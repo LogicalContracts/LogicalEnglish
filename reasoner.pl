@@ -64,7 +64,7 @@ explanationHTML(at(G,K),[li([p("~w"-[G]),p(i(K))])]).
 explanationHTML([C1|Cn],CH) :- explanationHTML(C1,CH1), explanationHTML(Cn,CHn), append(CH1,CHn,CH).
 explanationHTML([],[]).
 
-/* Graphviz support, not very promising given the large size of our labels (prediate names)
+/* Graphviz support, not very promising given the large size of our labels (predicate names)
 % experimental; would need unique IDs to avoid large term duplication
 explanationChild(w(_,Children),C) :- member(C,Children).
 
