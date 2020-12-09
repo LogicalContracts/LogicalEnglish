@@ -49,7 +49,7 @@ rollover_applies if
 % ultimate_owner(Asset,Owner,Share) :- ??
 
 elligible_party(P) if 
-    is_a_small_business_entity(TFN) at
+    is_a_small_business_entity(P) at
         "https://www.ato.gov.au/General/Capital-gains-tax/Small-business-CGT-concessions/Basic-conditions-for-the-small-business-CGT-concessions/Small-business-entity/".
 elligible_party(P) if 
     affiliate(P,AffiliateTFN) at
