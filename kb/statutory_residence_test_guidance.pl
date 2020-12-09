@@ -14,39 +14,40 @@ myURL("https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittanc
 :- use_module(syntax).
 :- discontiguous (if)/2.
 
-% **** clause order may not be enough.... there seems to be a global if-then-else:
-srt(true) if 
-    individual(I) and first_automatic_uk_test(I).
+% individual(ID).
+individual() := I if  % local function for convenience
+    individual(I).
 
-srt(false) if 
-    not srt(true) and individual(I) and (
-        first_automatic_overseas_test(I) or second_automatic_overseas_test(I)
-        or third_automatic_overseas_test(I) at "https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11140"
-    ). 
+srt if % this could actually go into the if-then-else below; just following the text
+    first_automatic_uk_test.
 
-srt(true) if 
-    individual(I) and 
-    second_automatic_uk_test(Individual) at "https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11330".
+srt if 
+    if ( first_automatic_overseas_test or second_automatic_overseas_test or third_automatic_overseas_test)
+        then false
+        else (second_automatic_uk_test or third_automatic_uk_test or ties_test).
 
-srt(true) if 
-    individual(I) and 
-    third_automatic_uk_test(Individual) at "https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11370".
+first_automatic_uk_test if
+    this_year(Year) and days_in_uk(individual(),Year,Duration) and Duration >= 183.
 
-srt(true) if 
-    individual(I) and
-    ties_test(I) at "https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11510".
+second_automatic_uk_test if
+    second_automatic_uk_test(individual()) at "https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11330".
 
+third_automatic_uk_test if
+    third_automatic_uk_test(individual()) at "https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11370".
 
-first_automatic_uk_test(Individual) if
-    this_year(Year) and days_in_uk(I,Year,Duration) and Duration >= 183.
+ties_test if
+    ties_test(individual()) at "https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11510".
 
 first_automatic_overseas_test(Individual) if % https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11120
     this_year(Y) and between(Y-3,Y-1,Previous) and srt(true) on PreviousYear
     and days_in_uk(I,Y,Duration) and Duration <16.
 
-second_automatic_overseas_test(ndividual) if
-    this_year(Y) and  forall(between(Y-3,Y-1,PreviousYear), not srt(true) on PreviousYear)
-    and days_in_uk(I,Y,Duration) and Duration <46.
+second_automatic_overseas_test(Individual) if
+    this_year(Y) and forall(between(Y-3,Y-1,PreviousYear), not srt(true) on PreviousYear)
+    and days_in_uk(Individual,Y,Duration) and Duration <46.
+
+third_automatic_overseas_test(Individual) if
+    third_automatic_overseas_test(Individual) at "https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11140".
 
 days_in_uk(Individual,Year,TotalDays) if
     days_in_uk(Individual,Year,TotalDays) at myDb123.

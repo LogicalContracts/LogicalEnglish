@@ -10,8 +10,10 @@
 % failure means false; success with empty Unknowns list means true; 
 % otherwise, result unknown, depending on solutions to goals in Unknowns; 
 % _-system is an "unknown" likely irrelevant, a consequence of others
+%TODO: expand functional notations, namely prior to system predicates such as between/3: user defined functions, and arithmetic
 % i(G,_,_) :- mylog(i-G), fail.
 i(true, [], []) :- !.
+i(false, [], []) :- !, fail.
 i(and(A,B), U, E) :- !, i((A,B),U,E).
 i(or(A,B), U, E) :- !, i((A;B),U,E).
 i((A,B), U, E) :- !, i(A,U1,E1), i(B,U2,E2), append(U1,U2,U), append(E1,E2,E).
