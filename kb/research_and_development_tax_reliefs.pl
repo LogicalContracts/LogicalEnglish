@@ -6,6 +6,9 @@
 % Web page from which the present knowledge page was encoded
 myURL("https://www.gov.uk/guidance/corporation-tax-research-and-development-rd-relief").
 
+% goals / use cases: 
+% - Determine if a company qualifies for the EIS
+
 % Assumptions: 
 %   all predicates hold on NOW unlesss indicated otherwise with 'on'; 
 %   datetimes in iso_8601 format

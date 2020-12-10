@@ -6,6 +6,9 @@
 % Web page from which the present knowledge page was encoded
 myURL("https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/small-business-restructure-rollover").
 
+% goals / use cases: 
+% - Determine if a asset transfer event can be treated as a restructure rollover
+
 % Assumptions: 
 %   all values are in AUD
 %   all predicates hold on NOW unlesss indicated otherwise with 'on'; 

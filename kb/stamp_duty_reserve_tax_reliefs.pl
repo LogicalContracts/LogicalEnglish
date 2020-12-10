@@ -6,6 +6,9 @@
 % Web page from which the present knowledge page was encoded
 myURL("https://www.gov.uk/guidance/stamp-duty-reserve-tax-reliefs-and-exemptions").
 
+% goals / use cases: 
+% - Determine if an electronic transaction is exempt from SDRT
+
 % Assumptions: 
 %   all predicates hold on NOW unlesss indicated otherwise with 'on'; 
 %   datetimes in iso_8601 format

@@ -64,6 +64,9 @@ now(Moment) if cgt_event(_,Moment,_,_).
 % Provenance of the knowledge we're encoding in this knowledge source/module
 myURL("https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/").
 
+% goals / use cases: 
+% - Determine if a cgt_event fullfills the basic conditions for CGT concessions
+
 basicConditions if 
     step1 and step2 and step3 and step4.
 

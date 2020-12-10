@@ -6,6 +6,9 @@
 % Web page from which the present knowledge page was encoded
 myURL("https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11040").
 
+% goals / use cases: 
+% - Determine if a person is a UK resident for tax purposes
+
 % Assumptions: 
 %   all predicates hold on NOW unlesss indicated otherwise with 'on'; 
 %   datetimes in iso_8601 format
