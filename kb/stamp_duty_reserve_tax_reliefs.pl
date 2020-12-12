@@ -55,3 +55,5 @@ married_or_in_civil_partnership(P1,P2) if
 
 trading_in_market(SecurityID,MarketID) if
     now(When) and trading_in_market(SecurityID,MarketID) at myDB_789.
+
+%TODO: Transfers that qualify for Stamp Duty Reserve Tax relief 

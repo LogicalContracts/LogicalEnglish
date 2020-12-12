@@ -18,6 +18,12 @@ myURL("https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-conce
 :- use_module(syntax).
 :- discontiguous (if)/2.
 
+%TODO: flesh out the examples
+example("Colin",[state([facts], (relevant_asset(...), ...))]).
+example("Ben",[state([facts], cgt_assets_net_value(...))]).
+example("Cool",[state([facts],...)])
+example("Lana",[state([facts],...)])
+
 % note: referred from cgt_concessions_basic_conditions_sb.pl
 satisfies_maximum_net_asset_value_test(TFN) on Date if 
     cgt_assets_net_value(TFN,Value) on Date and Value =< 6000000.

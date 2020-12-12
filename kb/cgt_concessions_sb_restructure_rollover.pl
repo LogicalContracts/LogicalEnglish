@@ -20,6 +20,27 @@ myURL("https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-conce
 
 %transfer_event(ID,Asset,When,TransferorTFN,TransfereesTFNList)
 
+% example(Title,Sequence).  Sequence is a list of state(FactChanges,TrueConclusion)
+% An example ilustrates and tests:
+%TODO: replace pseudo code text by predicates
+example( "Ultimate ownership unchanged", [
+    % initial facts and condition:
+    state(["penny runs a business B","B has assets A"], ultimate_owner(A,'Penny')),
+    % new facts and condition:
+    state(["penny has trust T", transfer_event(ID,A,When,B,[T])], ultimate_owner(A,'Penny'))
+    ]).
+example( "Changed share of ownership", [
+    % initial facts and condition:
+    state(["Amy, Joanna and Remy run a delivery business B as equal partners","B has assets A"], 
+        true),
+    % new facts and condition:
+    state(["Amy, Joanna and Remy establish company C, different shares", transfer_event(ID,A,When,B,[C])], 
+        not rollover_applies),
+    % alternative facts and another condition:
+    state([- "Amy, Joanna and Remy establish company C, different shares", "Amy, Joanna and Remy establish company C, equal shares"], 
+        rollover_applies)
+    ]).
+
 % mere linguistics...? :
 isa(cgt_event,asset).
 isa(trading_stock,asset).
@@ -49,7 +70,10 @@ rollover_applies if
     and elligible_asset(Asset).
 
 
-% ultimate_owner(Asset,Owner,Share) :- ??
+ultimate_owner(Asset,Owner,1) :- % full ownership
+    owns(TFN,Asset) 
+        at "https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/".
+%TODO: extend predicates for partial ownership, and indirection ( using connected_to ?)
 
 elligible_party(P) if 
     is_a_small_business_entity(P) at
