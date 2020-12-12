@@ -21,7 +21,7 @@ myURL("https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-conce
 affiliate(Entity,Affiliate) on Date if 
     Date @>= '20090101' % date (?) when affiliate definition changed
     and is_individual_or_company(Affiliate) 
-    and (acts_in_accordance_with_directions_from(Affiliate,Entity) or acts_in_concert_with(Affiliate,Entity)).
+    and (acts_in_accordance_with_directions_from(Affiliate,Entity) or acts_in_concert_with(Affiliate,Entity)). % seems human-bound!
 affiliate(Entity,Affiliate) on Date if
     Date @< '20090101' % date when affiliate definition changed
     and must_be(nonvar,Entity) and must_be(nonvar,Affiliate)

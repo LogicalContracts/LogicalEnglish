@@ -53,4 +53,5 @@ there_was_uncertainty if
 
 overcame_uncertainty if
     question( "Explain the work done to overcome the uncertainty. This can be a simple description of the successes and failures you had during the project.
-    Show that the R&D needed research, testing and analysis", _Explanation).
+        Show that the R&D needed research, testing and analysis", 
+    _Explanation).

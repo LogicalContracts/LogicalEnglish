@@ -48,14 +48,17 @@ asset_to_exclude(You,Asset) if
 %TODO: Effect of look-through earnout rights
 
 net_value(Asset,Value) on Date if
-    market_value(Asset,Market) on Date and 
-    aggregate(sum(Liability), (
-        liability(Asset,Type,Liability) and 
-        Type in [
-            annual_leave,long_service_leave,unearned_income,tax_liabilities, % From "Meaning of 'net value'"; contradicts exclusions in "Liabilities to include" !!!
-            legally_enforceable_debts, legal_or_equitable_obligations % from "Liabilities to include"; also refers https://www.ato.gov.au/law/view/document?DocID=TXD/TD200714/NAT/ATO/00001
-            ] 
-        ), Liabilities) on Date.
+    if is_earnout_cgt_asset(Asset,Value) then true 
+    else (
+        market_value(Asset,Market) on Date and 
+        aggregate( sum(Liability), (
+            liability(Asset,Type,Liability) and 
+            Type in [
+                annual_leave,long_service_leave,unearned_income,tax_liabilities, % From "Meaning of 'net value'"; contradicts exclusions in "Liabilities to include" !!!
+                legally_enforceable_debts, legal_or_equitable_obligations % from "Liabilities to include"; also refers https://www.ato.gov.au/law/view/document?DocID=TXD/TD200714/NAT/ATO/00001
+                ] 
+            ), Liabilities) on Date
+    ).
 
 % "Partner in a partnership": seems just an example
 
@@ -64,6 +67,8 @@ cgt_assets_net_value(You,Value) on Date if
         relevant_asset(You,Asset) and is_cgt_asset(Asset) and not asset_to_exclude(You,Asset) and net_value(Asset,AssetNet) on Date
         ), Value).
 
+
+% proxy predicates to other knowledge pages:
 
 owns(TFN,Asset) if
     owns(TFN,Asset) 
@@ -89,7 +94,12 @@ is_interest_in(Asset,Connection) if
         at "https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/".
 % Any other cases?  is_interest_in(Asset,Connection) if ...
 
-% is_cgt_asset(Asset) is ??
+is_cgt_asset(Asset) if
+    is_cgt_asset(Asset) at "https://www.ato.gov.au/General/Capital-gains-tax/CGT-assets-and-exemptions/".
 
 is_individual(TPN) if 
     is_individual(TPN) at myDB_entities.
+
+is_earnout_cgt_asset(Asset,Value) if 
+    is_earnout_cgt_asset(Asset,Value) 
+        at "https://www.ato.gov.au/General/Capital-gains-tax/In-detail/Business-assets/Earnout-arrangements-and-CGT/".

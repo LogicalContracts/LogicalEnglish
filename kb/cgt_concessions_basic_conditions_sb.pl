@@ -72,8 +72,8 @@ basicConditions if
 
 step1 if    % first, ilustrate a rule style where KB URLs are inline:
     you(Y) 
-    and is_a_small_business_entity(Y) at "https://www.ato.gov.au/General/Capital-gains-tax/Small-business-CGT-concessions/Basic-conditions-for-the-small-business-CGT-concessions/Small-business-entity/" 
-    and has_aggregated_turnover(Y,T) at "https://www.ato.gov.au/business/small-business-entity-concessions/eligibility/aggregation/"
+    and is_a_small_business_entity(Y)  
+    and has_aggregated_turnover(Y,T) 
     and  T< 2000000.
 step1 if    % now rules referring to the glue predicates above:
     you(Y) and does_not_carry_on_business_except_as_a_partner(Y) and 
