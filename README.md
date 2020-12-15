@@ -27,3 +27,66 @@ _Some suggestions for simplification and more info in first and second Chris ema
 - <https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11040>
 	- Bob's GoogleDoc: <https://docs.google.com/document/d/1nzoGuzPKI375jxtxT38jCEYwuhuZvjSBSHmvxusW0Lg/edit?ts=5fc92d43#heading=h.pzozuu8bp8r0>
 - <https://www.gov.uk/guidance/corporation-tax-research-and-development-rd-relief>
+
+## The Tax-KB language
+
+This is the language used to encode knowledge gleaned from regulatory textual sources. The text therein comprises 3 types of fragments: 
+
+- comments (to be effectively ignored); 
+- rule ingredients (the main thing)
+- examples
+
+The term *knowledge page* denotes a knowledge base module that encodes the knowledge in some web (or accessible via URL) page containing the regulatory text. This knowledge excludes instance (specific case) data, to be added in runtime.
+
+The logic language used is pure PROLOG (Horn clauses) but sugared with some additional operators, towards readability and expressiveness:
+
+  * ``if``, ``and``, ``or``, as alternatives to :- , ;
+  * ``if...must/then..``  and ``if...then...else...``
+  * Predicate ``on `` Moment
+  * Predicate ``at`` KnowledgePageURL
+
+The deontic ``if Condition (it) must (be true that) Obligation`` is simply mapped into ``Condition and Obligation or not Condition``.
+
+The ``on `` notation allows specification of a timestamp to the predicate, effectively adding it an extra argument. By default all predicate truth values report to "now", a datetime typically associated with the main time focus of the knowledge page.
+
+The ``P at KP`` metapredicate has several meanings, depending on where it is used. First there is the mandatory fact:
+
+	at("http://myURLBase").
+
+This means that the knowldege page was constructed from the text at that URL. If however a rule for some predicate ``P`` has a more specific provenance (perhaps a sub-section or text span identified by a more specific URL, possibly with an anchor), this can be encoded using ``at`` in its head:
+
+	P at "#MySubsection" if ....
+	
+The URL must be relative, and will be concatenated to the myURLBase above. Finally, there is ``at``in a rule body:
+
+	someRuleHead if ... and P at "http://someURL" and ...
+
+This allows reference of "external knowledge", e.g. predicates defined in other knowledge pages or external databases. The term *knowledge page* means: the knowledge base fragment encoding the knowledge in web page ``KP``. The truth of ``P`` will therefore be evaluated in KP. 
+
+Each predicate P may be:
+
+	* true
+	* false
+	* unknown
+
+Unknown values can fuel a user dialog. For example, if ``has_aggregated_turnover(tfn1,X) at WWW`` is evaluated as unknown (because the system has no access to the turnover value in order to bind variable X), this dictates the user question: 
+
+	What is the aggregated turnover of entity tfn1 ? Refer to WWW for more info
+
+Fully bound literals originate yes/no questions. These questions, generated in reaction to a query to the knowledge base, can provide the base for a chatbot. 
+
+### Other constructs
+
+In addition to the above features supporting knowledge representation, there are a few more:
+
+	mainGoal(PredicateTemplate, Description).
+
+Each such fact identifies a predicate to be exposed via the (REST) API.
+
+	example(Title,StatesAndAssertions).
+	
+This represents an example of the application of the knowledge rules in the module, providing it with "instance" data specific to some taxpayer, asset, etc. Regulatory (guidance) text sometimes provides them, to lighten their explanations. ``StatesAndAssertions``is an ordered list of ``state(Facts, Postcondition)``. Facts is a list of predicate facts, each optionally prefixed with ``- `` for deletion.
+
+To try an example, for each all facts in the StatesAndAssertions sequence are added/deleted, and the PostCondition (assertion) is evaluated.
+
+These facts are also test cases: all assertions must be true.

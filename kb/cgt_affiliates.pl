@@ -4,7 +4,7 @@
 % For now, residing in the 'user' module
 
 % Web page from which the present knowledge page was encoded
-myURL("https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/affiliates/").
+at("https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/affiliates/").
 
 
 % indicate future API entry point: predicate pattern, description

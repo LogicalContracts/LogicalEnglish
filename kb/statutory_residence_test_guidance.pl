@@ -4,7 +4,7 @@
 % For now, residing in the 'user' module
 
 % Web page from which the present knowledge page was encoded
-myURL("https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11040").
+at("https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11040").
 
 mainGoal(srt(Individual), "Determine if a person is a UK resident for tax purposes").
 

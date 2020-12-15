@@ -5,7 +5,7 @@
 % For now, residing in the 'user' module
 
 % Provenance of the knowledge we're encoding in this knowledge source/module
-myURL("https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/").
+at("https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/").
 
 mainGoal(basicConditions(_AssetID, _Date, _Type, _OwnerTFN), "Determine if a cgt_event fullfills the basic conditions for CGT concessions").
 
