@@ -6,8 +6,14 @@
 % Web page from which the present knowledge page was encoded
 myURL("https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/small-business-restructure-rollover").
 
-% goals / use cases: 
-% - Determine if a asset transfer event can be treated as a restructure rollover
+
+mainGoal(rollover_applies(ID,Asset,When,TransferorTFN,TransfereesTFNList), "Determine if a asset transfer event can be treated as a restructure rollover").
+
+:- thread_local transfer_event/5.
+rollover_applies(ID,Asset,When,TransferorTFN,TransfereesTFNList) :-
+    assert(transfer_event(ID,Asset,When,TransferorTFN,TransfereesTFNList)),
+    rollover_applies.
+
 
 % Assumptions: 
 %   all values are in AUD
@@ -18,7 +24,6 @@ myURL("https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-conce
 :- use_module(syntax).
 :- discontiguous (if)/2.
 
-%transfer_event(ID,Asset,When,TransferorTFN,TransfereesTFNList)
 
 % example(Title,Sequence).  Sequence is a list of state(FactChanges,TrueConclusion)
 % An example ilustrates and tests:

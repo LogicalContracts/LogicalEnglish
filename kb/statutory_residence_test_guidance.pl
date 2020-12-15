@@ -6,8 +6,12 @@
 % Web page from which the present knowledge page was encoded
 myURL("https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11040").
 
-% goals / use cases: 
-% - Determine if a person is a UK resident for tax purposes
+mainGoal(srt(Individual), "Determine if a person is a UK resident for tax purposes").
+
+:- thread_local theIndividual/1.
+srt(Individual) :-
+    assert(theIndividual(Individual)),
+    srt.
 
 % Assumptions: 
 %   all predicates hold on NOW unlesss indicated otherwise with 'on'; 
@@ -19,7 +23,7 @@ myURL("https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittanc
 
 % individual(ID).
 individual() := I if  % local function for convenience
-    individual(I).
+    theIndividual(I).
 
 srt if % this could actually go into the if-then-else below; just following the text
     first_automatic_uk_test.

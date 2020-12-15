@@ -6,8 +6,12 @@
 % Web page from which the present knowledge page was encoded
 myURL("https://www.gov.uk/guidance/corporation-tax-research-and-development-rd-relief").
 
-% goals / use cases: 
-% - Determine if a company qualifies for the EIS
+mainGoal(r_d_relief(ProjectID,ExtraDeduction,TaxCredit), "Determine if a project qualifies for the EIS").
+
+:- thread_local theProject/1.
+r_d_relief(ProjectID,ExtraDeduction,TaxCredit) :-
+    assert(theProject(ProjectID)),
+    r_d_relief(ExtraDeduction,TaxCredit).
 
 % Assumptions: 
 %   all predicates hold on NOW unlesss indicated otherwise with 'on'; 
@@ -21,7 +25,7 @@ myURL("https://www.gov.uk/guidance/corporation-tax-research-and-development-rd-r
 % project_team(ProjectID,MemberList)
 % project_subject_experts(ProjectID,ExpertsList)
 project() := P if 
-    project_expense(_TaxPayer,P,_Cost,_When).
+    theProject(P).
 
 r_d_relief(ExtraDeduction,TaxCredit) if
     qualify_for_r_d and ( % specific qualifying conditions are to be encoded in these:

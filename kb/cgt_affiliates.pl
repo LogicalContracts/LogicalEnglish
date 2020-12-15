@@ -6,8 +6,9 @@
 % Web page from which the present knowledge page was encoded
 myURL("https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/affiliates/").
 
-% goals / use cases: 
-% - Determine if a given entity is affiliate of another (also given)
+
+% indicate future API entry point: predicate pattern, description
+mainGoal(affiliate(_Entity,_Affiliate),"Determine if a given entity is affiliate of another (also given)").
 
 % Assumptions: 
 %   all predicates hold on NOW unlesss indicated otherwise with 'on'; 

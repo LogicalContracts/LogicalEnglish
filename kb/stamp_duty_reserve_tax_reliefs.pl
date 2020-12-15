@@ -6,8 +6,13 @@
 % Web page from which the present knowledge page was encoded
 myURL("https://www.gov.uk/guidance/stamp-duty-reserve-tax-reliefs-and-exemptions").
 
-% goals / use cases: 
-% - Determine if an electronic transaction is exempt from SDRT
+mainGoal(exempt_transfer(FromTaxPayer,ToTaxPayer,SecurityIdentifier,When),"Determine if an electronic transaction is exempt from SDRT").
+
+:- thread_local shares_transfer/4.
+exempt_transfer(FromTaxPayer,ToTaxPayer,SecurityIdentifier,When) :-
+    assert(shares_transfer(FromTaxPayer,ToTaxPayer,Identifier,When)),
+    exempt_transfer.
+
 
 % Assumptions: 
 %   all predicates hold on NOW unlesss indicated otherwise with 'on'; 
@@ -56,4 +61,4 @@ married_or_in_civil_partnership(P1,P2) if
 trading_in_market(SecurityID,MarketID) if
     now(When) and trading_in_market(SecurityID,MarketID) at myDB_789.
 
-%TODO later (cf. Chris email Dec 2, 2020): Transfers that qualify for Stamp Duty Reserve Tax RELIEF 
+%TODO: later (cf. Chris email Dec 2, 2020): Transfers that qualify for Stamp Duty Reserve Tax RELIEF 
