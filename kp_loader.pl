@@ -1,5 +1,6 @@
 :- module(_,[call_at/2, discover_kps_gitty/0, load_gitty_files/1, save_gitty_files/1]).
 
+:- use_module(library(prolog_xref)).
 % SWISH MUST be preloaded:
 :- use_module(swish(lib/storage)).
 :- use_module(swish(lib/gitty)).
@@ -13,6 +14,7 @@ Scans a given set of Prolog files in SWISH storage, and identifies "knowledge pa
 
 Can also export and import SWISH storage to/from a file system directory.
 
+%TODO: generalise to use files in a plain file system directory too
 */
 
 :- dynamic kp_location/2. % URL,GittyFile
@@ -22,6 +24,7 @@ Can also export and import SWISH storage to/from a file system directory.
 %
 %  Scans all Prolog files in SWISH's gitty storage for knowledge pages. Reloads
 %  loaded modules, but does not delete "orphans" (modules no longer in gitty)
+%  TODO: use '$destroy_module'(M) on those?
 discover_kps_gitty :-
     retractall(kp_location(_,_)),
     forall(storage_file_extension(File,pl),(
@@ -77,7 +80,7 @@ save_gitty_files(ToDirectory) :-
 
 %! load_gitty_files(+FromDirectory) is det
 %
-%  Updates or creates (in gitty storage) all Prolog files from the given directory; sub-directories are ignored.
+%  Updates or creates (in gitty storage) all Prolog files from the given file system directory; sub-directories are ignored.
 load_gitty_files(From) :- 
     web_storage:storage_dir(Store),
     forall(directory_member(From,Path,[extensions([pl])]),(
@@ -91,3 +94,27 @@ load_gitty_files(From) :-
             gitty_create(Store, File, Data, _{load_gitty_files:From}, _CommitRet)
             ))
         )).
+
+% Support xref for our gitty files
+:- multifile
+	prolog:xref_source_identifier/2,
+	prolog:xref_open_source/2,
+    prolog:xref_close_source/2,
+    prolog:xref_source_time/2.
+
+prolog:xref_source_identifier(URL, URL) :- kp_location(URL,_).
+prolog:xref_open_source(URL, Stream) :-
+    kp_location(URL,GittyFile),
+    storage_file(GittyFile,Data,_Meta),
+	open_string(Data, Stream).
+prolog:xref_close_source(_, Stream) :-
+	close(Stream).
+prolog:xref_source_time(URL, Modified) :-
+    kp_location(URL,GittyFile),
+    storage_file(GittyFile,_,Meta), Modified=Meta.time.
+
+%! xref_all is det
+%
+% refresh xref database for all knowledge pages
+xref_all :- 
+    forall(kp_location(URL,_), xref_source(URL)).
