@@ -36,7 +36,11 @@ This is the language used to encode knowledge gleaned from regulatory textual so
 - rule ingredients (the main thing)
 - examples
 
-The term *knowledge page* denotes a knowledge base module that encodes the knowledge in some web (or accessible via URL) page containing the regulatory text. This knowledge excludes instance (specific case) data, to be added in runtime.
+The term *knowledge page* denotes a Prolog module that encodes the knowledge in some web (or accessible via URL) page containing the regulatory text. This knowledge excludes instance (specific case) data, to be added in runtime. It is declared with a standard Prolog module declaration:
+
+	:- module('http://myURLBase',[]).
+
+This means that the knowldege page was constructed from the text at that URL. It must be the very first Prolog term in the file.
 
 The logic language used is pure PROLOG (Horn clauses) but sugared with some additional operators, towards readability and expressiveness:
 
@@ -49,11 +53,9 @@ The deontic ``if Condition (it) must (be true that) Obligation`` is simply mappe
 
 The ``on `` notation allows specification of a timestamp to the predicate, effectively adding it an extra argument. By default all predicate truth values report to "now", a datetime typically associated with the main time focus of the knowledge page.
 
-The ``P at KP`` metapredicate has several meanings, depending on where it is used. First there is the mandatory fact:
+The ``P at KP`` metapredicate has several meanings, depending on where it is used. 
 
-	at("http://myURLBase").
-
-This means that the knowldege page was constructed from the text at that URL. If however a rule for some predicate ``P`` has a more specific provenance (perhaps a sub-section or text span identified by a more specific URL, possibly with an anchor), this can be encoded using ``at`` in its head:
+If a rule for some predicate ``P`` has a more specific provenance than the whole module's (perhaps a sub-section or text span identified by a more specific URL, possibly with an anchor), this can be encoded using ``at`` in its head:
 
 	P at "#MySubsection" if ....
 	

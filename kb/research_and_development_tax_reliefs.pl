@@ -4,7 +4,7 @@
 % For now, residing in the 'user' module
 
 % Web page from which the present knowledge page was encoded
-at("https://www.gov.uk/guidance/corporation-tax-research-and-development-rd-relief").
+:-module(' https://www.gov.uk/guidance/corporation-tax-research-and-development-rd-relief',[]).
 
 mainGoal(r_d_relief(ProjectID,ExtraDeduction,TaxCredit), "Determine if a project qualifies for the EIS").
 

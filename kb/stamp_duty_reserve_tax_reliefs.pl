@@ -4,7 +4,7 @@
 % For now, residing in the 'user' module
 
 % Web page from which the present knowledge page was encoded
-at("https://www.gov.uk/guidance/stamp-duty-reserve-tax-reliefs-and-exemptions").
+:-module('https://www.gov.uk/guidance/stamp-duty-reserve-tax-reliefs-and-exemptions',[]).
 
 mainGoal(exempt_transfer(FromTaxPayer,ToTaxPayer,SecurityIdentifier,When),"Determine if an electronic transaction is exempt from SDRT").
 

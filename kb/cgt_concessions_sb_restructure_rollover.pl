@@ -4,7 +4,7 @@
 % For now, residing in the 'user' module
 
 % Web page from which the present knowledge page was encoded
-at("https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/small-business-restructure-rollover").
+:- module('https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/small-business-restructure-rollover',[]).
 
 
 mainGoal(rollover_applies(ID,Asset,When,TransferorTFN,TransfereesTFNList), "Determine if a asset transfer event can be treated as a restructure rollover").

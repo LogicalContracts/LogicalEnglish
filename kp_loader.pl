@@ -1,4 +1,4 @@
-:- module(_,[call_at/2, discover_kps_gitty/0, load_gitty_files/1, save_gitty_files/1]).
+:- module(_,[call_at/2, discover_kps_gitty/0, load_gitty_files/1, save_gitty_files/1, xref_all/0]).
 
 :- use_module(library(prolog_xref)).
 % SWISH MUST be preloaded:
@@ -9,8 +9,7 @@
 
 Scans a given set of Prolog files in SWISH storage, and identifies "knowledge pages", files which:
 
-- have an at(Name) fact. Name is typically an URL
-- do NOT have a module declaration.
+- are modules named with an URL
 
 Can also export and import SWISH storage to/from a file system directory.
 
@@ -18,7 +17,7 @@ Can also export and import SWISH storage to/from a file system directory.
 */
 
 :- dynamic kp_location/2. % URL,GittyFile
-:- dynamic loaded_module/2. % URL,Module.  
+% :- dynamic loaded_module/2. % URL,Module.  
 
 %! discover_kps_gitty is det.
 %
@@ -35,32 +34,33 @@ discover_kps_gitty :-
 process_file(Data,File) :-
     setup_call_cleanup( open_string(Data, In), (
         process_terms(In, LastTerm),
-        (LastTerm=at(Name) -> (
+        % (LastTerm=at(Name) -> (
+        (LastTerm=(:-module(Name,_)) -> (
             assert(kp_location(Name,File)),
             % reload the module if it already exists:
-            (retract(loaded_module(Name,M)) -> load_named_file(File,Name,M) ; true)
+            (current_module(Name) -> load_named_file(File,Name) ; true)
             ); true)
     ), close(In)).
 
-process_terms(In,Term) :-
-    repeat, 
+process_terms(In,Term) :- % actually gets only the first term, where the module declaration must be:
+    %repeat, 
     read_term(In, Term, [syntax_errors(fail)]),
     ( Term==end_of_file, ! ; 
-        Term= (:- module(_)), ! ; % ignore it
-        Term=at(Name), (ground(Name)->true; print_message(warning,'ignored'(at(Name))), fail) 
+        Term= (:- module(URL,_)), is_absolute_url(URL), ! ; 
+        true
+        %Term=at(Name), (ground(Name)->true; print_message(warning,'ignored'(at(Name))), fail) 
     ).
 
-load_named_file(File,Name,Module) :- 
-    (var(Module) -> uuid(Module); true),
-    use_gitty_file(Module:File,[module(Module)]), assert(loaded_module(Name,Module)).
+load_named_file(File,Module) :- 
+    use_gitty_file(Module:File,[module(Module)]).
 
 %! call_at(:Goal,++KnowledgePageName) is nondet.
 %
 %  Execute goal at the indicated knowledge page, loading it if necessary
-call_at(Goal,Name) :- must_be(nonvar,Name), loaded_module(Name,M), !, M:Goal.
+call_at(Goal,Name) :- must_be(nonvar,Name), current_module(Name), !, Name:Goal.
 call_at(Goal,Name) :- kp_location(Name,File), !, 
-    uuid(M), load_named_file(File,Name,M),
-    M:Goal.
+    load_named_file(File,Name),
+    Name:Goal.
 call_at(Goal,Name) :- print_message(error,'could not load kp'(Goal,Name)), fail.
 
 %! save_gitty_files(+ToDirectory) is det
@@ -100,7 +100,8 @@ load_gitty_files(From) :-
 	prolog:xref_source_identifier/2,
 	prolog:xref_open_source/2,
     prolog:xref_close_source/2,
-    prolog:xref_source_time/2.
+    prolog:xref_source_time/2,
+    prolog:meta_goal/2.
 
 prolog:xref_source_identifier(URL, URL) :- kp_location(URL,_).
 prolog:xref_open_source(URL, Stream) :-
@@ -112,6 +113,8 @@ prolog:xref_close_source(_, Stream) :-
 prolog:xref_source_time(URL, Modified) :-
     kp_location(URL,GittyFile),
     storage_file(GittyFile,_,Meta), Modified=Meta.time.
+
+prolog:meta_goal(at(G,M),[M:G]).
 
 %! xref_all is det
 %
