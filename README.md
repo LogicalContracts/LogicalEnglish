@@ -42,14 +42,14 @@ The term *knowledge page* denotes a Prolog module that encodes the knowledge in 
 
 This means that the knowldege page was constructed from the text at that URL. It must be the very first Prolog term in the file.
 
-The logic language used is pure PROLOG (Horn clauses) but sugared with some additional operators, towards readability and expressiveness:
+The logic language used is pure PROLOG (Horn clauses) but sugared with some additional operators in the clause bodies, towards readability and expressiveness:
 
   * ``if``, ``and``, ``or``, as alternatives to :- , ;
   * ``if...must/then..``  and ``if...then...else...``
   * Predicate ``on `` Moment
   * Predicate ``at`` KnowledgePageURL
 
-The deontic ``if Condition (it) must (be true that) Obligation`` is simply mapped into ``Condition and Obligation or not Condition``.
+The "deontic" ``if Condition (it) must (be true that) Obligation`` in a clause body is simply mapped into ``Condition and Obligation or not Condition``. The term "deontic" is being stretched here, cf. for example this explanation on [deonthic vs. alethic](https://www.brsolutions.com/the-two-fundamental-kinds-of-business-rules-where-they-come-from-and-why-they-are-what-they-are/).
 
 The ``on `` notation allows specification of a timestamp to the predicate, effectively adding it an extra argument. By default all predicate truth values report to "now", a datetime typically associated with the main time focus of the knowledge page.
 
