@@ -1,4 +1,8 @@
-:- module(_,[call_at/2, discover_kps_gitty/0, load_gitty_files/1, save_gitty_files/1, delete_gitty_file/1, xref_all/0]).
+:- module(_,[
+    call_at/2, 
+    discover_kps_gitty/0, load_gitty_files/1, save_gitty_files/1, delete_gitty_file/1, 
+    xref_all/0, kp_predicates/0,
+    edit_kp/1]).
 
 :- use_module(library(prolog_xref)).
 :- use_module(library(broadcast)).
@@ -132,7 +136,7 @@ prolog:xref_source_time(URL, Modified) :-
     kp_location(URL,GittyFile),
     storage_file(GittyFile,_,Meta), Modified=Meta.time.
 
-%TODO: put this near the reasoner? ADD and/or/etc.
+%TODO: put this nearer the reasoner
 prolog:meta_goal(at(G,M),[M_:G]) :- atom_string(M_,M).
 prolog:meta_goal(and(A,B),[A,B]).
 prolog:meta_goal(or(A,B),[A,B]).
@@ -155,6 +159,30 @@ reactToSaved(created(GittyFile,Commit)) :- % discover and xref
 reactToSaved(updated(GittyFile,_Commit)) :- % xref
     kp_location(URL,GittyFile), xref_source(URL).
 
+
+kp_predicates :- 
+    forall(kp(KP),(
+        format("KP: ~w~n",[KP]),
+        format("  Instance data:~n"),
+        forall(xref_defined(KP,G,thread_local(_)), (
+            functor(G,F,N), format("    ~w~n",[F/N])
+            )),
+        format("  Defined predicates:~n"),
+        forall((xref_defined(KP,G,How),How\=thread_local(_)), (
+            functor(G,F,N), format("    ~w~n",[F/N])
+        )),
+        format("  External predicates called:~n"),
+        forall((xref_called(KP, Called, _By),Called=Other:G,Other\=KP), (
+            functor(G,F,N), format("    ~w~n",[F/N])
+        ))
+    )). 
+
+%! edit_kp(URL) is det
+%
+% Open the current gitty version of the knowledge page in SWISH's editor
+edit_kp(URL) :-
+    kp_location(URL,File),
+    format(string(URL),"http://localhost:3050/p/~a",[File]), www_open_url(URL).
 
 %%%% Knowledge pages graph
 
