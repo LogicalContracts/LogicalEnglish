@@ -6,7 +6,7 @@
 % Web page from which the present knowledge page was encoded
 :-module('https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/maximum-net-asset-value-test/',[]).
 
-mainGoal(satisfies_maximum_net_asset_value_test(TFN), "Determine if a given entity satisfies the maximum net value test for CGT assets").
+mainGoal(satisfies_maximum_net_asset_value_test(_TFN), "Determine if a given entity satisfies the maximum net value test for CGT assets").
 
 
 % Assumptions: 
@@ -15,7 +15,6 @@ mainGoal(satisfies_maximum_net_asset_value_test(TFN), "Determine if a given enti
 %   datetimes in iso_8601 format
 %   external predicates MUST be aware of the local main event time, "now"
 
-:- use_module(syntax).
 :- discontiguous (if)/2.
 
 %TODO: flesh out the examples
@@ -63,7 +62,8 @@ net_value(Asset,Value) on Date if
                 annual_leave,long_service_leave,unearned_income,tax_liabilities, % From "Meaning of 'net value'"; contradicts exclusions in "Liabilities to include" !!!
                 legally_enforceable_debts, legal_or_equitable_obligations % from "Liabilities to include"; also refers https://www.ato.gov.au/law/view/document?DocID=TXD/TD200714/NAT/ATO/00001
                 ] 
-            ), Liabilities) on Date
+            ), Liabilities) on Date 
+        and Value is Market-Liabilities
     ).
 
 % "Partner in a partnership": seems just an example
@@ -93,10 +93,10 @@ affiliate(EntityTFN,AffiliateTFN) if
         at "https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/affiliates/".
 
 is_interest_in(Asset,Connection) if 
-    is_share_in_company(Asset)
+    is_share_in_company(Asset,Connection)
         at "https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/".
 is_interest_in(Asset,Connection) if 
-    is_interest_in_trust(Asset)
+    is_interest_in_trust(Asset,Connection)
         at "https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/".
 % Any other cases?  is_interest_in(Asset,Connection) if ...
 

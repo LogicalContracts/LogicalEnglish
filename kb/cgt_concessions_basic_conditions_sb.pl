@@ -22,7 +22,6 @@ basicConditions(AssetID, Date, Type, OwnerTFN) :-
 %   datetimes in iso_8601 format
 %   external predicates MUST be aware of the cgt event time, "now"
 
-:- use_module(syntax).
 :- discontiguous (if)/2.
 
 % repackage as examples/2 facts??:
@@ -36,8 +35,8 @@ partner_in_partnership(tfn1,partnershipTFN5) at myDB1.
 membership_interest_in_partnership(tfn2,partnershipTFN6,roriAsset1) at myDB1.
 asset_is_right_or_interest_to_amount_of_income_or_capital_of_partnership(roriAsset1,partnershipTFN6) at myDB2. 
 asset_is_right_or_interest_to_AMOUNT_CALCULATED_BY_REF_TO_PARTNER_ENTITLEMENT_to_amount_of_income_or_capital_of_partnership(roriAsset2,partnershipTFN6) at myDB2.
-is_share_in_company(asset6) at myDB1.
-is_interest_in_trust(asset7) at myDB1.
+is_share_in_company(asset6,company7) at myDB1.
+is_interest_in_trust(asset7,trust13) at myDB1.
 does_not_carry_on_business_except_as_a_partner(tfn1) at myDB2.
 is_used_in_business_of(asset1,partnershipTFN5) at myDB2.
 owns(tfn1,asset1) at myDB1.
@@ -92,7 +91,7 @@ step2 if
 
 step3 if
     theAsset(A),
-    (if (is_share_in_company(A) or is_interest_in_trust(A)) must additional_conditions(A)). 
+    (if (is_share_in_company(A,_Company) or is_interest_in_trust(A,_Trust)) must additional_conditions(A)). 
 
 step4 if
     cgt_event(A,When,Type,Y) and
@@ -143,10 +142,10 @@ asset_is_right_or_interest_to_amount_of_income_or_capital_of_partnership(Asset,P
     asset_is_right_or_interest_to_amount_of_income_or_capital_of_partnership(Asset,Partnership) at myDB2. %TODO: grok this!
 asset_is_right_or_interest_to_AMOUNT_CALCULATED_BY_REF_TO_PARTNER_ENTITLEMENT_to_amount_of_income_or_capital_of_partnership(Asset,Partnership) if
     asset_is_right_or_interest_to_AMOUNT_CALCULATED_BY_REF_TO_PARTNER_ENTITLEMENT_to_amount_of_income_or_capital_of_partnership(Asset,Partnership) at myDB2.
-is_share_in_company(Asset) if 
-    is_share_in_company(Asset) at myDB1.
-is_interest_in_trust(Asset) if 
-    is_interest_in_trust(Asset) at myDB1.
+is_share_in_company(Asset,Company) if 
+    is_share_in_company(Asset,Company) at myDB1.
+is_interest_in_trust(Asset,Trust) if 
+    is_interest_in_trust(Asset,Trust) at myDB1.
 does_not_carry_on_business_except_as_a_partner(TFN) if 
     does_not_carry_on_business_except_as_a_partner(TFN) at myDB2.
 is_used_in_business_of(Asset,TFN) if 

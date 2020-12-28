@@ -6,7 +6,7 @@
 % Web page from which the present knowledge page was encoded
 :-module(' https://www.gov.uk/guidance/corporation-tax-research-and-development-rd-relief',[]).
 
-mainGoal(r_d_relief(ProjectID,ExtraDeduction,TaxCredit), "Determine if a project qualifies for the EIS").
+mainGoal(r_d_relief(_ProjectID,_ExtraDeduction,_TaxCredit), "Determine if a project qualifies for the EIS").
 
 :- thread_local theProject/1.
 r_d_relief(ProjectID,ExtraDeduction,TaxCredit) :-
@@ -18,14 +18,13 @@ r_d_relief(ProjectID,ExtraDeduction,TaxCredit) :-
 %   datetimes in iso_8601 format
 %   external predicates MUST be aware of the local main event time, "now"
 
-:- use_module(syntax).
 :- discontiguous (if)/2.
 
 % project_expense(TaxPayer,ProjectID,Cost,When)
 % project_team(ProjectID,MemberList)
 % project_subject_experts(ProjectID,ExpertsList)
-project() := P if 
-    theProject(P).
+function(project(), Result) if 
+    theProject(Result).
 
 r_d_relief(ExtraDeduction,TaxCredit) if
     qualify_for_r_d and ( % specific qualifying conditions are to be encoded in these:
@@ -53,7 +52,7 @@ professionals_could_not_doit if
 
 there_was_uncertainty if
     project_subject_experts(project(),Experts) and Expert in Experts
-    and question("~w, is it true that you could not know about the project advances or how they were going to be accomplished ?").
+    and question("~w, is it true that you could not know about the project advances or how they were going to be accomplished ?"-Expert).
 
 overcame_uncertainty if
     question( "Explain the work done to overcome the uncertainty. This can be a simple description of the successes and failures you had during the project.

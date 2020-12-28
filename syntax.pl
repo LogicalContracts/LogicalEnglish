@@ -4,12 +4,13 @@
     op(1185,fx,user:(if)),
     op(1190,xfx,user:(if)),
     op(1100,xfy,user:else),
-    op(835,xfy,user:and),
-    op(840,xfy,user:or),
-    op(820,fx,user:not),
+    op(1000,xfy,user:and), % same as ,
+    op(1050,xfy,user:or), % same as ;
+    op(900,fx,user:not), % same as \+
     op(700,xfx,user:in),
     op(600,xfx,user:on),
-    op(600,xfy,at)
+    op(995,xfx,user:at), % note vs. negation...compatible with LPS
+    and/2
     ]).
 % For later definition in SWISH backend:
 
@@ -25,5 +26,8 @@
 % :- op(700,xfx,in),
 % :- op(600,xfx,on). % explicit datetime
 % :- op(600,xfy,at). % external predicate, meaning defined in URL
+
+and(_,_) :- throw(use_the_interpreter). % to avoid "undefined predicate" messages in editor
+%TODO: add other connectives
 
 user:term_expansion(if(H,B),(H:-B)).

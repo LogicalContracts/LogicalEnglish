@@ -1,7 +1,7 @@
 :- module(_,[
     call_at/2, 
-    discover_kps_gitty/0, load_gitty_files/1, save_gitty_files/1, delete_gitty_file/1, 
-    xref_all/0, kp_predicates/0,
+    discover_kps_in_dir/1, discover_kps_gitty/0, load_gitty_files/1, save_gitty_files/1, delete_gitty_file/1, 
+    xref_all/0, xref_clean/0, kp_predicates/0,
     edit_kp/1]).
 
 :- use_module(library(prolog_xref)).
@@ -23,9 +23,8 @@ Can also export and import SWISH storage to/from a file system directory.
 %TODO: generalise to use files in a plain file system directory too
 */
 
-:- dynamic kp_location/2. % URL,GittyFile
-% :- dynamic loaded_module/2. % URL,Module.  
-kp(URL) :- kp_location(URL,_).
+:- dynamic kp_location/3. % URL,File, InGitty
+kp(URL) :- kp_location(URL,_,_).
 
 %! discover_kps_gitty is det.
 %
@@ -33,20 +32,31 @@ kp(URL) :- kp_location(URL,_).
 %  loaded modules, but does not delete "orphans" (modules no longer in gitty)
 %  TODO: use '$destroy_module'(M) on those?
 discover_kps_gitty :-
-    retractall(kp_location(_,_)),
+    retractall(kp_location(_,_,true)),
     forall(storage_file_extension(File,pl),(
         storage_file(File,Data,_Meta),
-        process_file(Data,File)
+        open_string(Data, In),
+        process_file(In,File,true)
     )).
 
-process_file(Data,File) :-
-    setup_call_cleanup( open_string(Data, In), (
+%! discover_kps_in_dir(+Dir) is det.
+%
+discover_kps_in_dir(Dir) :-
+    retractall(kp_location(_,_,false)),
+    forall(directory_member(Dir,File,[extensions([pl])]), (
+        open(File,read,In),
+        process_file(In,File,false)
+    )).
+
+process_file(In,File,InGitty) :-
+    must_be(boolean,InGitty),
+    setup_call_cleanup( true, (
         process_terms(In, LastTerm),
         % (LastTerm=at(Name) -> (
         (LastTerm=(:-module(Name,_)) -> (
-            assert(kp_location(Name,File)),
+            assert(kp_location(Name,File,InGitty)),
             % reload the module if it already exists:
-            (current_module(Name) -> load_named_file(File,Name) ; true)
+            (current_module(Name) -> load_named_file(File,Name,InGitty) ; true)
             ); true)
     ), close(In)).
 
@@ -59,15 +69,18 @@ process_terms(In,Term) :- % actually gets only the first term, where the module 
         %Term=at(Name), (ground(Name)->true; print_message(warning,'ignored'(at(Name))), fail) 
     ).
 
-load_named_file(File,Module) :- 
+load_named_file(File,Module,true) :- !,
     use_gitty_file(Module:File,[module(Module)]).
+load_named_file(File,Module,false) :- 
+    load_files(File,[module(Module)]).
+
 
 %! call_at(:Goal,++KnowledgePageName) is nondet.
 %
 %  Execute goal at the indicated knowledge page, loading it if necessary
 call_at(Goal,Name) :- must_be(nonvar,Name), current_module(Name), !, Name:Goal.
-call_at(Goal,Name) :- kp_location(Name,File), !, 
-    load_named_file(File,Name),
+call_at(Goal,Name) :- kp_location(Name,File,InGitty), !, 
+    load_named_file(File,Name,InGitty),
     Name:Goal.
 call_at(Goal,Name) :- print_message(error,'could not load kp'(Goal,Name)), fail.
 
@@ -97,20 +110,24 @@ load_gitty_files(From) :-
         directory_file_path(_,File,Path),
         (gitty_file(Store, File, OldHead) -> (
             storage_meta_data(File, Meta), 
-            NewMeta = Meta.put([previous=OldHead]),
+            NewMeta = Meta.put([previous=OldHead, modify=[any, login, owner], (public)=true]),
             gitty_update(Store, File, Data, NewMeta, _CommitRet)
             ) ; (
-            gitty_create(Store, File, Data, _{load_gitty_files:From}, _CommitRet)
+            gitty_create(Store, File, Data, _{load_gitty_files:From, modify:[any, login, owner], public:true }, _CommitRet)
             ))
         )).
 
 %! delete_gitty_file(+GittyFile) is det
 %
-% makes the file empty
+% makes the file empty, NOT a proper delete
 delete_gitty_file(File) :-
     must_be(nonvar,File),
     web_storage:storage_dir(Store),
     gitty_file(Store, File, OldHead),
+    % I was unable to effectively delete:
+    % gitty:delete_head(Store, OldHead), gitty:delete_object(Store, OldHead), % this is only effective after a SWISH restart
+    % broadcast(swish(deleted(File, OldHead))). % not doing anything, possibly missing something on the JS end
+    % ... instead this does roughly what the DELETE REST SWISH endpoint in storage.pl does:
     storage_meta_data(File, Meta),
     NewMeta = Meta.put([previous=OldHead]),
     gitty_update(Store, File, "", NewMeta, _CommitRet).
@@ -125,31 +142,36 @@ delete_gitty_file(File) :-
     prolog:xref_source_time/2,
     prolog:meta_goal/2.
 
-prolog:xref_source_identifier(URL, URL) :- kp_location(URL,_).
+prolog:xref_source_identifier(URL, URL) :- kp_location(URL,_,_).
 prolog:xref_open_source(URL, Stream) :-
-    kp_location(URL,GittyFile),
-    storage_file(GittyFile,Data,_Meta),
-	open_string(Data, Stream).
+    kp_location(URL,File,InGitty),
+    (InGitty==true -> (storage_file(File,Data,_Meta), open_string(Data, Stream))
+        ; (open(File,read,Stream))).
 prolog:xref_close_source(_, Stream) :-
 	close(Stream).
 prolog:xref_source_time(URL, Modified) :-
-    kp_location(URL,GittyFile),
-    storage_file(GittyFile,_,Meta), Modified=Meta.time.
+    kp_location(URL,File,InGitty),
+    (InGitty==true -> (storage_file(File,_,Meta), Modified=Meta.time) ;
+        time_file(File,Modified)).
 
 %TODO: put this nearer the reasoner
-prolog:meta_goal(at(G,M),[M_:G]) :- atom_string(M_,M).
+prolog:meta_goal(at(G,M),[M_:G]) :- nonvar(M), atom_string(M_,M).
 prolog:meta_goal(and(A,B),[A,B]).
 prolog:meta_goal(or(A,B),[A,B]).
 prolog:meta_goal(must(A,B),[A,B]).
 prolog:meta_goal(not(A),[A]).
 prolog:meta_goal(then(if(C),else(T,Else)),[C,T,Else]).
 prolog:meta_goal(then(if(C),Then),[C,Then]) :- Then\=else(_,_).
+%prolog:meta_goal(if(_H,B),[B]). % weird; somehow term_expansion is not enough for the editor to build its longclick destinations
 
 %! xref_all is det
 %
 % refresh xref database for all knowledge pages %TODO: report syntax errors properly
 xref_all :- 
-    forall(kp_location(URL,_), (print_message(informational,xreferencing/URL), xref_source(URL))).
+    forall(kp_location(URL,File,_), (print_message(informational,xreferencing/URL-File), xref_source(URL))).
+
+xref_clean :-
+    forall(kp_location(URL,_,_), xref_clean(URL)).
 
 :- listen(swish(X),reactToSaved(X)). % note: do NOT use writes!, they would interfere with SWISH's internal REST API
 
@@ -181,8 +203,11 @@ kp_predicates :-
 %
 % Open the current gitty version of the knowledge page in SWISH's editor
 edit_kp(URL) :-
-    kp_location(URL,File),
-    format(string(URL),"http://localhost:3050/p/~a",[File]), www_open_url(URL).
+    kp_location(URL,File,InGitty),
+    (InGitty==(false) -> print_message(error,"That is not in SWISH storage");(
+        format(string(URL),"http://localhost:3050/p/~a",[File]), www_open_url(URL)
+        )).
+
 
 %%%% Knowledge pages graph
 
@@ -209,7 +234,8 @@ knowledgePagesGraph(dot(digraph([rankdir='LR'|Graph]))) :-
         %(hypercube(R,ID) -> Shape=box3d ; Shape=ellipse)
         ), Nodes),
     append(Nodes,Edges,Items),
-    (var(SizeInches) -> Graph=Items ; Graph = [size=SizeInches|Items]).
+    Graph=Items.
+    %(var(SizeInches) -> Graph=Items ; Graph = [size=SizeInches|Items]).
 
 :- multifile sandbox:safe_primitive/1.
 sandbox:safe_primitive(kp_loader:knowledgePagesGraph(_)).

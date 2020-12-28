@@ -7,7 +7,7 @@
 :- module('https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/small-business-restructure-rollover',[]).
 
 
-mainGoal(rollover_applies(ID,Asset,When,TransferorTFN,TransfereesTFNList), "Determine if a asset transfer event can be treated as a restructure rollover").
+mainGoal(rollover_applies(_ID,_Asset,_When,_TransferorTFN,_TransfereesTFNList), "Determine if a asset transfer event can be treated as a restructure rollover").
 
 :- thread_local transfer_event/5.
 rollover_applies(ID,Asset,When,TransferorTFN,TransfereesTFNList) :-
@@ -21,7 +21,6 @@ rollover_applies(ID,Asset,When,TransferorTFN,TransfereesTFNList) :-
 %   datetimes in iso_8601 format
 %   external predicates MUST be aware of the local main event time, "now"
 
-:- use_module(syntax).
 :- discontiguous (if)/2.
 
 
@@ -54,9 +53,9 @@ isa(depreciating_asset,asset).
 isa(loan_to_shareholder,asset). % from later in the text
 
 you(TaxPayer) if 
-    transfer_event(ID,Asset,When,TaxPayer,Tes).
+    transfer_event(_ID,_Asset,_When,TaxPayer,_Tes).
 you(TaxPayer) if 
-    transfer_event(ID,Asset,When,Tor,Transferees) and TaxPayer in Transferees.
+    transfer_event(_ID,_Asset,_When,_Tor,Transferees) and TaxPayer in Transferees.
 
 rollover_applies if
     you(Y) and has_aggregated_turnover(Y,Turnover) 
@@ -70,13 +69,13 @@ rollover_applies if
     and setof(Owner/Share, ultimate_owner(Asset,Owner,Share) on When, NewOwners) % assuming that When is the moment after the transfer
     and ( 
         NewOwners = PreviousOwners or 
-        family_trust(FT,GroupMembers) and forall(Owner/_ in PreviousOwners, Owner in GroupMembers) and forall(Owner/_ in NewOwners, Owner in GroupMembers)
+        family_trust(_FT,GroupMembers) and forall(Owner/_ in PreviousOwners, Owner in GroupMembers) and forall(Owner/_ in NewOwners, Owner in GroupMembers)
     )
     and elligible_asset(Asset).
 
 
 ultimate_owner(Asset,Owner,1) :- % full ownership
-    owns(TFN,Asset) 
+    owns(Owner,Asset) 
         at "https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/".
 %TODO: extend predicates for partial ownership, and indirection ( using connected_to ?)
 
@@ -104,8 +103,8 @@ elligible_asset(A) if
     % not A=loan_to_shareholder and   irrelevant?
     Type in [cgt_event,depreciating_asset,trading_stock,revenue_asset].
 
-active_asset(A) if 
-    is_used_in_business_of(Asset,SomeTFN) % our first knowledge page:
+active_asset(Asset) if 
+    is_used_in_business_of(Asset,_SomeTFN) % our first knowledge page:
         at "https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/".
 
 asset_type(Asset,Type) if 
@@ -113,7 +112,7 @@ asset_type(Asset,Type) if
 
 % "Tax implications" seem to boil down to:
 rollover_cost(Cost) if
-    transfer_event(ID,Asset,When,TaxPayer,Tes) and immediately_before(Before,When) 
+    transfer_event(_ID,Asset,When,_TaxPayer,_Transferees) and immediately_before(Before,When) 
     and asset_value(Asset,Cost) on Before.
 
 %TODO; discuss with Andrew

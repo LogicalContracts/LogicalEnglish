@@ -6,11 +6,11 @@
 % Web page from which the present knowledge page was encoded
 :-module('https://www.gov.uk/guidance/stamp-duty-reserve-tax-reliefs-and-exemptions',[]).
 
-mainGoal(exempt_transfer(FromTaxPayer,ToTaxPayer,SecurityIdentifier,When),"Determine if an electronic transaction is exempt from SDRT").
+mainGoal(exempt_transfer(_FromTaxPayer,_ToTaxPayer,_SecurityIdentifier,_When),"Determine if an electronic transaction is exempt from SDRT").
 
 :- thread_local shares_transfer/4.
 exempt_transfer(FromTaxPayer,ToTaxPayer,SecurityIdentifier,When) :-
-    assert(shares_transfer(FromTaxPayer,ToTaxPayer,Identifier,When)),
+    assert(shares_transfer(FromTaxPayer,ToTaxPayer,SecurityIdentifier,When)), % should retractall, but assuming this is a new, transient thread
     exempt_transfer.
 
 
@@ -19,7 +19,6 @@ exempt_transfer(FromTaxPayer,ToTaxPayer,SecurityIdentifier,When) :-
 %   datetimes in iso_8601 format
 %   external predicates MUST be aware of the local main event time, "now"
 
-:- use_module(syntax).
 :- discontiguous (if)/2.
 
 % shares_transfer(FromTaxPayer,ToTaxPayer,Identifier,When)
@@ -29,7 +28,7 @@ shares_transfer(From,To) if  % for mere convenience below
 you(TaxPayer) if 
     shares_transfer(_,TaxPayer).
 
-you() := Y if 
+function(you(), Y) if 
     you(Y). % functional notation for convenience
 
 now(Now) if shares_transfer(_,_,_,Now).
@@ -59,6 +58,6 @@ married_or_in_civil_partnership(P1,P2) if
     now(When) and married_or_in_civil_partnership(P1,P2,When) at myDB_456.
 
 trading_in_market(SecurityID,MarketID) if
-    now(When) and trading_in_market(SecurityID,MarketID) at myDB_789.
+    now(When) and trading_in_market(SecurityID,MarketID,When) at myDB_789.
 
 %TODO: later (cf. Chris email Dec 2, 2020): Transfers that qualify for Stamp Duty Reserve Tax RELIEF 
