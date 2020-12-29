@@ -52,7 +52,7 @@ taxlogBodySpec(at(G,M_),delimiter-[SpecG,module(M)]) :- nonvar(M_), nonvar(G), !
     (xref_defined(M,G,_)-> SpecG=goal(imported(M),G) ; SpecG=goal(undefined,G)).
  taxlogBodySpec(G,goal(Class,G)) :-  once(swish_highlight:current_editor(UUID, _TB, source, _Lock, _)), 
      taxlogGoalSpec(G, UUID, Class), !.
-taxlogBodySpec(G,classify).
+taxlogBodySpec(_G,classify).
 
 %TODO: meta predicates - forall, setof etc
 taxlogGoalSpec(G, UUID, Class) :-

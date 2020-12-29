@@ -18,8 +18,6 @@ srt(Individual) :-
 %   datetimes in iso_8601 format
 %   external predicates MUST be aware of the local main event time, "now"
 
-:- discontiguous if/2.
-
 :- multifile user:function/2.
 function(individual(), I) if  % local function for convenience
     theIndividual(I).

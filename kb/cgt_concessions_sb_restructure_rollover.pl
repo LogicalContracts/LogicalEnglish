@@ -21,8 +21,6 @@ rollover_applies(ID,Asset,When,TransferorTFN,TransfereesTFNList) :-
 %   datetimes in iso_8601 format
 %   external predicates MUST be aware of the local main event time, "now"
 
-:- discontiguous if/2.
-
 
 % example(Title,Sequence).  Sequence is a list of state(FactChanges,TrueConclusion)
 % An example ilustrates and tests:

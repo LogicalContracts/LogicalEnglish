@@ -22,8 +22,6 @@ basicConditions(AssetID, Date, Type, OwnerTFN) :-
 %   datetimes in iso_8601 format
 %   external predicates MUST be aware of the cgt event time, "now"
 
-:- discontiguous if/2.
-
 % repackage as examples/2 facts??:
 %%%% EXAMPLE DATA
 

@@ -1,6 +1,6 @@
 :- module(_,[
     call_at/2, kp_dir/1,
-    discover_kps_in_dir/1, discover_kps_in_dir/0, discover_kps_gitty/0, 
+    discover_kps_in_dir/1, discover_kps_in_dir/0, discover_kps_gitty/0, setup_kp_modules/0,
     load_gitty_files/1, load_gitty_files/0, save_gitty_files/1, delete_gitty_file/1, 
     xref_all/0, xref_clean/0, kp_predicates/0,
     edit_kp/1]).
@@ -82,6 +82,7 @@ load_named_file(File,Module,true) :- !,
 load_named_file(File,Module,false) :- 
     load_files(File,[module(Module)]).
 
+setup_kp_modules :- forall(kp(M), M:discontiguous((if)/2) ).
 
 %! call_at(:Goal,++KnowledgePageName) is nondet.
 %
@@ -111,6 +112,7 @@ save_gitty_files(ToDirectory) :-
 %
 %  Updates or creates (in gitty storage) all Prolog files from the given file system directory; sub-directories are ignored.
 %  Does not delete the other (pre-existing) gitty files
+% Example: load_gitty_files('/Users/mc/git/TaxKB/kb').
 load_gitty_files(From) :- 
     web_storage:storage_dir(Store),
     forall(directory_member(From,Path,[extensions([pl])]),(

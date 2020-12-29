@@ -43,7 +43,7 @@ swish_config:config(include_alias,	example).
 :- use_module('../syntax.pl').
 :- use_module('../kp_loader.pl').
 
-:- initialization( (discover_kps_gitty,xref_all, writeln("Ready!"))).
+:- initialization( (discover_kps_gitty, setup_kp_modules, xref_all, writeln("Ready!"))).
 
 sandbox:safe_primitive(reasoner:query(_,_)).
 
