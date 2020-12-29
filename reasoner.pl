@@ -1,9 +1,6 @@
-:- module(_ThisFileName,[query/2,kbDir/1]).
+:- module(_ThisFileName,[query/2]).
 
 % for now assumes KB in user module
-
-:- dynamic kbDir/1.
-:- prolog_load_context(directory, D), retractall(kbDir(_)), atomic_list_concat([D,'/kb'], KD), assert(kbDir(KD)).
 
 % i(+Goal,-Unknowns,-Why) 
 %  explanation is a proof tree: w(nodeLiteral,childrenNodes); [] denotes.. self-evident; no negative explanations yet
@@ -30,22 +27,40 @@ i(then(if(C),else(T,Else)), U, E) :- !,
     (   i(C,UC,EC), i(T,UT,ET), append(UC,UT,U), append(EC,ET,E) ; 
         i( \+ C,UC,EC), i(Else,UE,EE), append(UC,UE,U), append(EC,EE,E) ).
 i(then(if(C),Then),U,E) :- !, i(then(if(C),else(Then,true)),U,E).
+i(@(G,M),U,E) :- !, i(at(G,M),U,E).
 i(At,U,E) :- At=at(_,_), !, 
     (unknown(At) -> U=[At],E=[unknown(At)] ; evaluate_at(At), U=[],E=[At]).
 i(G,U,[]) :- system_predicate(G), !, 
     catch(G, error(instantiation_error,_Cx), U=[at(instantiation_error(G),system)]), 
     (var(U)->U=[];true).
 i(G,U,E) :- 
-    kbModule(M), 
+    kbModule(M), % **** generalize...
     (M:irrelevant_explanation(G) -> E=[] ; E= [w(G,Children)]),
     M:clause(G,B), i(B,U,Children). 
 
+:- multifile prolog:meta_goal/2. % for xref
+prolog:meta_goal(at(G,M),[M_:G]) :- nonvar(M), atom_string(M_,M).
+prolog:meta_goal(@(G,M),L) :- prolog:meta_goal(at(G,M),L).
+prolog:meta_goal(and(A,B),[A,B]).
+prolog:meta_goal(or(A,B),[A,B]).
+prolog:meta_goal(must(A,B),[A,B]).
+prolog:meta_goal(not(A),[A]).
+prolog:meta_goal(then(if(C),else(T,Else)),[C,T,Else]).
+prolog:meta_goal(then(if(C),Then),[C,Then]) :- Then\=else(_,_).
+%prolog:meta_goal(if(_H,B),[B]). % weird; somehow term_expansion is not enough for the editor to build its longclick destinations
+
+
+
+
 system_predicate(G) :- predicate_property(G,built_in).
-system_predicate(G) :- kbDir(D), predicate_property(G,file(F)), \+ sub_atom(F,_,_,_,D).
+%system_predicate(G) :- kbDir(D), predicate_property(G,file(F)), \+ sub_atom(F,_,_,_,D).
 
 % toy implementation based on plain undefinedness; the real one will depend on specific arguments for each KS
 % unknown(AtGoal) whether the knowledge source is currently unable to provide a result 
 unknown(at(G,KS)) :- kbModule(M), functor(G,F,N),functor(GG,F,N), \+ catch(M:at(GG,KS),_,fail).
+
+%TODO: (above and below) G can be a negation! should we simply abolish at/2 and use @/2 with a lower priority, thus keeping compatibility with LPS?
+%TODO: what about on/2 ? at(on(G,T),M) or on(at(G,M),T) ...??
 
 % assuming not unknown(...), ask the knowledge source for its result
 evaluate_at(at(G,KS)) :- kbModule(M), M:at(G,KS).

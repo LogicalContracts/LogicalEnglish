@@ -18,7 +18,7 @@ r_d_relief(ProjectID,ExtraDeduction,TaxCredit) :-
 %   datetimes in iso_8601 format
 %   external predicates MUST be aware of the local main event time, "now"
 
-:- discontiguous (if)/2.
+:- discontiguous if/2.
 
 % project_expense(TaxPayer,ProjectID,Cost,When)
 % project_team(ProjectID,MemberList)

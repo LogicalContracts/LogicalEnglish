@@ -1,6 +1,7 @@
 :- module(_,[
-    call_at/2, 
-    discover_kps_in_dir/1, discover_kps_gitty/0, load_gitty_files/1, save_gitty_files/1, delete_gitty_file/1, 
+    call_at/2, kp_dir/1,
+    discover_kps_in_dir/1, discover_kps_in_dir/0, discover_kps_gitty/0, 
+    load_gitty_files/1, load_gitty_files/0, save_gitty_files/1, delete_gitty_file/1, 
     xref_all/0, xref_clean/0, kp_predicates/0,
     edit_kp/1]).
 
@@ -11,6 +12,10 @@
 :- use_module(swish(lib/gitty)).
 
 :- use_module(syntax).
+
+:- dynamic kp_dir/1.
+:- prolog_load_context(directory, D), retractall(kp_dir(_)), atomic_list_concat([D,'/kb'], KD), assert(kp_dir(KD)).
+
 
 /** <module> Dynamic module loader.
 
@@ -47,6 +52,9 @@ discover_kps_in_dir(Dir) :-
         open(File,read,In),
         process_file(In,File,false)
     )).
+
+discover_kps_in_dir :-
+    kp_dir(D), discover_kps_in_dir(D).
 
 process_file(In,File,InGitty) :-
     must_be(boolean,InGitty),
@@ -117,6 +125,9 @@ load_gitty_files(From) :-
             ))
         )).
 
+load_gitty_files :-
+    kp_dir(D), load_gitty_files(D).
+
 %! delete_gitty_file(+GittyFile) is det
 %
 % makes the file empty, NOT a proper delete
@@ -154,15 +165,6 @@ prolog:xref_source_time(URL, Modified) :-
     (InGitty==true -> (storage_file(File,_,Meta), Modified=Meta.time) ;
         time_file(File,Modified)).
 
-%TODO: put this nearer the reasoner
-prolog:meta_goal(at(G,M),[M_:G]) :- nonvar(M), atom_string(M_,M).
-prolog:meta_goal(and(A,B),[A,B]).
-prolog:meta_goal(or(A,B),[A,B]).
-prolog:meta_goal(must(A,B),[A,B]).
-prolog:meta_goal(not(A),[A]).
-prolog:meta_goal(then(if(C),else(T,Else)),[C,T,Else]).
-prolog:meta_goal(then(if(C),Then),[C,Then]) :- Then\=else(_,_).
-%prolog:meta_goal(if(_H,B),[B]). % weird; somehow term_expansion is not enough for the editor to build its longclick destinations
 
 %! xref_all is det
 %

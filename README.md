@@ -63,7 +63,7 @@ The URL must be relative, and will be concatenated to the myURLBase above. Final
 
 	someRuleHead if ... and P at "http://someURL" and ...
 
-This allows reference of "external knowledge", e.g. predicates defined in other knowledge pages or external databases. The term *knowledge page* means: the knowledge base fragment encoding the knowledge in web page ``KP``. The truth of ``P`` will therefore be evaluated in KP. 
+This allows reference of "external knowledge", e.g. predicates defined in other knowledge pages or external databases. The term *knowledge page* means: the knowledge base fragment encoding the knowledge in web page ``KP``. The truth of ``P`` will therefore be evaluated in KP. This is similar to Prolog's call ```KP:P```, except that ```at``` abstracts from file names and uses a specific module loading mechanism.
 
 Each predicate P may be:
 
@@ -98,3 +98,10 @@ These example facts are also test cases: all assertions must be true.
 This is meant mostly as a convenience/readability feature, e.g. being able to write ```is_exempt( project() )``` instead of ```theProject(Project) and is_exempt(Project)```.
 
 **TODO**: document contexts where functions can be used
+
+Some predicates are so hard to specify that they may actually require a question to a human:
+
+	question(QuestionTerm)		a yes/no question
+	question(QuestionTerm,Answer)	elicit an answer from the user
+
+QuestionTerm can be a string, or a ```FormatString-ArgumentsList``` term, to allow for binding the question string with values, using the [format/2](https://www.swi-prolog.org/pldoc/doc_for?object=format/2) syntax.

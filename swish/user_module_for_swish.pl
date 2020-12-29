@@ -39,9 +39,11 @@ swish_config:config(include_alias,	example).
 :- prolog_load_context(directory, D), atomic_list_concat([D,/,passwd],F), set_setting(swish_http_authenticate:password_file,F), format("Password file at ~a~n",[F]).
 :- use_module(swish(lib/authenticate)).
 
-
 :- use_module('../reasoner.pl'). 
 :- use_module('../syntax.pl').
+:- use_module('../kp_loader.pl').
+
+:- initialization( (discover_kps_gitty,xref_all, writeln("Ready!"))).
 
 sandbox:safe_primitive(reasoner:query(_,_)).
 
@@ -52,7 +54,7 @@ sandbox:safe_primitive(reasoner:query(_,_)).
 :- use_rendering(graphviz).
 
 :- multifile user:file_search_path/2.
-user:file_search_path(example, D) :- kbDir(D).
+user:file_search_path(example, D) :- kp_dir(D).
 
 % PATCH to swish to avoid duplicate example and help menu and profile entries on Linux
 % list_without_duplicates(+L,-NL) 
@@ -93,5 +95,11 @@ swish_help:help_files(AllExamples) :-
 		maplist(swish_examples:index_json(HREF), ExDirs, SWISHExamples)
 )).
 
+:- multifile prolog_colour:term_colours/2, prolog_colour:goal_classification/2 /*??, prolog_colour:goal_colours/2*/.
+% Wire our colouring logic into SWI's:
+prolog_colour:term_colours(T,C) :- taxlog2prolog(T,C,_).
+
+%prolog_colour:goal_classification(Goal, Class) :- syntax:goal_classification(Goal, Class).
+
 % This at the end, as it activates the term expansion (no harm done otherwise, just some performance..):
-:- use_module('../syntax.pl'). 
+:- use_module('../syntax.pl').

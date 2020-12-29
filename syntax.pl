@@ -9,25 +9,56 @@
     op(900,fx,user:not), % same as \+
     op(700,xfx,user:in),
     op(600,xfx,user:on),
-    op(995,xfx,user:at), % note vs. negation...compatible with LPS
-    and/2
+    op(995,xfx,user:at), % note vs. negation...compatible with LPS fluents
+    op(995,xfx,user:'@'), % note vs. negation...
+    taxlog2prolog/3
     ]).
-% For later definition in SWISH backend:
 
-% For quick and dirty SWISH experimentation:
-% :- op(1200,xfx,(then)).
-% :- op(1200,xfx,(must)).
-% :- op(1185,fx,(if)).
-% :- op(1190,xfx,(if)).
-% :- op(1100,xfy,else). 
-% :- op(835,xfy,and).
-% :- op(840,xfy,or). 
-% :- op(820,fx,not).
-% :- op(700,xfx,in),
-% :- op(600,xfx,on). % explicit datetime
-% :- op(600,xfy,at). % external predicate, meaning defined in URL
+:- use_module(library(prolog_xref)).
 
-and(_,_) :- throw(use_the_interpreter). % to avoid "undefined predicate" messages in editor
-%TODO: add other connectives
+user:question(_,_) :- throw(use_the_interpreter). % to avoid "undefined predicate" messages in editor
+user:question(_) :- throw(use_the_interpreter).
 
-user:term_expansion(if(H,B),(H:-B)).
+taxlog2prolog(if(H,B),delimiter-[head(Class, H),SpecB],(H:-B)) :- swish_highlight:current_editor(UUID, _TB, source, _Lock, _), !,
+    xref_module(UUID,Me),
+    % mylog(H/UUID/Me),
+    (xref_called(Other,Me:H, _) -> (Class=exported, mylog(exported_to(Other))) ;
+        xref_called(UUID, H, _By) -> (Class=head, mylog(called_locally)) ;
+        Class=unreferenced),
+    %Class=unreferenced,
+    %mylog(class/Class),
+    taxlogBodySpec(B,SpecB).
+    %mylog(B/specB/SpecB).
+taxlog2prolog(if(H,B),null,(H:-B)).
+% not working: taxlog2prolog(irrelevant_explanation(G),head,irrelevant_explanation(G)).
+
+% this must be in sync with the interpreter i(...) and prolog:meta_goal(...) hooks
+% assumes a SWISH current_editor(...) exists
+taxlogBodySpec(V,classify) :- var(V), !.
+taxlogBodySpec(and(A,B),delimiter-[SpecA,SpecB]) :- !, 
+    taxlogBodySpec(A,SpecA), taxlogBodySpec(B,SpecB).
+taxlogBodySpec(or(A,B),delimiter-[SpecA,SpecB]) :- !, 
+    taxlogBodySpec(A,SpecA), taxlogBodySpec(B,SpecB).
+taxlogBodySpec(must(if(I),M),delimiter-[delimiter-SpecI,SpecM]) :- !, 
+    taxlogBodySpec(I,SpecI), taxlogBodySpec(M,SpecM).
+taxlogBodySpec(not(G),delimiter-[Spec]) :- !, 
+    taxlogBodySpec(G,Spec).
+taxlogBodySpec(then(if(C),else(T,Else)),delimiter-[delimiter-[SpecC],delimiter-[SpecT,SpecE]]) :- !, 
+    taxlogBodySpec(C,SpecC), taxlogBodySpec(T,SpecT), taxlogBodySpec(Else,SpecE).
+taxlogBodySpec(then(if(C),Then),delimiter-[delimiter-[SpecC],SpecT]) :- !, 
+    taxlogBodySpec(C,SpecC), taxlogBodySpec(Then,SpecT).
+taxlogBodySpec(at(G,M_),delimiter-[SpecG,module(M)]) :- nonvar(M_), nonvar(G), !, % assuming atomic goals
+    atom_string(M,M_),
+    (xref_defined(M,G,_)-> SpecG=goal(imported(M),G) ; SpecG=goal(undefined,G)).
+ taxlogBodySpec(G,goal(Class,G)) :-  once(swish_highlight:current_editor(UUID, _TB, source, _Lock, _)), 
+     taxlogGoalSpec(G, UUID, Class), !.
+taxlogBodySpec(G,classify).
+
+%TODO: meta predicates - forall, setof etc
+taxlogGoalSpec(G, UUID, Class) :-
+    (xref_defined(UUID, G, Class) -> true ; 
+        %prolog_colour:built_in_predicate(G)->Class=built_in ;
+        prolog_colour:goal_classification(G, Class) -> true;
+        Class=undefined).
+
+user:term_expansion(T,NT) :- taxlog2prolog(T,_,NT).

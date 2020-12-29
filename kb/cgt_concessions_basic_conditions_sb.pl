@@ -9,7 +9,7 @@
 
 mainGoal(basicConditions(_AssetID, _Date, _Type, _OwnerTFN), "Determine if a cgt_event fullfills the basic conditions for CGT concessions").
 
-% hacky front end to setup local data in oiur server environment
+% hacky front end to setup local data in our server environment
 % this may eventually be generated:
 :- thread_local cgt_event/4.
 basicConditions(AssetID, Date, Type, OwnerTFN) :-
@@ -22,7 +22,7 @@ basicConditions(AssetID, Date, Type, OwnerTFN) :-
 %   datetimes in iso_8601 format
 %   external predicates MUST be aware of the cgt event time, "now"
 
-:- discontiguous (if)/2.
+:- discontiguous if/2.
 
 % repackage as examples/2 facts??:
 %%%% EXAMPLE DATA

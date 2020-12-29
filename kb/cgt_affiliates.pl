@@ -15,7 +15,7 @@ mainGoal(affiliate(_Entity,_Affiliate),"Determine if a given entity is affiliate
 %   datetimes in iso_8601 format
 %   external predicates MUST be aware of the local main event time, "now"
 
-:- discontiguous (if)/2.
+:- discontiguous if/2.
 
 % note: referred by cgt_concessions_basic_conditions_sb.pl:
 affiliate(Entity,Affiliate) on Date if 

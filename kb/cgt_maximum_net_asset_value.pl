@@ -15,7 +15,7 @@ mainGoal(satisfies_maximum_net_asset_value_test(_TFN), "Determine if a given ent
 %   datetimes in iso_8601 format
 %   external predicates MUST be aware of the local main event time, "now"
 
-:- discontiguous (if)/2.
+:- discontiguous if/2.
 
 %TODO: flesh out the examples
 example("Colin",[state([facts], (relevant_asset(xxx), whatever))]).

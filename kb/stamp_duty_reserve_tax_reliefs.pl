@@ -19,7 +19,7 @@ exempt_transfer(FromTaxPayer,ToTaxPayer,SecurityIdentifier,When) :-
 %   datetimes in iso_8601 format
 %   external predicates MUST be aware of the local main event time, "now"
 
-:- discontiguous (if)/2.
+:- discontiguous if/2.
 
 % shares_transfer(FromTaxPayer,ToTaxPayer,Identifier,When)
 shares_transfer(From,To) if  % for mere convenience below
