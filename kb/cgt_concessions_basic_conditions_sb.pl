@@ -88,7 +88,7 @@ step2 if
     theAsset(A) and active_asset_test(A). 
 
 step3 if
-    theAsset(A),
+    theAsset(A) and
     (if (is_share_in_company(A,_Company) or is_interest_in_trust(A,_Trust)) must additional_conditions(A)). 
 
 step4 if

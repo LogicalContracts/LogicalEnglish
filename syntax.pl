@@ -22,8 +22,8 @@ user:question(_) :- throw(use_the_interpreter).
 taxlog2prolog(if(H,B),delimiter-[head(Class, H),SpecB],(H:-B)) :- swish_highlight:current_editor(UUID, _TB, source, _Lock, _), !,
     xref_module(UUID,Me),
     % mylog(H/UUID/Me),
-    (xref_called(Other,Me:H, _) -> (Class=exported, mylog(exported_to(Other))) ;
-        xref_called(UUID, H, _By) -> (Class=head, mylog(called_locally)) ;
+    (xref_called(Other,Me:H, _) -> (Class=exported) ;
+        xref_called(UUID, H, _By) -> (Class=head) ;
         Class=unreferenced),
     %Class=unreferenced,
     %mylog(class/Class),
@@ -47,10 +47,11 @@ taxlogBodySpec(then(if(C),else(T,Else)),delimiter-[delimiter-[SpecC],delimiter-[
     taxlogBodySpec(C,SpecC), taxlogBodySpec(T,SpecT), taxlogBodySpec(Else,SpecE).
 taxlogBodySpec(then(if(C),Then),delimiter-[delimiter-[SpecC],SpecT]) :- !, 
     taxlogBodySpec(C,SpecC), taxlogBodySpec(Then,SpecT).
-taxlogBodySpec(at(G,M_),delimiter-[SpecG,module(M)]) :- nonvar(M_), nonvar(G), !, % assuming atomic goals
+taxlogBodySpec(at(G,M_),delimiter-[SpecG,classify]) :- nonvar(M_), nonvar(G), !, % assuming atomic goals
     atom_string(M,M_),
-    (xref_defined(M,G,_)-> SpecG=goal(imported(M),G) ; SpecG=goal(undefined,G)).
- taxlogBodySpec(G,goal(Class,G)) :-  once(swish_highlight:current_editor(UUID, _TB, source, _Lock, _)), 
+    % check that the source has already been xrefed, otherwise xref will try to load it and cause a "iri_scheme" error:
+    ((xref_current_source(M), xref_defined(M,G,_))-> SpecG=goal(imported(M),G) ; SpecG=goal(undefined,G)).
+taxlogBodySpec(G,goal(Class,G)) :-  once(swish_highlight:current_editor(UUID, _TB, source, _Lock, _)), 
      taxlogGoalSpec(G, UUID, Class), !.
 taxlogBodySpec(_G,classify).
 
