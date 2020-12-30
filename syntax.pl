@@ -53,6 +53,12 @@ taxlogBodySpec(then(if(C),else(T,Else)),delimiter-[delimiter-[SpecC],delimiter-[
     taxlogBodySpec(C,SpecC), taxlogBodySpec(T,SpecT), taxlogBodySpec(Else,SpecE).
 taxlogBodySpec(then(if(C),Then),delimiter-[delimiter-[SpecC],SpecT]) :- !, 
     taxlogBodySpec(C,SpecC), taxlogBodySpec(Then,SpecT).
+taxlogBodySpec(forall(C,Must),control-[SpecC,SpecMust]) :- !, 
+    taxlogBodySpec(C,SpecC), taxlogBodySpec(Must,SpecMust).
+taxlogBodySpec(setof(_X,G,_L),control-[classify,SpecG,classify]) :- !, 
+    taxlogBodySpec(G,SpecG). %TODO: handle vars^G
+taxlogBodySpec(aggregate(_X,G,_L),control-[classify,SpecG,classify]) :- !, 
+    taxlogBodySpec(G,SpecG). %TODO: handle vars^G
 taxlogBodySpec(at(G,M_),delimiter-[SpecG,classify]) :- nonvar(M_), nonvar(G), !, % assuming atomic goals
     atom_string(M,M_),
     % check that the source has already been xrefed, otherwise xref will try to load it and cause a "iri_scheme" error:

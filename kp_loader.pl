@@ -253,9 +253,28 @@ sandbox:safe_primitive(kp_loader:knowledgePagesGraph(_)).
 :- http_handler(codemirror(xref),   token_references,        []).
 token_references(Request) :-
     %http_read_json_dict(Request, Query, [value_string_as(atom)]),
-    http_parameters(Request, [arity(Arity,[]),text(Functor,[]),type(Type,[]),file(File,[default('')])]),
-    mylog(gotQuery/Type/Functor/Arity/File),
+    http_parameters(Request, [arity(Arity,[]),text(Text,[]),type(Type,[]),file(Module,[optional(true)]),uuid(UUID,[optional(true)])]),
+    % UUID is the SWISH internal module for our current editor's text
+    mylog(gotQuery/Type/Text/Arity/Module/UUID),
     % asserta(my_request(Query)), % for debugging
-    %(entry_point(Query,Solution)->true;Solution=_{error:"Goal failed"}),
-    Solution = _{hello: "Good Afternoon!", functor:Functor, arity:Arity, module:File},
-    reply_json_dict(Solution).
+    (nonvar(UUID) -> (xref_module(UUID,MyModule), Ignorable=[UUID,MyModule]); Ignorable=[]),
+    catch(term_string(Term,Text),_,fail), 
+    functor(Term,Functor,_),
+    (sub_atom(Type, 0, _, _, head) -> ( % a clause head
+        must_be(var,Module),
+        findall( _{title:Title,line:Line,file:File,target:Functor}, ( % regex built on the Javascript side from target
+            xref_called(OtherModule,_Mine:Term,By,_Cond,Line), functor(By,F,N), format(string(Title),"A call to ~a from ~w",[Text,F/N]),
+            \+ member(OtherModule,Ignorable),
+            kp_location(OtherModule,File,_InGitty) 
+            ),Locations)
+        ) ; 
+        sub_atom(Type, 0, _, _, goal) -> ( % a goal in a clause body
+            findall( _{title:Title,line:Line,file:File,target:Functor}, ( 
+            xref_defined(Module,Term,How), arg(1,How,Line), format(string(Title),"A definition for ~a",[Text]),
+            kp_location(Module,File,_InGitty) 
+            ),Locations)
+        ) ; 
+        throw(weird_token_type(Type))
+    ),
+    %Solution = _{hello: "Good Afternoon!", functor:Functor, arity:Arity, module:File},
+    reply_json_dict(Locations).
