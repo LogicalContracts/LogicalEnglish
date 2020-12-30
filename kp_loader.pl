@@ -243,3 +243,19 @@ knowledgePagesGraph(dot(digraph([rankdir='LR'|Graph]))) :-
 
 :- multifile sandbox:safe_primitive/1.
 sandbox:safe_primitive(kp_loader:knowledgePagesGraph(_)).
+
+%%%% assist editor navigation; cf. swish/web/js/codemirror/mode/prolog/prolog_server.js
+
+:- use_module(library(http/http_json)).
+:- use_module(library(http/http_dispatch)).
+:- use_module(library(http/http_parameters)).
+
+:- http_handler(codemirror(xref),   token_references,        []).
+token_references(Request) :-
+    %http_read_json_dict(Request, Query, [value_string_as(atom)]),
+    http_parameters(Request, [arity(Arity,[]),text(Functor,[]),type(Type,[]),file(File,[default('')])]),
+    mylog(gotQuery/Type/Functor/Arity/File),
+    % asserta(my_request(Query)), % for debugging
+    %(entry_point(Query,Solution)->true;Solution=_{error:"Goal failed"}),
+    Solution = _{hello: "Good Afternoon!", functor:Functor, arity:Arity, module:File},
+    reply_json_dict(Solution).

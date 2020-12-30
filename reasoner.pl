@@ -1,4 +1,9 @@
-:- module(_ThisFileName,[query/2]).
+:- module(_ThisFileName,[query/2,
+    after/2,immediately_before/2,same_date/2]).
+
+/** <module> Tax-KB reasoner and utils
+@author Miguel Calejo
+*/
 
 % for now assumes KB in user module
 
@@ -102,8 +107,13 @@ nodeAttributes(at(G,K), [color=green,label=S]) :- format(string(S),"~w",G).
 %%%% Common background knowledge, probably to go elsewhere:
 
 %Time predicates; they assume times are atoms in iso_8601 format
+
+%!  after(+Laterrr,+Earlier) is det.
+%   Arguments must be atoms in iso_8601 format
+
 after(Later,Earlier) :- 
     parse_time(Later,L), parse_time(Earlier,E), L>E.
+
 % tests/generates previous day:
 immediately_before(Earlier,Later) :- 
     parse_time(Later,L), E is L-24*3600, 

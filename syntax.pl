@@ -22,7 +22,7 @@ user:question(_) :- throw(use_the_interpreter).
 taxlog2prolog(if(H,B),delimiter-[head(Class, H),SpecB],(H:-B)) :- swish_highlight:current_editor(UUID, _TB, source, _Lock, _), !,
     xref_module(UUID,Me),
     % mylog(H/UUID/Me),
-    (xref_called(Other,Me:H, _) -> (Class=exported) ;
+    (xref_called(_Other,Me:H, _) -> (Class=exported) ;
         xref_called(UUID, H, _By) -> (Class=head) ;
         Class=unreferenced),
     %Class=unreferenced,
@@ -30,14 +30,20 @@ taxlog2prolog(if(H,B),delimiter-[head(Class, H),SpecB],(H:-B)) :- swish_highligh
     taxlogBodySpec(B,SpecB).
     %mylog(B/specB/SpecB).
 taxlog2prolog(if(H,B),null,(H:-B)).
-% not working: taxlog2prolog(irrelevant_explanation(G),head,irrelevant_explanation(G)).
+taxlog2prolog(mainGoal(G,Description),delimiter-[Spec,classify],mainGoal(G,Description)) :- taxlogBodySpec(G,Spec).
+taxlog2prolog(example(T,Sequence),delimiter-[classify,classify],example(T,Sequence)).
+taxlog2prolog(irrelevant_explanation(G),delimiter-[Spec],irrelevant_explanation(G)) :- taxlogBodySpec(G,Spec).
 
 % this must be in sync with the interpreter i(...) and prolog:meta_goal(...) hooks
 % assumes a SWISH current_editor(...) exists
 taxlogBodySpec(V,classify) :- var(V), !.
 taxlogBodySpec(and(A,B),delimiter-[SpecA,SpecB]) :- !, 
     taxlogBodySpec(A,SpecA), taxlogBodySpec(B,SpecB).
+taxlogBodySpec((A,B),delimiter-[SpecA,SpecB]) :- !, 
+    taxlogBodySpec(A,SpecA), taxlogBodySpec(B,SpecB).
 taxlogBodySpec(or(A,B),delimiter-[SpecA,SpecB]) :- !, 
+    taxlogBodySpec(A,SpecA), taxlogBodySpec(B,SpecB).
+taxlogBodySpec((A;B),delimiter-[SpecA,SpecB]) :- !, 
     taxlogBodySpec(A,SpecA), taxlogBodySpec(B,SpecB).
 taxlogBodySpec(must(if(I),M),delimiter-[delimiter-SpecI,SpecM]) :- !, 
     taxlogBodySpec(I,SpecI), taxlogBodySpec(M,SpecM).
