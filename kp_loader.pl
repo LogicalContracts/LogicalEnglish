@@ -255,7 +255,7 @@ token_references(Request) :-
     %http_read_json_dict(Request, Query, [value_string_as(atom)]),
     http_parameters(Request, [arity(Arity,[]),text(Text,[]),type(Type,[]),file(Module,[optional(true)]),uuid(UUID,[optional(true)])]),
     % UUID is the SWISH internal module for our current editor's text
-    mylog(gotQuery/Type/Text/Arity/Module/UUID),
+    % mylog(gotQuery/Type/Text/Arity/Module/UUID),
     % asserta(my_request(Query)), % for debugging
     (nonvar(UUID) -> (xref_module(UUID,MyModule), Ignorable=[UUID,MyModule]); Ignorable=[]),
     catch(term_string(Term,Text),_,fail), 
@@ -263,7 +263,7 @@ token_references(Request) :-
     (sub_atom(Type, 0, _, _, head) -> ( % a clause head
         must_be(var,Module),
         findall( _{title:Title,line:Line,file:File,target:Functor}, ( % regex built on the Javascript side from target
-            xref_called(OtherModule,_Mine:Term,By,_Cond,Line), functor(By,F,N), format(string(Title),"A call to ~a from ~w",[Text,F/N]),
+            xref_called(OtherModule,_Mine:Term,By,_Cond,Line), functor(By,F,N), format(string(Title),"A call from ~w",[F/N]),
             \+ member(OtherModule,Ignorable),
             kp_location(OtherModule,File,_InGitty) 
             ),Locations)

@@ -28,9 +28,11 @@ _Some suggestions for simplification and more info in first and second Chris ema
 	- Bob's GoogleDoc: <https://docs.google.com/document/d/1nzoGuzPKI375jxtxT38jCEYwuhuZvjSBSHmvxusW0Lg/edit?ts=5fc92d43#heading=h.pzozuu8bp8r0>
 - <https://www.gov.uk/guidance/corporation-tax-research-and-development-rd-relief>
 
-## The Tax-KB language
+## TaxLog, the Tax-KB language
 
-This is the language used to encode knowledge gleaned from regulatory textual sources. The text therein comprises 3 types of fragments: 
+"**TaxLog**" is the Prolog-based language used to encode knowledge gleaned from regulatory textual sources. 
+
+The text in regulatory sources comprises 3 types of fragments: 
 
 - comments (to be effectively ignored); 
 - rule ingredients (the main thing)

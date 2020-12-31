@@ -1,5 +1,5 @@
 :- module(_ThisFileName,[query/2,
-    after/2,immediately_before/2,same_date/2]).
+    after/2,immediately_before/2,same_date/2,in/2]).
 
 /** <module> Tax-KB reasoner and utils
 @author Miguel Calejo
