@@ -77,12 +77,23 @@ process_terms(In,Term) :- % actually gets only the first term, where the module 
         %Term=at(Name), (ground(Name)->true; print_message(warning,'ignored'(at(Name))), fail) 
     ).
 
+declare_our_metas(Module) :-
+    Module:meta_predicate(mainGoal(0,+)),
+    Module:meta_predicate(on(0,?)),
+    Module:meta_predicate(because(0,-)).
+
+% load_named_file(+File+Module,+InGittyStorage)
 load_named_file(File,Module,true) :- !,
     use_gitty_file(Module:File,[module(Module)]).
 load_named_file(File,Module,false) :- 
     load_files(File,[module(Module)]).
 
-setup_kp_modules :- forall(kp(M), M:discontiguous((if)/2) ).
+setup_kp_modules :- forall(kp(M), (
+    M:discontiguous((if)/2),
+    M:discontiguous((on)/2),
+    M:discontiguous((because)/2),
+    declare_our_metas(M)
+    )).
 
 %! call_at(:Goal,++KnowledgePageName) is nondet.
 %
@@ -117,13 +128,14 @@ load_gitty_files(From) :-
     web_storage:storage_dir(Store),
     forall(directory_member(From,Path,[extensions([pl])]),(
         read_file_to_string(Path,Data,[]),
+        time_file(Path,Modified),
         directory_file_path(_,File,Path),
         (gitty_file(Store, File, OldHead) -> (
             storage_meta_data(File, Meta), 
-            NewMeta = Meta.put([previous=OldHead, modify=[any, login, owner], (public)=true]),
+            NewMeta = Meta.put([previous=OldHead, modify=[any, login, owner], (public)=true, time=Modified]),
             gitty_update(Store, File, Data, NewMeta, _CommitRet)
             ) ; (
-            gitty_create(Store, File, Data, _{load_gitty_files:From, modify:[any, login, owner], public:true }, _CommitRet)
+            gitty_create(Store, File, Data, _{load_gitty_files:From, modify:[any, login, owner], public:true, time:Modified }, _CommitRet)
             ))
         )).
 
@@ -186,7 +198,7 @@ reactToSaved(updated(GittyFile,_Commit)) :- % xref
     kp_location(URL,GittyFile), xref_source(URL).
 
 
-kp_predicates :- 
+kp_predicates :- %TODO: ignore subtrees of because/2
     forall(kp(KP),(
         format("KP: ~w~n",[KP]),
         format("  Instance data:~n"),
@@ -253,7 +265,7 @@ sandbox:safe_primitive(kp_loader:knowledgePagesGraph(_)).
 :- http_handler(codemirror(xref),   token_references,        []).
 token_references(Request) :-
     %http_read_json_dict(Request, Query, [value_string_as(atom)]),
-    http_parameters(Request, [arity(Arity,[]),text(Text,[]),type(Type,[]),file(Module,[optional(true)]),uuid(UUID,[optional(true)])]),
+    http_parameters(Request, [arity(_Arity,[]),text(Text,[]),type(Type,[]),file(Module,[optional(true)]),uuid(UUID,[optional(true)])]),
     % UUID is the SWISH internal module for our current editor's text
     % mylog(gotQuery/Type/Text/Arity/Module/UUID),
     % asserta(my_request(Query)), % for debugging

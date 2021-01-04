@@ -44,7 +44,7 @@ The term *knowledge page* denotes a Prolog module that encodes the knowledge in 
 
 This means that the knowldege page was constructed from the text at that URL. It must be the very first Prolog term in the file.
 
-The logic language used is pure PROLOG (Horn clauses) but sugared with some additional operators in the clause bodies, towards readability and expressiveness:
+The logic language used is pure PROLOG (Horn clauses plus a few connectives, excluding cuts) but sugared with some additional operators in the clause bodies, towards readability and expressiveness:
 
   * ``if``, ``and``, ``or``, as alternatives to :- , ;
   * ``if...must/then..``  and ``if...then...else...``
@@ -65,7 +65,7 @@ The URL must be relative, and will be concatenated to the myURLBase above. Final
 
 	someRuleHead if ... and P at "http://someURL" and ...
 
-This allows reference of "external knowledge", e.g. predicates defined in other knowledge pages or external databases. The term *knowledge page* means: the knowledge base fragment encoding the knowledge in web page ``KP``. The truth of ``P`` will therefore be evaluated in KP. This is similar to Prolog's call ```KP:P```, except that ```at``` abstracts from file names and uses a specific module loading mechanism.
+This allows reference of "external knowledge", e.g. predicates defined in other knowledge pages or external databases. The term *knowledge page* means: the knowledge base fragment encoding the knowledge in web page ``KP``. The truth of ``P`` will therefore be evaluated in KP. This is similar to Prolog's call ```KP:P```, except that ```at``` abstracts from file names and uses a specific (and SWISH-aware) module loading mechanism.
 
 Each predicate P may be:
 
@@ -107,3 +107,14 @@ Some predicates are so hard to specify that they may actually require a question
 	question(QuestionTerm,Answer)	elicit an answer from the user
 
 QuestionTerm can be a string, or a ```FormatString-ArgumentsList``` term, to allow for binding the question string with values, using the [format/2](https://www.swi-prolog.org/pldoc/doc_for?object=format/2) syntax.
+
+### Interfacing to external systems
+
+Access to data in external DBs or other services is done via (unrestricted, possibly with cuts and all) Prolog code. To have a predicate called directly (instead of it being interpreted by the Taxlog interpreter), it needs to be declared with a single ```Predicate on Time because Explanation``` clause "stub", allowing the external code to consider time and to contribute their own bits of explanations; for example:
+
+	is_sme(E) if is_small_business(E).
+	
+	is_small_business(E) on T because SomeExplanation :-
+		call_my_DB(E,T,SomeExplanation).
+
+The ```is_sme``` Taxlog predicate (which is interpreted) calls the ```call_my_DB ``` Prolog predicate directly, sharing time and getting an explanation for the DB result.

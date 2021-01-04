@@ -1,16 +1,16 @@
 :- module(_,[
-    op(1200,xfx,user:(then)),
-    op(1200,xfx,user:(must)),
-    op(1185,fx,user:(if)),
     op(1190,xfx,user:(if)),
-    op(1100,xfy,user:else),
+    op(1187,xfx,user:(then)),
+    op(1187,xfx,user:(must)),
+    op(1185,fx,user:(if)),
+    op(1185,xfy,user:else),
     op(1000,xfy,user:and), % same as ,
     op(1050,xfy,user:or), % same as ;
     op(900,fx,user:not), % same as \+
     op(700,xfx,user:in),
     op(600,xfx,user:on),
-    op(995,xfx,user:at), % note vs. negation...compatible with LPS fluents
-    op(995,xfx,user:'@'), % note vs. negation...
+    op(1150,xfx,user:because), % to support because(on(p,t),why) if ...
+    op(700,xfx,user:at), % note vs. negation...incompatible with LPS fluents
     taxlog2prolog/3
     ]).
 
@@ -19,6 +19,8 @@
 user:question(_,_) :- throw(use_the_interpreter). % to avoid "undefined predicate" messages in editor
 user:question(_) :- throw(use_the_interpreter).
 
+taxlog2prolog(if(function(Call,Result),Body), delimiter-[delimiter-[head(meta,Call),classify],SpecB], if(function(Call,Result),Body)) :- !,
+    taxlogBodySpec(Body,SpecB).
 taxlog2prolog(if(H,B),delimiter-[head(Class, H),SpecB],(H:-B)) :- swish_highlight:current_editor(UUID, _TB, source, _Lock, _), !,
     xref_module(UUID,Me),
     % mylog(H/UUID/Me),
@@ -32,6 +34,7 @@ taxlog2prolog(if(H,B),delimiter-[head(Class, H),SpecB],(H:-B)) :- swish_highligh
 taxlog2prolog(if(H,B),null,(H:-B)).
 taxlog2prolog(mainGoal(G,Description),delimiter-[Spec,classify],mainGoal(G,Description)) :- taxlogBodySpec(G,Spec).
 taxlog2prolog(example(T,Sequence),delimiter-[classify,classify],example(T,Sequence)).
+taxlog2prolog(because(on(G,T),Why), delimiter-[delimiter-[Spec,classify],classify], because(on(G,T),Why)) :- taxlogBodySpec(G,Spec).
 taxlog2prolog(irrelevant_explanation(G),delimiter-[Spec],irrelevant_explanation(G)) :- taxlogBodySpec(G,Spec).
 
 % this must be in sync with the interpreter i(...) and prolog:meta_goal(...) hooks
@@ -59,6 +62,8 @@ taxlogBodySpec(setof(_X,G,_L),control-[classify,SpecG,classify]) :- !,
     taxlogBodySpec(G,SpecG). %TODO: handle vars^G
 taxlogBodySpec(aggregate(_X,G,_L),control-[classify,SpecG,classify]) :- !, 
     taxlogBodySpec(G,SpecG). %TODO: handle vars^G
+taxlogBodySpec(on(G,_T),delimiter-[SpecG,classify] ) :- !,
+    taxlogBodySpec(G,SpecG).
 taxlogBodySpec(at(G,M_),delimiter-[SpecG,classify]) :- nonvar(M_), nonvar(G), !, % assuming atomic goals
     atom_string(M,M_),
     % check that the source has already been xrefed, otherwise xref will try to load it and cause a "iri_scheme" error:

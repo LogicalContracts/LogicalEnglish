@@ -72,7 +72,7 @@ rollover_applies if
     and elligible_asset(Asset).
 
 
-ultimate_owner(Asset,Owner,1) :- % full ownership
+ultimate_owner(Asset,Owner,1) if % full ownership
     owns(Owner,Asset) 
         at "https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/".
 %TODO: extend predicates for partial ownership, and indirection ( using connected_to ?)

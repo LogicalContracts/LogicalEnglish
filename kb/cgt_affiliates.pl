@@ -28,5 +28,6 @@ affiliate(Entity,Affiliate) on Date if
     and question( "Is ~w an affiliate of ~w as per the older legislation" - [Affiliate,Entity]).
 
 
-is_individual_or_company(Affiliate) if 
-    is_individual_or_company(Affiliate) at myDB_entities.
+% stub for an "external" Prolog call
+is_individual_or_company(Affiliate) on Date because 'according to myDB_entities' if 
+    myDB_entities:is_individual_or_company_on(Affiliate,Date).

@@ -18,7 +18,6 @@ srt(Individual) :-
 %   datetimes in iso_8601 format
 %   external predicates MUST be aware of the local main event time, "now"
 
-:- multifile user:function/2.
 function(individual(), I) if  % local function for convenience
     theIndividual(I).
 
@@ -26,7 +25,7 @@ srt if % this could actually go into the if-then-else below; just following the 
     first_automatic_uk_test.
 
 srt if 
-    if ( first_automatic_overseas_test or second_automatic_overseas_test or third_automatic_overseas_test)
+    if ( first_automatic_overseas_test or second_automatic_overseas_test(individual()) or third_automatic_overseas_test(individual()))
         then false
         else (second_automatic_uk_test or third_automatic_uk_test or ties_test).
 

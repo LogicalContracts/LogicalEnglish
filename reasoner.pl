@@ -1,9 +1,11 @@
 :- module(_ThisFileName,[query/2,
-    after/2,immediately_before/2,same_date/2,in/2]).
+    after/2,immediately_before/2,same_date/2,this_year/1]).
 
 /** <module> Tax-KB reasoner and utils
 @author Miguel Calejo
 */
+
+:- multifile user:function/2.
 
 % for now assumes KB in user module
 
@@ -32,9 +34,11 @@ i(then(if(C),else(T,Else)), U, E) :- !,
     (   i(C,UC,EC), i(T,UT,ET), append(UC,UT,U), append(EC,ET,E) ; 
         i( \+ C,UC,EC), i(Else,UE,EE), append(UC,UE,U), append(EC,EE,E) ).
 i(then(if(C),Then),U,E) :- !, i(then(if(C),else(Then,true)),U,E).
-i(@(G,M),U,E) :- !, i(at(G,M),U,E).
+% aggregate, setof, forall (cf. syntax cases), and also Module:G (Prolog).
 i(At,U,E) :- At=at(_,_), !, 
     (unknown(At) -> U=[At],E=[unknown(At)] ; evaluate_at(At), U=[],E=[At]).
+% check because(on(G,T),Why) and on(G,T) clauses first
+%TODO: on(G,2020) means "G true on some instant in 2020"
 i(G,U,[]) :- system_predicate(G), !, 
     catch(G, error(instantiation_error,_Cx), U=[at(instantiation_error(G),system)]), 
     (var(U)->U=[];true).
@@ -45,27 +49,27 @@ i(G,U,E) :-
 
 :- multifile prolog:meta_goal/2. % for xref
 prolog:meta_goal(at(G,M),[M_:G]) :- nonvar(M), atom_string(M_,M).
-prolog:meta_goal(@(G,M),L) :- prolog:meta_goal(at(G,M),L).
+% next two handled by declare_our_metas:
+%prolog:meta_goal(on(G,_Time),[G]).
+%prolog:meta_goal(because(G,_Why),[G]).
 prolog:meta_goal(and(A,B),[A,B]).
 prolog:meta_goal(or(A,B),[A,B]).
 prolog:meta_goal(must(A,B),[A,B]).
 prolog:meta_goal(not(A),[A]).
 prolog:meta_goal(then(if(C),else(T,Else)),[C,T,Else]).
 prolog:meta_goal(then(if(C),Then),[C,Then]) :- Then\=else(_,_).
-%prolog:meta_goal(if(_H,B),[B]). % weird; somehow term_expansion is not enough for the editor to build its longclick destinations
 
+:- multifile prolog:called_by/4.
+prolog:called_by(on(G,_T), M, M, [G]).
 
+% does NOT fix the "G is not called" bug: prolog:called_by(mainGoal(G,_), M, M, [G]).
 
-
-system_predicate(G) :- predicate_property(G,built_in).
+system_predicate(G) :- predicate_property(G,built_in). %TODO: exclude $ ; combine with handling of because/2; any Prolog code outside our kps
 %system_predicate(G) :- kbDir(D), predicate_property(G,file(F)), \+ sub_atom(F,_,_,_,D).
 
 % toy implementation based on plain undefinedness; the real one will depend on specific arguments for each KS
 % unknown(AtGoal) whether the knowledge source is currently unable to provide a result 
 unknown(at(G,KS)) :- kbModule(M), functor(G,F,N),functor(GG,F,N), \+ catch(M:at(GG,KS),_,fail).
-
-%TODO: (above and below) G can be a negation! should we simply abolish at/2 and use @/2 with a lower priority, thus keeping compatibility with LPS?
-%TODO: what about on/2 ? at(on(G,T),M) or on(at(G,M),T) ...??
 
 % assuming not unknown(...), ask the knowledge source for its result
 evaluate_at(at(G,KS)) :- kbModule(M), M:at(G,KS).
@@ -121,9 +125,9 @@ immediately_before(Earlier,Later) :-
 same_date(T1,T2) :- 
     format_time(string(S),"%F",T1), format_time(string(S),"%F",T2).
 
-on(P,_Time) :- P. %TODO: this should actually depend on time!
+this_year(Y) :- get_time(Now), stamp_date_time(Now,date(Y,_M,_D,_,_,_,_,_,_),local).
 
-in(X,List) :- member(X,List).
+user:in(X,List) :- member(X,List).
 
 :- if(current_module(swish)). %%%%% On SWISH:
 

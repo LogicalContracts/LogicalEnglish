@@ -56,10 +56,9 @@ net_value(Asset,Value) on Date if
         market_value(Asset,Market) on Date and 
         aggregate( sum(Liability), (
             liability(Asset,Type,Liability) and 
-            Type in [
-                annual_leave,long_service_leave,unearned_income,tax_liabilities, % From "Meaning of 'net value'"; contradicts exclusions in "Liabilities to include" !!!
-                legally_enforceable_debts, legal_or_equitable_obligations % from "Liabilities to include"; also refers https://www.ato.gov.au/law/view/document?DocID=TXD/TD200714/NAT/ATO/00001
-                ] 
+            % From "Meaning of 'net value'"; contradicts exclusions in "Liabilities to include" !!!
+            % from "Liabilities to include"; also refers https://www.ato.gov.au/law/view/document?DocID=TXD/TD200714/NAT/ATO/00001
+            Type in [annual_leave,long_service_leave,unearned_income,tax_liabilities, legally_enforceable_debts, legal_or_equitable_obligations] 
             ), Liabilities) on Date 
         and Value is Market-Liabilities
     ).
@@ -101,8 +100,10 @@ is_interest_in(Asset,Connection) if
 is_cgt_asset(Asset) if
     is_cgt_asset(Asset) at "https://www.ato.gov.au/General/Capital-gains-tax/CGT-assets-and-exemptions/".
 
-is_individual(TPN) if 
-    is_individual(TPN) at myDB_entities.
+% example of a stub to an external Prolog predicate on module myDB_entities
+% could insetad have use_module(myDB_entities) and avoid the qualified call to is_individual_on/2
+is_individual(TPN) on Date because 'according to myDB_entities' if 
+    myDB_entities:is_individual_on(TPN,Date).
 
 is_earnout_cgt_asset(Asset,Value) if 
     is_earnout_cgt_asset(Asset,Value) 
