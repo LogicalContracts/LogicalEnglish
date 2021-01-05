@@ -29,5 +29,5 @@ affiliate(Entity,Affiliate) on Date if
 
 
 % stub for an "external" Prolog call
-is_individual_or_company(Affiliate) on Date because 'according to myDB_entities' if 
+is_individual_or_company(Affiliate) on Date because 'according to myDB_entities' :- 
     myDB_entities:is_individual_or_company_on(Affiliate,Date).

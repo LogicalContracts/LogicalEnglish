@@ -102,7 +102,7 @@ is_cgt_asset(Asset) if
 
 % example of a stub to an external Prolog predicate on module myDB_entities
 % could insetad have use_module(myDB_entities) and avoid the qualified call to is_individual_on/2
-is_individual(TPN) on Date because 'according to myDB_entities' if 
+is_individual(TPN) on Date because 'according to myDB_entities' :- 
     myDB_entities:is_individual_on(TPN,Date).
 
 is_earnout_cgt_asset(Asset,Value) if 
