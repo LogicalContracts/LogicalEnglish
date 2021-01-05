@@ -16,29 +16,40 @@
 
 :- use_module(library(prolog_xref)).
 
-user:question(_,_) :- throw(use_the_interpreter). % to avoid "undefined predicate" messages in editor
-user:question(_) :- throw(use_the_interpreter).
+% user:question(_,_) :- throw(use_the_interpreter). % to avoid "undefined predicate" messages in editor
+% user:question(_) :- throw(use_the_interpreter).
 
-taxlog2prolog(if(function(Call,Result),Body), delimiter-[delimiter-[head(meta,Call),classify],SpecB], if(function(Call,Result),Body)) :- !,
+taxlog2prolog(if(function(Call,Result),Body), neck(if)-[delimiter-[head(meta,Call),classify],SpecB], if(function(Call,Result),Body)) :- !,
     taxlogBodySpec(Body,SpecB).
-taxlog2prolog(if(on(H,T),B), delimiter-[delimiter-[SpecH,classify],SpecB], (H:-on(B,T))) :- !,
+taxlog2prolog(if(on(H,T),B), neck(if)-[delimiter-[SpecH,classify],SpecB], (H:-on(B,T))) :- !,
     taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB).
-taxlog2prolog(if(H,B),delimiter-[SpecH,SpecB],(H:-B)) :- 
+taxlog2prolog(if(H,B),neck(if)-[SpecH,SpecB],(H:-B)) :- 
     taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB).
-taxlog2prolog((because(on(H,T),Why):-B), delimiter-[ delimiter-[delimiter-[SpecH,classify],classify], SpecB ], (H:-because(on(B,T),Why))) :- !,
+taxlog2prolog((because(on(H,T),Why):-B), neck(clause)-[ delimiter-[delimiter-[SpecH,classify],classify], SpecB ], (H:-because(on(B,T),Why))) :- !,
     taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB).
 taxlog2prolog(mainGoal(G,Description),delimiter-[Spec,classify],mainGoal(G,Description)) :- taxlogBodySpec(G,Spec).
 taxlog2prolog(example(T,Sequence),delimiter-[classify,classify],example(T,Sequence)).
-taxlog2prolog(because(on(G,T),Why), delimiter-[delimiter-[Spec,classify],classify], because(on(G,T),Why)) :- taxlogBodySpec(G,Spec).
 taxlog2prolog(irrelevant_explanation(G),delimiter-[Spec],irrelevant_explanation(G)) :- taxlogBodySpec(G,Spec).
 
-taxlogHeadSpec(H,head(Class, H)) :- swish_highlight:current_editor(UUID, _TB, source, _Lock, _), !,
+taxlogHeadSpec(H,head(Class, H)) :- current_editor(UUID),
+    !,
     xref_module(UUID,Me),
-    % mylog(H/UUID/Me),
+    %mylog(H/UUID/Me),
     (xref_called(_Other,Me:H, _) -> (Class=exported) ;
         xref_called(UUID, H, _By) -> (Class=head) ;
-        Class=unreferenced).
+        Class=unreferenced),
+    %mylog(class/Class).
 taxlogHeadSpec(H,head(head, H)).
+
+:- multifile swish_highlight:style/3.
+swish_highlight:style(neck(if),     neck, [ text(if) ]).
+
+% :- thread_local current_module/1.
+% :- multifile prolog_colour:directive_colours/2.
+% prolog_colour:directive_colours((:- module(M,_)),null) :-
+%     mylog(detected_module/M), % NOT CALLED AT ALL???
+%     retractall(current_module(_)), assert(current_module(M)), fail.
+
 
 % this must be in sync with the interpreter i(...) and prolog:meta_goal(...) hooks
 % assumes a SWISH current_editor(...) exists
@@ -71,15 +82,21 @@ taxlogBodySpec(at(G,M_),delimiter-[SpecG,classify]) :- nonvar(M_), nonvar(G), !,
     atom_string(M,M_),
     % check that the source has already been xrefed, otherwise xref will try to load it and cause a "iri_scheme" error:
     ((xref_current_source(M), xref_defined(M,G,_))-> SpecG=goal(imported(M),G) ; SpecG=goal(undefined,G)).
-taxlogBodySpec(G,goal(Class,G)) :-  once(swish_highlight:current_editor(UUID, _TB, source, _Lock, _)), 
-     taxlogGoalSpec(G, UUID, Class), !.
+taxlogBodySpec(G,goal(Class,G)) :-  current_editor(UUID), taxlogGoalSpec(G, UUID, Class), !,
+     mylog(goal(Class,G)).
 taxlogBodySpec(_G,classify).
 
 %TODO: meta predicates - forall, setof etc
+taxlogGoalSpec(question(_), _UUID, meta) :- !.
+taxlogGoalSpec(question(_,_), _UUID, meta) :- !.
 taxlogGoalSpec(G, UUID, Class) :-
     (xref_defined(UUID, G, Class) -> true ; 
         %prolog_colour:built_in_predicate(G)->Class=built_in ;
         prolog_colour:goal_classification(G, Class) -> true;
         Class=undefined).
+
+% hack to find the editor that triggered the present highlighting
+current_editor(UUID) :- 
+    swish_highlight:current_editor(UUID, _TB, source, Lock, _), mutex_property(Lock,status(locked(_Owner, _Count))), !.
 
 user:term_expansion(T,NT) :- taxlog2prolog(T,_,NT).
