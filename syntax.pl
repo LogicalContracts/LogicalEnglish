@@ -16,8 +16,12 @@
 
 :- use_module(library(prolog_xref)).
 
-% user:question(_,_) :- throw(use_the_interpreter). % to avoid "undefined predicate" messages in editor
-% user:question(_) :- throw(use_the_interpreter).
+/*
+Transforms source rules into our "no time on heads" representation:
+P on T if Body -->  P :- on(Body,T).
+P on T because Why --> P :- because(on(P,T),Why).
+P if Body --> P :- Body
+*/
 
 taxlog2prolog(if(function(Call,Result),Body), neck(if)-[delimiter-[head(meta,Call),classify],SpecB], if(function(Call,Result),Body)) :- !,
     taxlogBodySpec(Body,SpecB).
@@ -75,6 +79,7 @@ taxlogBodySpec(forall(C,Must),control-[SpecC,SpecMust]) :- !,
     taxlogBodySpec(C,SpecC), taxlogBodySpec(Must,SpecMust).
 taxlogBodySpec(setof(_X,G,_L),control-[classify,SpecG,classify]) :- !, 
     taxlogBodySpec(G,SpecG). %TODO: handle vars^G
+% this is needed only to deal with multiline instances of aggregate... (or of any predicate of our own colouring, apparently:-( )
 taxlogBodySpec(aggregate(_X,G,_L),control-[classify,SpecG,classify]) :- !, 
     taxlogBodySpec(G,SpecG). %TODO: handle vars^G
 taxlogBodySpec(on(G,_T),delimiter-[SpecG,classify] ) :- !,

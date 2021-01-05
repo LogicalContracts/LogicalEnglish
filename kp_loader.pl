@@ -195,7 +195,8 @@ reactToSaved(created(GittyFile,Commit)) :- % discover and xref
     storage_file(GittyFile,Data,_Meta), process_file(Data,GittyFile), 
     reactToSaved(updated(GittyFile,Commit)).
 reactToSaved(updated(GittyFile,_Commit)) :- % xref
-    kp_location(URL,GittyFile), xref_source(URL).
+    kp_location(URL,GittyFile,true), 
+    xref_source(URL).
 
 
 kp_predicates :- %TODO: ignore subtrees of because/2
