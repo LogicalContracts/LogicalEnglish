@@ -27,7 +27,8 @@ taxlog2prolog(if(H,B),neck(if)-[SpecH,SpecB],(H:-B)) :-
     taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB).
 taxlog2prolog((because(on(H,T),Why):-B), neck(clause)-[ delimiter-[delimiter-[SpecH,classify],classify], SpecB ], (H:-because(on(B,T),Why))) :- !,
     taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB).
-taxlog2prolog(mainGoal(G,Description),delimiter-[Spec,classify],mainGoal(G,Description)) :- taxlogBodySpec(G,Spec).
+taxlog2prolog(mainGoal(G,Description),delimiter-[Spec,classify],(mainGoal(G,Description):-(_=1->true;G))) :- % hack to avoid 'unreferenced' highlight in SWISH
+    taxlogBodySpec(G,Spec).
 taxlog2prolog(example(T,Sequence),delimiter-[classify,classify],example(T,Sequence)).
 taxlog2prolog(irrelevant_explanation(G),delimiter-[Spec],irrelevant_explanation(G)) :- taxlogBodySpec(G,Spec).
 
@@ -37,7 +38,7 @@ taxlogHeadSpec(H,head(Class, H)) :- current_editor(UUID),
     %mylog(H/UUID/Me),
     (xref_called(_Other,Me:H, _) -> (Class=exported) ;
         xref_called(UUID, H, _By) -> (Class=head) ;
-        Class=unreferenced),
+        Class=unreferenced).
     %mylog(class/Class).
 taxlogHeadSpec(H,head(head, H)).
 
@@ -98,5 +99,8 @@ taxlogGoalSpec(G, UUID, Class) :-
 % hack to find the editor that triggered the present highlighting
 current_editor(UUID) :- 
     swish_highlight:current_editor(UUID, _TB, source, Lock, _), mutex_property(Lock,status(locked(_Owner, _Count))), !.
+current_editor(UUID) :- 
+    %mylog('Could not find locked editor, going with the first one'), 
+    swish_highlight:current_editor(UUID, _TB, source, _Lock, _), !.
 
 user:term_expansion(T,NT) :- taxlog2prolog(T,_,NT).
