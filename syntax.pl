@@ -21,21 +21,24 @@ user:question(_) :- throw(use_the_interpreter).
 
 taxlog2prolog(if(function(Call,Result),Body), delimiter-[delimiter-[head(meta,Call),classify],SpecB], if(function(Call,Result),Body)) :- !,
     taxlogBodySpec(Body,SpecB).
-taxlog2prolog(if(H,B),delimiter-[head(Class, H),SpecB],(H:-B)) :- swish_highlight:current_editor(UUID, _TB, source, _Lock, _), !,
-    xref_module(UUID,Me),
-    % mylog(H/UUID/Me),
-    (xref_called(_Other,Me:H, _) -> (Class=exported) ;
-        xref_called(UUID, H, _By) -> (Class=head) ;
-        Class=unreferenced),
-    %Class=unreferenced,
-    %mylog(class/Class),
-    taxlogBodySpec(B,SpecB).
-    %mylog(B/specB/SpecB).
-taxlog2prolog(if(H,B),null,(H:-B)).
+taxlog2prolog(if(on(H,T),B), delimiter-[delimiter-[SpecH,classify],SpecB], (H:-on(B,T))) :- !,
+    taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB).
+taxlog2prolog(if(H,B),delimiter-[SpecH,SpecB],(H:-B)) :- 
+    taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB).
+taxlog2prolog((because(on(H,T),Why):-B), delimiter-[ delimiter-[delimiter-[SpecH,classify],classify], SpecB ], (H:-because(on(B,T),Why))) :- !,
+    taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB).
 taxlog2prolog(mainGoal(G,Description),delimiter-[Spec,classify],mainGoal(G,Description)) :- taxlogBodySpec(G,Spec).
 taxlog2prolog(example(T,Sequence),delimiter-[classify,classify],example(T,Sequence)).
 taxlog2prolog(because(on(G,T),Why), delimiter-[delimiter-[Spec,classify],classify], because(on(G,T),Why)) :- taxlogBodySpec(G,Spec).
 taxlog2prolog(irrelevant_explanation(G),delimiter-[Spec],irrelevant_explanation(G)) :- taxlogBodySpec(G,Spec).
+
+taxlogHeadSpec(H,head(Class, H)) :- swish_highlight:current_editor(UUID, _TB, source, _Lock, _), !,
+    xref_module(UUID,Me),
+    % mylog(H/UUID/Me),
+    (xref_called(_Other,Me:H, _) -> (Class=exported) ;
+        xref_called(UUID, H, _By) -> (Class=head) ;
+        Class=unreferenced).
+taxlogHeadSpec(H,head(head, H)).
 
 % this must be in sync with the interpreter i(...) and prolog:meta_goal(...) hooks
 % assumes a SWISH current_editor(...) exists

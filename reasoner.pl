@@ -60,7 +60,8 @@ prolog:meta_goal(then(if(C),else(T,Else)),[C,T,Else]).
 prolog:meta_goal(then(if(C),Then),[C,Then]) :- Then\=else(_,_).
 
 :- multifile prolog:called_by/4.
-prolog:called_by(on(G,_T), M, M, [G]).
+prolog:called_by(on(G,_T), M, M, [G]). % why is this needed, given meta_goal(on(..))...?
+prolog:called_by(because(G,_Why), M, M, [G]). % why is this needed, given meta_goal(on(..))...?
 
 % does NOT fix the "G is not called" bug: prolog:called_by(mainGoal(G,_), M, M, [G]).
 
