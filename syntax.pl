@@ -82,6 +82,8 @@ taxlogBodySpec(setof(_X,G,_L),control-[classify,SpecG,classify]) :- !,
 % this is needed only to deal with multiline instances of aggregate... (or of any predicate of our own colouring, apparently:-( )
 taxlogBodySpec(aggregate(_X,G,_L),control-[classify,SpecG,classify]) :- !, 
     taxlogBodySpec(G,SpecG). %TODO: handle vars^G
+taxlogBodySpec(question(_,_),delimiter-[classify,classify]). % to avoid multiline colouring bug
+taxlogBodySpec(question(_),delimiter-[classify]).
 taxlogBodySpec(on(G,_T),delimiter-[SpecG,classify] ) :- !,
     taxlogBodySpec(G,SpecG).
 taxlogBodySpec(at(G,M_),delimiter-[SpecG,classify]) :- nonvar(M_), nonvar(G), !, % assuming atomic goals
@@ -93,8 +95,6 @@ taxlogBodySpec(G,goal(Class,G)) :-  current_editor(UUID), taxlogGoalSpec(G, UUID
 taxlogBodySpec(_G,classify).
 
 %TODO: meta predicates - forall, setof etc
-taxlogGoalSpec(question(_), _UUID, meta) :- !.
-taxlogGoalSpec(question(_,_), _UUID, meta) :- !.
 taxlogGoalSpec(G, UUID, Class) :-
     (xref_defined(UUID, G, Class) -> true ; 
         %prolog_colour:built_in_predicate(G)->Class=built_in ;
