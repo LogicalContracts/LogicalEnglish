@@ -1,6 +1,6 @@
 :- module(_,[
     call_at/2, kp_dir/1, kp_location/3,
-    discover_kps_in_dir/1, discover_kps_in_dir/0, discover_kps_gitty/0, setup_kp_modules/0,
+    discover_kps_in_dir/1, discover_kps_in_dir/0, discover_kps_gitty/0, setup_kp_modules/0, load_kps/0,
     load_gitty_files/1, load_gitty_files/0, save_gitty_files/1, delete_gitty_file/1, 
     xref_all/0, xref_clean/0, kp_predicates/0,
     edit_kp/1]).
@@ -60,11 +60,16 @@ declare_our_metas(Module) :-
     Module:meta_predicate(on(0,?)),
     Module:meta_predicate(because(0,-)).
 
-% load_named_file(+File+Module,+InGittyStorage)
+% load_named_file(+File,+Module,+InGittyStorage)
 load_named_file(File,Module,true) :- !,
     use_gitty_file(Module:File,[module(Module)]).
 load_named_file(File,Module,false) :- 
     load_files(File,[module(Module)]).
+
+load_kps :- 
+    forall(kp_location(URL,File,InGitty), (
+        load_named_file(File,URL,InGitty)
+    )).
 
 setup_kp_modules :- forall(kp(M), (
     M:discontiguous((if)/2),
@@ -76,7 +81,8 @@ setup_kp_modules :- forall(kp(M), (
 %! call_at(:Goal,++KnowledgePageName) is nondet.
 %
 %  Execute goal at the indicated knowledge page, loading it if necessary
-call_at(Goal,Name) :- must_be(nonvar,Name), current_module(Name), !, Name:Goal.
+call_at(Goal,Name) :- must_be(nonvar,Name), module_property(Name,last_modified_generation(T)), T>0, !, 
+    Name:Goal.
 call_at(Goal,Name) :- kp_location(Name,File,InGitty), !, 
     load_named_file(File,Name,InGitty),
     Name:Goal.
@@ -112,7 +118,12 @@ prolog:xref_source_time(URL, Modified) :-
 %
 % refresh xref database for all knowledge pages %TODO: report syntax errors properly
 xref_all :- 
-    forall(kp_location(URL,File,_), (print_message(informational,xreferencing/URL-File), xref_source(URL))).
+    forall(kp_location(URL,File,_), (
+        print_message(informational,xreferencing(URL,File)), xref_source(URL)
+    )).
+
+:- multifile prolog:message//1.
+prolog:message(xreferencing(URL,File)) --> ['Xreferencing module ~w in file ~w'-[URL,File]].
 
 xref_clean :-
     forall(kp_location(URL,_,_), xref_clean(URL)).
