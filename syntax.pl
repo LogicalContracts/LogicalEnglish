@@ -14,7 +14,10 @@
     taxlog2prolog/3
     ]).
 
+:- use_module(kp_loader,[kp_location/3]).
+
 :- use_module(library(prolog_xref)).
+:- use_module(library(prolog_colour)).
 
 /*
 Transforms source rules into our "no time on heads" representation:
@@ -23,7 +26,7 @@ P on T because Why --> P :- because(on(P,T),Why).
 P if Body --> P :- Body
 */
 
-taxlog2prolog(if(function(Call,Result),Body), neck(if)-[delimiter-[head(meta,Call),classify],SpecB], if(function(Call,Result),Body)) :- !,
+taxlog2prolog(if(function(Call,Result),Body), neck(if)-[delimiter-[head(meta,Call),classify],SpecB], (function(Call,Result):-Body)) :- !,
     taxlogBodySpec(Body,SpecB).
 taxlog2prolog(if(on(H,T),B), neck(if)-[delimiter-[SpecH,classify],SpecB], (H:-on(B,T))) :- !,
     taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB).
@@ -36,14 +39,12 @@ taxlog2prolog(mainGoal(G,Description),delimiter-[Spec,classify],(mainGoal(G,Desc
 taxlog2prolog(example(T,Sequence),delimiter-[classify,classify],example(T,Sequence)).
 taxlog2prolog(irrelevant_explanation(G),delimiter-[Spec],irrelevant_explanation(G)) :- taxlogBodySpec(G,Spec).
 
-taxlogHeadSpec(H,head(Class, H)) :- current_editor(UUID),
+taxlogHeadSpec(H,head(Class, H)) :- current_source(UUID),
     !,
     xref_module(UUID,Me),
-    %mylog(H/UUID/Me),
     (xref_called(_Other,Me:H, _) -> (Class=exported) ;
         xref_called(UUID, H, _By) -> (Class=head) ;
         Class=unreferenced).
-    %mylog(class/Class).
 taxlogHeadSpec(H,head(head, H)).
 
 :- multifile swish_highlight:style/3.
@@ -57,7 +58,6 @@ swish_highlight:style(neck(if),     neck, [ text(if) ]).
 
 
 % this must be in sync with the interpreter i(...) and prolog:meta_goal(...) hooks
-% assumes a SWISH current_editor(...) exists
 taxlogBodySpec(V,classify) :- var(V), !.
 taxlogBodySpec(and(A,B),delimiter-[SpecA,SpecB]) :- !, 
     taxlogBodySpec(A,SpecA), taxlogBodySpec(B,SpecB).
@@ -90,8 +90,7 @@ taxlogBodySpec(at(G,M_),delimiter-[SpecG,classify]) :- nonvar(M_), nonvar(G), !,
     atom_string(M,M_),
     % check that the source has already been xrefed, otherwise xref will try to load it and cause a "iri_scheme" error:
     ((xref_current_source(M), xref_defined(M,G,_))-> SpecG=goal(imported(M),G) ; SpecG=goal(undefined,G)).
-taxlogBodySpec(G,goal(Class,G)) :-  current_editor(UUID), taxlogGoalSpec(G, UUID, Class), !,
-     mylog(goal(Class,G)).
+taxlogBodySpec(G,goal(Class,G)) :-  current_source(UUID), taxlogGoalSpec(G, UUID, Class), !. 
 taxlogBodySpec(_G,classify).
 
 %TODO: meta predicates - forall, setof etc
@@ -101,11 +100,17 @@ taxlogGoalSpec(G, UUID, Class) :-
         prolog_colour:goal_classification(G, Class) -> true;
         Class=undefined).
 
-% hack to find the editor that triggered the present highlighting
-current_editor(UUID) :- 
+:- if(current_module(swish)). %%% only when running with the SWISH web server:
+% hack to find the editor (e.g. its module name) that triggered the present highlighting
+current_source(UUID) :- 
     swish_highlight:current_editor(UUID, _TB, source, Lock, _), mutex_property(Lock,status(locked(_Owner, _Count))), !.
-current_editor(UUID) :- 
+current_source(UUID) :- 
     %mylog('Could not find locked editor, going with the first one'), 
     swish_highlight:current_editor(UUID, _TB, source, _Lock, _), !.
 
-user:term_expansion(T,NT) :- taxlog2prolog(T,_,NT).
+:- else. %% barebones SWI-Prolog:
+% find the module in the file being coloured (which has been xref'd already)
+current_source(Source) :- 
+    prolog_load_context(source,File), kp_location(Source,File,false).
+:- endif.
+

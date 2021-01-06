@@ -5,8 +5,6 @@
 @author Miguel Calejo
 */
 
-:- multifile user:function/2.
-
 % for now assumes KB in user module
 
 % i(+Goal,-Unknowns,-Why) 
@@ -115,7 +113,7 @@ nodeAttributes(at(G,K), [color=green,label=S]) :- format(string(S),"~w",G).
 
 %Time predicates; they assume times are atoms in iso_8601 format
 
-%!  after(+Laterrr,+Earlier) is det.
+%!  after(+Later,+Earlier) is det.
 %   Arguments must be atoms in iso_8601 format
 
 after(Later,Earlier) :- 
@@ -142,8 +140,6 @@ kbModule(M) :- pengine_self(M).
 
 
 :- else. % On command-line SWI-Prolog, no user restrictions:
-
-mylog(_).
 
 :- use_module(library(http/html_write)).
 html(Spec) :-

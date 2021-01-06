@@ -1,5 +1,5 @@
 :- module(_,[
-    call_at/2, kp_dir/1,
+    call_at/2, kp_dir/1, kp_location/3,
     discover_kps_in_dir/1, discover_kps_in_dir/0, discover_kps_gitty/0, setup_kp_modules/0,
     load_gitty_files/1, load_gitty_files/0, save_gitty_files/1, delete_gitty_file/1, 
     xref_all/0, xref_clean/0, kp_predicates/0,
@@ -7,11 +7,6 @@
 
 :- use_module(library(prolog_xref)).
 :- use_module(library(broadcast)).
-% SWISH MUST be preloaded:
-:- use_module(swish(lib/storage)).
-:- use_module(swish(lib/gitty)).
-
-:- use_module(syntax).
 
 :- dynamic kp_dir/1.
 :- prolog_load_context(directory, D), retractall(kp_dir(_)), atomic_list_concat([D,'/kb'], KD), assert(kp_dir(KD)).
@@ -19,30 +14,13 @@
 
 /** <module> Dynamic module loader.
 
-Scans a given set of Prolog files in SWISH storage, and identifies "knowledge pages", files which:
-
+Scans a given set of Prolog files in SWISH storage or in a file system directpry, and identifies "knowledge pages", files which:
 - are modules named with an URL
-
 Can also export and import SWISH storage to/from a file system directory.
-
-%TODO: generalise to use files in a plain file system directory too
 */
 
 :- dynamic kp_location/3. % URL,File, InGitty
 kp(URL) :- kp_location(URL,_,_).
-
-%! discover_kps_gitty is det.
-%
-%  Scans all Prolog files in SWISH's gitty storage for knowledge pages. Reloads
-%  loaded modules, but does not delete "orphans" (modules no longer in gitty)
-%  TODO: use '$destroy_module'(M) on those?
-discover_kps_gitty :-
-    retractall(kp_location(_,_,true)),
-    forall(storage_file_extension(File,pl),(
-        storage_file(File,Data,_Meta),
-        open_string(Data, In),
-        process_file(In,File,true)
-    )).
 
 %! discover_kps_in_dir(+Dir) is det.
 %
@@ -104,6 +82,75 @@ call_at(Goal,Name) :- kp_location(Name,File,InGitty), !,
     Name:Goal.
 call_at(Goal,Name) :- print_message(error,'could not load kp'(Goal,Name)), fail.
 
+
+
+% Support xref for gitty and file system files
+:- multifile
+	prolog:xref_source_identifier/2,
+	prolog:xref_open_source/2,
+    prolog:xref_close_source/2,
+    prolog:xref_source_time/2,
+    prolog:meta_goal/2.
+
+prolog:xref_source_identifier(URL, URL) :- kp_location(URL,_,_).
+
+prolog:xref_open_source(URL, Stream) :-
+    kp_location(URL,File,InGitty),
+    (InGitty==true -> (storage_file(File,Data,_Meta), open_string(Data, Stream))
+        ; (open(File,read,Stream))).
+
+prolog:xref_close_source(_, Stream) :-
+	close(Stream).
+
+prolog:xref_source_time(URL, Modified) :-
+    kp_location(URL,File,InGitty),
+    (InGitty==true -> (storage_file(File,_,Meta), Modified=Meta.time) ;
+        time_file(File,Modified)).
+
+
+%! xref_all is det
+%
+% refresh xref database for all knowledge pages %TODO: report syntax errors properly
+xref_all :- 
+    forall(kp_location(URL,File,_), (print_message(informational,xreferencing/URL-File), xref_source(URL))).
+
+xref_clean :-
+    forall(kp_location(URL,_,_), xref_clean(URL)).
+
+kp_predicates :- %TODO: ignore subtrees of because/2
+    forall(kp(KP),(
+        format("KP: ~w~n",[KP]),
+        format("  Instance data:~n"),
+        forall(xref_defined(KP,G,thread_local(_)), (
+            functor(G,F,N), format("    ~w~n",[F/N])
+            )),
+        format("  Defined predicates:~n"),
+        forall((xref_defined(KP,G,How),How\=thread_local(_)), (
+            functor(G,F,N), format("    ~w~n",[F/N])
+        )),
+        format("  External predicates called:~n"),
+        forall((xref_called(KP, Called, _By),Called=Other:G,Other\=KP), (
+            functor(G,F,N), format("    ~w~n",[F/N])
+        ))
+    )). 
+
+:- if(current_module(swish)). %%% only when running with the SWISH web server:
+:- use_module(swish(lib/storage)).
+:- use_module(swish(lib/gitty)).
+
+%! discover_kps_gitty is det.
+%
+%  Scans all Prolog files in SWISH's gitty storage for knowledge pages. Reloads
+%  loaded modules, but does not delete "orphans" (modules no longer in gitty)
+%  TODO: use '$destroy_module'(M) on those?
+discover_kps_gitty :-
+    retractall(kp_location(_,_,true)),
+    forall(storage_file_extension(File,pl),(
+        storage_file(File,Data,_Meta),
+        open_string(Data, In),
+        process_file(In,File,true)
+    )).
+
 %! save_gitty_files(+ToDirectory) is det
 %
 %  ERASES the directory and copies all gitty Prolog files into it
@@ -142,6 +189,7 @@ load_gitty_files(From) :-
 load_gitty_files :-
     kp_dir(D), load_gitty_files(D).
 
+
 %! delete_gitty_file(+GittyFile) is det
 %
 % makes the file empty, NOT a proper delete
@@ -157,40 +205,7 @@ delete_gitty_file(File) :-
     NewMeta = Meta.put([previous=OldHead]),
     gitty_update(Store, File, "", NewMeta, _CommitRet).
 
-
-
-% Support xref for our gitty files
-:- multifile
-	prolog:xref_source_identifier/2,
-	prolog:xref_open_source/2,
-    prolog:xref_close_source/2,
-    prolog:xref_source_time/2,
-    prolog:meta_goal/2.
-
-prolog:xref_source_identifier(URL, URL) :- kp_location(URL,_,_).
-prolog:xref_open_source(URL, Stream) :-
-    kp_location(URL,File,InGitty),
-    (InGitty==true -> (storage_file(File,Data,_Meta), open_string(Data, Stream))
-        ; (open(File,read,Stream))).
-prolog:xref_close_source(_, Stream) :-
-	close(Stream).
-prolog:xref_source_time(URL, Modified) :-
-    kp_location(URL,File,InGitty),
-    (InGitty==true -> (storage_file(File,_,Meta), Modified=Meta.time) ;
-        time_file(File,Modified)).
-
-
-%! xref_all is det
-%
-% refresh xref database for all knowledge pages %TODO: report syntax errors properly
-xref_all :- 
-    forall(kp_location(URL,File,_), (print_message(informational,xreferencing/URL-File), xref_source(URL))).
-
-xref_clean :-
-    forall(kp_location(URL,_,_), xref_clean(URL)).
-
 :- listen(swish(X),reactToSaved(X)). % note: do NOT use writes!, they would interfere with SWISH's internal REST API
-
 reactToSaved(created(GittyFile,Commit)) :- % discover and xref
     storage_file(GittyFile,Data,_Meta), process_file(Data,GittyFile), 
     reactToSaved(updated(GittyFile,Commit)).
@@ -198,23 +213,6 @@ reactToSaved(updated(GittyFile,_Commit)) :- % xref
     kp_location(URL,GittyFile,true), 
     xref_source(URL).
 
-
-kp_predicates :- %TODO: ignore subtrees of because/2
-    forall(kp(KP),(
-        format("KP: ~w~n",[KP]),
-        format("  Instance data:~n"),
-        forall(xref_defined(KP,G,thread_local(_)), (
-            functor(G,F,N), format("    ~w~n",[F/N])
-            )),
-        format("  Defined predicates:~n"),
-        forall((xref_defined(KP,G,How),How\=thread_local(_)), (
-            functor(G,F,N), format("    ~w~n",[F/N])
-        )),
-        format("  External predicates called:~n"),
-        forall((xref_called(KP, Called, _By),Called=Other:G,Other\=KP), (
-            functor(G,F,N), format("    ~w~n",[F/N])
-        ))
-    )). 
 
 %! edit_kp(URL) is det
 %
@@ -291,3 +289,21 @@ token_references(Request) :-
     ),
     %Solution = _{hello: "Good Afternoon!", functor:Functor, arity:Arity, module:File},
     reply_json_dict(Locations).
+
+:- else. % vanilla SWI-Prolog
+
+%! edit_kp(URL) is det
+%
+% Open the filed version of the knowledge page in the user editor
+edit_kp(URL) :-
+    kp_location(URL,File,InGitty),
+    (InGitty==(true) -> print_message(error,"That is in SWISH storage, not in the file system!");(
+        edit(file(File))
+        )).
+
+discover_kps_gitty :- throw('this only works on SWISH ').
+load_gitty_files :- throw('this only works on SWISH ').
+load_gitty_files(_) :- throw('this only works on SWISH ').
+save_gitty_files(_) :- throw('this only works on SWISH ').
+delete_gitty_file(_) :- throw('this only works on SWISH ').
+:- endif.
