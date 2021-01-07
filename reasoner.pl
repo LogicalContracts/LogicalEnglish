@@ -18,7 +18,7 @@
 % otherwise, result unknown, depending on solutions to goals in Unknowns; 
 % _-system is an "unknown" likely irrelevant, a consequence of others
 %TODO: expand functional notations, namely prior to system predicates such as between/3: user defined functions, and arithmetic
-% i(G,_,_) :- mylog(i-G), fail.
+% i(G,_,_,_) :- mylog(i-G), fail.
 i(G,M,_,_) :- var(G), !, throw(variable_call_at(M)).
 i(true, _, [], []) :- !.
 i(false, _, [], []) :- !, fail.
@@ -65,15 +65,34 @@ i(Q,M,[at(Q,M)],[w(unknown(at(Q,M)))]) :- functor(Q,question,N), (N=1;N=2), !.
 i(At,_Mod,U,E) :- At=at(G,M), !, % this may cause loading of the module
     (call_at(true,M) -> i(G,M,U,E) ; ( U=[At],E=[w(unknown(At),[])] )).
 i(M:G,_,U,E) :- !, i(G,M,U,E).
-i(G,_,U,[]) :- system_predicate(G), !, 
-    catch(G, error(instantiation_error,_Cx), U=[at(instantiation_error(G),system)]), 
-    (var(U)->U=[];true).
+i(G,M,U,E) :- system_predicate(G), !, 
+    evalArgExpressions(G,M,NewG,Uargs,E),
+    % floundering originates unknown:
+    catch(NewG, error(instantiation_error,_Cx), U_=[at(instantiation_error(G),M)]), 
+    (var(U_)->U_=[];true),
+    append(Uargs,U_,U).
 i(G,M,U,E) :- unknown(G,M), !, (U=[at(G,M)],E=[ w(unknown(at(G,M)),[]) ]).
 %TODO: on(G,2020) means "G true on some instant in 2020"; who matches that with '20210107' ?
 i(G,M,U,E) :- 
-    (catch(M:irrelevant_explanation(G),_,fail) -> E=[] ; E= [w(G,Children)]),
+    evalArgExpressions(G,M,NewG,Uargs,Eargs),
     myClause(G,M,B),
-    i(B,M,U,Children). 
+    i(B,M,U_,Children_),
+    append(Uargs,U_,U),
+    (catch(M:irrelevant_explanation(NewG),_,fail) -> E=Eargs ; (E=[w(G,Children)], append(Eargs,Children_,Children) )).
+
+
+evalArgExpressions(G,M,NewG,U,E) :- 
+    G=..[F|Args], 
+    maplist(evalExpression(M),Args,Results,Us,Es),
+    NewG=..[F|Results], 
+    append(Us,U), append(Es,E).
+
+% evalExpression(+Module,+Expression,-Result,-Unknowns,-WhyExplanation) expands (only) user functions
+% TODO: add arithmetic expressions too...?
+evalExpression(_M,X,X,[],[]) :- var(X), !.
+evalExpression(M,Exp,R,U,[w(function(Exp),Children)]) :- M:clause(function(Exp,R),Body), !,
+    once( i(Body,M,U,Children) ).
+evalExpression(_M,X,X,[],[]).
 
 %wrapTemplateGoal(+Gtemplate,+Module,+Unknowns,+Explanation,-WrappedGtemplate)
 % e.g. X^Y^g --> i(X^Y^i(g,Module,Unknowns,Explanation))
