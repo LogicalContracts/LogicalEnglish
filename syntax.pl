@@ -34,7 +34,8 @@ taxlog2prolog(if(H,B),neck(if)-[SpecH,SpecB],(H:-B)) :-
     taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB).
 taxlog2prolog((because(on(H,T),Why):-B), neck(clause)-[ delimiter-[delimiter-[SpecH,classify],classify], SpecB ], (H:-because(on(B,T),Why))) :- !,
     taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB).
-taxlog2prolog(mainGoal(G,Description),delimiter-[Spec,classify],(mainGoal(G,Description):-(_=1->true;G))) :- % hack to avoid 'unreferenced' highlight in SWISH
+taxlog2prolog(mainGoal(G,Description),delimiter-[Spec,classify],(mainGoal(G,Description):-(_=1->true;GG))) :- % hack to avoid 'unreferenced' highlight in SWISH
+    functor(G,F,N), functor(GG,F,N), % avoid "Singleton-marked variable appears more than once"
     taxlogBodySpec(G,Spec).
 taxlog2prolog(example(T,Sequence),delimiter-[classify,classify],example(T,Sequence)).
 taxlog2prolog(irrelevant_explanation(G),delimiter-[Spec],irrelevant_explanation(G)) :- taxlogBodySpec(G,Spec).
@@ -71,6 +72,8 @@ taxlogBodySpec(must(if(I),M),delimiter-[delimiter-SpecI,SpecM]) :- !,
     taxlogBodySpec(I,SpecI), taxlogBodySpec(M,SpecM).
 taxlogBodySpec(not(G),delimiter-[Spec]) :- !, 
     taxlogBodySpec(G,Spec).
+taxlogBodySpec((\+G),delimiter-[Spec]) :- !, 
+    taxlogBodySpec(G,Spec).
 taxlogBodySpec(then(if(C),else(T,Else)),delimiter-[delimiter-[SpecC],delimiter-[SpecT,SpecE]]) :- !, 
     taxlogBodySpec(C,SpecC), taxlogBodySpec(T,SpecT), taxlogBodySpec(Else,SpecE).
 taxlogBodySpec(then(if(C),Then),delimiter-[delimiter-[SpecC],SpecT]) :- !, 
@@ -78,18 +81,25 @@ taxlogBodySpec(then(if(C),Then),delimiter-[delimiter-[SpecC],SpecT]) :- !,
 taxlogBodySpec(forall(C,Must),control-[SpecC,SpecMust]) :- !, 
     taxlogBodySpec(C,SpecC), taxlogBodySpec(Must,SpecMust).
 taxlogBodySpec(setof(_X,G,_L),control-[classify,SpecG,classify]) :- !, 
-    taxlogBodySpec(G,SpecG). %TODO: handle vars^G
+    taxlogBodySpec(G,SpecG). 
+taxlogBodySpec(bagof(_X,G,_L),control-[classify,SpecG,classify]) :- !, 
+    taxlogBodySpec(G,SpecG). 
+taxlogBodySpec(_^G,delimiter-[classify,SpecG]) :- !,
+    taxlogBodySpec(G,SpecG).
 % this is needed only to deal with multiline instances of aggregate... (or of any predicate of our own colouring, apparently:-( )
 taxlogBodySpec(aggregate(_X,G,_L),control-[classify,SpecG,classify]) :- !, 
-    taxlogBodySpec(G,SpecG). %TODO: handle vars^G
+    taxlogBodySpec(G,SpecG). 
+taxlogBodySpec(findall(_X,G,_L),control-[classify,SpecG,classify]) :- !, 
+    taxlogBodySpec(G,SpecG). 
 taxlogBodySpec(question(_,_),delimiter-[classify,classify]). % to avoid multiline colouring bug
 taxlogBodySpec(question(_),delimiter-[classify]).
-taxlogBodySpec(on(G,_T),delimiter-[SpecG,classify] ) :- !,
-    taxlogBodySpec(G,SpecG).
 taxlogBodySpec(at(G,M_),delimiter-[SpecG,classify]) :- nonvar(M_), nonvar(G), !, % assuming atomic goals
     atom_string(M,M_),
-    % check that the source has already been xrefed, otherwise xref will try to load it and cause a "iri_scheme" error:
+    % check that the source has already been xref'ed, otherwise xref would try to load it and cause a "iri_scheme" error:
     ((xref_current_source(M), xref_defined(M,G,_))-> SpecG=goal(imported(M),G) ; SpecG=goal(undefined,G)).
+taxlogBodySpec(M:G,delimiter-[classify,SpecG]) :- !, taxlogBodySpec(at(G,M),delimiter-[SpecG,classify]).
+taxlogBodySpec(on(G,_T),delimiter-[SpecG,classify] ) :- !,
+    taxlogBodySpec(G,SpecG).
 taxlogBodySpec(G,goal(Class,G)) :-  current_source(UUID), taxlogGoalSpec(G, UUID, Class), !. 
 taxlogBodySpec(_G,classify).
 

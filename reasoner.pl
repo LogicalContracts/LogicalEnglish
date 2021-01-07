@@ -5,48 +5,87 @@
 @author Miguel Calejo
 */
 
+:- use_module(library(aggregate)).
+
 :- use_module(kp_loader).
 
 % for now assumes KB in user module
 
 % i(+Goal,+LoadedModule,-Unknowns,-Why) 
-%  explanation is a proof tree: w(nodeLiteral,childrenNodes); [] denotes.. self-evident; no negative explanations yet
+%  explanation is a proof tree: w(nodeLiteral,childrenNodes); [] denotes.. self-evident; 
+%TODO: negative explanations 
 % failure means false; success with empty Unknowns list means true; 
 % otherwise, result unknown, depending on solutions to goals in Unknowns; 
 % _-system is an "unknown" likely irrelevant, a consequence of others
 %TODO: expand functional notations, namely prior to system predicates such as between/3: user defined functions, and arithmetic
 % i(G,_,_) :- mylog(i-G), fail.
+i(G,M,_,_) :- var(G), !, throw(variable_call_at(M)).
 i(true, _, [], []) :- !.
 i(false, _, [], []) :- !, fail.
 i(and(A,B), M, U, E) :- !, i((A,B),M,U,E).
-i(or(A,B), M, U, E) :- !, i((A;B),M, U,E).
 i((A,B), M, U, E) :- !, i(A,M,U1,E1), i(B,M,U2,E2), append(U1,U2,U), append(E1,E2,E).
+i(or(A,B), M, U, E) :- !, i((A;B),M, U,E).
 i((A;B), M, U, E) :- !, (i(A,M,U,E) ; i(B,M,U,E)).
 i(must(I,M), Mod, U, E) :- !, i(then(I,M), Mod, U, E).
 i(not(G),M,U,E) :- !, i( \+ G,M,U,E).
-i(\+ G, M, [], [failed(G)]) :- !, \+ i( G, M, [], _).
+i(\+ G, M, [], [w(not(G),[])]) :- !, \+ i( G, M, [], _).
 i(!,_,_,_) :- throw(no_cuts_allowed).
 i(';'(C->T,Else), M, U, E) :- !, % forbid this?
     ( i(C,M,UC,EC) -> 
         (i(T,M,UT,ET), append(UC,UT,U), append(EC,ET,E))
-        ; (i(Else,M,U,EE), E = [failed(C)|EE] )).
+        ; (i(Else,M,U,EE), E = [w(not(C),[])|EE] )).
+i((If->Then),M,U,E) :- !, % forbid this?
+    (i(If,M,UI,EI) -> (i(Then,M,UT,ET), append(UI,UT,U), append(EI,ET,E))).
 i(then(if(C),else(T,Else)), M, U, E) :- !,
     (   i(C,M,UC,EC), i(T,M,UT,ET), append(UC,UT,U), append(EC,ET,E) ; 
         i( \+ C,M,UC,EC), i(Else,M,UE,EE), append(UC,UE,U), append(EC,EE,E) ).
 i(then(if(C),Then),M,U,E) :- !, i(then(if(C),else(Then,true)),M,U,E).
-%TODO: aggregate, setof, forall (cf. syntax cases), and also Module:G (Prolog).
+i(forall(A,B),M,U,[w(forall(A,B),Children)]) :- !, 
+    findall(X, (i(A,M,UA,EA), (i(B,M,UB,EB) -> (append(UA,UB,Ui),append(EA,EB,Ei),X=Ui/Ei) ; X=failed)), Tuples),
+    \+ member(failed,Tuples),
+    findall(Ui,member(Ui/_,Tuples),U_), append(U_,U),
+    findall(Ei,member(_/Ei,Tuples),Children_), append(Children_,Children).
+i(setof(X,G,L),M,U,[w(setof(X,G,L),Children)]) :- !, 
+    wrapTemplateGoal(G,M,Ui,Ei,Wrapped),
+    setof(X/Ui/Ei, Wrapped, Tuples),
+    squeezeTuples(Tuples,L,U,Children).
+i(bagof(X,G,L),M,U,[w(bagof(X,G,L),Children)]) :- !, 
+    wrapTemplateGoal(G,M,Ui,Ei,Wrapped),
+    bagof(X/Ui/Ei, Wrapped, Tuples),
+    squeezeTuples(Tuples,L,U,Children).
+i(aggregate(Template,G,Result),M,U,[w(aggregate(Template,G,Result),Children)]) :- !, 
+    % uses a bit too much of SWI internals at swipl-devel/library/aggregate.pl
+    aggregate:template_to_pattern(bag, Template, Pattern, G, Goal, Aggregate),
+    i(bagof(Pattern, Goal, List),M,U,[w(_Bagof,Children)]),
+    aggregate:aggregate_list(Aggregate, List, Result).
+i(findall(X,G,L),M,U,[w(findall(X,G,L),Children)]) :- !, 
+    findall(X/Ui/Ei, i(G,M,Ui,Ei), Tuples), 
+    squeezeTuples(Tuples,L,U,Children).
+i(Q,M,[at(Q,M)],[w(unknown(at(Q,M)))]) :- functor(Q,question,N), (N=1;N=2), !.
+i(At,_Mod,U,E) :- At=at(G,M), !, % this may cause loading of the module
+    (call_at(true,M) -> i(G,M,U,E) ; ( U=[At],E=[w(unknown(At),[])] )).
+i(M:G,_,U,E) :- !, i(G,M,U,E).
 i(G,_,U,[]) :- system_predicate(G), !, 
     catch(G, error(instantiation_error,_Cx), U=[at(instantiation_error(G),system)]), 
     (var(U)->U=[];true).
-i(At,_Mod,U,E) :- At=at(G,M), !, % this may cause loading of the module
-    ((\+ call_at(true,M) ; unknown(G,M))-> (U=[At],E=[unknown(At)]) ; i(G,M,U,E)).
-i(G,M,U,E) :- unknown(G,M), !, (U=[at(G,M)],E=[unknown(at(G,M))]).
-% check because(on(G,T),Why) and on(G,T) clauses first
-%TODO: on(G,2020) means "G true on some instant in 2020"
+i(G,M,U,E) :- unknown(G,M), !, (U=[at(G,M)],E=[ w(unknown(at(G,M)),[]) ]).
+%TODO: on(G,2020) means "G true on some instant in 2020"; who matches that with '20210107' ?
 i(G,M,U,E) :- 
     (catch(M:irrelevant_explanation(G),_,fail) -> E=[] ; E= [w(G,Children)]),
     myClause(G,M,B),
     i(B,M,U,Children). 
+
+%wrapTemplateGoal(+Gtemplate,+Module,+Unknowns,+Explanation,-WrappedGtemplate)
+% e.g. X^Y^g --> i(X^Y^i(g,Module,Unknowns,Explanation))
+wrapTemplateGoal(G,M,U,E,i(G,M,U,E)) :- var(G), !.
+wrapTemplateGoal(V^G,M,U,E,V^Wrapped) :- !, wrapTemplateGoal(G,M,U,E,Wrapped).
+wrapTemplateGoal(G,M,U,E,i(G,M,U,E)).
+
+%squeezeTuples(+Tuples,-ResultsList,-Unknowns,-Explanations)
+squeezeTuples(Tuples,L,U,Es) :-
+    findall(X, member(X/_/_,Tuples), L), 
+    findall(Ui, member(_/Ui/_,Tuples), U_), append(U_,U),
+    findall(Ei, member(_/_/Ei,Tuples), Es_), append(Es_,Es).
 
 % myClause(+Head,+Module,-Body)  also executes Prolog bodies
 myClause(on(H,Time),M,Body) :- !, myClause2(H,Time,M,Body).
@@ -59,6 +98,7 @@ myClause2(H,Time,M,Body) :-
         Body_=Body).
 
 % unknown(+Goal,+Module) whether the knowledge source is currently unable to provide a result 
+unknown(G,M) :- var(G), !, throw(variable_unknown_call_at(M)).
 unknown(on(G,_Time),M) :- !, functor(G,F,N),functor(GG,F,N), \+ myClause(GG,M,_).
 unknown(G,M) :- functor(G,F,N),functor(GG,F,N), \+ myClause(GG,M,_).
 

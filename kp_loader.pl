@@ -119,7 +119,8 @@ prolog:xref_source_time(URL, Modified) :-
 % refresh xref database for all knowledge pages %TODO: report syntax errors properly
 xref_all :- 
     forall(kp_location(URL,File,_), (
-        print_message(informational,xreferencing(URL,File)), xref_source(URL)
+        print_message(informational,xreferencing(URL,File)), 
+        xref_source(URL,[silent(true)]) % to avoid spurious warnings for mainGoal singleton vars
     )).
 
 :- multifile prolog:message//1.
@@ -222,7 +223,7 @@ reactToSaved(created(GittyFile,Commit)) :- % discover and xref
     reactToSaved(updated(GittyFile,Commit)).
 reactToSaved(updated(GittyFile,_Commit)) :- % xref
     kp_location(URL,GittyFile,true), 
-    xref_source(URL).
+    xref_source(URL,[silent(true)]).
 
 
 %! edit_kp(URL) is det
