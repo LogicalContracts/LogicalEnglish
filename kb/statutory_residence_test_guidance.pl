@@ -6,7 +6,7 @@
 % Web page from which the present knowledge page was encoded
 :-module('https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11040',[]).
 
-mainGoal(srt(_Individual), "Determine if a person is a UK resident for tax purposes").
+mainGoal(srt(Individual), "Determine if a person is a UK resident for tax purposes").
 
 :- thread_local theIndividual/1.
 srt(Individual) :-

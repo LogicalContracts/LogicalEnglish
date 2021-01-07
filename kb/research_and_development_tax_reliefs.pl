@@ -6,7 +6,7 @@
 % Web page from which the present knowledge page was encoded
 :-module('https://www.gov.uk/guidance/corporation-tax-research-and-development-rd-relief',[]).
 
-mainGoal(r_d_relief(_ProjectID,_ExtraDeduction,_TaxCredit), "Determine if a project qualifies for the EIS").
+mainGoal(r_d_relief(ProjectID,ExtraDeduction,TaxCredit), "Determine if a project qualifies for the EIS").
 
 :- thread_local theProject/1.
 r_d_relief(ProjectID,ExtraDeduction,TaxCredit) :-

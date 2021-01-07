@@ -6,7 +6,7 @@
 % Web page from which the present knowledge page was encoded
 :-module('https://www.gov.uk/guidance/stamp-duty-reserve-tax-reliefs-and-exemptions',[]).
 
-mainGoal(exempt_transfer(_FromTaxPayer,_ToTaxPayer,_SecurityIdentifier,_When),"Determine if an electronic transaction is exempt from SDRT").
+mainGoal(exempt_transfer(FromTaxPayer,ToTaxPayer,SecurityIdentifier,When),"Determine if an electronic transaction is exempt from SDRT").
 
 :- thread_local shares_transfer/4.
 exempt_transfer(FromTaxPayer,ToTaxPayer,SecurityIdentifier,When) :-
