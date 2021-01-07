@@ -6,7 +6,7 @@
 % Web page from which the present knowledge page was encoded
 :-module('https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/maximum-net-asset-value-test/',[]).
 
-mainGoal(satisfies_maximum_net_asset_value_test(TFN), "Determine if a given entity satisfies the maximum net value test for CGT assets").
+mainGoal(satisfies_maximum_net_asset_value_test(_TFN), "Determine if a given entity satisfies the maximum net value test for CGT assets").
 
 
 % Assumptions: 

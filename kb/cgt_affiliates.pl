@@ -8,7 +8,7 @@
 
 
 % indicate future API entry point: predicate pattern, description
-mainGoal(affiliate(Entity,Affiliate),"Determine if a given entity is affiliate of another (also given)").
+mainGoal(affiliate(_Entity,_Affiliate),"Determine if a given entity is affiliate of another (also given)").
 
 % Assumptions: 
 %   all predicates hold on NOW unlesss indicated otherwise with 'on'; 

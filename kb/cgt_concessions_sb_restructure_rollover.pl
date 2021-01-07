@@ -7,7 +7,7 @@
 :- module('https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/small-business-restructure-rollover',[]).
 
 
-mainGoal(rollover_applies(ID,Asset,When,TransferorTFN,TransfereesTFNList), "Determine if a asset transfer event can be treated as a restructure rollover").
+mainGoal(rollover_applies(_ID,_Asset,_When,_TransferorTFN,_TransfereesTFNList), "Determine if a asset transfer event can be treated as a restructure rollover").
 
 :- thread_local transfer_event/5.
 rollover_applies(ID,Asset,When,TransferorTFN,TransfereesTFNList) :-
