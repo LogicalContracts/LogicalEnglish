@@ -9,16 +9,17 @@
 
 :- use_module(kp_loader).
 
-% for now assumes KB in user module
+i( at(G,KP),U,E) :- !,context_module(M), i(at(G,KP),M,U,E).
+i( _G,_,_) :- print_message(error,top_goal_must_be_at), fail.
 
 % i(+Goal,+LoadedModule,-Unknowns,-Why) 
 %  explanation is a proof tree: w(nodeLiteral,childrenNodes); [] denotes.. self-evident; 
 %TODO: negative explanations 
+%TODO: add meta_predicate(i(0,...)) declarations...?
 % failure means false; success with empty Unknowns list means true; 
 % otherwise, result unknown, depending on solutions to goals in Unknowns; 
 % _-system is an "unknown" likely irrelevant, a consequence of others
-%TODO: expand functional notations, namely prior to system predicates such as between/3: user defined functions, and arithmetic
-% i(G,_,_,_) :- mylog(i-G), fail.
+i(G,_,_,_) :- mylog(i-G), fail.
 i(G,M,_,_) :- var(G), !, throw(variable_call_at(M)).
 i(true, _, [], []) :- !.
 i(false, _, [], []) :- !, fail.
@@ -28,7 +29,7 @@ i(or(A,B), M, U, E) :- !, i((A;B),M, U,E).
 i((A;B), M, U, E) :- !, (i(A,M,U,E) ; i(B,M,U,E)).
 i(must(I,M), Mod, U, E) :- !, i(then(I,M), Mod, U, E).
 i(not(G),M,U,E) :- !, i( \+ G,M,U,E).
-i(\+ G, M, [], [w(not(G),[])]) :- !, \+ i( G, M, [], _).
+i(\+ G, M, [], [w(not(G),[])]) :- !, \+ i( G, M, [], _). % notice this requires no unknowns!
 i(!,_,_,_) :- throw(no_cuts_allowed).
 i(';'(C->T,Else), M, U, E) :- !, % forbid this?
     ( i(C,M,UC,EC) -> 
@@ -69,7 +70,7 @@ i(M:G,_,U,E) :- !, i(G,M,U,E).
 i(G,M,U,E) :- system_predicate(G), !, 
     evalArgExpressions(G,M,NewG,Uargs,E),
     % floundering originates unknown:
-    catch(NewG, error(instantiation_error,_Cx), U_=[at(instantiation_error(G),M)]), 
+    catch(M:NewG, error(instantiation_error,_Cx), U_=[at(instantiation_error(G),M)]), 
     (var(U_)->U_=[];true),
     append(Uargs,U_,U).
 i(G,M,U,E) :- unknown(G,M), !, (U=[at(G,M)],E=[ w(unknown(at(G,M)),[]) ]).
@@ -120,12 +121,12 @@ myClause2(H,Time,M,Body,IsProlog) :-
     M:clause(H,Body_), 
     (Body_=because(on(Body,_Time),_Why) -> IsProlog=true; 
         Body_=on(Body,Time) -> IsProlog=false ; 
-        (Body_=Body,Prolog=false)).
+        (Body_=Body,IsProlog=false)).
 
 % unknown(+Goal,+Module) whether the knowledge source is currently unable to provide a result 
 unknown(G,M) :- var(G), !, throw(variable_unknown_call_at(M)).
-unknown(on(G,_Time),M) :- !, functor(G,F,N),functor(GG,F,N), \+ myClause(GG,M,_,_).
-unknown(G,M) :- functor(G,F,N),functor(GG,F,N), \+ myClause(GG,M,_,_).
+unknown(on(G,_Time),M) :- !, functor(G,F,N),functor(GG,F,N), \+ myClause2(GG,_,M,_,_).
+unknown(G,M) :- functor(G,F,N),functor(GG,F,N), \+ myClause2(GG,_,M,_,_).
 
 :- multifile prolog:meta_goal/2. % for xref
 prolog:meta_goal(at(G,M),[M_:G]) :- nonvar(M), atom_string(M_,M).
@@ -153,8 +154,14 @@ system_predicate(G) :- kp_dir(D), predicate_property(G,file(F)), \+ sub_atom(F,_
 
 %%%% Support for automated tests/examples
 
+i_once_with_facts(at(G,M),Facts,U,E) :-
+    context_module(Me),
+    once_with_facts( Me:i(at(G,M),U,E), M, Facts,true).
+
 % once_with_facts(Goal,Module,AdditionalFacts,+DoUndo)
 % asserts the facts and calls Goal, stopping at the first solution, and optionally undoing the fact changes
+% if a fact's predicate is undefined or not dynamic, it is declared (forever) as thread_local, 
+% to support multiple clients
 once_with_facts(G,M_,Facts,DoUndo) :-
     must_be(boolean,DoUndo),
     atom_string(M,M_),
@@ -168,11 +175,12 @@ assert_and_remember([Fact|Facts],M,(Undo,Undos)) :- must_be(nonvar,Fact),
 assert_and_remember([],_,true).
 
 assert_and_remember(M:Fact,Undo) :- \+ predicate_property(M:Fact,_), !, 
-    functor(Fact,F,N), Undo=abolish(M:F/N), assert(M:Fact).
+    % abolish caused 'No permission to modify thread_local_procedure'; weird interaction with yall.pl ..??
+    functor(Fact,F,N), Undo=retractall(M:Fact), thread_local(M:F/N), assert(M:Fact).
 assert_and_remember(CF,Undo) :- predicate_property(CF,(dynamic)), !, 
-    Undo = (retract(CF)->true;true), assert(CF).
-assert_and_remember(M:Fact,Undo) :- functor(Fact,F,N), dynamic(M:F/N),
-    Undo = (retract(M:Fact)->true;true), assert(M:Fact).
+    Undo = retractall(CF), assert(CF).
+assert_and_remember(M:Fact,Undo) :- functor(Fact,F,N), thread_local(M:F/N),
+    Undo = retractall(M:Fact), assert(M:Fact).
 
 canonic_fact(M_:F,_,M:F) :- !, atom_string(M,M_).
 canonic_fact(at(F,M),_,M_:F) :- !, atom_string(M_,M).
@@ -220,7 +228,6 @@ nodeAttributes(at(G,K), [color=green,label=S]) :- format(string(S),"~w",G).
 
 %!  after(+Later,+Earlier) is det.
 %   Arguments must be atoms in iso_8601 format
-
 after(Later,Earlier) :- 
     parse_time(Later,L), parse_time(Earlier,E), L>E.
 not_before(Later,Earlier) :-

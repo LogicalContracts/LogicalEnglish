@@ -1,7 +1,5 @@
-% Written by Miguel Calejo for LodgeIT, Australia, and AORALaw, UK; copyright LodgeIT+AORALaw (50% each) 2020
+% Written by Miguel Calejo for LodgeIT, Australia, and AORALaw, UK; copyright LodgeIT+AORALaw (50% each) 2020,2021
 % PRELIMINARY DRAFT
-
-% For now, residing in the 'user' module
 
 % Web page from which the present knowledge page was encoded
 :-module('https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/affiliates/',[]).
@@ -11,11 +9,7 @@
 mainGoal(affiliate(_Entity,_Affiliate),"Determine if a given entity is affiliate of another (also given)").
 
 % Assumptions: 
-%   all predicates hold on NOW unlesss indicated otherwise with 'on'; 
 %   datetimes in iso_8601 format
-%   external predicates MUST be aware of the local main event time, "now"
-
-%:- discontiguous (if)/2.
 
 % note: referred by cgt_concessions_basic_conditions_sb.pl:
 affiliate(Entity,Affiliate) on Date if 

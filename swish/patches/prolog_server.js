@@ -662,7 +662,7 @@ classification of tokens.
 			//console.log("xref result:"+JSON.stringify(myLocations));
 			for (var loc of myLocations){
 				loc["showAllMatches"]=true;
-				loc["regex"] = new RegExp(/*"\\b"+*/RegExp.escape(loc.target), "g");
+				loc["regex"] = new RegExp("\\b"+RegExp.escape(loc.target), "g");
 				result.push(loc);
 			}
     }
