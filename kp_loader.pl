@@ -86,7 +86,7 @@ call_at(Goal,Name) :- must_be(nonvar,Name), module_property(Name,last_modified_g
 call_at(Goal,Name) :- kp_location(Name,File,InGitty), !, 
     load_named_file(File,Name,InGitty),
     Name:Goal.
-call_at(Goal,Name) :- print_message(error,'could not load kp'(Goal,Name)), fail.
+call_at(Goal,Name) :- print_message(error,no_kp(Goal,Name)), fail.
 
 
 
@@ -125,6 +125,7 @@ xref_all :-
 
 :- multifile prolog:message//1.
 prolog:message(xreferencing(URL,File)) --> ['Xreferencing module ~w in file ~w'-[URL,File]].
+prolog:message(no_kp(Goal,Name)) --> ["Could not find knowledge page ~w for goal ~w"-[Name,Goal]].
 
 xref_clean :-
     forall(kp_location(URL,_,_), xref_clean(URL)).

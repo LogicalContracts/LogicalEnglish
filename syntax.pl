@@ -11,6 +11,10 @@
     op(600,xfx,user:on),
     op(1150,xfx,user:because), % to support because(on(p,t),why) if ...
     op(700,xfx,user:at), % note vs. negation...incompatible with LPS fluents
+    % date operators
+    op(700,xfx,user:not_before),
+    op(700,xfx,user:before),
+    op(700,xfx,user:after),
     taxlog2prolog/3
     ]).
 

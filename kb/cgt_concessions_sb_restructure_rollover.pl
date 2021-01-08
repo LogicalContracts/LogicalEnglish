@@ -27,7 +27,7 @@ rollover_applies(ID,Asset,When,TransferorTFN,TransfereesTFNList) :-
 %TODO: replace pseudo code text by predicates
 example( "Ultimate ownership unchanged", [
     % initial facts and condition:
-    state(["penny runs a business B","B has assets A"], ultimate_owner(A,'Penny')),
+    state(["penny runs a business B","B has assets A"], ultimate_owner(A,'Penny',1)),
     % new facts and condition:
     state(["penny has trust T", transfer_event(ID,A,When,B,[T])], ultimate_owner(A,'Penny'))
     ]).

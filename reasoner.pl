@@ -1,5 +1,5 @@
 :- module(_ThisFileName,[query/2,
-    after/2, immediately_before/2, same_date/2, this_year/1]).
+    after/2, not_before/2, before/2, immediately_before/2, same_date/2, this_year/1]).
 
 /** <module> Tax-KB reasoner and utils
 @author Miguel Calejo
@@ -62,7 +62,8 @@ i(findall(X,G,L),M,U,[w(findall(X,G,L),Children)]) :- !,
     findall(X/Ui/Ei, i(G,M,Ui,Ei), Tuples), 
     squeezeTuples(Tuples,L,U,Children).
 i(Q,M,[at(Q,M)],[w(unknown(at(Q,M)))]) :- functor(Q,question,N), (N=1;N=2), !.
-i(At,_Mod,U,E) :- At=at(G,M), !, % this may cause loading of the module
+i(At,_Mod,U,E) :- At=at(G,M_), !, % this may cause loading of the module
+    atom_string(M,M_),
     (call_at(true,M) -> i(G,M,U,E) ; ( U=[At],E=[w(unknown(At),[])] )).
 i(M:G,_,U,E) :- !, i(G,M,U,E).
 i(G,M,U,E) :- system_predicate(G), !, 
@@ -75,8 +76,13 @@ i(G,M,U,E) :- unknown(G,M), !, (U=[at(G,M)],E=[ w(unknown(at(G,M)),[]) ]).
 %TODO: on(G,2020) means "G true on some instant in 2020"; who matches that with '20210107' ?
 i(G,M,U,E) :- 
     evalArgExpressions(G,M,NewG,Uargs,Eargs),
-    myClause(G,M,B),
-    i(B,M,U_,Children_),
+    myClause(G,M,B,IsProlog),
+    (IsProlog==false -> i(B,M,U_,Children_) ; (
+        catch(B,error(Error,_),U_=[at(Error,M)]),
+        (var(U_)->U_=[];true),
+        Children_=[]
+    )),
+    
     append(Uargs,U_,U),
     (catch(M:irrelevant_explanation(NewG),_,fail) -> E=Eargs ; (E=[w(G,Children)], append(Eargs,Children_,Children) )).
 
@@ -106,20 +112,20 @@ squeezeTuples(Tuples,L,U,Es) :-
     findall(Ui, member(_/Ui/_,Tuples), U_), append(U_,U),
     findall(Ei, member(_/_/Ei,Tuples), Es_), append(Es_,Es).
 
-% myClause(+Head,+Module,-Body)  also executes Prolog bodies
-myClause(on(H,Time),M,Body) :- !, myClause2(H,Time,M,Body).
-myClause(H,M,Body) :- myClause2(H,_Time,M,Body).
+% myClause(+Head,+Module,-Body,-IsProlog)  IsProlog is true if the body should be called directly, without interpretation
+myClause(on(H,Time),M,Body,IsProlog) :- !, myClause2(H,Time,M,Body,IsProlog).
+myClause(H,M,Body,IsProlog) :- myClause2(H,_Time,M,Body,IsProlog).
 
-myClause2(H,Time,M,Body) :- 
+myClause2(H,Time,M,Body,IsProlog) :- 
     M:clause(H,Body_), 
-    (Body_=because(on(Prolog,_Time),_Why) -> ( catch(Prolog,Ex,(print_message(error,Ex), fail)), Body=true); 
-        Body_=on(Body,Time) -> true ; 
-        Body_=Body).
+    (Body_=because(on(Body,_Time),_Why) -> IsProlog=true; 
+        Body_=on(Body,Time) -> IsProlog=false ; 
+        (Body_=Body,Prolog=false)).
 
 % unknown(+Goal,+Module) whether the knowledge source is currently unable to provide a result 
 unknown(G,M) :- var(G), !, throw(variable_unknown_call_at(M)).
-unknown(on(G,_Time),M) :- !, functor(G,F,N),functor(GG,F,N), \+ myClause(GG,M,_).
-unknown(G,M) :- functor(G,F,N),functor(GG,F,N), \+ myClause(GG,M,_).
+unknown(on(G,_Time),M) :- !, functor(G,F,N),functor(GG,F,N), \+ myClause(GG,M,_,_).
+unknown(G,M) :- functor(G,F,N),functor(GG,F,N), \+ myClause(GG,M,_,_).
 
 :- multifile prolog:meta_goal/2. % for xref
 prolog:meta_goal(at(G,M),[M_:G]) :- nonvar(M), atom_string(M_,M).
@@ -144,8 +150,35 @@ prolog:called_by(because(G,_Why), M, M, [G]). % why is this needed, given meta_g
 system_predicate(G) :- predicate_property(G,built_in). 
 system_predicate(G) :- kp_dir(D), predicate_property(G,file(F)), \+ sub_atom(F,_,_,_,D).
 
-% assuming not unknown(...), ask the knowledge source for its result
-evaluate_at(at(G,KS)) :- kbModule(M), M:at(G,KS).
+
+%%%% Support for automated tests/examples
+
+% once_with_facts(Goal,Module,AdditionalFacts,+DoUndo)
+% asserts the facts and calls Goal, stopping at the first solution, and optionally undoing the fact changes
+once_with_facts(G,M_,Facts,DoUndo) :-
+    must_be(boolean,DoUndo),
+    atom_string(M,M_),
+    assert_and_remember(Facts,M,Undo),
+    once(M:G),
+    (DoUndo==true -> Undo ; true).
+
+assert_and_remember([Fact|Facts],M,(Undo,Undos)) :- must_be(nonvar,Fact),
+    canonic_fact(Fact,M,CF), assert_and_remember(CF,Undo),
+    assert_and_remember(Facts,M,Undos).
+assert_and_remember([],_,true).
+
+assert_and_remember(M:Fact,Undo) :- \+ predicate_property(M:Fact,_), !, 
+    functor(Fact,F,N), Undo=abolish(M:F/N), assert(M:Fact).
+assert_and_remember(CF,Undo) :- predicate_property(CF,(dynamic)), !, 
+    Undo = (retract(CF)->true;true), assert(CF).
+assert_and_remember(M:Fact,Undo) :- functor(Fact,F,N), dynamic(M:F/N),
+    Undo = (retract(M:Fact)->true;true), assert(M:Fact).
+
+canonic_fact(M_:F,_,M:F) :- !, atom_string(M,M_).
+canonic_fact(at(F,M),_,M_:F) :- !, atom_string(M_,M).
+canonic_fact(F,M,M:F).
+
+%%%%%
 
 query(at(G,M),Questions) :- 
     i(G,M,U,E), 
@@ -190,6 +223,10 @@ nodeAttributes(at(G,K), [color=green,label=S]) :- format(string(S),"~w",G).
 
 after(Later,Earlier) :- 
     parse_time(Later,L), parse_time(Earlier,E), L>E.
+not_before(Later,Earlier) :-
+    parse_time(Later,L), parse_time(Earlier,E), L>=E.
+before(Earlier,Later) :-
+    parse_time(Later,L), parse_time(Earlier,E), E<L.
 
 % tests/generates previous day:
 immediately_before(Earlier,Later) :- 

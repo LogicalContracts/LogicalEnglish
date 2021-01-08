@@ -19,11 +19,11 @@ mainGoal(affiliate(_Entity,_Affiliate),"Determine if a given entity is affiliate
 
 % note: referred by cgt_concessions_basic_conditions_sb.pl:
 affiliate(Entity,Affiliate) on Date if 
-    Date @>= '20090101' % date (?) when affiliate definition changed
+    Date not_before '20090101' % date (?) when affiliate definition changed
     and is_individual_or_company(Affiliate) 
     and (acts_in_accordance_with_directions_from(Affiliate,Entity) or acts_in_concert_with(Affiliate,Entity)). % seems human-bound!
 affiliate(Entity,Affiliate) on Date if
-    Date @< '20090101' % date when affiliate definition changed
+    Date before '20090101' % date when affiliate definition changed
     and must_be(nonvar,Entity) and must_be(nonvar,Affiliate)
     and question( "Is ~w an affiliate of ~w as per the older legislation" - [Affiliate,Entity]).
 
