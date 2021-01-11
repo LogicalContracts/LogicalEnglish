@@ -10,7 +10,9 @@
 :- use_module(kp_loader).
 
 % i(+AtGoal,-Unknowns,-Why)
-i( at(G,KP),U,E) :- !,context_module(M), i(at(G,KP),M,top_goal,U,E).
+i( at(G,KP),U,E) :- !,
+    context_module(M), i(at(G,KP),M,top_goal,U,E_),
+    expand_failure_trees(E_,E).
 i( _G,_,_) :- print_message(error,top_goal_must_be_at), fail.
 
 % i(+Goal,+AlreadyLoadedModule,+CallerGoalID,-Unknowns,-Why) 
@@ -258,10 +260,28 @@ canonic_fact(F,M,M:F).
 %%%%%
 
 query(at(G,M),Questions) :- 
-    i(G,M,U,E), 
+    i(G,M,top_goal,U,E), 
     findall(at(Q,K),(member(at(Q,K),U), K\=system),Questions),
     explanationHTML(E,EH), myhtml(EH).
 
+
+%%%%% Explanations
+
+% expand_failure_trees(+Why,-ExpandedWhy)
+expand_failure_trees([w(X,Children)|Wn],[w(X,NewChildren)|EWn]) :- !, 
+    expand_failure_trees(Children,NewChildren), expand_failure_trees(Wn,EWn).
+expand_failure_trees([f(ID,CID,Children)|Wn],[f(G,Children)|EWn]) :- failed_success(ID,Why), !, 
+    must_be(var,Children),
+    must(failed(ID,CID,G)),
+    Children = Why,
+    expand_failure_trees(Wn,EWn).
+expand_failure_trees([f(ID,CID,Children)|Wn],[f(G,NewChildren)|EWn]) :- 
+    must_be(var,Children),
+    must(failed(ID,CID,G)),
+    findall(f(ChildID,ID,_),failed(ChildID,ID,_ChildG),Children),
+    expand_failure_trees(Children,NewChildren),
+    expand_failure_trees(Wn,EWn).
+expand_failure_trees([],[]).
 
 % works ok but not inside SWISH because of its style clobbering ways:
 explanationHTML(w(G,C),[li(title="Rule inference step","~w"-[G]),ul(CH)]) :- explanationHTML(C,CH).
@@ -290,6 +310,10 @@ nodeAttributes(unknown(at(G,K)), [label=S]) :- format(string(S),"~w",G).
 nodeAttributes(failed(at(G,K)), [color=red,label=S]) :- format(string(S),"~w",G).
 nodeAttributes(at(G,K), [color=green,label=S]) :- format(string(S),"~w",G).
 */
+
+:- meta_predicate(must(0)).
+must(G) :- G, !.
+must(G) :- throw(weird_failure_of(G)).
 
 %%%% Common background knowledge, probably to go elsewhere:
 
