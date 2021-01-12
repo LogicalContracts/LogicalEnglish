@@ -15,3 +15,5 @@ t(a).
 
 e(b).
 
+testForall(L) :-
+    forall(member(X,L),c(X)).

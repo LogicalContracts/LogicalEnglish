@@ -9,24 +9,25 @@
 
 :- use_module(kp_loader).
 
-% i(+AtGoal,-Unknowns,-Why)
+% i(+AtGoal,-Unknowns,-Why) always succeeds; if Why=[s(...)], so did the goal; if Why=[f(...)], the goal has failed
 i( at(G,KP),U,E) :- !,
-    context_module(M), i(at(G,KP),M,top_goal,U,E_),
-    expand_failure_trees(E_,E).
+    context_module(M), nextGoalID(ID),
+    ( i(at(G,KP),M,top_goal,U,E_), expand_failure_trees(E_,E) ; expand_failure_trees([f(ID,_,_)],E)).
 i( _G,_,_) :- print_message(error,top_goal_must_be_at), fail.
 
 % i(+Goal,+AlreadyLoadedModule,+CallerGoalID,-Unknowns,-Why) 
-%  explanation is a proof tree: w(nodeLiteral,ClauseRef,childrenNodes); [] denotes.. self-evident; 
+%  explanation is a proof-like tree: s(nodeLiteral,ClauseRef,childrenNodes); (s)success) [] denotes.. self-evident; 
 %  if nextGoalID(ID), i(G,...) fails with zero solutions, there will be a failed tree asserted with root failed(ID,...)
 %  failures for not(G) goals will also leave asserted a fact failed_success(ID,Why)
-%   successes for not(G) goals will have a Why with f(NegatedGoalID,CallerID,FreeVar)
+%  successes for not(G) goals will have a Why with the underlying failure, f(NegatedGoalID,CallerID,FreeVar); 
+%  these can be expanded by expand_failure_trees into f(G,Children)
 %  there may be orphan failed(ID,...) facts, because we're focusing on solution-less failures only
 %  this predicate is NOT thread safe
 %TODO: add meta_predicate(i(0,...)) declarations...?
 % failure means false; success with empty Unknowns list means true; 
 % otherwise, result unknown, depending on solutions to goals in Unknowns; 
 %TODO: ?? _-system is an "unknown" likely irrelevant, a consequence of others
-% i(G,_,_,_) :- mylog(i-G), fail.
+% i(G,_,_,_,_) :- nextGoalID(ID), mylog(ID-G), fail.
 i(G,M,_,_,_) :- var(G), !, throw(variable_call_at(M)).
 i(true, _, _, U, E) :- !, U=[], E=[].
 i(false, _, _, _U, _E) :- !, fail.
@@ -71,7 +72,8 @@ i(then(if(C),else(T,Else)), M, CID, U, E) :- !,
         append(EC,EE,E)
     )).
 i(then(if(C),Then),M,CID,U,E) :- !, i(then(if(C),else(Then,true)),M,CID,U,E).
-i(forall(A,B),M,CID,U,E) :- !, E=[w(forall(A,B),Children)],
+% this is actually never used... SWI expands forall(X,C) into \+ (X, \+C)
+i(forall(A,B),M,CID,U,E) :- !, E=[s(forall(A,B),meta,Children)],
     newGoalID(ForID),
     findall(X, (
         i(A,M,ForID,UA,EA), 
@@ -93,26 +95,26 @@ i(forall(A,B),M,CID,U,E) :- !, E=[w(forall(A,B),Children)],
         findall(Ui,member(Ui/_,Tuples),U_), append(U_,U),
         findall(Ei,member(_/Ei,Tuples),Children_), append(Children_,Children)
     )).
-i(setof(X,G,L),M,CID,U,E) :- !, E=[w(setof(X,G,L),Children)],
+i(setof(X,G,L),M,CID,U,E) :- !, E=[s(setof(X,G,L),meta,Children)],
     wrapTemplateGoal(G,M,CID,Ui,Ei,Wrapped), %TODO: should we introduce an explicit failed node for aggregates?
     setof(X/Ui/Ei, Wrapped, Tuples),
     squeezeTuples(Tuples,L,U,Children).
-i(bagof(X,G,L),M,CID,U,E) :- !, E=[w(bagof(X,G,L),Children)],
+i(bagof(X,G,L),M,CID,U,E) :- !, E=[s(bagof(X,G,L),meta,Children)],
     wrapTemplateGoal(G,M,CID,Ui,Ei,Wrapped),
     bagof(X/Ui/Ei, Wrapped, Tuples),
     squeezeTuples(Tuples,L,U,Children).
-i(aggregate(Template,G,Result),M,CID,U,E) :- !, E=[w(aggregate(Template,G,Result),Children)],
+i(aggregate(Template,G,Result),M,CID,U,E) :- !, E=[s(aggregate(Template,G,Result),meta,Children)],
     % uses a bit too much of SWI internals at swipl-devel/library/aggregate.pl
     aggregate:template_to_pattern(bag, Template, Pattern, G, Goal, Aggregate),
-    i(bagof(Pattern, Goal, List),M,CID,U,[w(_Bagof,Children)]),
+    i(bagof(Pattern, Goal, List),M,CID,U,[s(_Bagof,_ClauseRef,Children)]),
     aggregate:aggregate_list(Aggregate, List, Result).
-i(findall(X,G,L),M,CID,U,E) :- !, E=[w(findall(X,G,L),Children)],
+i(findall(X,G,L),M,CID,U,E) :- !, E=[s(findall(X,G,L),meta,Children)],
     findall(X/Ui/Ei, i(G,M,CID,Ui,Ei), Tuples), 
     squeezeTuples(Tuples,L,U,Children).
-i(Q,M,_CID,U,E) :- functor(Q,question,N), (N=1;N=2), !, U=[at(Q,M)], E=[w(unknown(at(Q,M)))].
+i(Q,M,_CID,U,E) :- functor(Q,question,N), (N=1;N=2), !, U=[at(Q,M)], E=[s(unknown(at(Q,M)),meta,[])].
 i(At,_Mod,CID,U,E) :- At=at(G,M_), !, % this may cause loading of the module
     atom_string(M,M_),
-    (call_at(true,M) -> i(G,M,CID,U,E) ; ( U=[At],E=[w(unknown(At),[])] )).
+    (call_at(true,M) -> i(G,M,CID,U,E) ; ( U=[At],E=[s(unknown(At),meta,[])] )).
 i(M:G,_,CID,U,E) :- !, i(G,M,CID,U,E).
 i(G,M,CID,U,E) :- system_predicate(G), !, 
     evalArgExpressions(G,M,NewG,CID,Uargs,E),
@@ -120,7 +122,7 @@ i(G,M,CID,U,E) :- system_predicate(G), !,
     catch(M:NewG, error(instantiation_error,_Cx), U_=[at(instantiation_error(G),M)]), 
     (var(U_)->U_=[];true),
     append(Uargs,U_,U).
-i(G,M,_CID,U,E) :- unknown(G,M), !, (U=[at(G,M)],E=[ w(unknown(at(G,M)),[]) ]).
+i(G,M,_CID,U,E) :- unknown(G,M), !, (U=[at(G,M)],E=[ s(unknown(at(G,M)),meta,[]) ]).
 %TODO: on(G,2020) means "G true on some instant in 2020"; who matches that with '20210107' ?
 i(G,M,CID,U,E) :- 
     newGoalID(NewID), create_counter(Counter),
@@ -131,7 +133,7 @@ i(G,M,CID,U,E) :-
         fail
         )),
     evalArgExpressions(G,M,NewG,CID,Uargs,Eargs), % failures in the expression (which would be weird btw...) stay directly under CID
-    myClause(G,M,B,_Ref,IsProlog),
+    myClause(G,M,B,Ref,IsProlog),
     (IsProlog==false -> i(B,M,NewID,U_,Children_) ; (
         catch(B,error(Error,_),U_=[at(Error,M)]),
         (var(U_)->U_=[];true),
@@ -139,7 +141,7 @@ i(G,M,CID,U,E) :-
     )),
     inc_counter(Counter), % one more solution found; this is a nonbacktrackable operation
     append(Uargs,U_,U),
-    (catch(M:irrelevant_explanation(NewG),_,fail) -> E=Eargs ; (E=[w(G,Children)], append(Eargs,Children_,Children) )).
+    (catch(M:irrelevant_explanation(NewG),_,fail) -> E=Eargs ; (E=[s(G,Ref,Children)], append(Eargs,Children_,Children) )).
 
 :- thread_local last_goal_id/1, failed/3, failed_success/2.
 
@@ -155,10 +157,6 @@ set_counter(Counter,N) :- Counter=counter(_), nb_setarg(1,Counter,N).
 inc_counter(Counter,N) :- get_counter(Counter,N), NewN is N+1, nb_setarg(1,Counter,NewN).
 inc_counter(Counter) :- inc_counter(Counter,_).
 
-% Why: w(GoalID,ClauseID,SolutionTerm,Children)
-%storeFailure() : failed(ID,CallerID,CallTerm)
-%storeSuccess() : succeeded(CallerGoalID,Why)
-
 evalArgExpressions(G,M,NewG,CID,U,E) :- 
     G=..[F|Args], 
     maplist(evalExpression(M,CID),Args,Results,Us,Es),
@@ -168,7 +166,7 @@ evalArgExpressions(G,M,NewG,CID,U,E) :-
 % evalExpression(+Module,+Expression,-Result,+CallerID,-Unknowns,-WhyExplanation) expands (only) user functions
 % TODO: add arithmetic expressions too...?
 evalExpression(_M,_CID,X,X,[],[]) :- var(X), !.
-evalExpression(M,CID,Exp,R,U,[w(function(Exp),Children)]) :- M:clause(function(Exp,R),Body), !,
+evalExpression(M,CID,Exp,R,U,[s(function(Exp),Ref,Children)]) :- M:clause(function(Exp,R),Body,Ref), !,
     once( i(Body,M,CID,U,Children) ).
 evalExpression(_M,_CID,X,X,[],[]).
 
@@ -268,23 +266,24 @@ query(at(G,M),Questions) :-
 %%%%% Explanations
 
 % expand_failure_trees(+Why,-ExpandedWhy)
-expand_failure_trees([w(X,Children)|Wn],[w(X,NewChildren)|EWn]) :- !, 
+expand_failure_trees([s(X,Ref,Children)|Wn],[s(X,Ref,NewChildren)|EWn]) :- !, 
     expand_failure_trees(Children,NewChildren), expand_failure_trees(Wn,EWn).
 expand_failure_trees([f(ID,CID,Children)|Wn],[f(G,Children)|EWn]) :- failed_success(ID,Why), !, 
     must_be(var,Children),
-    must(failed(ID,CID,G)),
-    Children = Why,
+    must(failed(ID,CID,G),one),
+    %Children = Why,
+    expand_failure_trees(Why,Children),
     expand_failure_trees(Wn,EWn).
-expand_failure_trees([f(ID,CID,Children)|Wn],[f(G,NewChildren)|EWn]) :- 
+expand_failure_trees([f(ID,CID,Children)|Wn],Expanded) :- 
     must_be(var,Children),
-    must(failed(ID,CID,G)),
     findall(f(ChildID,ID,_),failed(ChildID,ID,_ChildG),Children),
     expand_failure_trees(Children,NewChildren),
-    expand_failure_trees(Wn,EWn).
+    expand_failure_trees(Wn,EWn),
+    (failed(ID,CID,G) -> Expanded=[f(G,NewChildren)|EWn]; append(NewChildren,EWn,Expanded)).
 expand_failure_trees([],[]).
 
 % works ok but not inside SWISH because of its style clobbering ways:
-explanationHTML(w(G,C),[li(title="Rule inference step","~w"-[G]),ul(CH)]) :- explanationHTML(C,CH).
+explanationHTML(s(G,_Ref,C),[li(title="Rule inference step","~w"-[G]),ul(CH)]) :- explanationHTML(C,CH).
 %explanationHTML(unknown(at(G,K)),[li([style="color:blue",title="Unknown"],a(href=K,"~w"-[G]))]).
 explanationHTML(unknown(at(G,K)),[li([p("UNKNOWN: ~w"-[G]),p(i(K))])]).
 explanationHTML(failed(G),[li([title="Failed goal"],span(style="color:red","FALSE: ~w"-[G]))]).
@@ -295,7 +294,7 @@ explanationHTML([],[]).
 
 /* Graphviz support, not very promising given the large size of our labels (predicate names)
 % experimental; would need unique IDs to avoid large term duplication
-explanationChild(w(_,Children),C) :- member(C,Children).
+explanationChild(s(_,_Ref,Children),C) :- member(C,Children).
 
 explanationRelation(Root,Parent,Child) :- Parent=Root, explanationChild(Parent,Child).
 explanationRelation(Root,Parent,Child) :- explanationChild(Root,X), explanationRelation(X,Parent,Child).
@@ -305,15 +304,15 @@ explanationGraph(E,dot(digraph([rankdir='TB'|Items]))) :-
     setof(node(N,NodeAttrs), Attrs^From^To^(member(edge(From->To,Attrs),Edges), (From=N;To=N), nodeAttributes(N,NodeAttrs)), Nodes),
     append(Edges,Nodes,Items).
 
-nodeAttributes(w(G,_),[label=S]) :- format(string(S),"~w",G).
+nodeAttributes(s(G,_Ref,_),[label=S]) :- format(string(S),"~w",G).
 nodeAttributes(unknown(at(G,K)), [label=S]) :- format(string(S),"~w",G).
 nodeAttributes(failed(at(G,K)), [color=red,label=S]) :- format(string(S),"~w",G).
 nodeAttributes(at(G,K), [color=green,label=S]) :- format(string(S),"~w",G).
 */
 
-:- meta_predicate(must(0)).
-must(G) :- G, !.
-must(G) :- throw(weird_failure_of(G)).
+:- meta_predicate(must(0,+)).
+must(G,_) :- G, !.
+must(G,M) :- throw(weird_failure_of(G,M)).
 
 %%%% Common background knowledge, probably to go elsewhere:
 
