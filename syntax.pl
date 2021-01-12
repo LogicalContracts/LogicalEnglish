@@ -42,7 +42,14 @@ taxlog2prolog(mainGoal(G,Description),delimiter-[Spec,classify],(mainGoal(G,Desc
     functor(G,F,N), functor(GG,F,N), % avoid "Singleton-marked variable appears more than once"
     taxlogBodySpec(G,Spec).
 taxlog2prolog(example(T,Sequence),delimiter-[classify,classify],example(T,Sequence)).
+%TODO: colour the examples; the following is not working; how do we specify the colour of lists...? :
+% taxlog2prolog(example(T,Sequence),delimiter-[classify,Spec],example(T,Sequence)) :- scenarioSequenceSpec(Sequence,Spec).
 taxlog2prolog(irrelevant_explanation(G),delimiter-[Spec],irrelevant_explanation(G)) :- taxlogBodySpec(G,Spec).
+
+scenarioSequenceSpec([scenario(_Facts,Assertion)|Scenarios],[delimiter-[classify,AssertionSpec]|Spec]) :- !,
+    taxlogBodySpec(Assertion,AssertionSpec),
+    scenarioSequenceSpec(Scenarios,Spec).
+scenarioSequenceSpec([scenario(_Facts,Assertion)],[delimiter-[classify,Spec]]) :- taxlogBodySpec(Assertion,Spec).
 
 taxlogHeadSpec(H,head(Class, H)) :- current_source(UUID),
     !,

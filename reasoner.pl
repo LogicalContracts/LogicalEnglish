@@ -224,6 +224,23 @@ system_predicate(G) :- kp_dir(D), predicate_property(G,file(F)), \+ sub_atom(F,_
 
 %%%% Support for automated tests/examples
 
+run_examples(Module) :-
+    call_at(true,Module),
+    forall(Module:example(Desc,Scenarios),(
+        format("Running example ~w~n",Desc),
+        run_scenarios(Scenarios,Module,[],U,E),
+        writeln(U),
+        writeln(E)
+    )).
+
+%consider sequence of scenario fact sets; for now, a simple concatenation:
+run_scenarios([scenario(Facts,G)|Scenarios],M,PreviousFacts,U,E) :- !,
+    append(PreviousFacts,Facts,Facts_),
+    i_once_with_facts(at(G,M),Facts_,U1,E1),
+    run_scenarios(Scenarios,M,Facts_,Un,En),
+    append(U1,Un,U), append([E1],En,E).
+run_scenarios([],_,_,[],[]).
+
 i_once_with_facts(at(G,M),Facts,U,E) :-
     context_module(Me),
     once_with_facts( Me:i(at(G,M),U,E), M, Facts,true).
@@ -232,6 +249,7 @@ i_once_with_facts(at(G,M),Facts,U,E) :-
 % asserts the facts and calls Goal, stopping at the first solution, and optionally undoing the fact changes
 % if a fact's predicate is undefined or not dynamic, it is declared (forever) as thread_local, 
 % to support multiple clients
+% BUG: not thread safe, failing to call thread_local(..) before
 once_with_facts(G,M_,Facts,DoUndo) :-
     must_be(boolean,DoUndo),
     atom_string(M,M_),
@@ -249,7 +267,7 @@ assert_and_remember(M:Fact,Undo) :- \+ predicate_property(M:Fact,_), !,
     functor(Fact,F,N), Undo=retractall(M:Fact), thread_local(M:F/N), assert(M:Fact).
 assert_and_remember(CF,Undo) :- predicate_property(CF,(dynamic)), !, 
     Undo = retractall(CF), assert(CF).
-assert_and_remember(M:Fact,Undo) :- functor(Fact,F,N), thread_local(M:F/N),
+assert_and_remember(M:Fact,Undo) :- functor(Fact,F,N), dynamic(M:F/N), % should be thread_local(M:F/N) !!!
     Undo = retractall(M:Fact), assert(M:Fact).
 
 canonic_fact(M_:F,_,M:F) :- !, atom_string(M,M_).
