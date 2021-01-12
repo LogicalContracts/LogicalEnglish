@@ -9,10 +9,11 @@
 
 :- use_module(kp_loader).
 
-% i(+AtGoal,-Unknowns,-Why) always succeeds; if Why=[s(...)], so did the goal; if Why=[f(...)], the goal has failed
-i( at(G,KP),U,E) :- !,
+% i(+AtGoal,-Unknowns,-ExplainedResult) always succeeds, with result true(Explanation) or false(Explanation)
+i( at(G,KP),U,Result) :- !,
     context_module(M), nextGoalID(ID),
-    ( i(at(G,KP),M,top_goal,U,E_), expand_failure_trees(E_,E) ; expand_failure_trees([f(ID,_,_)],E)).
+    ( i(at(G,KP),M,top_goal,U,E_) *-> (expand_failure_trees(E_,E), Result=true(E)) ;
+        (expand_failure_trees([f(ID,_,_)],E), U=[], Result=false(E)) ).
 i( _G,_,_) :- print_message(error,top_goal_must_be_at), fail.
 
 % i(+Goal,+AlreadyLoadedModule,+CallerGoalID,-Unknowns,-Why) 
