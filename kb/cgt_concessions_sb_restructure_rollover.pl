@@ -22,24 +22,24 @@ rollover_applies(ID,Asset,When,TransferorTFN,TransfereesTFNList) :-
 %   external predicates MUST be aware of the local main event time, "now"
 
 
-% example(Title,Sequence).  Sequence is a list of state(FactChanges,TrueConclusion)
+% example(Title,Sequence).  Sequence is a list of scenario(FactChanges,TrueConclusion)
 % An example ilustrates and tests:
 %TODO: replace pseudo code text by predicates
 example( "Ultimate ownership unchanged", [
     % initial facts and condition:
-    state(["penny runs a business B","B has assets A"], ultimate_owner(A,'Penny',1)),
+    scenario(['penny runs a business B','B has assets A'], ultimate_owner(A,'Penny',1)),
     % new facts and condition:
-    state(["penny has trust T", transfer_event(ID,A,When,B,[T])], ultimate_owner(A,'Penny'))
+    scenario(['penny has trust T', transfer_event(ID,A,When,B,[T])], ultimate_owner(A,'Penny'))
     ]).
 example( "Changed share of ownership", [
     % initial facts and condition:
-    state(["Amy, Joanna and Remy run a delivery business B as equal partners","B has assets A"], 
+    scenario(['Amy, Joanna and Remy run a delivery business B as equal partners','B has assets A'], 
         true),
     % new facts and condition:
-    state(["Amy, Joanna and Remy establish company C, different shares", transfer_event(ID,A,When,B,[C])], 
+    scenario(['Amy, Joanna and Remy establish company C, different shares', transfer_event(ID,A,When,B,[C])], 
         not rollover_applies),
     % alternative facts and another condition:
-    state([- "Amy, Joanna and Remy establish company C, different shares", "Amy, Joanna and Remy establish company C, equal shares"], 
+    scenario(['Amy, Joanna and Remy establish company C, different shares', 'Amy, Joanna and Remy establish company C, equal shares'], 
         rollover_applies)
     ]).
 

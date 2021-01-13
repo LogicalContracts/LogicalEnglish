@@ -89,7 +89,7 @@ Each such fact identifies a predicate to be exposed via the (REST) API.
 
 	example(Title,StatesAndAssertions).
 	
-This represents an example of the application of the knowledge rules in the module, providing it with "instance" data specific to some taxpayer, asset, etc. Regulatory (guidance) text sometimes provides them, to lighten their explanations. ``StatesAndAssertions``is an ordered list of ``state(Facts, Postcondition)``. Facts is a list of predicate facts, each optionally prefixed with ``- `` for deletion. To try an example, for each all facts in the StatesAndAssertions sequence are added/deleted, and the PostCondition (assertion) is evaluated.
+This represents an example of the application of the knowledge rules in the module, providing it with "instance" data specific to some taxpayer, asset, etc. Regulatory (guidance) text sometimes provides them, to lighten their explanations. ``StatesAndAssertions``is an ordered list of ``scenario(Facts, Postcondition)``. Facts is a list of predicate facts, each optionally prefixed with ``- `` for deletion. To try an example, for each all facts in the StatesAndAssertions sequence are added/deleted, and the PostCondition (assertion) is evaluated.
 
 These example facts are also test cases: all assertions must be true.
 
@@ -117,6 +117,6 @@ Access to data in external DBs or other services is done via (unrestricted, poss
 	is_small_business(E) on T because SomeExplanation :-
 		call_my_DB(E,T,SomeExplanation).
 
-The ```is_sme``` Taxlog predicate (which is interpreted) calls the ```call_my_DB ``` Prolog predicate directly, sharing time and getting an explanation for the DB result.
+The ```is_sme``` Taxlog predicate (which is interpreted) calls the ```call_my_DB ``` Prolog predicate directly, sharing time and getting an explanation for the DB result. The provided SomeExplanation term is regarded as an informal predicate literal in the overall explanation tree.
 
 (TODO: fix this hack) SomeExplanation MUST be textually different from '[]'.

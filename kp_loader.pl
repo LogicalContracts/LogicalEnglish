@@ -1,8 +1,8 @@
 :- module(_,[
-    call_at/2, kp_dir/1, kp_location/3,
+    call_at/2, kp_dir/1, kp_location/3, kp/1,
     discover_kps_in_dir/1, discover_kps_in_dir/0, discover_kps_gitty/0, setup_kp_modules/0, load_kps/0,
     load_gitty_files/1, load_gitty_files/0, save_gitty_files/1, delete_gitty_file/1, 
-    xref_all/0, xref_clean/0, kp_predicates/0,
+    xref_all/0, xref_clean/0, kp_predicates/0, reset_errors/0,
     edit_kp/1]).
 
 :- use_module(library(prolog_xref)).
@@ -31,6 +31,7 @@ discover_kps_in_dir(Dir) :-
         process_file(In,File,false)
     )).
 
+% This also RELOADS modules already loaded
 discover_kps_in_dir :-
     kp_dir(D), discover_kps_in_dir(D).
 
@@ -86,8 +87,14 @@ call_at(Goal,Name) :- must_be(nonvar,Name), module_property(Name,last_modified_g
 call_at(Goal,Name) :- kp_location(Name,File,InGitty), !, 
     load_named_file(File,Name,InGitty),
     Name:Goal.
-call_at(Goal,Name) :- print_message(error,no_kp(Goal,Name)), fail.
+call_at(Goal,Name) :- 
+    \+ reported_missing_kp(Name), 
+    print_message(error,no_kp(Goal,Name)), 
+    assert(reported_missing_kp(Name)), fail.
 
+:-thread_local reported_missing_kp/1.
+
+reset_errors :- retractall(reported_missing_kp(_)).
 
 
 % Support xref for gitty and file system files
@@ -153,8 +160,8 @@ kp_predicates :- %TODO: ignore subtrees of because/2
 
 %! discover_kps_gitty is det.
 %
-%  Scans all Prolog files in SWISH's gitty storage for knowledge pages. Reloads
-%  loaded modules, but does not delete "orphans" (modules no longer in gitty)
+%  Scans all Prolog files in SWISH's gitty storage for knowledge pages. RELOADS
+%  already loaded modules, but does not delete "orphans" (modules no longer in gitty)
 %  TODO: use '$destroy_module'(M) on those?
 discover_kps_gitty :-
     retractall(kp_location(_,_,true)),
@@ -314,7 +321,7 @@ edit_kp(URL) :-
         edit(file(File))
         )).
 
-discover_kps_gitty :- throw('this only works on SWISH ').
+discover_kps_gitty :- print_message(informational,'this only works on SWISH ').
 load_gitty_files :- throw('this only works on SWISH ').
 load_gitty_files(_) :- throw('this only works on SWISH ').
 save_gitty_files(_) :- throw('this only works on SWISH ').

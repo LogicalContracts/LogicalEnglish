@@ -16,10 +16,10 @@ mainGoal(satisfies_maximum_net_asset_value_test(_TFN), "Determine if a given ent
 %   external predicates MUST be aware of the local main event time, "now"
 
 %TODO: flesh out the examples
-example("Colin",[state([facts], (relevant_asset(xxx), whatever))]).
-example("Ben",[state([facts], cgt_assets_net_value(123,5000))]).
-example("Cool",[state([facts],p)]).
-example("Lana",[state([facts],q)]).
+example("Colin",[scenario([facts], (relevant_asset(xxx), whatever))]).
+example("Ben",[scenario([facts], cgt_assets_net_value(123,5000))]).
+example("Cool",[scenario([facts],p)]).
+example("Lana",[scenario([facts],q)]).
 
 % note: referred from cgt_concessions_basic_conditions_sb.pl
 satisfies_maximum_net_asset_value_test(TFN) on Date if 

@@ -1,4 +1,4 @@
-:- module(_ThisFileName,[query/2,
+:- module(_ThisFileName,[query/2, run_examples/0,
     after/2, not_before/2, before/2, immediately_before/2, same_date/2, this_year/1]).
 
 /** <module> Tax-KB reasoner and utils
@@ -11,6 +11,7 @@
 
 % i(+AtGoal,-Unknowns,-ExplainedResult) always succeeds, with result true(Explanation) or false(Explanation)
 i( at(G,KP),U,Result) :- !,
+    reset_errors,
     context_module(M), nextGoalID(ID),
     ( i(at(G,KP),M,top_goal,U,E_) *-> (expand_failure_trees(E_,E), Result=true(E)) ;
         (expand_failure_trees([f(ID,_,_)],E), U=[], Result=false(E)) ).
@@ -107,8 +108,8 @@ i(bagof(X,G,L),M,CID,U,E) :- !, E=[s(bagof(X,G,L),meta,Children)],
 i(aggregate(Template,G,Result),M,CID,U,E) :- !, E=[s(aggregate(Template,G,Result),meta,Children)],
     % uses a bit too much of SWI internals at swipl-devel/library/aggregate.pl
     aggregate:template_to_pattern(bag, Template, Pattern, G, Goal, Aggregate),
-    i(bagof(Pattern, Goal, List),M,CID,U,[s(_Bagof,_ClauseRef,Children)]),
-    aggregate:aggregate_list(Aggregate, List, Result).
+    i(bagof(Pattern, Goal, List),M,CID,U_,[s(_Bagof,_ClauseRef,Children)]),
+    catch(( aggregate:aggregate_list(Aggregate, List, Result), U=U_ ), error(instantiation_error,_Cx), append(U_,[instantiation_error(G)],U)).
 i(findall(X,G,L),M,CID,U,E) :- !, E=[s(findall(X,G,L),meta,Children)],
     findall(X/Ui/Ei, i(G,M,CID,Ui,Ei), Tuples), 
     squeezeTuples(Tuples,L,U,Children).
@@ -189,8 +190,10 @@ myClause(H,M,Body,Ref,IsProlog,URL,E) :- myClause2(H,_Time,M,Body,Ref,IsProlog,U
 
 myClause2(H,Time,M,Body,Ref,IsProlog,URL,E) :- 
     M:clause(H,Body_,Ref), 
-    ((Body_= taxlogBody(Body,Time,URL,E), E\==[] ) -> IsProlog=true; 
-        Body_=taxlogBody(Body,Time,URL,E) -> IsProlog=false ; 
+    ((Body_= taxlogBody(Body,Time,URL,E_), E_\==[] ) -> (
+            (IsProlog=true, E=[s(E_,Ref,[])])
+        ); 
+        Body_=taxlogBody(Body,Time,URL,E) -> (IsProlog=false) ; 
         (Body_=Body,IsProlog=true,E=[],URL='')).
 
 % unknown(+Goal,+Module) whether the knowledge source is currently unable to provide a result 
@@ -225,10 +228,16 @@ system_predicate(G) :- kp_dir(D), predicate_property(G,file(F)), \+ sub_atom(F,_
 
 %%%% Support for automated tests/examples
 
+run_examples :-
+    forall(kp(M),(
+        format("Knowldege page ~w~n",M),
+        run_examples(M)
+    )).
+
 run_examples(Module) :-
     call_at(true,Module),
-    forall(Module:example(Desc,Scenarios),(
-        format("Running example ~w~n",Desc),
+    forall( catch(Module:example(Desc,Scenarios),_,fail), (
+        format(" Running example ~w~n",Desc),
         run_scenarios(Scenarios,Module,1,[],_U,_E)
     )).
 
