@@ -19,5 +19,5 @@ t(a).
 
 e(b).
 
-testForall(L) :-
+testForall(L) if
     forall(member(X,L),c(X)).

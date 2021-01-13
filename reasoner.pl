@@ -134,11 +134,11 @@ i(G,M,CID,U,E) :-
         fail
         )),
     evalArgExpressions(G,M,NewG,CID,Uargs,Eargs), % failures in the expression (which would be weird btw...) stay directly under CID
-    myClause(G,M,B,Ref,IsProlog),
+    myClause(G,M,B,Ref,IsProlog,_URL,LocalE),
     (IsProlog==false -> i(B,M,NewID,U_,Children_) ; (
         catch(B,error(Error,_),U_=[at(Error,M)]),
         (var(U_)->U_=[];true),
-        Children_=[]
+        Children_=LocalE
     )),
     inc_counter(Counter), % one more solution found; this is a nonbacktrackable operation
     append(Uargs,U_,U),
@@ -183,20 +183,20 @@ squeezeTuples(Tuples,L,U,Es) :-
     findall(Ui, member(_/Ui/_,Tuples), U_), append(U_,U),
     findall(Ei, member(_/_/Ei,Tuples), Es_), append(Es_,Es).
 
-% myClause(+Head,+Module,-Body,-IsProlog)  IsProlog is true if the body should be called directly, without interpretation
-myClause(on(H,Time),M,Body,Ref,IsProlog) :- !, myClause2(H,Time,M,Body,Ref,IsProlog).
-myClause(H,M,Body,Ref,IsProlog) :- myClause2(H,_Time,M,Body,Ref,IsProlog).
+% myClause(+Head,+Module,-Body,-IsProlog,-LocalExplanation)  IsProlog is true if the body should be called directly, without interpretation
+myClause(on(H,Time),M,Body,Ref,IsProlog,URL,E) :- !, myClause2(H,Time,M,Body,Ref,IsProlog,URL,E).
+myClause(H,M,Body,Ref,IsProlog,URL,E) :- myClause2(H,_Time,M,Body,Ref,IsProlog,URL,E).
 
-myClause2(H,Time,M,Body,Ref,IsProlog) :- 
+myClause2(H,Time,M,Body,Ref,IsProlog,URL,E) :- 
     M:clause(H,Body_,Ref), 
-    (Body_=because(on(Body,_Time),_Why) -> IsProlog=true; 
-        Body_=on(Body,Time) -> IsProlog=false ; 
-        (Body_=Body,IsProlog=false)).
+    ((Body_= taxlogBody(Body,Time,URL,E), E\==[] ) -> IsProlog=true; 
+        Body_=taxlogBody(Body,Time,URL,E) -> IsProlog=false ; 
+        (Body_=Body,IsProlog=true,E=[],URL='')).
 
 % unknown(+Goal,+Module) whether the knowledge source is currently unable to provide a result 
 unknown(G,M) :- var(G), !, throw(variable_unknown_call_at(M)).
-unknown(on(G,_Time),M) :- !, functor(G,F,N),functor(GG,F,N), \+ myClause2(GG,_,M,_,_,_).
-unknown(G,M) :- functor(G,F,N),functor(GG,F,N), \+ myClause2(GG,_,M,_,_,_).
+unknown(on(G,_Time),M) :- !, functor(G,F,N),functor(GG,F,N), \+ myClause2(GG,_,M,_,_,_,_,_).
+unknown(G,M) :- functor(G,F,N),functor(GG,F,N), \+ myClause2(GG,_,M,_,_,_,_,_).
 
 :- multifile prolog:meta_goal/2. % for xref
 prolog:meta_goal(at(G,M),[M_:G]) :- nonvar(M), atom_string(M_,M).
@@ -214,6 +214,7 @@ prolog:meta_goal(aggregate(_,G,_),[G]). % is this necessary...?
 :- multifile prolog:called_by/4.
 prolog:called_by(on(G,_T), M, M, [G]). % why is this needed, given meta_goal(on(..))...?
 prolog:called_by(because(G,_Why), M, M, [G]). % why is this needed, given meta_goal(on(..))...?
+prolog:called_by(taxlogBody(G,_,_,_), M, M, [G]). 
 %prolog:called_by(aggregate(_,G,_), M, M, [G]). % why is this needed, given meta_goal(on(..))...?
 
 % does NOT fix the "G is not called" bug: prolog:called_by(mainGoal(G,_), M, M, [G]).
@@ -228,18 +229,19 @@ run_examples(Module) :-
     call_at(true,Module),
     forall(Module:example(Desc,Scenarios),(
         format("Running example ~w~n",Desc),
-        run_scenarios(Scenarios,Module,[],U,E),
-        writeln(U),
-        writeln(E)
+        run_scenarios(Scenarios,Module,1,[],_U,_E)
     )).
 
 %consider sequence of scenario fact sets; for now, a simple concatenation:
-run_scenarios([scenario(Facts,G)|Scenarios],M,PreviousFacts,U,E) :- !,
+run_scenarios([scenario(Facts,G)|Scenarios],M,N,PreviousFacts,U,E) :- !,
     append(PreviousFacts,Facts,Facts_),
     i_once_with_facts(at(G,M),Facts_,U1,E1),
-    run_scenarios(Scenarios,M,Facts_,Un,En),
+    format("  Scenario ~w unknowns   : ~w~n",[N,U1]),
+    format("  Scenario ~w explanation: ~w~n",[N,E1]),
+    NewN is N+1,
+    run_scenarios(Scenarios,M,NewN,Facts_,Un,En),
     append(U1,Un,U), append([E1],En,E).
-run_scenarios([],_,_,[],[]).
+run_scenarios([],_,_,_,[],[]).
 
 i_once_with_facts(at(G,M),Facts,U,E) :-
     context_module(Me),

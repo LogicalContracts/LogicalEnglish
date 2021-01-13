@@ -24,32 +24,41 @@
 :- use_module(library(prolog_colour)).
 
 /*
-Transforms source rules into our "no time on heads" representation:
-P on T if Body -->  P :- on(Body,T).
-P on T because Why --> P :- because(on(P,T),Why).
-P if Body --> P :- Body
+Transforms source rules into our "no time on heads" representation, using a body wrapper to carry extra information:
+    taxlogBody(RealBody,Time,URL,Why)
+
+P on T if Body  -->  P :- taxlogBody(Body,T,'',[])
+P on T because Why :- PrologBody   -->   P :- taxlogBody(PrologBody,T,'',Why)
+P if Body  --> P  :- taxlogBody(Body,_,'',[])
+Admissible variants with a specific URL:
+P on T at URL if Body --> P :- taxlogBody(Body,T,URL,[])
+P at URL if Body  -->  P :- taxlogBody(Body,_,URL,[])
 */
 
 taxlog2prolog(if(function(Call,Result),Body), neck(if)-[delimiter-[head(meta,Call),classify],SpecB], (function(Call,Result):-Body)) :- !,
     taxlogBodySpec(Body,SpecB).
-taxlog2prolog(if(on(H,T),B), neck(if)-[delimiter-[SpecH,classify],SpecB], (H:-on(B,T))) :- !,
+taxlog2prolog(if(at(on(H,T),Url),B), neck(if)-[delimiter-[delimiter-[SpecH,classify],classify],SpecB], (H:-taxlogBody(B,T,Url,[]))) :- !,
     taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB).
-taxlog2prolog(if(H,B),neck(if)-[SpecH,SpecB],(H:-B)) :- 
+taxlog2prolog(if(at(H,Url),B), neck(if)-[delimiter-[SpecH,classify],SpecB], (H:-taxlogBody(B,_T,Url,[]))) :- !,
     taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB).
-taxlog2prolog((because(on(H,T),Why):-B), neck(clause)-[ delimiter-[delimiter-[SpecH,classify],classify], SpecB ], (H:-because(on(B,T),Why))) :- !,
+taxlog2prolog(if(on(H,T),B), neck(if)-[delimiter-[SpecH,classify],SpecB], (H:-taxlogBody(B,T,'',[]))) :- !,
+    taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB).
+taxlog2prolog(if(H,B),neck(if)-[SpecH,SpecB],(H:-taxlogBody(B,_,'',[]))) :- 
+    taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB).
+taxlog2prolog((because(on(H,T),Why):-B), neck(clause)-[ delimiter-[delimiter-[SpecH,classify],classify], SpecB ], (H:-taxlogBody(B,T,'',Why))) :- Why\==[], !,
     taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB).
 taxlog2prolog(mainGoal(G,Description),delimiter-[Spec,classify],(mainGoal(G,Description):-(_=1->true;GG))) :- % hack to avoid 'unreferenced' highlight in SWISH
     functor(G,F,N), functor(GG,F,N), % avoid "Singleton-marked variable appears more than once"
     taxlogBodySpec(G,Spec).
 taxlog2prolog(example(T,Sequence),delimiter-[classify,classify],example(T,Sequence)).
 %TODO: colour the examples; the following is not working; how do we specify the colour of lists...? :
-% taxlog2prolog(example(T,Sequence),delimiter-[classify,Spec],example(T,Sequence)) :- scenarioSequenceSpec(Sequence,Spec).
+%taxlog2prolog(example(T,Sequence),delimiter-[classify,Spec],example(T,Sequence)) :- scenarioSequenceSpec(Sequence,Spec).
 taxlog2prolog(irrelevant_explanation(G),delimiter-[Spec],irrelevant_explanation(G)) :- taxlogBodySpec(G,Spec).
 
-scenarioSequenceSpec([scenario(_Facts,Assertion)|Scenarios],[delimiter-[classify,AssertionSpec]|Spec]) :- !,
+scenarioSequenceSpec([scenario(_Facts,Assertion)|Scenarios],list-[delimiter-[classify,AssertionSpec],Specs]) :- !,
     taxlogBodySpec(Assertion,AssertionSpec),
-    scenarioSequenceSpec(Scenarios,Spec).
-scenarioSequenceSpec([scenario(_Facts,Assertion)],[delimiter-[classify,Spec]]) :- taxlogBodySpec(Assertion,Spec).
+    scenarioSequenceSpec(Scenarios,Specs).
+scenarioSequenceSpec([scenario(_Facts,Assertion)],list-[delimiter-[classify,Spec]]) :- taxlogBodySpec(Assertion,Spec).
 
 taxlogHeadSpec(H,head(Class, H)) :- current_source(UUID),
     !,

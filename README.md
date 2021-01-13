@@ -118,3 +118,5 @@ Access to data in external DBs or other services is done via (unrestricted, poss
 		call_my_DB(E,T,SomeExplanation).
 
 The ```is_sme``` Taxlog predicate (which is interpreted) calls the ```call_my_DB ``` Prolog predicate directly, sharing time and getting an explanation for the DB result.
+
+(TODO: fix this hack) SomeExplanation MUST be textually different from '[]'.
