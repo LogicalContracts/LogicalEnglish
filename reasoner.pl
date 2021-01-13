@@ -13,7 +13,9 @@
 i( at(G,KP),U,Result) :- !,
     reset_errors,
     context_module(M), nextGoalID(ID),
-    ( i(at(G,KP),M,top_goal,U,E_) *-> (expand_failure_trees(E_,E), Result=true(E)) ;
+    IG = call_with_time_limit( 0.5, i(at(G,KP),M,top_goal,U__,E__)), % half second max
+    ( catch( (IG,E_=E__,U=U__), time_limit_exceeded, (E_=[], U=[time_limit_exceeded]) ) *-> 
+        (expand_failure_trees(E_,E), Result=true(E)) ;
         (expand_failure_trees([f(ID,_,_)],E), U=[], Result=false(E)) ).
 i( _G,_,_) :- print_message(error,top_goal_must_be_at), fail.
 
