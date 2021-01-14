@@ -31,7 +31,6 @@ swish_config:config(include_alias,	example).
 % the above facts must come before this...:
 :- use_module('../../swish/swish').
 
-:- use_module(swish(lib/render)).
 :- use_module(library(http/http_dispatch)).
 :- use_module(swish(lib/plugin/login)).
 :- use_module(library(pengines)). % used only under SWISH
@@ -42,10 +41,12 @@ swish_config:config(include_alias,	example).
 :- use_module('../syntax.pl').
 :- use_module('../kp_loader.pl').
 :- use_module('../reasoner.pl'). 
+:- use_module('explanation_renderer').
+:- use_rendering(explanation_renderer).
 
 :- initialization( (discover_kps_gitty, setup_kp_modules, xref_all, writeln("Ready on SWISH!"))).
 
-sandbox:safe_primitive(reasoner:query(_,_)).
+:- use_module(swish(lib/render)).
 
 :- use_rendering(user:table, [
     header(at('Unknown Predicate','Knowledge Page')) 

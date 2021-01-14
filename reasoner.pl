@@ -1,4 +1,4 @@
-:- module(_ThisFileName,[query/2, run_examples/0,
+:- module(_ThisFileName,[query/4, explanationHTML/2, run_examples/0,
     after/2, not_before/2, before/2, immediately_before/2, same_date/2, this_year/1]).
 
 /** <module> Tax-KB reasoner and utils
@@ -9,7 +9,16 @@
 
 :- use_module(kp_loader).
 
+query(at(G,M),Questions,taxlogExplanation(E),Result) :- 
+    i(at(G,M),U,Result_), 
+    Result_=..[F,E],
+    must_be(boolean,F),
+    ((F==true,U==[]) -> Result=true; F==true->Result=unknown; Result=false),
+    findall(at(Q,K),(member(at(Q,K),U) /*, K\=system*/),Questions).
+    % explanationHTML(E,EH), myhtml(EH).
+
 % i(+AtGoal,-Unknowns,-ExplainedResult) always succeeds, with result true(Explanation) or false(Explanation)
+% top level interpreter predicate
 i( at(G,KP),U,Result) :- !,
     reset_errors,
     context_module(M), nextGoalID(ID),
@@ -20,7 +29,11 @@ i( at(G,KP),U,Result) :- !,
 i( _G,_,_) :- print_message(error,top_goal_must_be_at), fail.
 
 % i(+Goal,+AlreadyLoadedModule,+CallerGoalID,-Unknowns,-Why) 
-%  explanation is a proof-like tree: s(nodeLiteral,ClauseRef,childrenNodes); (s)success) [] denotes.. self-evident; 
+% failure means false; success with empty Unknowns list means true; 
+% otherwise, result unknown, depending on solutions to goals in Unknowns; 
+%  explanation is a list of proof-like trees: 
+%   s(nodeLiteral,ClauseRef,childrenNodes); (s)success) [] denotes.. some self-evident literal; 
+%   u(nodeLiteral,ClauseRef,[]); u)nknown, basically similar to s
 %  if nextGoalID(ID), i(G,...) fails with zero solutions, there will be a failed tree asserted with root failed(ID,...)
 %  failures for not(G) goals will also leave asserted a fact failed_success(ID,Why)
 %  successes for not(G) goals will have a Why with the underlying failure, f(NegatedGoalID,CallerID,FreeVar); 
@@ -28,8 +41,6 @@ i( _G,_,_) :- print_message(error,top_goal_must_be_at), fail.
 %  there may be orphan failed(ID,...) facts, because we're focusing on solution-less failures only
 %  this predicate is NOT thread safe
 %TODO: add meta_predicate(i(0,...)) declarations...?
-% failure means false; success with empty Unknowns list means true; 
-% otherwise, result unknown, depending on solutions to goals in Unknowns; 
 %TODO: ?? _-system is an "unknown" likely irrelevant, a consequence of others
 % i(G,_,_,_,_) :- nextGoalID(ID), mylog(ID-G), fail.
 i(G,M,_,_,_) :- var(G), !, throw(variable_call_at(M)).
@@ -115,10 +126,10 @@ i(aggregate(Template,G,Result),M,CID,U,E) :- !, E=[s(aggregate(Template,G,Result
 i(findall(X,G,L),M,CID,U,E) :- !, E=[s(findall(X,G,L),meta,Children)],
     findall(X/Ui/Ei, i(G,M,CID,Ui,Ei), Tuples), 
     squeezeTuples(Tuples,L,U,Children).
-i(Q,M,_CID,U,E) :- functor(Q,question,N), (N=1;N=2), !, U=[at(Q,M)], E=[s(unknown(at(Q,M)),meta,[])].
+i(Q,M,_CID,U,E) :- functor(Q,question,N), (N=1;N=2), !, U=[at(Q,M)], E=[u(at(Q,M),meta,[])].
 i(At,_Mod,CID,U,E) :- At=at(G,M_), !, % this may cause loading of the module
     atom_string(M,M_),
-    (call_at(true,M) -> i(G,M,CID,U,E) ; ( U=[At],E=[s(unknown(At),meta,[])] )).
+    (call_at(true,M) -> i(G,M,CID,U,E) ; ( U=[At],E=[u(At,meta,[])] )).
 i(M:G,_,CID,U,E) :- !, i(G,M,CID,U,E).
 i(G,M,CID,U,E) :- system_predicate(G), !, 
     evalArgExpressions(G,M,NewG,CID,Uargs,E),
@@ -126,7 +137,7 @@ i(G,M,CID,U,E) :- system_predicate(G), !,
     catch(M:NewG, error(instantiation_error,_Cx), U_=[at(instantiation_error(G),M)]), 
     (var(U_)->U_=[];true),
     append(Uargs,U_,U).
-i(G,M,_CID,U,E) :- unknown(G,M), !, (U=[at(G,M)],E=[ s(unknown(at(G,M)),meta,[]) ]).
+i(G,M,_CID,U,E) :- unknown(G,M), !, (U=[at(G,M)],E=[ u(at(G,M),meta,[]) ]).
 %TODO: on(G,2020) means "G true on some instant in 2020"; who matches that with '20210107' ?
 i(G,M,CID,U,E) :- 
     newGoalID(NewID), create_counter(Counter),
@@ -287,18 +298,12 @@ canonic_fact(M_:F,_,M:F) :- !, atom_string(M,M_).
 canonic_fact(at(F,M),_,M_:F) :- !, atom_string(M_,M).
 canonic_fact(F,M,M:F).
 
-%%%%%
-
-query(at(G,M),Questions) :- 
-    i(G,M,top_goal,U,E), 
-    findall(at(Q,K),(member(at(Q,K),U), K\=system),Questions),
-    explanationHTML(E,EH), myhtml(EH).
-
-
 %%%%% Explanations
 
 % expand_failure_trees(+Why,-ExpandedWhy)
 expand_failure_trees([s(X,Ref,Children)|Wn],[s(X,Ref,NewChildren)|EWn]) :- !, 
+    expand_failure_trees(Children,NewChildren), expand_failure_trees(Wn,EWn).
+expand_failure_trees([u(X,Ref,Children)|Wn],[u(X,Ref,NewChildren)|EWn]) :- !, 
     expand_failure_trees(Children,NewChildren), expand_failure_trees(Wn,EWn).
 expand_failure_trees([f(ID,CID,Children)|Wn],[f(G,Children)|EWn]) :- failed_success(ID,Why), !, 
     must_be(var,Children),
@@ -314,13 +319,15 @@ expand_failure_trees([f(ID,CID,Children)|Wn],Expanded) :-
     (failed(ID,CID,G) -> Expanded=[f(G,NewChildren)|EWn]; append(NewChildren,EWn,Expanded)).
 expand_failure_trees([],[]).
 
+% explanationHTML(ExpandedExplanationTree,TermerizedHTMLlist)
 % works ok but not inside SWISH because of its style clobbering ways:
 explanationHTML(s(G,_Ref,C),[li(title="Rule inference step","~w"-[G]),ul(CH)]) :- explanationHTML(C,CH).
+explanationHTML(u(G,_Ref,[]),[li(title="Unknown","~w ?"-[G])]).
 %explanationHTML(unknown(at(G,K)),[li([style="color:blue",title="Unknown"],a(href=K,"~w"-[G]))]).
-explanationHTML(unknown(at(G,K)),[li([p("UNKNOWN: ~w"-[G]),p(i(K))])]).
-explanationHTML(failed(G),[li([title="Failed goal"],span(style="color:red","FALSE: ~w"-[G]))]).
+% explanationHTML(unknown(at(G,K)),[li([p("UNKNOWN: ~w"-[G]),p(i(K))])]).
+explanationHTML(f(G,C),[li(title="Failed goal",[span(style="color:red","FALSE: ~w"-[G]),ul(CH)])]) :- explanationHTML(C,CH).
 %explanationHTML(at(G,K),[li(style="color:green",a(href=K,"~w"-[G]))]).
-explanationHTML(at(G,K),[li([p("~w"-[G]),p(i(K))])]).
+%explanationHTML(at(G,K),[li([p("~w"-[G]),p(i(K))])]).
 explanationHTML([C1|Cn],CH) :- explanationHTML(C1,CH1), explanationHTML(Cn,CHn), append(CH1,CHn,CH).
 explanationHTML([],[]).
 
@@ -371,6 +378,8 @@ this_year(Y) :- get_time(Now), stamp_date_time(Now,date(Y,_M,_D,_,_,_,_,_,_),loc
 user:in(X,List) :- member(X,List).
 
 :- if(current_module(swish)). %%%%% On SWISH:
+
+sandbox:safe_primitive(reasoner:query(_,_,_,_)).
 
 :- use_module(swish(lib/html_output),[html/1]). 
 % hack to avoid SWISH errors:
