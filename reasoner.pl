@@ -1,4 +1,4 @@
-:- module(_ThisFileName,[query/4, explanationHTML/2, run_examples/0,
+:- module(_ThisFileName,[query/4, run_examples/0,
     after/2, not_before/2, before/2, immediately_before/2, same_date/2, this_year/1]).
 
 /** <module> Tax-KB reasoner and utils
@@ -14,7 +14,7 @@ query(at(G,M),Questions,taxlogExplanation(E),Result) :-
     Result_=..[F,E],
     must_be(boolean,F),
     ((F==true,U==[]) -> Result=true; F==true->Result=unknown; Result=false),
-    findall(at(Q,K),(member(at(Q,K),U) /*, K\=system*/),Questions).
+    findall(at(Q,K),member(at(Q,K),U),Questions).
     % explanationHTML(E,EH), myhtml(EH).
 
 % i(+AtGoal,-Unknowns,-ExplainedResult) always succeeds, with result true(Explanation) or false(Explanation)
@@ -33,7 +33,7 @@ i( _G,_,_) :- print_message(error,top_goal_must_be_at), fail.
 % otherwise, result unknown, depending on solutions to goals in Unknowns; 
 %  explanation is a list of proof-like trees: 
 %   s(nodeLiteral,ClauseRef,childrenNodes); (s)success) [] denotes.. some self-evident literal; 
-%   u(nodeLiteral,ClauseRef,[]); u)nknown, basically similar to s
+%   u(nodeLiteral,ClauseRef,[]); u)nknown (or system predicate floundering), basically similar to s
 %  if nextGoalID(ID), i(G,...) fails with zero solutions, there will be a failed tree asserted with root failed(ID,...)
 %  failures for not(G) goals will also leave asserted a fact failed_success(ID,Why)
 %  successes for not(G) goals will have a Why with the underlying failure, f(NegatedGoalID,CallerID,FreeVar); 
@@ -121,23 +121,26 @@ i(bagof(X,G,L),M,CID,U,E) :- !, E=[s(bagof(X,G,L),meta,Children)],
 i(aggregate(Template,G,Result),M,CID,U,E) :- !, E=[s(aggregate(Template,G,Result),meta,Children)],
     % uses a bit too much of SWI internals at swipl-devel/library/aggregate.pl
     aggregate:template_to_pattern(bag, Template, Pattern, G, Goal, Aggregate),
-    i(bagof(Pattern, Goal, List),M,CID,U_,[s(_Bagof,_ClauseRef,Children)]),
-    catch(( aggregate:aggregate_list(Aggregate, List, Result), U=U_ ), error(instantiation_error,_Cx), append(U_,[instantiation_error(G)],U)).
+    i(bagof(Pattern, Goal, List),M,CID,U_,[s(_Bagof,_ClauseRef,Children_)]),
+    catch( ( aggregate:aggregate_list(Aggregate, List, Result), U=U_, Children=Children_ ), 
+        error(instantiation_error,_Cx), 
+        (append(U_,[instantiation_error(G)],U), append(Children_,[u(instantiation_error(G),unknown,[])],Children)) 
+        ).
 i(findall(X,G,L),M,CID,U,E) :- !, E=[s(findall(X,G,L),meta,Children)],
     findall(X/Ui/Ei, i(G,M,CID,Ui,Ei), Tuples), 
     squeezeTuples(Tuples,L,U,Children).
-i(Q,M,_CID,U,E) :- functor(Q,question,N), (N=1;N=2), !, U=[at(Q,M)], E=[u(at(Q,M),meta,[])].
+i(Q,M,_CID,U,E) :- functor(Q,question,N), (N=1;N=2), !, U=[at(Q,M)], E=[u(at(Q,M),unknown,[])].
 i(At,_Mod,CID,U,E) :- At=at(G,M_), !, % this may cause loading of the module
     atom_string(M,M_),
-    (call_at(true,M) -> i(G,M,CID,U,E) ; ( U=[At],E=[u(At,meta,[])] )).
+    (call_at(true,M) -> i(G,M,CID,U,E) ; ( U=[At],E=[u(At,unknown,[])] )).
 i(M:G,_,CID,U,E) :- !, i(G,M,CID,U,E).
 i(G,M,CID,U,E) :- system_predicate(G), !, 
-    evalArgExpressions(G,M,NewG,CID,Uargs,E),
+    evalArgExpressions(G,M,NewG,CID,Uargs,E_),
     % floundering originates unknown:
-    catch(M:NewG, error(instantiation_error,_Cx), U_=[at(instantiation_error(G),M)]), 
-    (var(U_)->U_=[];true),
-    append(Uargs,U_,U).
-i(G,M,_CID,U,E) :- unknown(G,M), !, (U=[at(G,M)],E=[ u(at(G,M),meta,[]) ]).
+    catch((M:NewG, U=Uargs, E=E_), 
+        error(instantiation_error,_Cx), 
+        (append(Uargs,[at(instantiation_error(G),M)],U), append(E_,[u(instantiation_error(G),unknown,[])],E) )).
+i(G,M,_CID,U,E) :- unknown(G,M), !, (U=[at(G,M)],E=[ u(at(G,M),unknown,[]) ]).
 %TODO: on(G,2020) means "G true on some instant in 2020"; who matches that with '20210107' ?
 i(G,M,CID,U,E) :- 
     newGoalID(NewID), create_counter(Counter),
@@ -319,17 +322,7 @@ expand_failure_trees([f(ID,CID,Children)|Wn],Expanded) :-
     (failed(ID,CID,G) -> Expanded=[f(G,NewChildren)|EWn]; append(NewChildren,EWn,Expanded)).
 expand_failure_trees([],[]).
 
-% explanationHTML(ExpandedExplanationTree,TermerizedHTMLlist)
-% works ok but not inside SWISH because of its style clobbering ways:
-explanationHTML(s(G,_Ref,C),[li(title="Rule inference step","~w"-[G]),ul(CH)]) :- explanationHTML(C,CH).
-explanationHTML(u(G,_Ref,[]),[li(title="Unknown","~w ?"-[G])]).
-%explanationHTML(unknown(at(G,K)),[li([style="color:blue",title="Unknown"],a(href=K,"~w"-[G]))]).
-% explanationHTML(unknown(at(G,K)),[li([p("UNKNOWN: ~w"-[G]),p(i(K))])]).
-explanationHTML(f(G,C),[li(title="Failed goal",[span(style="color:red","FALSE: ~w"-[G]),ul(CH)])]) :- explanationHTML(C,CH).
-%explanationHTML(at(G,K),[li(style="color:green",a(href=K,"~w"-[G]))]).
-%explanationHTML(at(G,K),[li([p("~w"-[G]),p(i(K))])]).
-explanationHTML([C1|Cn],CH) :- explanationHTML(C1,CH1), explanationHTML(Cn,CHn), append(CH1,CHn,CH).
-explanationHTML([],[]).
+% for HTML rendering, see explanation_renderer.pl
 
 /* Graphviz support, not very promising given the large size of our labels (predicate names)
 % experimental; would need unique IDs to avoid large term duplication

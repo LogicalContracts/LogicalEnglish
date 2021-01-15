@@ -35,6 +35,9 @@ swish_config:config(include_alias,	example).
 :- use_module(swish(lib/plugin/login)).
 :- use_module(library(pengines)). % used only under SWISH
 
+:- use_module(library(http/html_write)).
+:- use_module(swish(lib/page)).
+
 :- prolog_load_context(directory, D), atomic_list_concat([D,/,passwd],F), set_setting(swish_http_authenticate:password_file,F), format("Password file at ~a~n",[F]).
 :- use_module(swish(lib/authenticate)).
 
@@ -95,6 +98,46 @@ swish_help:help_files(AllExamples) :-
 		list_without_duplicates(ExDirs_,ExDirs), % patch..
 		maplist(swish_examples:index_json(HREF), ExDirs, SWISHExamples)
 )).
+
+:- multifile swish_config:reply_page/1. % redefine SWISH's page maker, namely so we can inject common scripts or CSSs:
+swish_config:reply_page(Options) :- 
+	reply_html_page(
+	    swish(main),
+	    \(swish_page:swish_title(Options)),
+	    \my_swish_page(Options)).
+
+
+:- multifile user:forbidden_url/1.
+forbidden_url(_) :- fail. % all URLs allowed by default
+% Example:
+% forbidden_url('/example/bankTransfer.pl') :- lps_user(unknown_user).
+
+
+my_swish_page(Options) -->
+	{
+		mylog(my_swish_page_options/Options), 
+		((option(url(URL),Options), forbidden_url(URL)) ->
+			throw(no_permission_for(URL))
+			; true)
+	},
+	my_swish_navbar(Options),
+	swish_content(Options). % no need to inject resources here again... is there??
+
+my_swish_navbar(Options) -->
+	my_swish_resources, % this may have to move to after the next call's inhards...
+	swish_navbar(Options).
+	
+my_swish_resources -->
+	{findall(R,extra_swish_resource(R),Resources)},
+	html_post_resources(Resources).
+
+html_post_resources([R|Resources]) --> {!}, html_post(head, R), html_post_resources(Resources).
+html_post_resources([]) --> {true}.
+
+:- multifile user:extra_swish_resource/1. % declare a link or script resource to include in the SWISH page's head
+% extra_swish_resource(link([ type('text/css'),rel('stylesheet'),href('/lps/lps.css') ])).
+% extra_swish_resource(script(JS)) :- google_analytics_script(JS).
+
 
 :- multifile prolog_colour:term_colours/2.
 % Wire our colouring logic into SWI's:
