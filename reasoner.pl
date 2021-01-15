@@ -1,4 +1,4 @@
-:- module(_ThisFileName,[query/4, run_examples/0,
+:- module(_ThisFileName,[query/4, run_examples/0, myClause2/8,
     after/2, not_before/2, before/2, immediately_before/2, same_date/2, this_year/1]).
 
 /** <module> Tax-KB reasoner and utils
@@ -204,7 +204,9 @@ squeezeTuples(Tuples,L,U,Es) :-
 myClause(on(H,Time),M,Body,Ref,IsProlog,URL,E) :- !, myClause2(H,Time,M,Body,Ref,IsProlog,URL,E).
 myClause(H,M,Body,Ref,IsProlog,URL,E) :- myClause2(H,_Time,M,Body,Ref,IsProlog,URL,E).
 
+% myClause2(PlainHead,Time,Module,Body,Ref,IsProlog,URL,LocalExplanation)
 myClause2(H,Time,M,Body,Ref,IsProlog,URL,E) :- 
+    (nonvar(Ref) -> clause_property(Ref,module(M)) ; true),
     M:clause(H,Body_,Ref), 
     ((Body_= taxlogBody(Body,Time,URL,E_), E_\==[] ) -> (
             (IsProlog=true, E=[s(E_,Ref,[])])

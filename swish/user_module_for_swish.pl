@@ -115,7 +115,6 @@ forbidden_url(_) :- fail. % all URLs allowed by default
 
 my_swish_page(Options) -->
 	{
-		mylog(my_swish_page_options/Options), 
 		((option(url(URL),Options), forbidden_url(URL)) ->
 			throw(no_permission_for(URL))
 			; true)
