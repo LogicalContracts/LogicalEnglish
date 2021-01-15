@@ -1,5 +1,5 @@
 :- module(_,[
-    call_at/2, kp_dir/1, kp_location/3, kp/1,
+    call_at/2, kp_dir/1, kp_location/3, kp/1, shouldMapModule/2, moduleMapping/2,
     discover_kps_in_dir/1, discover_kps_in_dir/0, discover_kps_gitty/0, setup_kp_modules/0, load_kps/0,
     load_gitty_files/1, load_gitty_files/0, save_gitty_files/1, delete_gitty_file/1, 
     xref_all/0, xref_clean/0, kp_predicates/0, reset_errors/0,
@@ -310,7 +310,23 @@ token_references(Request) :-
     %Solution = _{hello: "Good Afternoon!", functor:Functor, arity:Arity, module:File},
     reply_json_dict(Locations).
 
+:- thread_local myDeclaredModule/1. % remembers the module declared in the last SWISH window loaded
+% This at the end, as it activates the term expansion (no harm done otherwise, just some performance..):
+user:term_expansion((:-module(M,L)),(:-module(M,L))) :- !, assert(myDeclaredModule(M)). 
+:- multifile pengines:prepare_module/3.
+:- thread_local myCurrentModule/1. % the new temporary SWISH module where our query runs
+pengines:prepare_module(Module, swish, _Options) :- assert(myCurrentModule(Module)).
+
+% there is (just arrived from the SWISH editor) a fresher version To of the declared module From
+% ...OR there WAS, and although it no longer exists
+shouldMapModule(From,To) :- myDeclaredModule(From), myCurrentModule(To), !, 
+    (moduleMapping(From,To)->true;assert(moduleMapping(From,To))).
+:- dynamic moduleMapping/2. % remembers previous mappings, to support UI navigation later, e.g. from explanations
+
 :- else. % vanilla SWI-Prolog
+
+shouldMapModule(_,_) :- fail.
+moduleMapping(_,_).
 
 %! edit_kp(URL) is det
 %

@@ -1,4 +1,4 @@
-:- module(_ThisFileName,[query/4, run_examples/0, myClause2/8,
+:- module(_ThisFileName,[query/4, run_examples/0, myClause2/8, niceModule/2,
     after/2, not_before/2, before/2, immediately_before/2, same_date/2, this_year/1]).
 
 /** <module> Tax-KB reasoner and utils
@@ -17,15 +17,25 @@ query(at(G,M),Questions,taxlogExplanation(E),Result) :-
     findall(at(Q,K),member(at(Q,K),U),Questions).
     % explanationHTML(E,EH), myhtml(EH).
 
+
+niceModule(Goal,NiceGoal) :- nonvar(Goal), Goal=at(G,Ugly), moduleMapping(Nice,Ugly), !, NiceGoal=at(G,Nice).
+niceModule(G,G).
+
 % i(+AtGoal,-Unknowns,-ExplainedResult) always succeeds, with result true(Explanation) or false(Explanation)
 % top level interpreter predicate
-i( at(G,KP),U,Result) :- !,
+i( at(G,KP),U,Result) :- % hack to use the latest module version on the SWISH window
+    shouldMapModule(KP,UUID), !,
+    %mylog(mapped/(KP->UUID)), 
+    i( at(G,UUID),U,Result).
+i( at(G,KP),Unknowns,Result) :- !,
     reset_errors,
-    context_module(M), nextGoalID(ID),
+    context_module(M), 
+    nextGoalID(ID),
     IG = call_with_time_limit( 0.5, i(at(G,KP),M,top_goal,top_clause,U__,E__)), % half second max
     ( catch( (IG,E_=E__,U=U__), time_limit_exceeded, (E_=[], U=[time_limit_exceeded]) ) *-> 
         (expand_failure_trees(E_,E), Result=true(E)) ;
-        (expand_failure_trees([f(ID,_,_)],E), U=[], Result=false(E)) ).
+        (expand_failure_trees([f(ID,_,_)],E), U=[], Result=false(E)) ),
+    maplist(niceModule,U,Unknowns).
 i( _G,_,_) :- print_message(error,top_goal_must_be_at), fail.
 
 % i(+Goal,+AlreadyLoadedModule,+CallerGoalID,+CallerClauseRef,-Unknowns,-Why) 
