@@ -38,7 +38,7 @@ i( at(G,KP),Unknowns,Result) :- !,
     maplist(niceModule,U,Unknowns).
 i( _G,_,_) :- print_message(error,top_goal_must_be_at), fail.
 
-% i(+Goal,+AlreadyLoadedModule,+CallerGoalID,+CallerClauseRef,-Unknowns,-Why) 
+% i(+Goal,+AlreadyLoadedAndMappedModule,+CallerGoalID,+CallerClauseRef,-Unknowns,-Why) 
 % failure means false; success with empty Unknowns list means true; 
 % otherwise, result unknown, depending on solutions to goals in Unknowns; 
 %  explanation is a list of proof-like trees: 
@@ -140,6 +140,7 @@ i(findall(X,G,L),M,CID,Cref,U,E) :- !, E=[s(findall(X,G,L),meta,Children)],
     findall(X/Ui/Ei, i(G,M,CID,Cref,Ui,Ei), Tuples), 
     squeezeTuples(Tuples,L,U,Children).
 i(Q,M,_CID,Cref,U,E) :- functor(Q,question,N), (N=1;N=2), !, U=[at(Q,M)], E=[u(at(Q,M),Cref,[])].
+i(at(G,KP),M,CID,Cref,U,E) :- shouldMapModule(KP,UUID), !, i(at(G,UUID),M,CID,Cref,U,E). % use SWISH's latest editor version
 i(At,_Mod,CID,Cref,U,E) :- At=at(G,M_), !, % this may cause loading of the module
     atom_string(M,M_),
     (call_at(true,M) -> i(G,M,CID,Cref,U,E) ; ( U=[At],E=[u(At,Cref,[])] )).
