@@ -57,19 +57,15 @@ explanationHTML([],[]).
 % clauseNavigator(Ref,a([onclick="myPlayFile('cgt_affiliates.pl',26);"],"SOURCE")).
 clauseNavigator(Ref,span([a([onclick=Handler]," TaxLog")|Origin])) :- 
     blob(Ref,clause), clause_property(Ref,file(F_)), clause_property(Ref,line_count(L)),
-    myClause2(_H,_Time,Module_,_Body,Ref,_IsProlog,URL_,_E),
+    myClause2(_H,_Time,Module_,_Body,Ref,_IsProlog,_URL,_E),
     !,
     (moduleMapping(Module,Module_)-> kp_location(Module,F,true) ;(
-        Module=Module_,
+        % strip swish "file" header if present:
         ((sub_atom(F_,0,_,R,'swish://'), sub_atom(F_,R,_,0,F)) -> true ; F=F_)
         )),
-    % strip swish "file" header:
-    
-    
+    refToOrigin(Ref,URL),
     % could probably use https://www.swi-prolog.org/pldoc/doc_for?object=js_call//1 , but having trouble embedding that as attribute above:
     format(string(Handler),"myPlayFile('~a',~w);",[F,L]),
-    (is_absolute_url(URL_) -> URL=URL_; (
-        sub_atom(Module,_,_,0,'/') -> atomic_list_concat([Module,URL_],URL) ; atomic_list_concat([Module,'/',URL_],URL)
-        )),
+
     Origin = a([href=URL, target='_self']," Text").
 clauseNavigator(Ref,i(" ~w"-[Ref])).

@@ -123,7 +123,6 @@ taxlogBodySpec(on(G,_T),delimiter-[SpecG,classify] ) :- !,
 taxlogBodySpec(G,goal(Class,G)) :-  current_source(UUID), taxlogGoalSpec(G, UUID, Class), !. 
 taxlogBodySpec(_G,classify).
 
-%TODO: meta predicates - forall, setof etc
 taxlogGoalSpec(G, UUID, Class) :-
     (xref_defined(UUID, G, Class) -> true ; 
         %prolog_colour:built_in_predicate(G)->Class=built_in ;

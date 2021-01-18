@@ -4,11 +4,14 @@
 :- use_module('syntax.pl').
 :- use_module('kp_loader.pl').
 :- use_module('reasoner.pl'). 
+:- use_module('api.pl').
 
 :- initialization( (discover_kps_in_dir, setup_kp_modules, xref_all, writeln("Ready!"))).
 
 % counterpart to our little homebrewn SWISH logger
-mylog(M) :- thread_self(T), writeq(T:M), nl.
+% mylog(M) :- thread_self(T), writeq(T:M), nl.
+:- open('mylog.txt',write,S), assert(mylogFile(S)).
+mylog(M) :- mylogFile(S), thread_self(T), writeq(S,T:M), nl(S), flush_output(S).
 
 :- multifile prolog_colour:term_colours/2.
 % Wire our colouring logic into SWI's:

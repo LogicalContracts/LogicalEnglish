@@ -1,4 +1,5 @@
-:- module(_ThisFileName,[query/4, run_examples/0, myClause2/8, niceModule/2,
+:- module(_ThisFileName,[query/4, expand_explanation_refs/2, explanation_node_type/2,
+    run_examples/0, myClause2/8, niceModule/2, refToOrigin/2,
     after/2, not_before/2, before/2, immediately_before/2, same_date/2, this_year/1]).
 
 /** <module> Tax-KB reasoner and utils
@@ -22,7 +23,7 @@ niceModule(Goal,NiceGoal) :- nonvar(Goal), Goal=at(G,Ugly), moduleMapping(Nice,U
 niceModule(G,G).
 
 % i(+AtGoal,-Unknowns,-ExplainedResult) always succeeds, with result true(Explanation) or false(Explanation)
-% top level interpreter predicate
+% top level interpreter predicate; true with Unknowns\=[].... means 'unknown'
 i( at(G,KP),U,Result) :- % hack to use the latest module version on the SWISH window
     shouldMapModule(KP,UUID), !,
     %mylog(mapped/(KP->UUID)), 
@@ -40,6 +41,7 @@ i( _G,_,_) :- print_message(error,top_goal_must_be_at), fail.
 
 % i(+Goal,+AlreadyLoadedAndMappedModule,+CallerGoalID,+CallerClauseRef,-Unknowns,-Why) 
 % failure means false; success with empty Unknowns list means true; 
+% Unknowns contains a list of at(GoalOrErrorTerm,Module)
 % otherwise, result unknown, depending on solutions to goals in Unknowns; 
 %  explanation is a list of proof-like trees: 
 %   s(nodeLiteral,ClauseRef,childrenNodes); (s)success) [] denotes.. some self-evident literal; 
@@ -134,7 +136,7 @@ i(aggregate(Template,G,Result),M,CID,Cref,U,E) :- !, E=[s(aggregate(Template,G,R
     i(bagof(Pattern, Goal, List),M,CID,Cref,U_,[s(_Bagof,_ClauseRef,Children_)]),
     catch( ( aggregate:aggregate_list(Aggregate, List, Result), U=U_, Children=Children_ ), 
         error(instantiation_error,_Cx), 
-        (append(U_,[instantiation_error(G)],U), append(Children_,[u(instantiation_error(G),unknown,[])],Children)) 
+        (append(U_,[at(instantiation_error(G),M)],U), append(Children_,[u(instantiation_error(G),unknown,[])],Children)) 
         ).
 i(findall(X,G,L),M,CID,Cref,U,E) :- !, E=[s(findall(X,G,L),meta,Children)],
     findall(X/Ui/Ei, i(G,M,CID,Cref,Ui,Ei), Tuples), 
@@ -225,6 +227,24 @@ myClause2(H,Time,M,Body,Ref,IsProlog,URL,E) :-
         Body_=taxlogBody(Body,Time,URL,E) -> (IsProlog=false) ; 
         (Body_=Body,IsProlog=true,E=[],URL='')).
 
+refToOrigin(Ref,URL) :-
+    blob(Ref,clause), 
+    myClause2(_H,_Time,Module_,_Body,Ref,_IsProlog,URL_,_E),
+    !,
+    (moduleMapping(Module,Module_)-> true ; Module=Module_),
+    (is_absolute_url(URL_) -> URL=URL_; (
+        sub_atom(Module,_,_,0,'/') -> atomic_list_concat([Module,URL_],URL) ; atomic_list_concat([Module,'/',URL_],URL)
+        )).
+refToOrigin(Ref,Ref).
+
+% refToSourceAndOrigin(ClauseRef,-SourceCode,-TextOriginURL)
+refToSourceAndOrigin(Ref,Source,Origin) :-
+    refToOrigin(Ref,Origin),
+    ((blob(Ref,clause),clause(H,B,Ref)) -> 
+        with_output_to(string(Source),portray_clause((H:-B)))
+        ; Source="").
+    
+    
 % unknown(+Goal,+Module) whether the knowledge source is currently unable to provide a result 
 unknown(G,M) :- var(G), !, throw(variable_unknown_call_at(M)).
 unknown(on(G,_Time),M) :- !, functor(G,F,N),functor(GG,F,N), \+ myClause2(GG,_,M,_,_,_,_,_).
@@ -334,6 +354,21 @@ expand_failure_trees([f(ID,CID,Children)|Wn],Expanded) :-
     expand_failure_trees(Wn,EWn),
     (failed(ID,CID,Cref,G) -> Expanded=[f(G,Cref,NewChildren)|EWn]; append(NewChildren,EWn,Expanded)).
 expand_failure_trees([],[]).
+
+
+% expand_explanation_refs(+ExpandedWhy,-ExpandedRefLessWhy)
+% TODO: recover original variable names? seems to require either some hacking with clause_info or reparsing
+% transforms explanation: each nodetype(Literal,ClauseRef,Children) --> nodetype(Literal,SourceString,OriginURL,Children)
+expand_explanation_refs([Node|Nodes],[NewNode|NewNodes]) :- !,
+    Node=..[Type,X,Ref,Children], NewNode=..[Type,X,Source,Origin,NewChildren],
+    refToSourceAndOrigin(Ref,Source,Origin),
+    expand_explanation_refs(Children,NewChildren),
+    expand_explanation_refs(Nodes,NewNodes).
+expand_explanation_refs([],[]).
+
+explanation_node_type(s,success).
+explanation_node_type(f,failure).
+explanation_node_type(u,unknown). % a success depending on unknown subgoals
 
 % for HTML rendering, see explanation_renderer.pl
 

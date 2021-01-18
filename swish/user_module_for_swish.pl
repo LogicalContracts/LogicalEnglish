@@ -44,6 +44,8 @@ swish_config:config(include_alias,	example).
 :- use_module('../syntax.pl').
 :- use_module('../kp_loader.pl').
 :- use_module('../reasoner.pl'). 
+:- use_module('../api.pl').
+
 :- use_module('explanation_renderer').
 :- use_rendering(explanation_renderer).
 

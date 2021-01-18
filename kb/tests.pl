@@ -19,5 +19,5 @@ t(a).
 
 e(b).
 
-testForall(L) if
+testForall(L) if xpto and
     forall(member(X,L),c(X)).

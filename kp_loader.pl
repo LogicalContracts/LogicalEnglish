@@ -1,7 +1,7 @@
 :- module(_,[
     call_at/2, kp_dir/1, kp_location/3, kp/1, shouldMapModule/2, moduleMapping/2,
     discover_kps_in_dir/1, discover_kps_in_dir/0, discover_kps_gitty/0, setup_kp_modules/0, load_kps/0,
-    load_gitty_files/1, load_gitty_files/0, save_gitty_files/1, delete_gitty_file/1, 
+    load_gitty_files/1, load_gitty_files/0, save_gitty_files/1, save_gitty_files/0, delete_gitty_file/1, 
     xref_all/0, xref_clean/0, kp_predicates/0, reset_errors/0,
     edit_kp/1]).
 
@@ -174,6 +174,7 @@ discover_kps_gitty :-
 %! save_gitty_files(+ToDirectory) is det
 %
 %  ERASES the directory and copies all gitty Prolog files into it
+%  MAKE SURE ToDirectory has source versioning control!
 save_gitty_files(_ToDirectory) :- \+ storage_file_extension(_File,pl), !, 
     print_message(warning,"No gitty files to save").
 save_gitty_files(ToDirectory) :-
@@ -185,6 +186,9 @@ save_gitty_files(ToDirectory) :-
         open(Path,write,S), write_term(S,Data,[]), close(S),
         set_time_file(Path, _OldTimes, [modified(Meta.time)])
         )).
+
+save_gitty_files :- 
+    kp_dir(D), save_gitty_files(D).
 
 %! load_gitty_files(+FromDirectory) is det
 %
@@ -274,6 +278,8 @@ knowledgePagesGraph(dot(digraph([rankdir='LR'|Graph]))) :-
 
 :- multifile sandbox:safe_primitive/1.
 sandbox:safe_primitive(kp_loader:knowledgePagesGraph(_)).
+sandbox:safe_primitive(kp_loader:load_gitty_files). %TODO: this should be restricted to power users
+sandbox:safe_primitive(kp_loader:save_gitty_files).
 
 %%%% assist editor navigation; cf. swish/web/js/codemirror/mode/prolog/prolog_server.js
 
@@ -326,7 +332,7 @@ shouldMapModule(From,To) :- myDeclaredModule(From), myCurrentModule(To), !,
 :- else. % vanilla SWI-Prolog
 
 shouldMapModule(_,_) :- fail.
-moduleMapping(_,_).
+moduleMapping(_,_) :- fail.
 
 %! edit_kp(URL) is det
 %
@@ -341,5 +347,6 @@ discover_kps_gitty :- print_message(informational,'this only works on SWISH ').
 load_gitty_files :- throw('this only works on SWISH ').
 load_gitty_files(_) :- throw('this only works on SWISH ').
 save_gitty_files(_) :- throw('this only works on SWISH ').
+save_gitty_files :- throw('this only works on SWISH ').
 delete_gitty_file(_) :- throw('this only works on SWISH ').
 :- endif.
