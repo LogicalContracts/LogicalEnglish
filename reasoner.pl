@@ -1,4 +1,4 @@
-:- module(_ThisFileName,[query/4, expand_explanation_refs/2, explanation_node_type/2,
+:- module(_ThisFileName,[query/4, i_once_with_facts/4, expand_explanation_refs/4, explanation_node_type/2,
     run_examples/0, myClause2/8, niceModule/2, refToOrigin/2,
     after/2, not_before/2, before/2, immediately_before/2, same_date/2, this_year/1]).
 
@@ -12,9 +12,10 @@
 
 query(at(G,M),Questions,taxlogExplanation(E),Result) :- 
     i(at(G,M),U,Result_), 
-    Result_=..[F,E],
+    Result_=..[F,E_],
     must_be(boolean,F),
     ((F==true,U==[]) -> Result=true; F==true->Result=unknown; Result=false),
+    expand_explanation_refs(E_,[],M,E),
     findall(at(Q,K),member(at(Q,K),U),Questions).
     % explanationHTML(E,EH), myhtml(EH).
 
@@ -32,7 +33,7 @@ i( at(G,KP),Unknowns,Result) :- !,
     reset_errors,
     context_module(M), 
     nextGoalID(ID),
-    IG = call_with_time_limit( 0.5, i(at(G,KP),M,top_goal,top_clause,U__,E__)), % half second max
+    IG = call_with_time_limit( 500, i(at(G,KP),M,top_goal,top_clause,U__,E__)), % half second max
     ( catch( (IG,E_=E__,U=U__), time_limit_exceeded, (E_=[], U=[time_limit_exceeded]) ) *-> 
         (expand_failure_trees(E_,E), Result=true(E)) ;
         (expand_failure_trees([f(ID,_,_)],E), U=[], Result=false(E)) ),
@@ -235,14 +236,16 @@ refToOrigin(Ref,URL) :-
     (is_absolute_url(URL_) -> URL=URL_; (
         sub_atom(Module,_,_,0,'/') -> atomic_list_concat([Module,URL_],URL) ; atomic_list_concat([Module,'/',URL_],URL)
         )).
-refToOrigin(Ref,Ref).
+refToOrigin(Ref_,Ref) :- term_string(Ref_,Ref).
 
-% refToSourceAndOrigin(ClauseRef,-SourceCode,-TextOriginURL)
-refToSourceAndOrigin(Ref,Source,Origin) :-
+% refToModuleAndSourceAndOrigin(ClauseRef,-Module,-SourceCode,-TextOriginURL)
+refToModuleAndSourceAndOrigin(Ref,M,Source,Origin) :-
     refToOrigin(Ref,Origin),
-    ((blob(Ref,clause),clause(H,B,Ref)) -> 
-        with_output_to(string(Source),portray_clause((H:-B)))
-        ; Source="").
+    ((blob(Ref,clause),clause(H,B,Ref)) -> (
+        with_output_to(string(Source),portray_clause((H:-B))),
+        clause_property(Ref,module(M))
+    )
+        ; (Source="", M='???')).
     
     
 % unknown(+Goal,+Module) whether the knowledge source is currently unable to provide a result 
@@ -301,9 +304,14 @@ run_scenarios([scenario(Facts,G)|Scenarios],M,N,PreviousFacts,U,E) :- !,
     append(U1,Un,U), append([E1],En,E).
 run_scenarios([],_,_,_,[],[]).
 
-i_once_with_facts(at(G,M),Facts,U,E) :-
+i_once_with_facts(at(G,M),Facts,U,Result) :-
     context_module(Me),
-    once_with_facts( Me:i(at(G,M),U,E), M, Facts,true).
+    once_with_facts( Me:(
+        i(at(G,M),U,Result_),
+        Result_=..[Outcome,E_],
+        expand_explanation_refs(E_,Facts,M,E),
+        Result=..[Outcome,E]
+        ), M, Facts,true).
 
 % once_with_facts(Goal,Module,AdditionalFacts,+DoUndo)
 % asserts the facts and calls Goal, stopping at the first solution, and optionally undoing the fact changes
@@ -313,6 +321,7 @@ i_once_with_facts(at(G,M),Facts,U,E) :-
 once_with_facts(G,M_,Facts,DoUndo) :-
     must_be(boolean,DoUndo),
     atom_string(M,M_),
+    call_at(true,M), % make sure the module is loaded
     assert_and_remember(Facts,M,Undo),
     once(M:G),
     (DoUndo==true -> Undo ; true).
@@ -356,16 +365,20 @@ expand_failure_trees([f(ID,CID,Children)|Wn],Expanded) :-
 expand_failure_trees([],[]).
 
 
-% expand_explanation_refs(+ExpandedWhy,-ExpandedRefLessWhy)
+% expand_explanation_refs(+ExpandedWhy,+ExtraFacts,+TheirModule,-ExpandedRefLessWhy)
 % TODO: recover original variable names? seems to require either some hacking with clause_info or reparsing
 % transforms explanation: each nodetype(Literal,ClauseRef,Children) --> nodetype(Literal,SourceString,OriginURL,Children)
-expand_explanation_refs([Node|Nodes],[NewNode|NewNodes]) :- !,
-    Node=..[Type,X,Ref,Children], NewNode=..[Type,X,Source,Origin,NewChildren],
-    refToSourceAndOrigin(Ref,Source,Origin),
-    expand_explanation_refs(Children,NewChildren),
-    expand_explanation_refs(Nodes,NewNodes).
-expand_explanation_refs([],[]).
+expand_explanation_refs([Node|Nodes],Facts,M,[NewNode|NewNodes]) :- !,
+    Node=..[Type,X,Ref,Children], 
+    refToModuleAndSourceAndOrigin(Ref,Module,Source,Origin),
+    ((M=Module, member(XX,Facts), variant(XX,X)) -> NewOrigin=userFact ; NewOrigin=Origin),
+    NewNode=..[Type,X,Module,Source,NewOrigin,NewChildren],
+    expand_explanation_refs(Children,Facts,M,NewChildren),
+    expand_explanation_refs(Nodes,Facts,M,NewNodes).
+expand_explanation_refs([],_,_,[]).
 
+
+% [s(a(1,a),<clause>(0x7f95c763bc30),[s(c(1),<clause>(0x7f95c763bd90),[]),s(t(a),<clause>(0x7f95c763c000),[])])]
 explanation_node_type(s,success).
 explanation_node_type(f,failure).
 explanation_node_type(u,unknown). % a success depending on unknown subgoals

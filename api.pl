@@ -38,17 +38,23 @@ handle_api(Request) :-
 %  curl --header "Content-Type: application/json" --request POST --data '{"operation":"query", "theQuery":"a(1,Y)", "module":"https://tests.com"}' http://localhost:3050/taxkbapi
 %  curl --header "Content-Type: application/json" --request POST --data '{"operation":"query", "theQuery":"testForall([1,2])", "module":"https://tests.com"}' http://localhost:3050/taxkbapi
 %  curl --header "Content-Type: application/json" --request POST --data '{"operation":"query", "theQuery":"testForall([1,2,9])", "module":"https://tests.com"}' http://localhost:3050/taxkbapi
+% Example with hypothetical facts:
+%  curl --header "Content-Type: application/json" --request POST --data '{"operation":"query", "theQuery":"a(13,Y)", "facts":["d(13)"], "module":"https://tests.com"}' http://localhost:3050/taxkbapi
+%  curl --header "Content-Type: application/json" --request POST --data '{"operation":"query", "theQuery":"a(13,Y)",  "module":"https://tests.com"}' http://localhost:3050/taxkbapi
 
 % {operation: query, theQuery: "a(1,Y)", module:"https://tests.com"} --> {results:ResultsArray}
 %   each result is a {result: true/false/unknown, bindings:VarsValuesArray, unknowns: ArrayOfTerm, why: ExplanationTerm}
 entry_point(R, _{results:Results}) :- get_dict(operation,R,query), !, 
     term_string(Query,R.theQuery,[variable_names(VarPairs_)]),
+    (get_dict(facts,R,Facts_) -> maplist(term_string,Facts,Facts_) ; Facts=[]),
     findall( _{bindings:VarPairs, unknowns:U, result:Result, why:E}, (
-        query(at(Query,R.module),U_,taxlogExplanation(E_),Result),
+        (Facts\=[] -> ( G = (i_once_with_facts(at(Query,R.module),Facts,U_,Result__), Result__=..[Result,E_])) ; 
+            G = query(at(Query,R.module),U_,taxlogExplanation(E_),Result)
+            ),
+        G, 
         makeBindingsDict(VarPairs_,VarPairs),
         makeUnknownsArray(U_,U),
-        expand_explanation_refs(E_,E__),
-        makeExplanationTree(E__,E)
+        makeExplanationTree(E_,E)
         ), Results).
 
 %makeBindingsDict(+NameTermPairs,-NameTermDict)
@@ -63,11 +69,13 @@ makeUnknownsArray([at(X,M)|U],[_{goal:J, module:M}|NewU]) :- !,
     term_to_json(X,J), makeUnknownsArray(U,NewU).
 makeUnknownsArray([],[]).
 
+
 % keep in sync with reasoner.pl, namely expand_failure_trees and expand_explanation_refs
-makeExplanationTree([Node|Nodes],[_{type:Type, literal:Gstring, source:Source, textOrigin:Origin, children:NewChildren}|NewNodes]) :- !,
-    Node=..[Type_,G,Source,Origin,Children],
+makeExplanationTree([Node|Nodes],[_{type:Type, literal:Gstring, module:M, source:Source, textOrigin:Origin, children:NewChildren}|NewNodes]) :- !,
+    Node=..[Type_,G,M,Source,Origin,Children],
     explanation_node_type(Type_,Type),
     term_string(G,Gstring),
     makeExplanationTree(Children,NewChildren),
     makeExplanationTree(Nodes,NewNodes).
 makeExplanationTree([],[]).
+

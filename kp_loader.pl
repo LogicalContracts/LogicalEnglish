@@ -86,6 +86,7 @@ call_at(Goal,Name) :- must_be(nonvar,Name), module_property(Name,last_modified_g
     Name:Goal.
 call_at(Goal,Name) :- kp_location(Name,File,InGitty), !, 
     load_named_file(File,Name,InGitty),
+    print_message(informational,loaded/File),
     Name:Goal.
 call_at(Goal,Name) :- 
     \+ reported_missing_kp(Name), 
