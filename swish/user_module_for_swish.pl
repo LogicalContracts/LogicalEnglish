@@ -1,15 +1,16 @@
 % Things that need to be defined in the user module, so Swish finds them
 % To start as local server:
-% /Applications/SWI-Prolog8.1.9.app/Contents/MacOS/swipl -l user_module_for_swish.pl -l ../../swish/server.pl -g server:server
+% export SPACY_HOST=localhost:8080; /Applications/SWI-Prolog8.1.9.app/Contents/MacOS/swipl -l user_module_for_swish.pl -l ../../swish/server.pl -g server:server
 %  (local Docker testing:
 % docker run -it -p 3051:3050 -v /Users/mc/git/TaxKB/swish/data:/data -v /Users/mc/git/TaxKB:/app -e LOAD='/app/swish/user_module_for_swish.pl' logicalcontracts/customprivateswish
 % or (Docker on Ubuntu server):
 % docker run -d --restart always -p 8082:3050 -v /home/ubuntu/TaxKB_swish_data:/data -v /home/ubuntu/TaxKB:/TaxKB -e LOAD='/TaxKB/swish/user_module_for_swish.pl' logicalcontracts/customprivateswish
 
 :- multifile sandbox:safe_primitive/1.
- 
+
 % For debugging:
 % can not print output as usual, would interfere with http responses; uncomment the following for a log:
+
 /*
 :- open('mylog.txt',write,S), assert(mylogFile(S)).
 mylog(M) :- mylogFile(S), thread_self(T), writeq(S,T:M), nl(S), flush_output(S).
@@ -45,8 +46,12 @@ swish_config:config(include_alias,	example).
 :- use_module('../kp_loader.pl').
 :- use_module('../reasoner.pl'). 
 :- use_module('../api.pl').
+:- use_module('../spacy/spacy.pl').
 
-:- use_module('explanation_renderer').
+:- use_module('../spacy/hierplane_renderer.pl',[]).
+:- use_rendering(hierplane,[]).
+
+:- use_module('explanation_renderer',[]).
 :- use_rendering(explanation_renderer).
 
 :- initialization( (discover_kps_gitty, setup_kp_modules, xref_all, writeln("Ready on SWISH!"))).

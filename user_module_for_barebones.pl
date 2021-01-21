@@ -5,6 +5,7 @@
 :- use_module('kp_loader.pl').
 :- use_module('reasoner.pl'). 
 :- use_module('api.pl').
+:- use_module('spacy/spacy.pl').
 
 :- initialization( (discover_kps_in_dir, setup_kp_modules, xref_all, writeln("Ready!"))).
 
