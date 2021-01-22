@@ -329,6 +329,7 @@ spaCyParse(Text,CollapseNouns,CollapsePuncts,Model,Dict) :-
     must_be(var,Dict),
     atom_string(Text,Text_),
     replace_complicated_words(Text_,Text__),
+    %(Text_\=Text__ -> print_message(informational,Text__);true),
     spaCyURL(URL),
     format(atom(Post),'{"text":"~a", "model":"~a", "collapse_phrases": ~w, "collapse_punctuation": ~w }',[Text__,Model,CollapseNouns,CollapsePuncts]),
     catch( (http_post(URL, atom(Post), Result, []), atom_json_dict(Result,Dict,[])), Ex, (print_message(error,Ex), format("BAD (?) text: ~a~n",[Text]), Dict=[])).
@@ -337,7 +338,8 @@ spaCyParse(Text,CollapseNouns,CollapsePuncts,Model,Dict) :-
 replace_complicated_words(Text,NewText) :- 
     findall(Word/Synonym,complicatedWord(Word,Synonym),Pairs), replace_complicated_words(Pairs,Text,NewText).
 
-replace_complicated_words([Word/Syn|Pairs],Text,NewText) :- !, string_replace(Text,Word,Syn,Text1), replace_complicated_words(Pairs,Text1,NewText).
+replace_complicated_words([Word/Syn|Pairs],Text,NewText) :- string_replace(Text,Word,Syn,Text1), Text\=Text1, !, replace_complicated_words([Word/Syn|Pairs],Text1,NewText).
+replace_complicated_words([_|Pairs],Text,NewText) :- !, replace_complicated_words(Pairs,Text,NewText).
 replace_complicated_words([],T,T).
 
 % Some synomymns for weird legalese words SpaCy dislikes
@@ -348,6 +350,8 @@ complicatedWord("”","'"). % ditto for smart quotes..
 complicatedWord("‘’","'"). % ...and weird friends
 complicatedWord("’’","'"). % ...and weird friends
 complicatedWord("\t"," "). % ditto for tabs
+complicatedWord("\n\n","\n"). % collapse empty lines
+complicatedWord("\n","\\n"). % newlines need to be "reified" TODO: ";" would be better... at least of there's no other punctuation ending the previous line!
 
 
 %%% utils

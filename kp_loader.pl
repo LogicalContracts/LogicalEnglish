@@ -357,4 +357,5 @@ load_gitty_files(_) :- throw('this only works on SWISH ').
 save_gitty_files(_) :- throw('this only works on SWISH ').
 save_gitty_files :- throw('this only works on SWISH ').
 delete_gitty_file(_) :- throw('this only works on SWISH ').
+update_gitty_file(_,_,_) :- throw('this only works on SWISH ').
 :- endif.
