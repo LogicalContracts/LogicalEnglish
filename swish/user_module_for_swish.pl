@@ -1,6 +1,6 @@
 % Things that need to be defined in the user module, so Swish finds them
 % To start as local server:
-% export SPACY_HOST=localhost:8080; /Applications/SWI-Prolog8.1.9.app/Contents/MacOS/swipl -l user_module_for_swish.pl -l ../../swish/server.pl -g server:server
+% export SPACY_HOST=localhost:8080; export LOAD_KB=true; /Applications/SWI-Prolog8.1.9.app/Contents/MacOS/swipl -l user_module_for_swish.pl -l ../../swish/server.pl -g server:server
 %  (local Docker testing:
 % docker run -it -p 3051:3050 -v /Users/mc/git/TaxKB/swish/data:/data -v /Users/mc/git/TaxKB:/app -e LOAD='/app/swish/user_module_for_swish.pl' logicalcontracts/customprivateswish
 % or (Docker on Ubuntu server):
@@ -54,7 +54,13 @@ swish_config:config(include_alias,	example).
 :- use_module('explanation_renderer',[]).
 :- use_rendering(explanation_renderer).
 
-:- initialization( (discover_kps_gitty, setup_kp_modules, xref_all, writeln("Ready on SWISH!"))).
+:- initialization( (
+	(getenv('LOAD_KB',true) -> (
+		print_message(informational,"Updating SWISH storage with latest KB"), load_gitty_files
+		) ; true),
+	discover_kps_gitty, setup_kp_modules, xref_all, 
+	print_message(informational,"Ready on SWISH!")
+)).
 
 :- use_module(swish(lib/render)).
 

@@ -1,7 +1,7 @@
 :- module(_,[
     call_at/2, kp_dir/1, kp_location/3, kp/1, shouldMapModule/2, moduleMapping/2,
     discover_kps_in_dir/1, discover_kps_in_dir/0, discover_kps_gitty/0, setup_kp_modules/0, load_kps/0,
-    load_gitty_files/1, load_gitty_files/0, save_gitty_files/1, save_gitty_files/0, delete_gitty_file/1, 
+    load_gitty_files/1, load_gitty_files/0, save_gitty_files/1, save_gitty_files/0, delete_gitty_file/1, update_gitty_file/3,
     xref_all/0, xref_clean/0, kp_predicates/0, reset_errors/0,
     edit_kp/1]).
 
@@ -197,30 +197,37 @@ save_gitty_files :-
 %  Does not delete the other (pre-existing) gitty files
 % Example: load_gitty_files('/Users/mc/git/TaxKB/kb').
 load_gitty_files(From) :- 
-    web_storage:storage_dir(Store),
     forall(directory_member(From,Path,[extensions([pl])]),(
         read_file_to_string(Path,Data,[]),
         time_file(Path,Modified),
         directory_file_path(_,File,Path),
-        (gitty_file(Store, File, OldHead) -> (
-            storage_meta_data(File, Meta), 
-            NewMeta = Meta.put([previous=OldHead, modify=[any, login, owner], (public)=true, time=Modified]),
-            gitty_update(Store, File, Data, NewMeta, _CommitRet)
-            ) ; (
-            gitty_create(Store, File, Data, _{load_gitty_files:From, modify:[any, login, owner], public:true, time:Modified }, _CommitRet)
-            ))
-        )).
+        update_gitty_file(File,Modified,From,Data)
+    )).
 
 load_gitty_files :-
     kp_dir(D), load_gitty_files(D).
 
+% update_gitty_file(+Filename,+ModifiedTime,+Origin,+Text)
+update_gitty_file(File,Modified,Origin,Data) :-
+    web_storage:open_gittystore(Store),
+    (gitty_file(Store, File, OldHead) -> (
+        storage_meta_data(File, Meta), 
+        NewMeta = Meta.put([previous=OldHead, modify=[any, login, owner], (public)=true, time=Modified]),
+        gitty_update(Store, File, Data, NewMeta, _CommitRet)
+        ) ; (
+        gitty_create(Store, File, Data, _{update_gitty_file:Origin, modify:[any, login, owner], public:true, time:Modified }, _CommitRet)
+        )
+    ).
+
+update_gitty_file(File,Origin,Data) :- 
+    get_time(Now), update_gitty_file(File,Now,Origin,Data).
 
 %! delete_gitty_file(+GittyFile) is det
 %
 % makes the file empty, NOT a proper delete
 delete_gitty_file(File) :-
     must_be(nonvar,File),
-    web_storage:storage_dir(Store),
+    web_storage:open_gittystore(Store),
     gitty_file(Store, File, OldHead),
     % I was unable to effectively delete:
     % gitty:delete_head(Store, OldHead), gitty:delete_object(Store, OldHead), % this is only effective after a SWISH restart
