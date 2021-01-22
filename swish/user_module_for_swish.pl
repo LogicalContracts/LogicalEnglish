@@ -46,7 +46,7 @@ swish_config:config(include_alias,	example).
 :- use_module('../kp_loader.pl').
 :- use_module('../reasoner.pl'). 
 :- use_module('../api.pl').
-:- use_module('../spacy/spacy.pl').
+:- use_module('../drafter.pl').
 
 :- use_module('../spacy/hierplane_renderer.pl',[]).
 :- use_rendering(hierplane,[]).

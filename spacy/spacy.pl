@@ -1,7 +1,8 @@
 % Copyright Miguel Calejo, 2019-2020; open source, licensed with 3-clause BSD
 
 :- module(_,[
-    load_content/1, 
+    load_content/1, content/2, refreshTokens/1, content_tokens/4, content_tokens_in/5,
+    t_word/2, t_lemma/2, t_pos/2, t_tag/2, t_head/2, t_dep/2, t_i/2, t_offset/2, t_absorbed/2, member_with/3,
     depgraph/2, hierplane/2]).
 % Spacy interface: parsing, representation of text chunks and sentences with tokens, utility predicates
 % Text and tokens are kept associated with URLs/paths, with an implicit textual hierarchy
@@ -15,8 +16,8 @@ load_content(File) :- setup_call_cleanup(open(File,read,S),(
         )
     )),close(S)), !.
 
-% content(Path,Text)
-% all the text chunks to process, with URLs denoting their origin
+% content(URL,Text)
+% all the text chunks to process, each with a unique URL denoting its origin
 content(Path,Text) :- 
     user_can_see_content, content_(Path,Text).
 
@@ -28,6 +29,12 @@ update_content(URL,Text) :-
 % parsed sentence tokens for each text chunk
 content_tokens(URI, Sentence_i, Tokens,Extraction) :- 
     user_can_see_content, content_tokens_(URI, Sentence_i, Tokens,Extraction).
+
+% content_tokens_in(+PrefixURL, ?SpecificURL, ?Sentence_i, ?Tokens, ?Extraction)
+content_tokens_in(PrefixURL,URL,SI,Tokens,Extraction) :-
+    user_can_see_content, must_be(nonvar,PrefixURL),
+    content_tokens_(URL, SI, Tokens,Extraction),
+    sub_atom(URL,0,_,_,PrefixURL).
 
 :- thread_local content_tokens_/4. % content_tokens_(URI, Sentence_i, Tokens, Extraction)  
 
@@ -77,9 +84,12 @@ t_absorb(t(I,Offset,Word,Lemma,POS,Tag,Head,Dep,Old), Absorbed, t(I,Offset,Word,
 member_with(i=I,T,Tokens):-!, t_i(T,I), (nonvar(I) -> memberchk(T,Tokens) ; member(T,Tokens)). % i is a key!
 member_with(head=Head,T,Tokens):-!, t_head(T,Head), member(T,Tokens).
 member_with(pos=POS,T,Tokens):-!, t_pos(T,POS), member(T,Tokens). 
+member_with(tag=Tag,T,Tokens):-!, t_tag(T,Tag), member(T,Tokens). 
 member_with(dep=Dep,T,Tokens):-!, t_dep(T,Dep), member(T,Tokens). 
 member_with(word=Word,T,Tokens):-!, t_word(T,Word), member(T,Tokens). 
 member_with(lemma=L,T,Tokens):-!, t_lemma(T,L), member(T,Tokens). 
+member_with([C|Conditions],T,Tokens):-!, member_with(C,T,Tokens), member_with(Conditions,T,Tokens).
+member_with([],T,Tokens) :- !, member(T,Tokens).
 member_with(AV,_,_) :- domain_error(token_attribute=value,AV).
 
 select_with(i=I,T,Tokens,NewTokens):- !, t_i(T,I), select(T,Tokens,NewTokens). 
