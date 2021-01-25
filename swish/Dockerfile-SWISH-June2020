@@ -1,0 +1,37 @@
+# docker build -t logicalcontracts/swish-june2020 -f Dockerfile-SWISH-June2020 .
+# docker run -it -p 3051:3050 -v ~/git/lps_corner/swish/data:/data logicalcontracts/swish-june2020 
+FROM swipl as base
+
+RUN apt-get update && apt-get install -y \
+    git build-essential autoconf curl unzip \
+    cleancss node-requirejs
+
+ENV SWISH_HOME /swish
+#ENV SWISH_SHA1 V1.3.1
+# June 12, 2020:
+ENV SWISH_SHA1 d3c6a784d4c9d6baca661ddc3a228ee42f9f34e9
+
+RUN echo "At version ${SWISH_SHA1}"
+RUN git clone https://github.com/SWI-Prolog/swish.git && \
+    (cd swish && git checkout -q ${SWISH_SHA1})
+RUN make -C /swish RJS="nodejs /usr/lib/nodejs/requirejs/r.js" \
+	yarn-zip packs
+# letting minimization out, so we can hack SWISH files:	yarn-zip packs min
+
+FROM base
+LABEL maintainer "Jan Wielemaker <jan@swi-prolog.org>"
+
+RUN apt-get update && apt-get install -y \
+    graphviz imagemagick \
+    git \
+    wamerican && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY --from=base /swish /swish
+COPY entry.sh entry.sh
+
+ENV SWISH_DATA /data
+VOLUME ${SWISH_DATA}
+WORKDIR ${SWISH_DATA}
+
+ENTRYPOINT ["/entry.sh"]

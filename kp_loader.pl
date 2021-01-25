@@ -9,7 +9,7 @@
 :- use_module(library(broadcast)).
 
 :- dynamic kp_dir/1.
-:- prolog_load_context(directory, D), retractall(kp_dir(_)), atomic_list_concat([D,'/kb'], KD), assert(kp_dir(KD)).
+:- prolog_load_context(directory, D), retractall(kp_dir(_)), atomic_list_concat([D,'/kb'], KD), assert(kp_dir(KD)), print_message(informational,kp_dir(KD)).
 
 
 /** <module> Dynamic module loader.

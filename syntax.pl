@@ -115,8 +115,7 @@ taxlogBodySpec(question(_,_),delimiter-[classify,classify]). % to avoid multilin
 taxlogBodySpec(question(_),delimiter-[classify]).
 taxlogBodySpec(at(G,M_),delimiter-[SpecG,classify]) :- nonvar(M_), nonvar(G), !, % assuming atomic goals
     atom_string(M,M_),
-    % check that the source has already been xref'ed, otherwise xref would try to load it and cause a "iri_scheme" error:
-    ((xref_current_source(M), xref_defined(M,G,_))-> SpecG=goal(imported(M),G) ; SpecG=goal(undefined,G)).
+    (my_xref_defined(M,G,_)-> SpecG=goal(imported(M),G) ; SpecG=goal(undefined,G)).
 taxlogBodySpec(M:G,delimiter-[classify,SpecG]) :- !, taxlogBodySpec(at(G,M),delimiter-[SpecG,classify]).
 taxlogBodySpec(on(G,_T),delimiter-[SpecG,classify] ) :- !,
     taxlogBodySpec(G,SpecG).
@@ -124,10 +123,13 @@ taxlogBodySpec(G,goal(Class,G)) :-  current_source(UUID), taxlogGoalSpec(G, UUID
 taxlogBodySpec(_G,classify).
 
 taxlogGoalSpec(G, UUID, Class) :-
-    (xref_defined(UUID, G, Class) -> true ; 
+    (my_xref_defined(UUID, G, Class) -> true ; 
         %prolog_colour:built_in_predicate(G)->Class=built_in ;
         prolog_colour:goal_classification(G, Class) -> true;
         Class=undefined).
+
+my_xref_defined(M,G,Class) :- % check that the source has already been xref'ed, otherwise xref would try to load it and cause a "iri_scheme" error:
+    xref_current_source(M), xref_defined(M,G,Class).
 
 :- if(current_module(swish)). %%% only when running with the SWISH web server:
 % hack to find the editor (e.g. its module name) that triggered the present highlighting

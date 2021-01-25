@@ -31,7 +31,7 @@ draft(URL,TmpFile):-
 % detected_predicate(+Tokens,-Functor,-Args,-Reason)
 % See predicates and notes on tags etc. in spacy.pl 
 detected_predicate(Tokens,F,Args,VerbToken) :- 
-    member_with([lemma=L_,tag=VerbTag,pos=verb,i=Vi_],VerbToken,Tokens), 
+    member_with([lemma=L_,tag=VerbTag,pos=verb,i=Vi_], VerbToken, Tokens), 
     VerbTag\=md, % must not be a modal auxiliary
     (L_=="be" -> (
         member_with([head=Vi_,dep=acomp,lemma=RealL,i=Vi],_,Tokens), 

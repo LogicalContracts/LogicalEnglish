@@ -12,11 +12,15 @@
 % can not print output as usual, would interfere with http responses; uncomment the following for a log:
 
 /*
-:- open('mylog.txt',write,S), assert(mylogFile(S)).
 mylog(M) :- mylogFile(S), thread_self(T), writeq(S,T:M), nl(S), flush_output(S).
+:- prolog_load_context(directory, D), atomic_list_concat([D,/,'mylog.txt'],F), open(F,write,S), assert(mylogFile(S)), mylog('Log started').
 % :- asserta((prolog:message(A,B,C) :-  mylog(message-A), fail)).
 sandbox:safe_primitive(user:mylog(_M)). 
+
+user:sudo(G) :- (G).
+sandbox:safe_primitive(user:sudo(_)). 
 */
+
 :- use_module(library(settings)).
 %:- use_module(library(http/http_log)). % uncomment to produce httpd.log
 %:- set_setting_default(http:logfile, 'data/httpd.log'). % swish's writable sub directory
@@ -59,6 +63,7 @@ swish_config:config(include_alias,	example).
 		print_message(informational,"Updating SWISH storage with latest KB"), load_gitty_files
 		) ; true),
 	discover_kps_gitty, setup_kp_modules, xref_all, 
+	current_prolog_flag(version_data,V), print_message(informational,V),
 	print_message(informational,"Ready on SWISH!")
 )).
 
