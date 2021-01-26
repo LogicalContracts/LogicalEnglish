@@ -37,15 +37,15 @@ user:extra_swish_resource(script("
 
 % explanationHTML(ExpandedExplanationTree,TermerizedHTMLlist)
 % works ok but not inside SWISH because of its style clobbering ways:
-explanationHTML(s(G,Ref,C),[li(title="Rule inference step",["~w"-[NG],Navigator]),ul(CH)]) :- 
+explanationHTML(s(G,Ref,_,_,_,C),[li(title="Rule inference step",["~w"-[NG],Navigator]),ul(CH)]) :- 
     niceModule(G,NG),
     clauseNavigator(Ref,Navigator), explanationHTML(C,CH).
-explanationHTML(u(G,Ref,[]),[li(title="Unknown",["~w ?"-[NG],Navigator])]) :-
+explanationHTML(u(G,Ref,_,_,_,[]),[li(title="Unknown",["~w ?"-[NG],Navigator])]) :-
     niceModule(G,NG),
     clauseNavigator(Ref,Navigator).
 %explanationHTML(unknown(at(G,K)),[li([style="color:blue",title="Unknown"],a(href=K,"~w"-[G]))]).
 % explanationHTML(unknown(at(G,K)),[li([p("UNKNOWN: ~w"-[G]),p(i(K))])]).
-explanationHTML(f(G,Ref,C),[li(title="Failed goal",[span(style="color:red","~w ~~"-[NG]),Navigator]), ul(CH)]) :- 
+explanationHTML(f(G,Ref,_,_,_,C),[li(title="Failed goal",[span(style="color:red","~w ~~"-[NG]),Navigator]), ul(CH)]) :- 
     niceModule(G,NG),
     clauseNavigator(Ref,Navigator), explanationHTML(C,CH).
 %explanationHTML(at(G,K),[li(style="color:green",a(href=K,"~w"-[G]))]).
@@ -57,7 +57,7 @@ explanationHTML([],[]).
 % clauseNavigator(Ref,a([onclick="myPlayFile('cgt_affiliates.pl',26);"],"SOURCE")).
 clauseNavigator(Ref,span([a([onclick=Handler]," TaxLog")|Origin])) :- 
     blob(Ref,clause), clause_property(Ref,file(F_)), clause_property(Ref,line_count(L)),
-    myClause2(_H,_Time,Module_,_Body,Ref,_IsProlog,_URL,_E),
+    myClause2(_H,_Time,Module_,_Body,Ref,_IsProlog,_URL,_E), 
     !,
     (moduleMapping(Module,Module_)-> kp_location(Module,F,true) ;(
         % strip swish "file" header if present:

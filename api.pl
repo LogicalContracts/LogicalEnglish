@@ -72,7 +72,7 @@ makeUnknownsArray([],[]).
 
 % keep in sync with reasoner.pl, namely expand_failure_trees and expand_explanation_refs
 makeExplanationTree([Node|Nodes],[_{type:Type, literal:Gstring, module:M, source:Source, textOrigin:Origin, children:NewChildren}|NewNodes]) :- !,
-    Node=..[Type_,G,M,Source,Origin,Children],
+    Node=..[Type_,G,_Ref,M,Source,Origin,Children],
     explanation_node_type(Type_,Type),
     term_string(G,Gstring),
     makeExplanationTree(Children,NewChildren),

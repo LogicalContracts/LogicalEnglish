@@ -367,12 +367,12 @@ expand_failure_trees([],[]).
 
 % expand_explanation_refs(+ExpandedWhy,+ExtraFacts,+TheirModule,-ExpandedRefLessWhy)
 % TODO: recover original variable names? seems to require either some hacking with clause_info or reparsing
-% transforms explanation: each nodetype(Literal,ClauseRef,Children) --> nodetype(Literal,SourceString,OriginURL,Children)
+% transforms explanation: each nodetype(Literal,ClauseRef,Children) --> nodetype(Literal,ClauseRef,SourceString,OriginURL,Children)
 expand_explanation_refs([Node|Nodes],Facts,M,[NewNode|NewNodes]) :- !,
     Node=..[Type,X,Ref,Children], 
     refToModuleAndSourceAndOrigin(Ref,Module,Source,Origin),
     ((M=Module, member(XX,Facts), variant(XX,X)) -> NewOrigin=userFact ; NewOrigin=Origin),
-    NewNode=..[Type,X,Module,Source,NewOrigin,NewChildren],
+    NewNode=..[Type,X,Ref,Module,Source,NewOrigin,NewChildren],
     expand_explanation_refs(Children,Facts,M,NewChildren),
     expand_explanation_refs(Nodes,Facts,M,NewNodes).
 expand_explanation_refs([],_,_,[]).
