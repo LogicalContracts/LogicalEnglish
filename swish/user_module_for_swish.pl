@@ -1,11 +1,11 @@
 % Things that need to be defined in the user module, so Swish finds them
 
 % To start as local server:
-% export SPACY_HOST=localhost:8080; export LOAD_KB=true; /Applications/SWI-Prolog8.1.9.app/Contents/MacOS/swipl -l user_module_for_swish.pl -l ../../swish/server.pl -g server:server
+% export SPACY_HOST=localhost:8080; export LOAD_KB=true; export SUDO=true; /Applications/SWI-Prolog8.1.9.app/Contents/MacOS/swipl -l user_module_for_swish.pl -l ../../swish/server.pl -g server:server
 %  (local Docker testing:
-% docker run -it -p 3051:3050 -v /Users/mc/git/TaxKB/swish/data:/data -v /Users/mc/git/TaxKB:/app -e LOAD='/app/swish/user_module_for_swish.pl' -e SPACY_HOST='host.docker.internal:8080' -e LOAD_KB=false -e SUDO=true logicalcontracts/customprivateswish
+% docker run -it -p 3051:3050 -v /Users/mc/git/TaxKB/swish/data:/data -v /Users/mc/git/TaxKB:/app -e LOAD='/app/swish/user_module_for_swish.pl' -e SPACY_HOST='host.docker.internal:8080' -e LOAD_KB=false -e SUDO=true logicalcontracts/patchedprivateswish
 % or (Docker on Ubuntu server):
-% docker run -d --restart always -p 8082:3050 -v /home/ubuntu/TaxKB_swish_data:/data -v /home/ubuntu/TaxKB:/TaxKB -e LOAD='/TaxKB/swish/user_module_for_swish.pl' logicalcontracts/customprivateswish
+% docker run -d --restart always -p 8082:3050 -v /home/ubuntu/TaxKB_swish_data:/data -v /home/ubuntu/TaxKB:/TaxKB -e LOAD='/TaxKB/swish/user_module_for_swish.pl' -e SPACY_HOST='172.31.6.64:8080' -e LOAD_KB=false -e SUDO=true logicalcontracts/patchedprivateswish
 
 :- multifile sandbox:safe_primitive/1.
 
