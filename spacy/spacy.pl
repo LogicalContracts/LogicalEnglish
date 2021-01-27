@@ -7,15 +7,21 @@
 % Spacy interface: parsing, representation of text chunks and sentences with tokens, utility predicates
 % Text and tokens are kept associated with URLs/paths, with an implicit textual hierarchy
 
-% load_file(+ContentFile)
-load_content(File) :- setup_call_cleanup(open(File,read,S),(
-    repeat,(read(S,Term), 
-        (Term==end_of_file -> true ; 
-            Term=content(URL,Text) -> (update_content(URL,Text), fail) ; 
-            (print_message(warning, ignored_content/Term), fail)
-        )
-    )),close(S)), !.
-
+% load_file(+ContentFileOrDicts)  loads content from a a file or a ItemsArray list; each item is a _{url:U,text:T} dict
+load_content(File) :- atomic(File), !,
+    setup_call_cleanup(open(File,read,S),(
+        repeat,
+        (
+            read(S,Term), 
+            (Term==end_of_file -> true ; 
+                Term=content(URL,Text) -> (update_content(URL,Text), fail) ; 
+                (print_message(warning, ignored_content/Term), fail)
+            ))
+    ),close(S)), !.
+load_content(Items) :- 
+    must_be(list,Items), 
+    forall(member(Item,Items), update_content(Item.url,Item.text) ).
+    
 % content(URL,Text)
 % all the text chunks to process, each with a unique URL denoting its origin
 content(Path,Text) :- 
@@ -24,6 +30,7 @@ content(Path,Text) :-
 :- thread_local content_/2. % URL, text string
 
 update_content(URL,Text) :- 
+    must_be(atomic,URL), must_be(atomic,Text),
     retractall(content_(URL,_)), assert(content_(URL,Text)).
 
 % parsed sentence tokens for each text chunk

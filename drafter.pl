@@ -1,4 +1,4 @@
-:- module(_,[]).
+:- module(_,[draft_string/2]).
 
 :- use_module('spacy/spacy.pl').
 
@@ -11,6 +11,7 @@
 
 % draft(+URL,-TmpPrologFile)
 draft(URL,TmpFile):-
+    must_be(atomic,URL), must_be(var,TmpFile),
     retractall(predicate_draft(URL,_,_,_)),
     refreshTokens(URL),
     forall((
@@ -27,6 +28,9 @@ draft(URL,TmpFile):-
         format(S,"% ~w.~n%  Why: ~w~n~n",[Pred,Why])
         )),
     close(S).
+
+draft_string(URL,S) :- 
+    draft(URL,Tmp), read_file_to_string(Tmp,S,[]).
 
 % detected_predicate(+Tokens,-Functor,-Args,-Reason)
 % See predicates and notes on tags etc. in spacy.pl 
@@ -50,4 +54,5 @@ capitalize(X,NewX) :-
     name(X,[First|Codes]), to_upper(First,U), name(NewX,[U|Codes]).
 
 %TODO: handle more verb patterns, e.g. have+dobj, etc.
-%TODO: generate rules
+%TODO: generate rules, extract nouns/concepts/class hierarchies, knowledge page/reference extractor
+
