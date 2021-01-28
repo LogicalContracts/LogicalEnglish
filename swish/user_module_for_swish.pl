@@ -70,7 +70,9 @@ swish_config:config(include_alias,	example).
 :- use_module(swish(lib/render)).
 
 :- use_rendering(user:table, [
-    header(at('Unknown Predicate','Knowledge Page')) 
+	header(at('Unknown Predicate','Knowledge Page')),
+	%_I,_Offset,Word,_Lemma,_POS,_Tag,_Head,_Dep,_Absorbed
+    header(t('#','Offset','Word','Lemma','POS','Tag','Head','Dep','Absorbed')) 
     ]).
 
 :- use_rendering(graphviz).

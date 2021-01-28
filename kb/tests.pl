@@ -1,4 +1,4 @@
-:-module('https://tests.com',[]).
+:-module('http://tests.com',[]).
 
 example("meta tests",[
     scenario([], testForall([0,1,2])),
@@ -20,4 +20,10 @@ t(a).
 e(b).
 
 testForall(L) if xpto and
-    forall(member(X,L),c(X)).
+    forall(member(X,L), c(X)).
+
+/** <examples>
+?- query(testForall([0,1,2]) at 'http://tests.com',Unknowns,E,R).
+?- query(testForall([0,1,2,3]) at 'http://tests.com',Unknowns,E,R).
+?- i_once_with_facts(testForall([0,1,2,3]) at 'http://tests.com',[d(3)],Unknowns,_R), _R=..[Result,_E], Explanation=taxlogExplanation(_E).
+*/

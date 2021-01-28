@@ -304,8 +304,9 @@ run_scenarios([scenario(Facts,G)|Scenarios],M,N,PreviousFacts,U,E) :- !,
     append(U1,Un,U), append([E1],En,E).
 run_scenarios([],_,_,_,[],[]).
 
-i_once_with_facts(at(G,M),Facts,U,Result) :-
+i_once_with_facts(at(G,M_),Facts,U,Result) :-
     context_module(Me),
+    (shouldMapModule(M_,M)->true;M=M_),
     once_with_facts( Me:(
         i(at(G,M),U,Result_),
         Result_=..[Outcome,E_],
@@ -434,6 +435,7 @@ user:in(X,List) :- member(X,List).
 :- if(current_module(swish)). %%%%% On SWISH:
 
 sandbox:safe_primitive(reasoner:query(_,_,_,_)).
+sandbox:safe_primitive(reasoner:i_once_with_facts(_,_,_,_)).
 
 :- use_module(swish(lib/html_output),[html/1]). 
 % hack to avoid SWISH errors:
