@@ -158,6 +158,7 @@ kp_predicates :- %TODO: ignore subtrees of because/2
 :- if(current_module(swish)). %%% only when running with the SWISH web server:
 :- use_module(swish(lib/storage)).
 :- use_module(swish(lib/gitty)).
+:- use_module(library(pengines)).
 
 %! discover_kps_gitty is det.
 %
@@ -210,12 +211,13 @@ load_gitty_files :-
 % update_gitty_file(+Filename,+ModifiedTime,+Origin,+Text)
 update_gitty_file(File,Modified,Origin,Data) :-
     web_storage:open_gittystore(Store),
+    current_user(User,_Email),
     (gitty_file(Store, File, OldHead) -> (
         storage_meta_data(File, Meta), 
-        NewMeta = Meta.put([previous=OldHead, modify=[any, login, owner], (public)=true, time=Modified]),
+        NewMeta = Meta.put([previous=OldHead, modify=[any, login, owner], (public)=true, time=Modified, author=User]),
         gitty_update(Store, File, Data, NewMeta, _CommitRet)
         ) ; (
-        gitty_create(Store, File, Data, _{update_gitty_file:Origin, modify:[any, login, owner], public:true, time:Modified }, _CommitRet)
+        gitty_create(Store, File, Data, _{update_gitty_file:Origin, modify:[any, login, owner], public:true, time:Modified, author:User }, _CommitRet)
         )
     ).
 
@@ -337,7 +339,14 @@ shouldMapModule(From,To) :- myDeclaredModule(From), myCurrentModule(To), !,
     (moduleMapping(From,To)->true;assert(moduleMapping(From,To))).
 :- dynamic moduleMapping/2. % remembers previous mappings, to support UI navigation later, e.g. from explanations
 
+current_user(User,Email) :- 
+    pengine_user(U), get_dict(user,U,User), Email=U.user_info.email, 
+    !.
+current_user(unknown_user,unknown_email).
+
 :- else. % vanilla SWI-Prolog
+
+current_user(unknown_user,unknown_email).
 
 shouldMapModule(_,_) :- fail.
 moduleMapping(_,_) :- fail.
