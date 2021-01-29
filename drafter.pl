@@ -23,9 +23,11 @@ draft(URL,TmpFile):-
     tmp_file_stream(TmpFile, S, [encoding(text),extension(pl)]),
     format(S,":- module('~a',[]).~n~n",[URL]),
     forall(predicate_draft(URL,Functor,Args_,Why),(
+        Why=_/SpecificURL/SI/_, 
+        content_tokens(SpecificURL, SI, Tokens,_), sentence(Tokens,Sentence),
         maplist(capitalize,Args_,Args),
         Pred=..[Functor|Args],
-        format(S,"% ~w.~n%  Why: ~w~n~n",[Pred,Why])
+        format(S,"% ~w.~n%  Why: ~w~n%  To parse sentence:~n% parseAndSee('~a',SentenceI,Tokens,Tree).~n~n",[Pred,Why,Sentence])
         )),
     close(S).
 

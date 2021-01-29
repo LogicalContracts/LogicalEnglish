@@ -25,5 +25,5 @@ testForall(L) if xpto and
 /** <examples>
 ?- query(testForall([0,1,2]) at 'http://tests.com',Unknowns,E,R).
 ?- query(testForall([0,1,2,3]) at 'http://tests.com',Unknowns,E,R).
-?- i_once_with_facts(testForall([0,1,2,3]) at 'http://tests.com',[d(3)],Unknowns,_R), _R=..[Result,_E], Explanation=taxlogExplanation(_E).
+?- query_once_with_facts(testForall([0,1,2,3]) at 'http://tests.com',[d(3)],Unknowns,_R), _R=..[Result,_E], Explanation=taxlogExplanation(_E).
 */

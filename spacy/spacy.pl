@@ -3,6 +3,7 @@
 :- module(_,[
     load_content/1, content/2, refreshTokens/1, content_tokens/4, content_tokens_in/5,
     t_word/2, t_lemma/2, t_pos/2, t_tag/2, t_head/2, t_dep/2, t_i/2, t_offset/2, t_absorbed/2, member_with/3,
+    sentence/2, parseAndSee/4,
     depgraph/2, hierplane/2]).
 % Spacy interface: parsing, representation of text chunks and sentences with tokens, utility predicates
 % Text and tokens are kept associated with URLs/paths, with an implicit textual hierarchy
@@ -66,6 +67,10 @@ refreshTokens(Prefix) :-
 
 
 %%% Token utilities, graph and tree generators for SWISH rendering
+
+parseAndSee(Text,SentenceIndex,Tokens,Hierplane) :- 
+    spaCyParseTokens(Text,SentenceIndex,Tokens),
+    hierplane(Tokens,Hierplane).
 
 % t(...); tag and POS and dependency labels are kept as lowercase atoms; the rest as strings
 %TODO: replace by dict-based representation for terser queries etc. e.g. member_with(i=T.head,Head,Tokens), Head.pos=verb
@@ -434,6 +439,7 @@ sandbox:safe_primitive(prolog_pretty_print:print_term_2(_,_)). % Somehow print_t
 sandbox:safe_primitive(spacy:depgraph(Tokens,_G)) :- is_list(Tokens).
 sandbox:safe_primitive(spacy:hierplane(Tokens,_G)) :- is_list(Tokens).
 sandbox:safe_primitive(spacy:sentence(_,_)).
+sandbox:safe_primitive(spacy:parseAndSee(_,_,_,_)).
 sandbox:safe_primitive(spacy:chunkVerbs(Tokens,_)) :- is_list(Tokens).
 sandbox:safe_primitive(spacy:count_solutions(G,_)) :- sandbox:safe_goal(spacy:G).
 sandbox:safe_primitive(spacy:count_occurrences(_,_)).

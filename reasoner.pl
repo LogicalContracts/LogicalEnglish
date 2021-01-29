@@ -1,4 +1,4 @@
-:- module(_ThisFileName,[query/4, i_once_with_facts/4, expand_explanation_refs/4, explanation_node_type/2,
+:- module(_ThisFileName,[query/4, query_once_with_facts/4, expand_explanation_refs/4, explanation_node_type/2,
     run_examples/0, myClause2/8, niceModule/2, refToOrigin/2,
     after/2, not_before/2, before/2, immediately_before/2, same_date/2, this_year/1]).
 
@@ -10,6 +10,8 @@
 
 :- use_module(kp_loader).
 
+% query(AtGoal,Unknowns,ExplanationTerm,Result)
+%  Result will be true/false/unknown
 query(at(G,M),Questions,taxlogExplanation(E),Result) :- 
     i(at(G,M),U,Result_), 
     Result_=..[F,E_],
@@ -19,7 +21,19 @@ query(at(G,M),Questions,taxlogExplanation(E),Result) :-
     findall(at(Q,K),member(at(Q,K),U),Questions).
     % explanationHTML(E,EH), myhtml(EH).
 
-
+% Result will be true/false/unknown ( ExplanationTreeList)
+%TODO: normalize result params with the above predicate's
+query_once_with_facts(at(G,M_),Facts,U,Result) :-
+    context_module(Me),
+    (shouldMapModule(M_,M)->true;M=M_),
+    once_with_facts( Me:(
+        i(at(G,M),U,Result_),
+        Result_=..[Outcome,E_],
+        expand_explanation_refs(E_,Facts,M,E),
+        Result=..[Outcome,E]
+        ), M, Facts,true).
+    
+    
 niceModule(Goal,NiceGoal) :- nonvar(Goal), Goal=at(G,Ugly), moduleMapping(Nice,Ugly), !, NiceGoal=at(G,Nice).
 niceModule(G,G).
 
@@ -296,23 +310,13 @@ run_examples(Module) :-
 %consider sequence of scenario fact sets; for now, a simple concatenation:
 run_scenarios([scenario(Facts,G)|Scenarios],M,N,PreviousFacts,U,E) :- !,
     append(PreviousFacts,Facts,Facts_),
-    i_once_with_facts(at(G,M),Facts_,U1,E1),
+    query_once_with_facts(at(G,M),Facts_,U1,E1),
     format("  Scenario ~w unknowns   : ~w~n",[N,U1]),
     format("  Scenario ~w explanation: ~w~n",[N,E1]),
     NewN is N+1,
     run_scenarios(Scenarios,M,NewN,Facts_,Un,En),
     append(U1,Un,U), append([E1],En,E).
 run_scenarios([],_,_,_,[],[]).
-
-i_once_with_facts(at(G,M_),Facts,U,Result) :-
-    context_module(Me),
-    (shouldMapModule(M_,M)->true;M=M_),
-    once_with_facts( Me:(
-        i(at(G,M),U,Result_),
-        Result_=..[Outcome,E_],
-        expand_explanation_refs(E_,Facts,M,E),
-        Result=..[Outcome,E]
-        ), M, Facts,true).
 
 % once_with_facts(Goal,Module,AdditionalFacts,+DoUndo)
 % asserts the facts and calls Goal, stopping at the first solution, and optionally undoing the fact changes
@@ -435,7 +439,7 @@ user:in(X,List) :- member(X,List).
 :- if(current_module(swish)). %%%%% On SWISH:
 
 sandbox:safe_primitive(reasoner:query(_,_,_,_)).
-sandbox:safe_primitive(reasoner:i_once_with_facts(_,_,_,_)).
+sandbox:safe_primitive(reasoner:query_once_with_facts(_,_,_,_)).
 
 :- use_module(swish(lib/html_output),[html/1]). 
 % hack to avoid SWISH errors:

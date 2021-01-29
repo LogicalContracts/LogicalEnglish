@@ -26,6 +26,7 @@ start_api_server :- print_message(informational,"No need to start API server, SW
 
 :- else. % On command-line SWI-Prolog, no user restrictions:
 
+% Need to call thi to respond to REST API requests:
 start_api_server :- start_api_server(3050).
 start_api_server(Port) :- http_server(http_dispatch, [port(Port)]).
 :- endif.
@@ -41,12 +42,12 @@ handle_api(Request) :-
 %  https://pengines.swi-prolog.org/docs/documentation.html (Javascript) or
 %  https://www.swi-prolog.org/pengines/PenginesFromPython.md (Python)
 % Examples (resp: true, unknown, false):
-%  curl --header "Content-Type: application/json" --request POST --data '{"operation":"query", "theQuery":"a(1,Y)", "module":"https://tests.com"}' http://localhost:3050/taxkbapi
-%  curl --header "Content-Type: application/json" --request POST --data '{"operation":"query", "theQuery":"testForall([1,2])", "module":"https://tests.com"}' http://localhost:3050/taxkbapi
-%  curl --header "Content-Type: application/json" --request POST --data '{"operation":"query", "theQuery":"testForall([1,2,9])", "module":"https://tests.com"}' http://localhost:3050/taxkbapi
+%  curl --header "Content-Type: application/json" --request POST --data '{"operation":"query", "theQuery":"a(1,Y)", "module":"http://tests.com"}' http://localhost:3050/taxkbapi
+%  curl --header "Content-Type: application/json" --request POST --data '{"operation":"query", "theQuery":"testForall([1,2])", "module":"http://tests.com"}' http://localhost:3050/taxkbapi
+%  curl --header "Content-Type: application/json" --request POST --data '{"operation":"query", "theQuery":"testForall([1,2,9])", "module":"http://tests.com"}' http://localhost:3050/taxkbapi
 % Example with hypothetical facts:
-%  curl --header "Content-Type: application/json" --request POST --data '{"operation":"query", "theQuery":"a(13,Y)", "facts":["d(13)"], "module":"https://tests.com"}' http://localhost:3050/taxkbapi
-%  curl --header "Content-Type: application/json" --request POST --data '{"operation":"query", "theQuery":"a(13,Y)",  "module":"https://tests.com"}' http://localhost:3050/taxkbapi
+%  curl --header "Content-Type: application/json" --request POST --data '{"operation":"query", "theQuery":"a(13,Y)", "facts":["d(13)"], "module":"http://tests.com"}' http://localhost:3050/taxkbapi
+%  curl --header "Content-Type: application/json" --request POST --data '{"operation":"query", "theQuery":"a(13,Y)",  "module":"http://tests.com"}' http://localhost:3050/taxkbapi
 
 % {operation: query, theQuery: "a(1,Y)", module:"https://tests.com"} --> {results:ResultsArray}
 %   each result is a {result: true/false/unknown, bindings:VarsValuesArray, unknowns: ArrayOfTerm, why: ExplanationTerm}
@@ -54,7 +55,7 @@ entry_point(R, _{results:Results}) :- get_dict(operation,R,query), !,
     term_string(Query,R.theQuery,[variable_names(VarPairs_)]),
     (get_dict(facts,R,Facts_) -> maplist(term_string,Facts,Facts_) ; Facts=[]),
     findall( _{bindings:VarPairs, unknowns:U, result:Result, why:E}, (
-        (Facts\=[] -> ( G = (i_once_with_facts(at(Query,R.module),Facts,U_,Result__), Result__=..[Result,E_])) ; 
+        (Facts\=[] -> ( G = (query_once_with_facts(at(Query,R.module),Facts,U_,Result__), Result__=..[Result,E_])) ; 
             G = query(at(Query,R.module),U_,taxlogExplanation(E_),Result)
             ),
         G, 
@@ -84,7 +85,6 @@ makeUnknownsArray([at(X,M)|U],[_{goal:J, module:M}|NewU]) :- !,
     term_to_json(X,J), makeUnknownsArray(U,NewU).
 makeUnknownsArray([],[]).
 
-
 % keep in sync with reasoner.pl, namely expand_failure_trees and expand_explanation_refs
 makeExplanationTree([Node|Nodes],[_{type:Type, literal:Gstring, module:M, source:Source, textOrigin:Origin, children:NewChildren}|NewNodes]) :- !,
     Node=..[Type_,G,_Ref,M,Source,Origin,Children],
@@ -97,19 +97,15 @@ makeExplanationTree([],[]).
 :- http_handler('/taxkbapi/draft', handle_api_draft, []).  % this defines a web server endpoint for https://github.com/mcalejo/my-highlighter
 % receive content from our highlighter Chrome extension, digest it and open a new Prolog file with its "draft":
 handle_api_draft(Request) :-
-    http_parameters(Request, [pageURL(PageURL_,[]),content(Content_,[])]),
-    PageURL=PageURL_,
+    http_parameters(Request, [pageURL(PageURL,[]),content(Content_,[])]),
     uri_encoded(query_value,Content,Content_),
     open_string(Content,S), json_read_dict(S, ContentArray), close(S),
     load_content(ContentArray),
     draft_string(PageURL,Draft),
-    url_simple(PageURL,Filename_),
-    atomic_list_concat([Filename_,".pl"],Filename),
+    url_simple(PageURL,Filename_), atomic_list_concat([Filename_,".pl"],Filename),
     update_gitty_file(Filename,PageURL,Draft),
     format(string(NewEditor),"/p/~a",[Filename]),
-    http_redirect(see_other,NewEditor,Request).
-    % reply_json_dict(_{draft:Draft, pageURL:PageURL}).
-    
+    http_redirect(see_other,NewEditor,Request).    
 
 url_simple(URL,Simple) :- 
     parse_url(URL,L), memberchk(path(P),L), atomics_to_string(LL,'/',P), 
