@@ -42,9 +42,38 @@ example( "Changed share of ownership", [
     scenario(['Amy, Joanna and Remy establish company C, different shares', 'Amy, Joanna and Remy establish company C, equal shares'], 
         rollover_applies)
     ]).
+example( "Andrew email Feb 4 2021", [
+    /* Company transfers its assets to partners in a partnership on 1 July 2020. Company has turnover of 5,300,000. 
+    Company is a Small Business Entity i.e. the transferor & the partners in a partnership i.e. transferee is also a small business entity.)
+    Assets are - Goodwill, Trading stock, Plant & equipment, revenue assets
+    */
+    scenario([
+        owns(company1,company1_goodwill) on BEFORE at BASICS,
+        owns(company1,company1_trading_stock) on BEFORE at BASICS,
+        owns(company1,company1_plant_and_equipment) on BEFORE at BASICS,
+        owns(company1,company1_revenue_asset) on BEFORE at BASICS,
+        %TODO: add time here, and below...?
+        partner_in_partnership(andrew,company1) at BASICS, partner_in_partnership(miguel,company1) at BASICS, 
+        has_aggregated_turnover(company1,5300000) 
+            at "https://www.ato.gov.au/business/small-business-entity-concessions/eligibility/aggregation/",
+        is_a_small_business_entity(company1) at SBE, is_a_small_business_entity(andrew) at SBE, is_a_small_business_entity(miguel) at SBE,
+        transfer_event(123,company1_assets,WHEN,company1,[andrew,miguel]),
+        owns(company1,company1_goodwill) on AFTER at BASICS,
+        owns(company1,company1_trading_stock) on AFTER at BASICS,
+        owns(company1,company1_plant_and_equipment) on AFTER at BASICS,
+        owns(company1,company1_revenue_asset) on AFTER at BASICS,
+        part_of_genuine_restructure(123)
+            at "https://www.ato.gov.au/law/view/document?DocID=COG/LCG20163/NAT/ATO/00001&PiT=99991231235958"
+        
+        ], rollover_applies)
+    ]) :- 
+        % for mere convenience, Prolog code to setup some data and make the above less cluttered:
+        WHEN='20200701', immediately_before(BEFORE,When), immediately_before(When,AFTER),
+        SBE= "https://www.ato.gov.au/General/Capital-gains-tax/Small-business-CGT-concessions/Basic-conditions-for-the-small-business-CGT-concessions/Small-business-entity/",
+        BASICS="https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/".
 
 % mere linguistics...? :
-isa(cgt_event,asset).
+isa(cgt_asset,asset).
 isa(trading_stock,asset).
 isa(revenue_asset,asset).
 isa(depreciating_asset,asset).
@@ -58,9 +87,9 @@ you(TaxPayer) if
 rollover_applies if
     you(Y) and has_aggregated_turnover(Y,Turnover) 
         at "https://www.ato.gov.au/business/small-business-entity-concessions/eligibility/aggregation/" 
-    and Turnover < 10000000 % is this redundant with elligible_party?
+    and Turnover < 10000000 % is this redundant with eligible_party?
     and transfer_event(ID,Asset,When,Tor,Tes) and after(When,'20160701') 
-    and forall( Party in [Tor|Tes], elligible_party(Party))
+    and forall( Party in [Tor|Tes], eligible_party(Party))
     and part_of_genuine_restructure(ID)
         at "https://www.ato.gov.au/law/view/document?DocID=COG/LCG20163/NAT/ATO/00001&PiT=99991231235958"
     and immediately_before(Before,When) and setof(Owner/Share, ultimate_owner(Asset,Owner,Share) on Before, PreviousOwners)
@@ -77,20 +106,20 @@ ultimate_owner(Asset,Owner,1) if % full ownership
         at "https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/".
 %TODO: extend predicates for partial ownership, and indirection ( using connected_to ?)
 
-elligible_party(P) if 
+eligible_party(P) if 
     is_a_small_business_entity(P) at
         "https://www.ato.gov.au/General/Capital-gains-tax/Small-business-CGT-concessions/Basic-conditions-for-the-small-business-CGT-concessions/Small-business-entity/".
-elligible_party(P) if 
+eligible_party(P) if 
     affiliate(P,AffiliateTFN) at
         "https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/affiliates/"
     and is_a_small_business_entity(AffiliateTFN) at
         "https://www.ato.gov.au/General/Capital-gains-tax/Small-business-CGT-concessions/Basic-conditions-for-the-small-business-CGT-concessions/Small-business-entity/".
-elligible_party(P) if 
+eligible_party(P) if 
     connected_to(P,ConnectedTFN) at
         "https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/connected-entities/" 
     and is_a_small_business_entity(ConnectedTFN) at
         "https://www.ato.gov.au/General/Capital-gains-tax/Small-business-CGT-concessions/Basic-conditions-for-the-small-business-CGT-concessions/Small-business-entity/".
-elligible_party(P) if
+eligible_party(P) if
     partner_in_partnership(P,Partnership) at % our first knowledge page:
         "https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/"
     and is_a_small_business_entity(Partnership) at
