@@ -319,7 +319,8 @@ run_scenarios([scenario(Facts,G)|Scenarios],M,N,PreviousFacts,U,E) :- !,
 run_scenarios([],_,_,_,[],[]).
 
 % once_with_facts(Goal,Module,AdditionalFacts,+DoUndo)
-% asserts the facts and calls Goal, stopping at the first solution, and optionally undoing the fact changes
+% Facts should be ground...
+% asserts the facts (and deletes those with a - ) and calls Goal, stopping at the first solution, and optionally undoing the fact changes
 % if a fact's predicate is undefined or not dynamic, it is declared (forever) as thread_local, 
 % to support multiple clients
 % BUG: not thread safe, failing to call thread_local(..) before
@@ -327,26 +328,39 @@ once_with_facts(G,M_,Facts,DoUndo) :-
     must_be(boolean,DoUndo),
     atom_string(M,M_),
     call_at(true,M), % make sure the module is loaded
-    assert_and_remember(Facts,M,Undo),
+    assert_and_remember(Facts,M,from_with_facts,Undo),
     once(M:G),
-    (DoUndo==true -> Undo ; true).
+    (DoUndo==true -> once(Undo) ; true).
 
-assert_and_remember([Fact|Facts],M,(Undo,Undos)) :- must_be(nonvar,Fact),
-    canonic_fact(Fact,M,CF), assert_and_remember(CF,Undo),
-    assert_and_remember(Facts,M,Undos).
-assert_and_remember([],_,true).
+% assert a list of timed facts, and returns a goal to undo the asserts
+assert_and_remember([-Fact|Facts],M,Why,(Undo,Undos)) :- must_be(nonvar,Fact),
+    canonic_fact_time(Fact,M,CF,Time), assert_and_remember_(delete,CF,Time,Why,Undo),
+    assert_and_remember(Facts,M,Why,Undos).
+assert_and_remember([Fact|Facts],M,Why,(Undo,Undos)) :- must_be(nonvar,Fact),
+    canonic_fact_time(Fact,M,CF,Time), assert_and_remember_(add,CF,Time,Why,Undo),
+    assert_and_remember(Facts,M,Why,Undos).
+assert_and_remember([],_,_,true).
 
-assert_and_remember(M:Fact,Undo) :- \+ predicate_property(M:Fact,_), !, 
+assert_and_remember_(Operation,M:Fact,Time,Why,Undo) :- 
     % abolish caused 'No permission to modify thread_local_procedure'; weird interaction with yall.pl ..??
-    functor(Fact,F,N), Undo=retractall(M:Fact), thread_local(M:F/N), assert(M:Fact).
-assert_and_remember(CF,Undo) :- predicate_property(CF,(dynamic)), !, 
-    Undo = retractall(CF), assert(CF).
-assert_and_remember(M:Fact,Undo) :- functor(Fact,F,N), dynamic(M:F/N), % should be thread_local(M:F/N) !!!
-    Undo = retractall(M:Fact), assert(M:Fact).
+    ( \+ predicate_property(M:Fact,_) -> (functor(Fact,F,N), thread_local(M:F/N)) ;
+        predicate_property(M:Fact,(dynamic)) -> true ; 
+        (functor(Fact,F,N), dynamic(M:F/N) ) % should be thread_local(M:F/N) !!!
+    ),
+    %TODO: Adds hould check if there's a matching clause already, to avoid spurious facts at the end of some example runs
+    % e.g. add a fact F in one scenarion and deleting in the next, which may leave F asserted when undoing the delete
+    % this seems to require either using a variant test... or demanding facts to be ground
+    Add = assert(M:(Fact:-taxlogBody(true,Time,'',Why))),
+    Delete = forall(M:clause(Fact,taxlogBody(true,Time,'',Why),Ref),erase(Ref)),
+    (Operation==add ->( Undo=Delete, Add) ; ( Undo=Add, Delete )).
 
-canonic_fact(M_:F,_,M:F) :- !, atom_string(M,M_).
-canonic_fact(at(F,M),_,M_:F) :- !, atom_string(M_,M).
-canonic_fact(F,M,M:F).
+
+canonic_fact_time(M_:on(F,T),_,M:F,T) :- !, atom_string(M,M_).
+canonic_fact_time(M_:F,_,M:F,_) :- !, atom_string(M,M_).
+canonic_fact_time(at(on(F,T),M),_,M_:F,T) :- !, atom_string(M_,M).
+canonic_fact_time(at(F,M),_,M_:F,_) :- !, atom_string(M_,M).
+canonic_fact_time(on(F,T),M,M:F,T) :- !.
+canonic_fact_time(F,M,M:F,_).
 
 %%%%% Explanations
 
@@ -427,8 +441,13 @@ before(Earlier,Later) :-
 
 % tests/generates previous day:
 immediately_before(Earlier,Later) :- 
-    parse_time(Later,L), E is L-24*3600, 
-    (var(Earlier) -> format_time(string(Earlier),"%FT%T%z",E) ; parse_time(Earlier,E_), same_date(E,E_)).
+    assertion(nonvar(Earlier);nonvar(Later)),
+    (nonvar(Earlier) -> (parse_time(Earlier,E), L is E+24*3600 ) ; true),
+    (nonvar(Later) -> (parse_time(Later,L), E is L-24*3600) ; true),
+    (var(Earlier) -> format_time(string(Earlier),"%FT%T%z",E) ; true),
+    (var(Later) ->  format_time(string(Later),"%FT%T%z",L) ; true).
+
+
 same_date(T1,T2) :- 
     format_time(string(S),"%F",T1), format_time(string(S),"%F",T2).
 

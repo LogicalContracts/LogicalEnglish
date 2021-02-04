@@ -89,7 +89,7 @@ Each such fact identifies a predicate to be exposed via the (REST) API.
 
 	example(Title,StatesAndAssertions).
 	
-This represents an example of the application of the knowledge rules in the module, providing it with "instance" data specific to some taxpayer, asset, etc. Regulatory (guidance) text sometimes provides them, to lighten their explanations. ``StatesAndAssertions``is an ordered list of ``scenario(Facts, Postcondition)``. Facts is a list of predicate facts, each optionally prefixed with ``- `` for deletion. To try an example, for each all facts in the StatesAndAssertions sequence are added/deleted, and the PostCondition (assertion) is evaluated.
+This represents an example of the application of the knowledge rules in the module, providing it with "instance" data specific to some taxpayer, asset, etc. Regulatory (guidance) text sometimes provides them, to lighten their explanations. ``StatesAndAssertions``is an ordered list of ``scenario(Facts, Postcondition)``. Facts is a list of predicate facts (Fact or Fact on Time), each optionally prefixed with ``- `` for deletion. To try an example, for each all facts in the StatesAndAssertions sequence are added/deleted, and the PostCondition (assertion) is evaluated.
 
 These example facts are also test cases: all assertions must be true.
 
