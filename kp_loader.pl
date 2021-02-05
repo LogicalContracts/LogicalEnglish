@@ -86,7 +86,7 @@ call_at(Goal,Name) :- must_be(nonvar,Name), module_property(Name,last_modified_g
     Name:Goal.
 call_at(Goal,Name) :- kp_location(Name,File,InGitty), !, 
     load_named_file(File,Name,InGitty),
-    print_message(informational,loaded/File),
+    (\+ reported_loaded_kp(Name) -> (print_message(informational,loaded(Name,File)), assert(reported_loaded_kp(Name))) ; true),
     Name:Goal.
 call_at(Goal,Name) :- 
     \+ reported_missing_kp(Name), 
@@ -94,8 +94,13 @@ call_at(Goal,Name) :-
     assert(reported_missing_kp(Name)), fail.
 
 :-thread_local reported_missing_kp/1.
+:-thread_local reported_loaded_kp/1.
 
-reset_errors :- retractall(reported_missing_kp(_)).
+reset_errors :- 
+    retractall(reported_missing_kp(_)), retractall(reported_loaded_kp(_)).
+
+:- multifile prolog:message//1.
+prolog:message(loaded(Module,Path)) --> ['Loaded ~w from ~a'-[Module,Path]].
 
 
 % Support xref for gitty and file system files

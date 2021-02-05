@@ -18,12 +18,12 @@ query(at(G,M),Questions,taxlogExplanation(E),Result) :-
     must_be(boolean,F),
     ((F==true,U==[]) -> Result=true; F==true->Result=unknown; Result=false),
     expand_explanation_refs(E_,[],M,E),
-    findall(at(Q,K),member(at(Q,K),U),Questions).
+    list_without_variants(U,Questions). % remove duplicates
     % explanationHTML(E,EH), myhtml(EH).
 
 % Result will be true/false/unknown ( ExplanationTreeList)
 %TODO: normalize result params with the above predicate's
-query_once_with_facts(at(G,M_),Facts,U,Result) :-
+query_once_with_facts(at(G,M_),Facts,Questions,Result) :-
     context_module(Me),
     (shouldMapModule(M_,M)->true;M=M_),
     once_with_facts( Me:(
@@ -31,9 +31,17 @@ query_once_with_facts(at(G,M_),Facts,U,Result) :-
         Result_=..[Outcome,E_],
         expand_explanation_refs(E_,Facts,M,E),
         Result=..[Outcome,E]
-        ), M, Facts,true).
-    
-    
+        ), M, Facts,true),
+        list_without_variants(U,Questions). 
+
+% list_without_variants(+L,-NL) 
+% Remove duplicates from list L, without binding variables, and keeping last occurrences in their original order
+list_without_variants([X|L],[X|NL]) :- !, remove_all_variants(L,X,LL), list_without_variants(LL,NL).
+list_without_variants([],[]).
+% remove_all_variants(+List,+Term,-NewList)
+remove_all_variants(L,T,NL) :- select(X,L,LL), variant(X,T), !, remove_all_variants(LL,T,NL).
+remove_all_variants(L,_,L).
+
 niceModule(Goal,NiceGoal) :- nonvar(Goal), Goal=at(G,Ugly), moduleMapping(Nice,Ugly), !, NiceGoal=at(G,Nice).
 niceModule(G,G).
 
@@ -41,16 +49,15 @@ niceModule(G,G).
 % top level interpreter predicate; true with Unknowns\=[].... means 'unknown'
 i( at(G,KP),U,Result) :- % hack to use the latest module version on the SWISH window
     shouldMapModule(KP,UUID), !,
-    %mylog(mapped/(KP->UUID)), 
     i( at(G,UUID),U,Result).
 i( at(G,KP),Unknowns,Result) :- !,
     reset_errors,
     context_module(M), 
     nextGoalID(ID),
     IG = call_with_time_limit( 500, i(at(G,KP),M,top_goal,top_clause,U__,E__)), % half second max
-    ( catch( (IG,E_=E__,U=U__), time_limit_exceeded, (E_=[], U=[time_limit_exceeded]) ) *-> 
-        (expand_failure_trees(E_,E), Result=true(E)) ;
-        (expand_failure_trees([f(ID,_,_)],E), U=[], Result=false(E)) ),
+    ( catch( (IG,E_=E__,U=U__), time_limit_exceeded, (E_=[], U=[time_limit_exceeded], print_message(warning,time_limit_exceeded)) ) *-> 
+        (expand_failure_trees_and_simp(E_,E), Result=true(E)) ;
+        (expand_failure_trees_and_simp([f(ID,_,_)],E), U=[], Result=false(E)) ),
     maplist(niceModule,U,Unknowns).
 i( _G,_,_) :- print_message(error,top_goal_must_be_at), fail.
 
@@ -364,6 +371,10 @@ canonic_fact_time(F,M,M:F,_).
 
 %%%%% Explanations
 
+expand_failure_trees_and_simp(E,ES) :-
+    expand_failure_trees(E,Expanded), 
+    simplify_explanation(Expanded,ES).
+
 % expand_failure_trees(+Why,-ExpandedWhy)
 expand_failure_trees([s(X,Ref,Children)|Wn],[s(X,Ref,NewChildren)|EWn]) :- !, 
     expand_failure_trees(Children,NewChildren), expand_failure_trees(Wn,EWn).
@@ -383,6 +394,20 @@ expand_failure_trees([f(ID,CID,Children)|Wn],Expanded) :-
     (failed(ID,CID,Cref,G) -> Expanded=[f(G,Cref,NewChildren)|EWn]; append(NewChildren,EWn,Expanded)).
 expand_failure_trees([],[]).
 
+% simplify_explanation(+ExpandedWhy,-LeanerWhy)
+simplify_explanation(Why,Simp) :- simplify_explanation(Why,[],_,Simp).
+
+% simplify_explanation(+Why,+VisitedNodes,-NewVisitedNodes,-Simplified) ...Nodes are lists of (s/f/u)(Literal)
+simplify_explanation([E1|En],Visited,NewVisited,Simplified) :- E1=..[Type,X,Ref,Children], Node=..[Type,X],
+    ((member(Node_,Visited), variant(Node_,Node))->
+        simplify_explanation(En,Visited,NewVisited,Simplified) ;
+        ( 
+            simplify_explanation(Children,[Node|Visited],V2,SimpChildren), simplify_explanation(En,V2,NewVisited,SimpN), 
+            E1Simp=..[Type,X,Ref,SimpChildren],
+            Simplified=[E1Simp|SimpN]
+            )
+        ).
+simplify_explanation([],V,V,[]).
 
 % expand_explanation_refs(+ExpandedWhy,+ExtraFacts,+TheirModule,-ExpandedRefLessWhy)
 % TODO: recover original variable names? seems to require either some hacking with clause_info or reparsing

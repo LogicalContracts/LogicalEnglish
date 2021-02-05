@@ -4,7 +4,7 @@
 #	docker run -it -p 3051:3050 -v /Users/mc/git/TaxKB/swish/data:/data -v /Users/mc/git/TaxKB:/app -e LOAD='/app/swish/user_module_for_swish.pl' logicalcontracts/patchedprivateswish 
 #
 # For typical server configuration on Ubuntu:
-#	docker run -d --restart always -p 8081:3050 -v /home/ubuntu/krt_swish_data:/data -v /home/ubuntu/krt:/krt -e LOAD='/krt/swish/user_module_for_swish.pl' logicalcontracts/patchedprivateswish
+#   docker run -d --restart always -p 8082:3050 -v /home/ubuntu/TaxKB_swish_data:/data -v /home/ubuntu/TaxKB:/TaxKB -e LOAD='/TaxKB/swish/user_module_for_swish.pl' -e SPACY_HOST=demo.logicalcontracts.com:8080 -e LOAD_KB=true -e SUDO=true logicalcontracts/patchedprivateswish
 
 FROM logicalcontracts/swish-june2020
 LABEL maintainer = "mc@interprolog.com"

@@ -12,12 +12,12 @@
 % For debugging:
 % can not print output as usual, would interfere with http responses; uncomment the following for a log:
 
-/*
+
 mylog(M) :- mylogFile(S), thread_self(T), writeq(S,T:M), nl(S), flush_output(S).
 :- prolog_load_context(directory, D), atomic_list_concat([D,/,'mylog.txt'],F), open(F,write,S), assert(mylogFile(S)), mylog('Log started').
 % :- asserta((prolog:message(A,B,C) :-  mylog(message-A), fail)).
 sandbox:safe_primitive(user:mylog(_M)). 
-*/
+
 user:sudo(G) :- (G).
 sandbox:safe_primitive(user:sudo(_)) :- getenv('SUDO',true). 
 
@@ -84,9 +84,11 @@ user:file_search_path(example, D) :- kp_dir(D).
 % PATCH to swish to avoid duplicate example and help menu and profile entries on Linux
 % list_without_duplicates(+L,-NL) 
 % Remove duplicates from list L, but keeping first occurrences in their original order
-list_without_duplicates([X|L],[X|NL]) :- select(X,L,LL), !, list_without_duplicates(LL,NL).
-list_without_duplicates([X|L],[X|NL]) :- !, list_without_duplicates(L,NL).
+list_without_duplicates([X|L],[X|NL]) :- remove_all(L,X,LL), !, list_without_duplicates(LL,NL).
 list_without_duplicates([],[]).
+remove_all(L,T,NL) :- select(T,L,LL), !, remove_all(LL,T,NL).
+remove_all(L,_,L).
+
 :- dynamic(swish_help:help_files/1). % Needed in SWI Prolog 8.1.1... who knows for how long this will be admissible ;-)
 :- asserta((
 swish_help:help_files(AllExamples) :-
