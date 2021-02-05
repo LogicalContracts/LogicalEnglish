@@ -81,7 +81,7 @@ declare_our_metas(Module) :-
 
 % load_named_file(+File,+Module,+InGittyStorage)
 load_named_file(File,Module,true) :- !,
-    use_gitty_file(Module:File,[/* useless: module(Module)*/]), mylog(hihi).
+    use_gitty_file(Module:File,[/* useless: module(Module)*/]).
 load_named_file(File,Module,false) :- 
     load_files(File,[module(Module)]).
 
@@ -269,19 +269,13 @@ reactToSaved(updated(GittyFile,_Commit)) :- % xref
 */
 
 reactToSaved(created(GittyFile,Commit)) :- 
-    mylog(created(GittyFile,Commit)),
     reactToSaved(updated(GittyFile,Commit)).
 reactToSaved(updated(GittyFile,_Commit)) :- % discover (module name may have changed...) and xref
-    mylog(updated(GittyFile,_Commit)),
     storage_file(GittyFile,Data,Meta), 
-    mylog(meta/Meta),
-    mylog(data/Data),
     open_string(Data,In),
     process_file(In,GittyFile,Meta.time,true), 
-    mylog(processed),
     kp_location(URL,GittyFile,true), 
-    mylog(kp_location(URL,GittyFile,true)),
-    xref_source(URL,[silent(true)]), mylog(wtf).
+    xref_source(URL,[silent(true)]).
 
 %! edit_kp(URL) is det
 %
