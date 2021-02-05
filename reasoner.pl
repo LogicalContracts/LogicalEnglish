@@ -12,7 +12,10 @@
 
 % query(AtGoal,Unknowns,ExplanationTerm,Result)
 %  Result will be true/false/unknown
-query(at(G,M),Questions,taxlogExplanation(E),Result) :- 
+query(Goal,Questions,taxlogExplanation(E),Result) :- 
+    (Goal=at(G,M) -> true ; 
+        myDeclaredModule(M) -> Goal=G; % only possible on SWISH
+        (print_message(error,"No knowledge module specified"), fail)),
     i(at(G,M),U,Result_), 
     Result_=..[F,E_],
     must_be(boolean,F),
@@ -23,7 +26,10 @@ query(at(G,M),Questions,taxlogExplanation(E),Result) :-
 
 % Result will be true/false/unknown ( ExplanationTreeList)
 %TODO: normalize result params with the above predicate's
-query_once_with_facts(at(G,M_),Facts,Questions,Result) :-
+query_once_with_facts(Goal,Facts,Questions,Result) :-
+    (Goal=at(G,M_) -> true ; 
+        myDeclaredModule(M_) -> Goal=G; 
+        (print_message(error,"No knowledge module specified"), fail)),
     context_module(Me),
     (shouldMapModule(M_,M)->true;M=M_),
     once_with_facts( Me:(
@@ -338,6 +344,14 @@ once_with_facts(G,M_,Facts,DoUndo) :-
     assert_and_remember(Facts,M,from_with_facts,Undo),
     once(M:G),
     (DoUndo==true -> once(Undo) ; true).
+
+% call_with_facts(+Goal,+Module,+AdditionalFacts) This does NOT undo the fact changes
+call_with_facts(G,M_,Facts) :-
+    atom_string(M,M_),
+    call_at(true,M), % make sure the module is loaded
+    assert_and_remember(Facts,M,from_with_facts,_Undo),
+    call(M:G).
+
 
 % assert a list of timed facts, and returns a goal to undo the asserts
 assert_and_remember([-Fact|Facts],M,Why,(Undo,Undos)) :- must_be(nonvar,Fact),

@@ -1,5 +1,5 @@
 :- module(_,[
-    call_at/2, kp_dir/1, kp_location/3, kp/1, shouldMapModule/2, moduleMapping/2,
+    call_at/2, kp_dir/1, kp_location/3, kp/1, shouldMapModule/2, moduleMapping/2, myDeclaredModule/1,
     discover_kps_in_dir/1, discover_kps_in_dir/0, discover_kps_gitty/0, setup_kp_modules/0, load_kps/0,
     load_gitty_files/1, load_gitty_files/0, save_gitty_files/1, save_gitty_files/0, delete_gitty_file/1, update_gitty_file/3,
     xref_all/0, xref_clean/0, kp_predicates/0, reset_errors/0,
@@ -11,6 +11,7 @@
 :- dynamic kp_dir/1.
 :- prolog_load_context(directory, D), retractall(kp_dir(_)), atomic_list_concat([D,'/kb'], KD), assert(kp_dir(KD)), print_message(informational,kp_dir(KD)).
 
+:- multifile prolog:message//1.
 
 /** <module> Dynamic module loader.
 
@@ -19,33 +20,49 @@ Scans a given set of Prolog files in SWISH storage or in a file system directpry
 Can also export and import SWISH storage to/from a file system directory.
 */
 
-:- dynamic kp_location/3. % URL,File, InGitty
+:- dynamic kp_location/4. % URL,File,ModifiedTime,InGitty
+kp_location(URL,File,InGitty) :- kp_location(URL,File,_,InGitty).
+
 kp(URL) :- kp_location(URL,_,_).
 
 %! discover_kps_in_dir(+Dir) is det.
 %
 discover_kps_in_dir(Dir) :-
-    retractall(kp_location(_,_,false)),
+    retractall(kp_location(_,_,_,false)),
     forall(directory_member(Dir,File,[extensions([pl])]), (
+        time_file(File,Modified),
         open(File,read,In),
-        process_file(In,File,false)
+        process_file(In,File,Modified,false)
     )).
 
 % This also RELOADS modules already loaded
 discover_kps_in_dir :-
     kp_dir(D), discover_kps_in_dir(D).
 
-process_file(In,File,InGitty) :-
+process_file(In,File,Modified,InGitty) :-
     must_be(boolean,InGitty),
     setup_call_cleanup( true, (
         process_terms(In, LastTerm),
         % (LastTerm=at(Name) -> (
         (LastTerm=(:-module(Name,_)) -> (
-            assert(kp_location(Name,File,InGitty)),
-            % reload the module if it already exists:
-            (current_module(Name) -> load_named_file(File,Name,InGitty) ; true)
+            ((kp_location(Name,PreviousFile,PreviousMod,InGitty), PreviousMod>=Modified) -> 
+                print_message(warning,ignored_older_module(Name,PreviousFile,File)) ; 
+                (
+                    (kp_location(Name,PreviousFile,_,InGitty) -> 
+                        print_message(warning,using_newer_module(Name,PreviousFile,File)) 
+                        ; true),
+                    retractall(kp_location(Name,_,_,InGitty)),
+                    assert(kp_location(Name,File,Modified,InGitty)),
+                    % reload the module if it already exists:
+                    (current_module(Name) -> load_named_file(File,Name,InGitty) ; true)
+                ))
             ); true)
     ), close(In)).
+
+prolog:message(ignored_older_module(Module,PreviousFile,File)) --> 
+    ['Ignored older file ~a for module ~w; sticking to ~a'-[File,Module,PreviousFile]].
+prolog:message(using_newer_module(Module,PreviousFile,File)) --> 
+    ['Forgot older file ~a for module ~w; using instead ~a'-[PreviousFile,Module,File]].
 
 process_terms(In,Term) :- % actually gets only the first term, where the module declaration must be:
     %repeat, 
@@ -56,6 +73,7 @@ process_terms(In,Term) :- % actually gets only the first term, where the module 
         %Term=at(Name), (ground(Name)->true; print_message(warning,'ignored'(at(Name))), fail) 
     ).
 
+
 declare_our_metas(Module) :-
     Module:meta_predicate(mainGoal(0,+)),
     Module:meta_predicate(on(0,?)),
@@ -63,7 +81,7 @@ declare_our_metas(Module) :-
 
 % load_named_file(+File,+Module,+InGittyStorage)
 load_named_file(File,Module,true) :- !,
-    use_gitty_file(Module:File,[module(Module)]).
+    use_gitty_file(Module:File,[/* useless: module(Module)*/]), mylog(hihi).
 load_named_file(File,Module,false) :- 
     load_files(File,[module(Module)]).
 
@@ -99,7 +117,6 @@ call_at(Goal,Name) :-
 reset_errors :- 
     retractall(reported_missing_kp(_)), retractall(reported_loaded_kp(_)).
 
-:- multifile prolog:message//1.
 prolog:message(loaded(Module,Path)) --> ['Loaded ~w from ~a'-[Module,Path]].
 
 
@@ -122,9 +139,7 @@ prolog:xref_close_source(_, Stream) :-
 	close(Stream).
 
 prolog:xref_source_time(URL, Modified) :-
-    kp_location(URL,File,InGitty),
-    (InGitty==true -> (storage_file(File,_,Meta), Modified=Meta.time) ;
-        time_file(File,Modified)).
+    kp_location(URL,_File,Modified,_InGitty).
 
 
 %! xref_all is det
@@ -136,7 +151,6 @@ xref_all :-
         xref_source(URL,[silent(true)]) % to avoid spurious warnings for mainGoal singleton vars
     )).
 
-:- multifile prolog:message//1.
 prolog:message(xreferencing(URL,File)) --> ['Xreferencing module ~w in file ~w'-[URL,File]].
 prolog:message(no_kp(Goal,Name)) --> ["Could not find knowledge page ~w for goal ~w"-[Name,Goal]].
 
@@ -171,11 +185,11 @@ kp_predicates :- %TODO: ignore subtrees of because/2
 %  already loaded modules, but does not delete "orphans" (modules no longer in gitty)
 %  TODO: use '$destroy_module'(M) on those?
 discover_kps_gitty :-
-    retractall(kp_location(_,_,true)),
+    retractall(kp_location(_,_,_,true)),
     forall(storage_file_extension(File,pl),(
-        storage_file(File,Data,_Meta),
+        storage_file(File,Data,Meta),
         open_string(Data, In),
-        process_file(In,File,true)
+        process_file(In,File,Meta.time,true)
     )).
 
 %! save_gitty_files(+ToDirectory) is det
@@ -245,13 +259,29 @@ delete_gitty_file(File) :-
     gitty_update(Store, File, "", NewMeta, _CommitRet).
 
 :- listen(swish(X),reactToSaved(X)). % note: do NOT use writes!, they would interfere with SWISH's internal REST API
+/*
 reactToSaved(created(GittyFile,Commit)) :- % discover and xref
-    storage_file(GittyFile,Data,_Meta), process_file(Data,GittyFile), 
+    storage_file(GittyFile,Data,Meta), process_file(Data,GittyFile,Meta.time,true), 
     reactToSaved(updated(GittyFile,Commit)).
 reactToSaved(updated(GittyFile,_Commit)) :- % xref
     kp_location(URL,GittyFile,true), 
     xref_source(URL,[silent(true)]).
+*/
 
+reactToSaved(created(GittyFile,Commit)) :- 
+    mylog(created(GittyFile,Commit)),
+    reactToSaved(updated(GittyFile,Commit)).
+reactToSaved(updated(GittyFile,_Commit)) :- % discover (module name may have changed...) and xref
+    mylog(updated(GittyFile,_Commit)),
+    storage_file(GittyFile,Data,Meta), 
+    mylog(meta/Meta),
+    mylog(data/Data),
+    open_string(Data,In),
+    process_file(In,GittyFile,Meta.time,true), 
+    mylog(processed),
+    kp_location(URL,GittyFile,true), 
+    mylog(kp_location(URL,GittyFile,true)),
+    xref_source(URL,[silent(true)]), mylog(wtf).
 
 %! edit_kp(URL) is det
 %
