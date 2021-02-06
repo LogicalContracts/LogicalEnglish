@@ -1,6 +1,6 @@
 :- module(_ThisFileName,[query/4, query_once_with_facts/4, expand_explanation_refs/4, explanation_node_type/2,
     run_examples/0, myClause2/8, niceModule/2, refToOrigin/2,
-    after/2, not_before/2, before/2, immediately_before/2, same_date/2, this_year/1]).
+    after/2, not_before/2, before/2, immediately_before/2, same_date/2, this_year/1, in/2]).
 
 /** <module> Tax-KB reasoner and utils
 @author Miguel Calejo
@@ -470,7 +470,7 @@ must(G,M) :- throw(weird_failure_of(G,M)).
 %Time predicates; they assume times are atoms in iso_8601 format
 
 %!  after(+Later,+Earlier) is det.
-%   Arguments must be atoms in iso_8601 format
+%   Arguments must be dates in iso_8601 format, e.g. '20210206' or '2021-02-06T08:25:34'
 after(Later,Earlier) :- 
     parse_time(Later,L), parse_time(Earlier,E), L>E.
 not_before(Later,Earlier) :-
@@ -478,7 +478,8 @@ not_before(Later,Earlier) :-
 before(Earlier,Later) :-
     parse_time(Later,L), parse_time(Earlier,E), E<L.
 
-% tests/generates previous day:
+%! immediately_before(?Earlier,?Later) is det.
+%  Later is 24h after Earlier; at least one must be known
 immediately_before(Earlier,Later) :- 
     assertion(nonvar(Earlier);nonvar(Later)),
     (nonvar(Earlier) -> (parse_time(Earlier,E), L is E+24*3600 ) ; true),
@@ -486,13 +487,16 @@ immediately_before(Earlier,Later) :-
     (var(Earlier) -> format_time(string(Earlier),"%FT%T%z",E) ; true),
     (var(Later) ->  format_time(string(Later),"%FT%T%z",L) ; true).
 
-
 same_date(T1,T2) :- 
     format_time(string(S),"%F",T1), format_time(string(S),"%F",T2).
 
+%! this_year(?Year) is det.
+%  The current year
 this_year(Y) :- get_time(Now), stamp_date_time(Now,date(Y,_M,_D,_,_,_,_,_,_),local).
 
-user:in(X,List) :- member(X,List).
+%! in(X,List) is nondet.
+%  X is in List
+in(X,List) :- must_be(list,List), member(X,List).
 
 :- if(current_module(swish)). %%%%% On SWISH:
 
