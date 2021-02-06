@@ -119,14 +119,24 @@ taxlogBodySpec(at(G,M_),delimiter-[SpecG,classify]) :- nonvar(M_), nonvar(G), !,
 taxlogBodySpec(M:G,delimiter-[classify,SpecG]) :- !, taxlogBodySpec(at(G,M),delimiter-[SpecG,classify]).
 taxlogBodySpec(on(G,_T),delimiter-[SpecG,classify] ) :- !,
     taxlogBodySpec(G,SpecG).
-taxlogBodySpec(G,goal(Class,G)) :-  current_source(UUID), taxlogGoalSpec(G, UUID, Class), !. 
+taxlogBodySpec(G,goal(Class,G)-classify) :-  current_source(UUID), taxlogGoalSpec(G, UUID, Class), !. 
 taxlogBodySpec(_G,classify).
 
 taxlogGoalSpec(G, UUID, Class) :-
     (my_xref_defined(UUID, G, Class) -> true ; 
         %prolog_colour:built_in_predicate(G)->Class=built_in ;
-        prolog_colour:goal_classification(G, Class) -> true;
+        my_goal_classification(G,Class) -> true;
         Class=undefined).
+
+:- if(current_prolog_flag(version_data,swi(8, 2, _, _))).
+my_goal_classification(G,Class) :-
+    prolog_colour:call_goal_classification(G, Class).
+:- elif(( current_prolog_flag(version_data,V), V@>= swi(8, 3, 0, []))).
+my_goal_classification(G,Class) :-
+    prolog_colour:call_goal_classification(G, _Module, Class).
+:- else.
+:- print_message(error,"You need SWI-Prolog 8.2 or later"), halt(1).
+:- endif.
 
 my_xref_defined(M,G,Class) :- % check that the source has already been xref'ed, otherwise xref would try to load it and cause a "iri_scheme" error:
     xref_current_source(M), xref_defined(M,G,Class).
