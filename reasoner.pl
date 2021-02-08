@@ -1,4 +1,4 @@
-:- module(_ThisFileName,[query/4, query_once_with_facts/4, expand_explanation_refs/4, explanation_node_type/2,
+:- module(_ThisFileName,[query/4, query_once_with_facts/5, expand_explanation_refs/4, explanation_node_type/2,
     run_examples/0, myClause2/8, niceModule/2, refToOrigin/2,
     after/2, not_before/2, before/2, immediately_before/2, same_date/2, this_year/1, in/2]).
 
@@ -22,23 +22,23 @@ query(Goal,Questions,taxlogExplanation(E),Result) :-
     ((F==true,U==[]) -> Result=true; F==true->Result=unknown; Result=false),
     expand_explanation_refs(E_,[],M,E),
     list_without_variants(U,Questions). % remove duplicates
-    % explanationHTML(E,EH), myhtml(EH).
 
 % Result will be true/false/unknown ( ExplanationTreeList)
-%TODO: normalize result params with the above predicate's
-query_once_with_facts(Goal,Facts,Questions,Result) :-
+%! query_once_with_facts(+Goal,?FactsListOrExampleName,-Unknowns,-Explanation,-Result)
+%  query considering the given facts (or accumulated facts of all scenarios the given example name)
+query_once_with_facts(Goal,Facts_,Questions,taxlogExplanation(E),Outcome) :-
     (Goal=at(G,M_) -> true ; 
         myDeclaredModule(M_) -> Goal=G; 
         (print_message(error,"No knowledge module specified"-[]), fail)),
     context_module(Me),
     (shouldMapModule(M_,M)->true;M=M_),
+    (is_list(Facts_)-> Facts=Facts_; example_fact_sequence(M,Facts_,Facts)),
     once_with_facts( Me:(
         i(at(G,M),U,Result_),
         Result_=..[Outcome,E_],
-        expand_explanation_refs(E_,Facts,M,E),
-        Result=..[Outcome,E]
+        expand_explanation_refs(E_,Facts,M,E)
         ), M, Facts,true),
-        list_without_variants(U,Questions). 
+    list_without_variants(U,Questions). 
 
 % list_without_variants(+L,-NL) 
 % Remove duplicates from list L, without binding variables, and keeping last occurrences in their original order
@@ -179,7 +179,7 @@ i(Q,M,_CID,Cref,U,E) :- functor(Q,question,N), (N=1;N=2), !, U=[at(Q,M)], E=[u(a
 i(G,M,CID,Cref,U,E) :- system_predicate(G), !, 
     evalArgExpressions(G,M,NewG,CID,Cref,Uargs,E_),
     % floundering originates unknown:
-    catch((M:NewG, U=Uargs, E=E_), 
+    catch(( myCall(M:NewG), U=Uargs, E=E_), 
         error(instantiation_error,_Cx), 
         (append(Uargs,[at(instantiation_error(G),M)],U), append(E_,[u(instantiation_error(G),Cref,[])],E) )).
 i(G,M,_CID,Cref,U,E) :- unknown(G,M), !, (U=[at(G,M)],E=[ u(at(G,M),Cref,[]) ]).
@@ -195,13 +195,15 @@ i(G,M,CID,Cref,U,E) :-
     evalArgExpressions(G,M,NewG,CID,Cref,Uargs,Eargs), % failures in the expression (which would be weird btw...) stay directly under CID
     myClause(G,M,B,Ref,IsProlog,_URL,LocalE),
     (IsProlog==false -> i(B,M,NewID,Ref,U_,Children_) ; (
-        catch(B,error(Error,_),U_=[at(Error,M)]),
+        catch( myCall(B), error(Error,_), U_=[at(Error,M)]),
         (var(U_)->U_=[];true),
         Children_=LocalE
     )),
     inc_counter(Counter), % one more solution found; this is a nonbacktrackable operation
     append(Uargs,U_,U),
     (catch(M:irrelevant_explanation(NewG),_,fail) -> E=Eargs ; (E=[s(G,Ref,Children)], append(Eargs,Children_,Children) )).
+
+myCall(G) :- sandbox:safe_call(G).
 
 :- thread_local last_goal_id/1, failed/4, failed_success/2.
 
@@ -247,14 +249,14 @@ myClause(on(H,Time),M,Body,Ref,IsProlog,URL,E) :- !, myClause2(H,Time,M,Body,Ref
 myClause(H,M,Body,Ref,IsProlog,URL,E) :- myClause2(H,_Time,M,Body,Ref,IsProlog,URL,E).
 
 % Supports the injecting of facts for a query:
-:- thread_local hypothetical_fact/4. % Module, FactTemplate, Fact, ClauseLikeBody
+:- thread_local hypothetical_fact/5. % Module, FactTemplate, Fact, ClauseLikeBody, FakeClauseRef
 
 % myClause2(PlainHead,Time,Module,Body,Ref,IsProlog,URL,LocalExplanation)
 myClause2(H,Time,M,Body,Ref,IsProlog,URL,E) :- 
     (nonvar(Ref) -> clause_property(Ref,module(M)) ; true),
     % backtrack over hypothetical facts if some is present, hence the 'soft-cut':
-    % too strong, forgets existing facts: (hypothetical_fact(M,H,Fact,Body_) *-> H=Fact ; M:clause(H,Body_,Ref)),
-    (hypothetical_fact(M,H,H,Body_) ; M:clause(H,Body_,Ref)),
+    % too strong, forgets existing facts: (hypothetical_fact(M,H,Fact,Body_,_) *-> H=Fact ; M:clause(H,Body_,Ref)),
+    (hypothetical_fact(M,H,H,Body_,Ref) ; M:clause(H,Body_,Ref)),
     ((Body_= taxlogBody(Body,Time,URL,E_), E_\==[] ) -> (
             (IsProlog=true, E=[s(E_,Ref,[])])
         ); 
@@ -283,8 +285,8 @@ refToModuleAndSourceAndOrigin(Ref,M,Source,Origin) :-
     
 % unknown(+Goal,+Module) whether the knowledge source is currently unable to provide a result 
 unknown(G,M) :- var(G), !, throw(variable_unknown_call_at(M)).
-unknown(on(G,_Time),M) :- !, functor(G,F,N),functor(GG,F,N), \+ hypothetical_fact(M,GG,_,_), \+ myClause2(GG,_,M,_,_,_,_,_).
-unknown(G,M) :- functor(G,F,N),functor(GG,F,N), \+ hypothetical_fact(M,GG,_,_), \+ myClause2(GG,_,M,_,_,_,_,_).
+unknown(on(G,_Time),M) :- !, functor(G,F,N),functor(GG,F,N), \+ hypothetical_fact(M,GG,_,_,_), \+ myClause2(GG,_,M,_,_,_,_,_).
+unknown(G,M) :- functor(G,F,N),functor(GG,F,N), \+ hypothetical_fact(M,GG,_,_,_), \+ myClause2(GG,_,M,_,_,_,_,_).
 
 :- multifile prolog:meta_goal/2. % for xref
 prolog:meta_goal(at(G,M),[M_:G]) :- nonvar(M), atom_string(M_,M).
@@ -337,6 +339,13 @@ run_scenarios([scenario(Facts,G)|Scenarios],M,N,PreviousFacts,U,E) :- !,
     append(U1,Un,U), append([E1],En,E).
 run_scenarios([],_,_,_,[],[]).
 
+% example_fact_sequence(+Module,?ExampleName,-Facts)
+example_fact_sequence(M,Name,Facts) :- 
+    catch(M:example(Name,Scenarios),_,fail),
+    findall(SF,member(scenario(SF,_Assertion),Scenarios),Facts_),
+    append(Facts_,Facts).
+
+
 % once_with_facts(Goal,Module,AdditionalFacts,+DoUndo)
 % Facts should be ground...
 % asserts the facts (and deletes those with a - ) and calls Goal, stopping at the first solution, and optionally undoing the fact changes
@@ -360,7 +369,8 @@ call_with_facts(G,M_,Facts) :-
 
 
 % assert a list of timed facts, and returns a goal to undo the asserts
-assert_and_remember([-Fact|Facts],M,Why,(Undo,Undos)) :- must_be(nonvar,Fact),
+assert_and_remember([-Fact|Facts],M,Why,(Undo,Undos)) :- !,
+    must_be(nonvar,Fact),
     canonic_fact_time(Fact,M,CF,Time), assert_and_remember_(delete,CF,Time,Why,Undo),
     assert_and_remember(Facts,M,Why,Undos).
 assert_and_remember([Fact|Facts],M,Why,(Undo,Undos)) :- must_be(nonvar,Fact),
@@ -378,10 +388,10 @@ assert_and_remember_(Operation,M:Fact,Time,Why,Undo) :-
     % Instead of the above complications, we now use hypothetical_fact:
     % e.g. add a fact F in one scenarion and deleting in the next, which may leave F asserted when undoing the delete
     % this seems to require either using a variant test... or demanding facts to be ground
-    % hypothetical_fact(M,H,Fact,Body_)
+    % hypothetical_fact(M,H,Fact,Body_,Ref)
     functor(Fact,F,N), functor(Template,F,N), 
-    Add = assert( hypothetical_fact(M,Template,Fact,taxlogBody(true,Time,'',Why)) ),
-    Delete = retractall( hypothetical_fact(M,Template,Fact,taxlogBody(true,Time,'',Why)) ),
+    Add = assert( hypothetical_fact(M,Template,Fact,taxlogBody(true,Time,'',Why),hypothetical) ),
+    Delete = retractall( hypothetical_fact(M,Template,Fact,taxlogBody(true,Time,'',Why),_) ),
     (Operation==add ->( Undo=Delete, Add) ; ( Undo=Add, Delete )).
 
 % canonic_fact_time(+Fact,+DefaultModule,Module:Fact_,Time)
@@ -510,7 +520,7 @@ in(X,List) :- must_be(list,List), member(X,List).
 :- if(current_module(swish)). %%%%% On SWISH:
 
 sandbox:safe_primitive(reasoner:query(_,_,_,_)).
-sandbox:safe_primitive(reasoner:query_once_with_facts(_,_,_,_)).
+sandbox:safe_primitive(reasoner:query_once_with_facts(_,_,_,_,_)).
 
 :- use_module(swish(lib/html_output),[html/1]). 
 % hack to avoid SWISH errors:
