@@ -16,7 +16,7 @@ load_content(File) :- atomic(File), !,
             read(S,Term), 
             (Term==end_of_file -> true ; 
                 Term=content(URL,Text) -> (update_content(URL,Text), fail) ; 
-                (print_message(warning, ignored_content/Term), fail)
+                (print_message(warning, "ignored content: ~w"-[Term]), fail)
             ))
     ),close(S)), !.
 load_content(Items) :- 
@@ -312,7 +312,7 @@ storeSentences(Dicts,SentenceIndex,WordIndex,Path,Functor,Extraction) :-
 % wordTokens(+Words,+WI,-NewWI,-Tokens)
 wordTokens([W|Words],WI,NewWI,[T|Tokens]) :- !,
     string_lower(W.tag,TagL), atom_string(Tag,TagL),
-    (tagToPOS(Tag,POS,_,_)->true;Tag=POS, print_message(warning,badTag(W))), % throw(badTag(W)) is too harsh on non English languages...
+    (tagToPOS(Tag,POS,_,_)->true;Tag=POS, print_message(warning,"bad tag: ~w for ~w "-[Tag,W])), % throw(badTag(W)) is too harsh on non English languages...
     t_word(T,W.text), t_tag(T,Tag), t_pos(T,POS), t_i(T,WI),
     t_lemma(T,W.lemma), t_offset(T,W.offset), t_absorbed(T,[]),
     I is WI+1, 
@@ -354,7 +354,7 @@ spaCyParse(Text,CollapseNouns,CollapsePuncts,Model,Dict) :-
     %(Text_\=Text__ -> print_message(informational,Text__);true),
     spaCyURL(URL),
     format(atom(Post),'{"text":"~a", "model":"~a", "collapse_phrases": ~w, "collapse_punctuation": ~w }',[Text__,Model,CollapseNouns,CollapsePuncts]),
-    catch( (http_post(URL, atom(Post), Result, []), atom_json_dict(Result,Dict,[])), Ex, (print_message(error,Ex), format("BAD (?) text: ~a~n",[Text]), Dict=[])).
+    catch( (http_post(URL, atom(Post), Result, []), atom_json_dict(Result,Dict,[])), Ex, (print_message(error,"spaCy failed for ~a: ~w"-[Text, Ex]), Dict=[])).
 
 
 replace_complicated_words(Text,NewText) :- 

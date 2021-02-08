@@ -8,10 +8,10 @@
 :- use_module(library(prolog_xref)).
 :- use_module(library(broadcast)).
 
-:- dynamic kp_dir/1.
-:- prolog_load_context(directory, D), retractall(kp_dir(_)), atomic_list_concat([D,'/kb'], KD), assert(kp_dir(KD)), print_message(informational,kp_dir(KD)).
-
 :- multifile prolog:message//1.
+
+:- dynamic kp_dir/1.
+:- prolog_load_context(directory, D), retractall(kp_dir(_)), atomic_list_concat([D,'/kb'], KD), assert(kp_dir(KD)), print_message(informational,"KB directory is ~a"-[KD]).
 
 /** <module> Dynamic module loader.
 
@@ -174,6 +174,8 @@ kp_predicates :- %TODO: ignore subtrees of because/2
         ))
     )). 
 
+:- thread_local myDeclaredModule/1. % remembers the module declared in the last SWISH window loaded
+
 :- if(current_module(swish)). %%% only when running with the SWISH web server:
 :- use_module(swish(lib/storage)).
 :- use_module(swish(lib/gitty)).
@@ -197,7 +199,7 @@ discover_kps_gitty :-
 %  ERASES the directory and copies all gitty Prolog files into it
 %  MAKE SURE ToDirectory has source versioning control!
 save_gitty_files(_ToDirectory) :- \+ storage_file_extension(_File,pl), !, 
-    print_message(warning,"No gitty files to save").
+    print_message(warning,"No gitty files to save"-[]).
 save_gitty_files(ToDirectory) :-
     (exists_directory(ToDirectory)->true; make_directory(ToDirectory)),
     delete_directory_contents(ToDirectory),
@@ -282,7 +284,7 @@ reactToSaved(updated(GittyFile,_Commit)) :- % discover (module name may have cha
 % Open the current gitty version of the knowledge page in SWISH's editor
 edit_kp(URL) :-
     kp_location(URL,File,InGitty),
-    (InGitty==(false) -> print_message(error,"That is not in SWISH storage");(
+    (InGitty==(false) -> print_message(error,"~w is not in SWISH storage"-[URL]);(
         format(string(URL),"http://localhost:3050/p/~a",[File]), www_open_url(URL)
         )).
 
@@ -355,7 +357,6 @@ token_references(Request) :-
     %Solution = _{hello: "Good Afternoon!", functor:Functor, arity:Arity, module:File},
     reply_json_dict(Locations).
 
-:- thread_local myDeclaredModule/1. % remembers the module declared in the last SWISH window loaded
 % This at the end, as it activates the term expansion (no harm done otherwise, just some performance..):
 user:term_expansion((:-module(M,L)),(:-module(M,L))) :- !, assert(myDeclaredModule(M)). 
 :- multifile pengines:prepare_module/3.
@@ -389,7 +390,7 @@ edit_kp(URL) :-
         edit(file(File))
         )).
 
-discover_kps_gitty :- print_message(informational,'this only works on SWISH ').
+discover_kps_gitty :- print_message(informational,'this only works on SWISH'-[]).
 load_gitty_files :- throw('this only works on SWISH ').
 load_gitty_files(_) :- throw('this only works on SWISH ').
 save_gitty_files(_) :- throw('this only works on SWISH ').

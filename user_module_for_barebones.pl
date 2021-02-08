@@ -1,5 +1,8 @@
 % To start as a local development (serverless) engine:
-% /Applications/SWI-Prolog8.1.9.app/Contents/MacOS/swipl -l user_module_for_barebones.pl
+% /Applications/SWI-Prolog8.2.1-1.app/Contents/MacOS/swipl -l user_module_for_barebones.pl
+
+:- multifile prolog:message//1.
+prolog:message(S-Args) --> {atomic(S),is_list(Args)},[S-Args].
 
 :- use_module('syntax.pl').
 :- use_module('kp_loader.pl').

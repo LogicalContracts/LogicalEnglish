@@ -22,7 +22,7 @@
 
 :- if(current_module(swish)). %%%%% On SWISH:
 
-start_api_server :- print_message(informational,"No need to start API server, SWISH already running").
+start_api_server :- print_message(informational,"No need to start API server, SWISH already running"-[]).
 
 :- else. % On command-line SWI-Prolog, no user restrictions:
 

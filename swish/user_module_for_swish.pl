@@ -1,7 +1,7 @@
 % Things that need to be defined in the user module, so Swish finds them
 
 % To start as local server:
-% export SPACY_HOST=localhost:8080; export LOAD_KB=true; export SUDO=true; /Applications/SWI-Prolog8.1.9.app/Contents/MacOS/swipl -l user_module_for_swish.pl -l ../../swish/server.pl -g server:server
+% export SPACY_HOST=localhost:8080; export LOAD_KB=true; export SUDO=true; /Applications/SWI-Prolog8.2.1-1.app/Contents/MacOS/swipl -l user_module_for_swish.pl -l ../../swish/server.pl -g server:server
 %  (local Docker testing:
 % docker run -it -p 3051:3050 -v /Users/mc/git/TaxKB/swish/data:/data -v /Users/mc/git/TaxKB:/app -e LOAD='/app/swish/user_module_for_swish.pl' -e SPACY_HOST='host.docker.internal:8080' -e LOAD_KB=false -e SUDO=true logicalcontracts/patchedprivateswish
 % or (Docker on Ubuntu server):
@@ -12,11 +12,14 @@
 % For debugging:
 % can not print output as usual, would interfere with http responses; uncomment the following for a log:
 
-
 mylog(M) :- mylogFile(S), thread_self(T), writeq(S,T:M), nl(S), flush_output(S).
 :- prolog_load_context(directory, D), atomic_list_concat([D,/,'mylog.txt'],F), open(F,write,S), assert(mylogFile(S)), mylog('Log started').
 % :- asserta((prolog:message(A,B,C) :-  mylog(message-A), fail)).
 sandbox:safe_primitive(user:mylog(_M)). 
+
+:- multifile prolog:message//1.
+% too strong, would override swipl-devel/boot/messages.pl:  prolog:message(X) --> {atomic(X)}, ['~w'-[X]].
+prolog:message(S-Args) --> {atomic(S),is_list(Args)},[S-Args].
 
 user:sudo(G) :- (G).
 sandbox:safe_primitive(user:sudo(_)) :- getenv('SUDO',true). 
@@ -61,11 +64,11 @@ swish_config:config(include_alias,	example).
 
 :- initialization( (
 	(getenv('LOAD_KB',true) -> (
-		print_message(informational,"Updating SWISH storage with latest KB"), load_gitty_files
+		print_message(informational,"Updating SWISH storage with latest KB"-[]), load_gitty_files
 		) ; true),
 	discover_kps_gitty, setup_kp_modules, xref_all, 
 	current_prolog_flag(version_data,V), print_message(informational,V),
-	print_message(informational,"Ready on SWISH!")
+	print_message(informational,"Ready on SWISH!"-[])
 )).
 
 :- use_module(swish(lib/render)).
@@ -159,7 +162,6 @@ html_post_resources([]) --> {true}.
 :- multifile user:extra_swish_resource/1. % declare a link or script resource to include in the SWISH page's head
 % extra_swish_resource(link([ type('text/css'),rel('stylesheet'),href('/lps/lps.css') ])).
 % extra_swish_resource(script(JS)) :- google_analytics_script(JS).
-
 
 :- multifile prolog_colour:term_colours/2.
 % Wire our colouring logic into SWI's:

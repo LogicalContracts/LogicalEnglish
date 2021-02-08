@@ -15,7 +15,7 @@
 query(Goal,Questions,taxlogExplanation(E),Result) :- 
     (Goal=at(G,M) -> true ; 
         myDeclaredModule(M) -> Goal=G; % only possible on SWISH
-        (print_message(error,"No knowledge module specified"), fail)),
+        (print_message(error,"No knowledge module specified"-[]), fail)),
     i(at(G,M),U,Result_), 
     Result_=..[F,E_],
     must_be(boolean,F),
@@ -29,7 +29,7 @@ query(Goal,Questions,taxlogExplanation(E),Result) :-
 query_once_with_facts(Goal,Facts,Questions,Result) :-
     (Goal=at(G,M_) -> true ; 
         myDeclaredModule(M_) -> Goal=G; 
-        (print_message(error,"No knowledge module specified"), fail)),
+        (print_message(error,"No knowledge module specified"-[]), fail)),
     context_module(Me),
     (shouldMapModule(M_,M)->true;M=M_),
     once_with_facts( Me:(
@@ -60,12 +60,13 @@ i( at(G,KP),Unknowns,Result) :- !,
     reset_errors,
     context_module(M), 
     nextGoalID(ID),
-    IG = call_with_time_limit( 500, i(at(G,KP),M,top_goal,top_clause,U__,E__)), % half second max
-    ( catch( (IG,E_=E__,U=U__), time_limit_exceeded, (E_=[], U=[time_limit_exceeded], print_message(warning,time_limit_exceeded)) ) *-> 
+    Limit=0.5,
+    IG = call_with_time_limit( Limit, i(at(G,KP),M,top_goal,top_clause,U__,E__)), % half second max
+    ( catch( (IG,E_=E__,U=U__), time_limit_exceeded, (E_=[], U=[time_limit_exceeded], print_message(warning,"Time limit of ~w seconds exceeded by ~w at ~w"-[Limit,G,KP])) ) *-> 
         (expand_failure_trees_and_simp(E_,E), Result=true(E)) ;
         (expand_failure_trees_and_simp([f(ID,_,_)],E), U=[], Result=false(E)) ),
     maplist(niceModule,U,Unknowns).
-i( _G,_,_) :- print_message(error,top_goal_must_be_at), fail.
+i( G,_,_) :- print_message(error,"Top goal ~w should be qualified with ' at knowledge_page'"-[G]), fail.
 
 % i(+Goal,+AlreadyLoadedAndMappedModule,+CallerGoalID,+CallerClauseRef,-Unknowns,-Why) 
 % failure means false; success with empty Unknowns list means true; 

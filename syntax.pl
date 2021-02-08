@@ -135,7 +135,7 @@ my_goal_classification(G,Class) :-
 my_goal_classification(G,Class) :-
     prolog_colour:call_goal_classification(G, _Module, Class).
 :- else.
-:- print_message(error,"You need SWI-Prolog 8.2 or later"), halt(1).
+:- print_message(error,"You need SWI-Prolog 8.2 or later"-[]), halt(1).
 :- endif.
 
 my_xref_defined(M,G,Class) :- % check that the source has already been xref'ed, otherwise xref would try to load it and cause a "iri_scheme" error:
