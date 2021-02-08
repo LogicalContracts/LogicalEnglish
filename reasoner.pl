@@ -170,12 +170,12 @@ i(aggregate(Template,G,Result),M,CID,Cref,U,E) :- !, E=[s(aggregate(Template,G,R
 i(findall(X,G,L),M,CID,Cref,U,E) :- !, E=[s(findall(X,G,L),meta,Children)],
     findall(X/Ui/Ei, i(G,M,CID,Cref,Ui,Ei), Tuples), 
     squeezeTuples(Tuples,L,U,Children).
-i(Q,M,_CID,Cref,U,E) :- functor(Q,question,N), (N=1;N=2), !, U=[at(Q,M)], E=[u(at(Q,M),Cref,[])].
 i(at(G,KP),M,CID,Cref,U,E) :- shouldMapModule(KP,UUID), !, i(at(G,UUID),M,CID,Cref,U,E). % use SWISH's latest editor version
 i(At,_Mod,CID,Cref,U,E) :- At=at(G,M_), !, % this may cause loading of the module
     atom_string(M,M_),
     (call_at(true,M) -> i(G,M,CID,Cref,U,E) ; ( U=[At],E=[u(At,Cref,[])] )).
 i(M:G,_,CID,Cref,U,E) :- !, i(G,M,CID,Cref,U,E).
+i(Q,M,_CID,Cref,U,E) :- functor(Q,question,N), (N=1;N=2), !, U=[at(Q,M)], E=[u(at(Q,M),Cref,[])].
 i(G,M,CID,Cref,U,E) :- system_predicate(G), !, 
     evalArgExpressions(G,M,NewG,CID,Cref,Uargs,E_),
     % floundering originates unknown:
@@ -246,10 +246,15 @@ squeezeTuples(Tuples,L,U,Es) :-
 myClause(on(H,Time),M,Body,Ref,IsProlog,URL,E) :- !, myClause2(H,Time,M,Body,Ref,IsProlog,URL,E).
 myClause(H,M,Body,Ref,IsProlog,URL,E) :- myClause2(H,_Time,M,Body,Ref,IsProlog,URL,E).
 
+% Supports the injecting of facts for a query:
+:- thread_local hypothetical_fact/4. % Module, FactTemplate, Fact, ClauseLikeBody
+
 % myClause2(PlainHead,Time,Module,Body,Ref,IsProlog,URL,LocalExplanation)
 myClause2(H,Time,M,Body,Ref,IsProlog,URL,E) :- 
     (nonvar(Ref) -> clause_property(Ref,module(M)) ; true),
-    M:clause(H,Body_,Ref), 
+    % backtrack over hypothetical facts if some is present, hence the 'soft-cut':
+    % too strong, forgets existing facts: (hypothetical_fact(M,H,Fact,Body_) *-> H=Fact ; M:clause(H,Body_,Ref)),
+    (hypothetical_fact(M,H,H,Body_) ; M:clause(H,Body_,Ref)),
     ((Body_= taxlogBody(Body,Time,URL,E_), E_\==[] ) -> (
             (IsProlog=true, E=[s(E_,Ref,[])])
         ); 
@@ -278,8 +283,8 @@ refToModuleAndSourceAndOrigin(Ref,M,Source,Origin) :-
     
 % unknown(+Goal,+Module) whether the knowledge source is currently unable to provide a result 
 unknown(G,M) :- var(G), !, throw(variable_unknown_call_at(M)).
-unknown(on(G,_Time),M) :- !, functor(G,F,N),functor(GG,F,N), \+ myClause2(GG,_,M,_,_,_,_,_).
-unknown(G,M) :- functor(G,F,N),functor(GG,F,N), \+ myClause2(GG,_,M,_,_,_,_,_).
+unknown(on(G,_Time),M) :- !, functor(G,F,N),functor(GG,F,N), \+ hypothetical_fact(M,GG,_,_), \+ myClause2(GG,_,M,_,_,_,_,_).
+unknown(G,M) :- functor(G,F,N),functor(GG,F,N), \+ hypothetical_fact(M,GG,_,_), \+ myClause2(GG,_,M,_,_,_,_,_).
 
 :- multifile prolog:meta_goal/2. % for xref
 prolog:meta_goal(at(G,M),[M_:G]) :- nonvar(M), atom_string(M_,M).
@@ -364,19 +369,22 @@ assert_and_remember([Fact|Facts],M,Why,(Undo,Undos)) :- must_be(nonvar,Fact),
 assert_and_remember([],_,_,true).
 
 assert_and_remember_(Operation,M:Fact,Time,Why,Undo) :- 
+   %TODO: Adds could check if there's a matching clause already, to avoid spurious facts at the end of some example runs
     % abolish caused 'No permission to modify thread_local_procedure'; weird interaction with yall.pl ..??
-    ( \+ predicate_property(M:Fact,_) -> (functor(Fact,F,N), thread_local(M:F/N)) ;
-        predicate_property(M:Fact,(dynamic)) -> true ; 
-        (functor(Fact,F,N), dynamic(M:F/N) ) % should be thread_local(M:F/N) !!!
-    ),
-    %TODO: Adds hould check if there's a matching clause already, to avoid spurious facts at the end of some example runs
+    % ( \+ predicate_property(M:Fact,_) -> (functor(Fact,F,N), thread_local(M:F/N)) ;
+    %     predicate_property(M:Fact,(dynamic)) -> true ; 
+    %     (functor(Fact,F,N), dynamic(M:F/N) ) % should be thread_local(M:F/N) !!!
+    % ),
+    % Instead of the above complications, we now use hypothetical_fact:
     % e.g. add a fact F in one scenarion and deleting in the next, which may leave F asserted when undoing the delete
     % this seems to require either using a variant test... or demanding facts to be ground
-    Add = assert(M:(Fact:-taxlogBody(true,Time,'',Why))),
-    Delete = forall(M:clause(Fact,taxlogBody(true,Time,'',Why),Ref),erase(Ref)),
+    % hypothetical_fact(M,H,Fact,Body_)
+    functor(Fact,F,N), functor(Template,F,N), 
+    Add = assert( hypothetical_fact(M,Template,Fact,taxlogBody(true,Time,'',Why)) ),
+    Delete = retractall( hypothetical_fact(M,Template,Fact,taxlogBody(true,Time,'',Why)) ),
     (Operation==add ->( Undo=Delete, Add) ; ( Undo=Add, Delete )).
 
-
+% canonic_fact_time(+Fact,+DefaultModule,Module:Fact_,Time)
 canonic_fact_time(M_:on(F,T),_,M:F,T) :- !, atom_string(M,M_).
 canonic_fact_time(M_:F,_,M:F,_) :- !, atom_string(M,M_).
 canonic_fact_time(at(on(F,T),M),_,M_:F,T) :- !, atom_string(M_,M).
