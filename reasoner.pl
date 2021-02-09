@@ -272,13 +272,16 @@ myClause(H,M,Body,Ref,IsProlog,URL,E) :- myClause2(H,_Time,M,Body,Ref,IsProlog,U
 % Supports the injecting of facts for a query:
 :- thread_local hypothetical_fact/5. % Module, FactTemplate, Fact, ClauseLikeBody, FakeClauseRef
 hypothetical_fact_with_time(Module,Template,Head,Time,Ref) :-
-    hypothetical_fact(Module,Template,Head,taxlogBody(_Body,Time,_URL,_E),Ref).
+    hypothetical_fact(Module,Template,Head,taxlogBody(Body,Time,_URL,_E),Ref),
+    % hypo rules can NOT depend on unknowns:
+    i(Body,Module,-1,Ref,[],_Why).
 
 % myClause2(PlainHead,Time,Module,Body,Ref,IsProlog,URL,LocalExplanation)
 myClause2(H,Time,M,Body,Ref,IsProlog,URL,E) :- 
     (nonvar(Ref) -> clause_property(Ref,module(M)) ; true),
     % backtrack over hypothetical facts if some is present, hence the 'soft-cut':
-    % too strong, forgets existing facts: (hypothetical_fact(M,H,Fact,Body_,_) *-> H=Fact ; M:clause(H,Body_,Ref)),
+    % ...actually too strong, would forget existing facts in same module: (hypothetical_fact(M,H,Fact,Body_,_) *-> H=Fact ; M:clause(H,Body_,Ref)),
+    % hypos with rules cause their bodies to become part of our resolvent via Body:
     (hypothetical_fact(M,H,H,Body_,Ref) ; M:clause(H,Body_,Ref)),
     ((Body_= taxlogBody(Body,Time_,URL,E_), E_\==[] ) -> (
             (Time=Time_, IsProlog=true, E=[s(E_,Ref,[])])
@@ -391,14 +394,16 @@ call_with_facts(G,M_,Facts) :-
 % assert a list of timed facts, and returns a goal to undo the asserts
 assert_and_remember([-Fact|Facts],M,Why,(Undo,Undos)) :- !,
     must_be(nonvar,Fact),
-    canonic_fact_time(Fact,M,CF,Time), assert_and_remember_(delete,CF,Time,Why,Undo),
+    canonic_fact_time(Fact,M,CF,Time), assert_and_remember_(delete,CF,_,Time,Why,Undo),
     assert_and_remember(Facts,M,Why,Undos).
-assert_and_remember([Fact|Facts],M,Why,(Undo,Undos)) :- must_be(nonvar,Fact),
-    canonic_fact_time(Fact,M,CF,Time), assert_and_remember_(add,CF,Time,Why,Undo),
+assert_and_remember([Fact_|Facts],M,Why,(Undo,Undos)) :- must_be(nonvar,Fact_),
+    % Note: the following MUST be kept in sync with taxlog2prolog/3; essencially, this assumes no transform occurs:
+    (Fact_ = if(Fact,Body) -> true ; (Fact=Fact_,Body=true)), %TODO: verify that rules are not functions etc
+    canonic_fact_time(Fact,M,CF,Time), assert_and_remember_(add,CF,Body,Time,Why,Undo),
     assert_and_remember(Facts,M,Why,Undos).
 assert_and_remember([],_,_,true).
 
-assert_and_remember_(Operation,M:Fact,Time,Why,Undo) :- 
+assert_and_remember_(Operation,M:Fact,Body,Time,Why,Undo) :- 
    %TODO: Adds could check if there's a matching clause already, to avoid spurious facts at the end of some example runs
     % abolish caused 'No permission to modify thread_local_procedure'; weird interaction with yall.pl ..??
     % ( \+ predicate_property(M:Fact,_) -> (functor(Fact,F,N), thread_local(M:F/N)) ;
@@ -410,8 +415,8 @@ assert_and_remember_(Operation,M:Fact,Time,Why,Undo) :-
     % this seems to require either using a variant test... or demanding facts to be ground
     % hypothetical_fact(M,H,Fact,Body_,Ref)
     functor(Fact,F,N), functor(Template,F,N), 
-    Add = assert( hypothetical_fact(M,Template,Fact,taxlogBody(true,Time,'',Why),hypothetical) ),
-    Delete = retractall( hypothetical_fact(M,Template,Fact,taxlogBody(true,Time,'',Why),_) ),
+    Add = assert( hypothetical_fact(M,Template,Fact,taxlogBody(Body,Time,'',Why),hypothetical) ),
+    Delete = retractall( hypothetical_fact(M,Template,Fact,taxlogBody(Body,Time,'',Why),_) ),
     (Operation==add ->( Undo=Delete, Add) ; ( Undo=Add, Delete )).
 
 % canonic_fact_time(+Fact,+DefaultModule,Module:Fact_,Time)

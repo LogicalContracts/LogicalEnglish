@@ -48,29 +48,42 @@ example( "Andrew email Feb 4 2021", [
     Assets are - Goodwill, Trading stock, Plant & equipment, revenue assets
     */
     scenario([
-        owns(company1,company1_goodwill) on BEFORE at BASICS,
-        owns(company1,company1_trading_stock) on BEFORE at BASICS,
-        owns(company1,company1_plant_and_equipment) on BEFORE at BASICS,
-        owns(company1,company1_revenue_asset) on BEFORE at BASICS,
+        owns(company1,company1_goodwill) on T at BASICS if T @=< BEFORE,
+        owns(company1,company1_trading_stock) on T at BASICS if T @=< BEFORE,
+        owns(company1,company1_plant_and_equipment) on T at BASICS if T @=< BEFORE,
+        owns(company1,company1_revenue_asset) on T at BASICS if T @=< BEFORE,
         %TODO: add time here, and below...?
         partner_in_partnership(andrew,company1) at BASICS, partner_in_partnership(miguel,company1) at BASICS, 
         has_aggregated_turnover(company1,5300000) 
             at "https://www.ato.gov.au/business/small-business-entity-concessions/eligibility/aggregation/",
+        has_aggregated_turnover(andrew,1000000) 
+            at "https://www.ato.gov.au/business/small-business-entity-concessions/eligibility/aggregation/",
+        has_aggregated_turnover(miguel,500000) 
+            at "https://www.ato.gov.au/business/small-business-entity-concessions/eligibility/aggregation/",
         is_a_small_business_entity(company1) at SBE, is_a_small_business_entity(andrew) at SBE, is_a_small_business_entity(miguel) at SBE,
-        transfer_event(123,company1_assets,WHEN,company1,[andrew,miguel]),
-        owns(company1,company1_goodwill) on AFTER at BASICS,
-        owns(company1,company1_trading_stock) on AFTER at BASICS,
-        owns(company1,company1_plant_and_equipment) on AFTER at BASICS,
-        owns(company1,company1_revenue_asset) on AFTER at BASICS,
-        part_of_genuine_restructure(123)
-            at "https://www.ato.gov.au/law/view/document?DocID=COG/LCG20163/NAT/ATO/00001&PiT=99991231235958"
-        
-        ], rollover_applies)
+        transfer_event(EVENT,company1_goodwill,WHEN,company1,[andrew,miguel]),
+        % with the rule as it is below, no point in injecting more than one event:
+        %transfer_event(EVENT2,company1_trading_stock,WHEN,company1,[andrew,miguel]),
+        %transfer_event(EVENT3,company1_plant_and_equipment,WHEN,company1,[andrew,miguel]),
+        %transfer_event(EVENT4,company1_revenue_asset,WHEN,company1,[andrew,miguel]),
+        owns(company1,company1_goodwill) on T at BASICS if T @>= WHEN,
+        owns(company1,company1_trading_stock) on T at BASICS if T @>= WHEN,
+        owns(company1,company1_plant_and_equipment) on T at BASICS if T @>= WHEN,
+        owns(company1,company1_revenue_asset) on T at BASICS if T @>= WHEN,
+        part_of_genuine_restructure(EVENT)
+            at "https://www.ato.gov.au/law/view/document?DocID=COG/LCG20163/NAT/ATO/00001&PiT=99991231235958",
+        is_used_in_business_of(company1_goodwill,company1) at BASICS,
+        asset_type(company1_goodwill,trading_stock) at myDb17,
+        family_trust(_,_) if false
+        | MoreFacts
+        ], rollover_applies(EVENT))
     ]) :- 
         % for mere convenience, Prolog code to setup some data and make the above less cluttered:
-        WHEN='20200701', immediately_before(BEFORE,When), immediately_before(When,AFTER),
+        EVENT=123,
+        WHEN='20200701', immediately_before(BEFORE,WHEN),
         SBE= "https://www.ato.gov.au/General/Capital-gains-tax/Small-business-CGT-concessions/Basic-conditions-for-the-small-business-CGT-concessions/Small-business-entity/",
-        BASICS="https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/".
+        BASICS="https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/",
+        findall(is_a_small_business_entity(E) at SBE, E in [company1,andrew,miguel], MoreFacts).
 
 % mere linguistics...? :
 isa(cgt_asset,asset).
@@ -79,30 +92,30 @@ isa(revenue_asset,asset).
 isa(depreciating_asset,asset).
 isa(loan_to_shareholder,asset). % from later in the text
 
-you(TaxPayer) if 
-    transfer_event(_ID,_Asset,_When,TaxPayer,_Tes).
-you(TaxPayer) if 
-    transfer_event(_ID,_Asset,_When,_Tor,Transferees) and TaxPayer in Transferees.
+party_in(TaxPayer,EventID) if 
+    transfer_event(EventID,_Asset,_When,TaxPayer,_Tes).
+party_in(TaxPayer,EventID) if 
+    transfer_event(EventID,_Asset,_When,_Tor,Transferees) and TaxPayer in Transferees.
 
-rollover_applies if
-    you(Y) and has_aggregated_turnover(Y,Turnover) 
-        at "https://www.ato.gov.au/business/small-business-entity-concessions/eligibility/aggregation/" 
-    and Turnover < 10000000 % is this redundant with eligible_party?
-    and transfer_event(ID,Asset,When,Tor,Tes) and after(When,'20160701') 
-    and forall( Party in [Tor|Tes], eligible_party(Party))
-    and part_of_genuine_restructure(ID)
+rollover_applies(Event) if
+    transfer_event(Event,Asset,When,_Tor,_Tes) and after(When,'20160701') 
+    % we could simply use [Tor|Tes] below, but perhaps this reads more nicely:
+    and forall( party_in(Party,Event), has_aggregated_turnover(Party,Turnover) and Turnover < 10000000 and eligible_party(Party) )
+    and part_of_genuine_restructure(Event)
         at "https://www.ato.gov.au/law/view/document?DocID=COG/LCG20163/NAT/ATO/00001&PiT=99991231235958"
-    and immediately_before(Before,When) and setof(Owner/Share, ultimate_owner(Asset,Owner,Share) on Before, PreviousOwners)
-    and setof(Owner/Share, ultimate_owner(Asset,Owner,Share) on When, NewOwners) % assuming that When is the moment after the transfer
+    and immediately_before(Before,When) 
+    and setof(Owner/Share, ultimate_owner(Asset,Owner,Share) on Before, PreviousOwners)
+    and setof(Owner/Share, ultimate_owner(Asset,Owner,Share) on When, NewOwners) % assuming that When is the first moment after the transfer
     and ( 
         NewOwners = PreviousOwners or 
+        % there is a family trust to which all owners belong:
         family_trust(_FT,GroupMembers) and forall(Owner/_ in PreviousOwners, Owner in GroupMembers) and forall(Owner/_ in NewOwners, Owner in GroupMembers)
     )
     and elligible_asset(Asset).
 
 
-ultimate_owner(Asset,Owner,1) if % full ownership
-    owns(Owner,Asset) 
+ultimate_owner(Asset,Owner,1) on T if % full ownership
+    owns(Owner,Asset) on T
         at "https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/".
 %TODO: extend predicates for partial ownership, and indirection ( using connected_to ?)
 
@@ -136,6 +149,9 @@ active_asset(Asset) if
 
 asset_type(Asset,Type) if 
     isa(Type,asset) and asset_type(Asset,Type) at myDb17.
+
+has_aggregated_turnover(Party,Turnover) if 
+    has_aggregated_turnover(Party,Turnover) at "https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/".
 
 % "Tax implications" seem to boil down to:
 rollover_cost(Cost) if
