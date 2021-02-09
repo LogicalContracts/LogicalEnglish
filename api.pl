@@ -55,10 +55,7 @@ entry_point(R, _{results:Results}) :- get_dict(operation,R,query), !,
     term_string(Query,R.theQuery,[variable_names(VarPairs_)]),
     (get_dict(facts,R,Facts_) -> maplist(term_string,Facts,Facts_) ; Facts=[]),
     findall( _{bindings:VarPairs, unknowns:U, result:Result, why:E}, (
-        (Facts\=[] -> ( G = (query_once_with_facts(at(Query,R.module),Facts,U_,Result__), Result__=..[Result,E_])) ; 
-            G = query(at(Query,R.module),U_,taxlogExplanation(E_),Result)
-            ),
-        G, 
+        query_with_facts(at(Query,R.module),Facts,U_,taxlogExplanation(E_),Result),
         makeBindingsDict(VarPairs_,VarPairs),
         makeUnknownsArray(U_,U),
         makeExplanationTree(E_,E)

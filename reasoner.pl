@@ -1,4 +1,4 @@
-:- module(_ThisFileName,[query/4, query_once_with_facts/5, expand_explanation_refs/4, explanation_node_type/2,
+:- module(_ThisFileName,[query/4, query_with_facts/5, query_once_with_facts/5, expand_explanation_refs/4, explanation_node_type/2,
     run_examples/0, myClause2/8, niceModule/2, refToOrigin/2,
     after/2, not_before/2, before/2, immediately_before/2, same_date/2, this_year/1, in/2]).
 
@@ -12,33 +12,40 @@
 
 % query(AtGoal,Unknowns,ExplanationTerm,Result)
 %  Result will be true/false/unknown
-query(Goal,Questions,taxlogExplanation(E),Result) :- 
-    (Goal=at(G,M) -> true ; 
-        myDeclaredModule(M) -> Goal=G; % only possible on SWISH
-        (print_message(error,"No knowledge module specified"-[]), fail)),
-    i(at(G,M),U,Result_), 
-    Result_=..[F,E_],
-    must_be(boolean,F),
-    ((F==true,U==[]) -> Result=true; F==true->Result=unknown; Result=false),
-    expand_explanation_refs(E_,[],M,E),
-    list_without_variants(U,Questions). % remove duplicates
+query(Goal,Questions,E,Result) :- 
+    query_with_facts(Goal,[],false,Questions,E,Result).
 
-% Result will be true/false/unknown ( ExplanationTreeList)
-%! query_once_with_facts(+Goal,?FactsListOrExampleName,-Unknowns,-Explanation,-Result)
+%! query_with_facts(+Goal,?FactsListOrExampleName,-Unknowns,-Explanation,-Result)
+query_with_facts(Goal,Facts,Questions,E,Outcome) :-
+    query_with_facts(Goal,Facts,false,Questions,E,Outcome).
+
+
+%! query_with_facts(+Goal,?FactsListOrExampleName,+OnceUndo,-Unknowns,-Explanation,-Result)
 %  query considering the given facts (or accumulated facts of all scenarios the given example name)
-query_once_with_facts(Goal,Facts_,Questions,taxlogExplanation(E),Outcome) :-
-    (Goal=at(G,M_) -> true ; 
+%  if OnceUndo, only one solution, and time execution is limited
+%  Result will be true/false/unknown
+%  This is NOT reentrant
+query_with_facts(Goal,Facts_,OnceUndo,Questions,taxlogExplanation(E),Outcome) :-
+    must_be(boolean,OnceUndo),
+    (Goal=at(G,M__) -> atom_string(M_,M__) ; 
         myDeclaredModule(M_) -> Goal=G; 
         (print_message(error,"No knowledge module specified"-[]), fail)),
     context_module(Me),
     (shouldMapModule(M_,M)->true;M=M_),
     (is_list(Facts_)-> Facts=Facts_; example_fact_sequence(M,Facts_,Facts)),
-    once_with_facts( Me:(
-        i(at(G,M),U,Result_),
+    Caller = Me:(
+        i(at(G,M),OnceUndo,U,Result_),
         Result_=..[Outcome,E_],
         expand_explanation_refs(E_,Facts,M,E)
-        ), M, Facts,true),
-    list_without_variants(U,Questions). 
+        ),
+    retractall(hypothetical_fact(_,_,_,_,_)),
+    (OnceUndo==true -> once_with_facts(Caller, M, Facts, true) ; call_with_facts(Caller, M, Facts)),
+    list_without_variants(U,Questions). % remove duplicates
+
+%! query_once_with_facts(+Goal,?FactsListOrExampleName,-Unknowns,-Explanation,-Result)
+%  query considering the given facts (or accumulated facts of all scenarios the given example name), undoes them at the end; limited execution time
+query_once_with_facts(Goal,Facts_,Questions,E,Outcome) :-
+    query_with_facts(Goal,Facts_,true,Questions,E,Outcome).
 
 % list_without_variants(+L,-NL) 
 % Remove duplicates from list L, without binding variables, and keeping last occurrences in their original order
@@ -51,22 +58,23 @@ remove_all_variants(L,_,L).
 niceModule(Goal,NiceGoal) :- nonvar(Goal), Goal=at(G,Ugly), moduleMapping(Nice,Ugly), !, NiceGoal=at(G,Nice).
 niceModule(G,G).
 
-% i(+AtGoal,-Unknowns,-ExplainedResult) always succeeds, with result true(Explanation) or false(Explanation)
+% i(+AtGoal,+OnceTimed,-Unknowns,-ExplainedResult) always succeeds, with result true(Explanation) or false(Explanation)
 % top level interpreter predicate; true with Unknowns\=[].... means 'unknown'
-i( at(G,KP),U,Result) :- % hack to use the latest module version on the SWISH window
+i( at(G,KP),OnceTimed,U,Result) :- % hack to use the latest module version on the SWISH window
     shouldMapModule(KP,UUID), !,
-    i( at(G,UUID),U,Result).
-i( at(G,KP),Unknowns,Result) :- !,
+    i( at(G,UUID),OnceTimed,U,Result).
+i( at(G,KP),OnceTimed,Unknowns,Result) :- !,
     reset_errors,
     context_module(M), 
     nextGoalID(ID),
-    Limit=0.5,
-    IG = call_with_time_limit( Limit, i(at(G,KP),M,top_goal,top_clause,U__,E__)), % half second max
+    Limit=0.5, % max seconds
+    Caller = i(at(G,KP),M,top_goal,top_clause,U__,E__),
+    (OnceTimed==true -> IG = call_with_time_limit( Limit, Caller) ; IG = Caller), 
     ( catch( (IG,E_=E__,U=U__), time_limit_exceeded, (E_=[], U=[time_limit_exceeded], print_message(warning,"Time limit of ~w seconds exceeded by ~w at ~w"-[Limit,G,KP])) ) *-> 
         (expand_failure_trees_and_simp(E_,E), Result=true(E)) ;
         (expand_failure_trees_and_simp([f(ID,_,_)],E), U=[], Result=false(E)) ),
     maplist(niceModule,U,Unknowns).
-i( G,_,_) :- print_message(error,"Top goal ~w should be qualified with ' at knowledge_page'"-[G]), fail.
+i( G,_,_,_) :- print_message(error,"Top goal ~w should be qualified with ' at knowledge_page'"-[G]), fail.
 
 % i(+Goal,+AlreadyLoadedAndMappedModule,+CallerGoalID,+CallerClauseRef,-Unknowns,-Why) 
 % failure means false; success with empty Unknowns list means true; 
@@ -83,7 +91,7 @@ i( G,_,_) :- print_message(error,"Top goal ~w should be qualified with ' at know
 %  this predicate is NOT thread safe
 %TODO: add meta_predicate(i(0,...)) declarations...?
 %TODO: ?? _-system is an "unknown" likely irrelevant, a consequence of others
-% i(G,_,_,_,_,_) :- nextGoalID(ID), mylog(ID-G), fail.
+%i(G,M,_,_,_,_) :- nextGoalID(ID), writeln(ID-G/M), fail.
 i(G,M,_,_,_,_) :- var(G), !, throw(variable_call_at(M)).
 i(true, _, _, _, U, E) :- !, U=[], E=[].
 i(false, _, _, _, _U, _E) :- !, fail.
@@ -170,11 +178,6 @@ i(aggregate(Template,G,Result),M,CID,Cref,U,E) :- !, E=[s(aggregate(Template,G,R
 i(findall(X,G,L),M,CID,Cref,U,E) :- !, E=[s(findall(X,G,L),meta,Children)],
     findall(X/Ui/Ei, i(G,M,CID,Cref,Ui,Ei), Tuples), 
     squeezeTuples(Tuples,L,U,Children).
-i(at(G,KP),M,CID,Cref,U,E) :- shouldMapModule(KP,UUID), !, i(at(G,UUID),M,CID,Cref,U,E). % use SWISH's latest editor version
-i(At,_Mod,CID,Cref,U,E) :- At=at(G,M_), !, % this may cause loading of the module
-    atom_string(M,M_),
-    (call_at(true,M) -> i(G,M,CID,Cref,U,E) ; ( U=[At],E=[u(At,Cref,[])] )).
-i(M:G,_,CID,Cref,U,E) :- !, i(G,M,CID,Cref,U,E).
 i(Q,M,_CID,Cref,U,E) :- functor(Q,question,N), (N=1;N=2), !, U=[at(Q,M)], E=[u(at(Q,M),Cref,[])].
 i(G,M,CID,Cref,U,E) :- system_predicate(G), !, 
     evalArgExpressions(G,M,NewG,CID,Cref,Uargs,E_),
@@ -182,8 +185,20 @@ i(G,M,CID,Cref,U,E) :- system_predicate(G), !,
     catch(( myCall(M:NewG), U=Uargs, E=E_), 
         error(instantiation_error,_Cx), 
         (append(Uargs,[at(instantiation_error(G),M)],U), append(E_,[u(instantiation_error(G),Cref,[])],E) )).
+i(M:G,Mod,CID,Cref,U,E) :- !, i(at(G,M),Mod,CID,Cref,U,E).
+i(at(G,KP),M,CID,Cref,U,E) :- shouldMapModule(KP,UUID), !, 
+    i(at(G,UUID),M,CID,Cref,U,E). % use SWISH's latest editor version
+i(At,_Mod,CID,Cref,U,E) :- At=at(G_,M_), !,
+    atom_string(M,M_),
+    (G_=on(G,Time)->true;G=G_),
+    (hypothetical_fact_with_time(M,G,G__,Time_,Ref) *-> ( % hypo facts: use them, ignoring the real module:
+        G=G__, Time=Time_, U=[], E=[s(At,Ref,[])] 
+        ) ; (
+            % attempt to load and continue, or report it as unknown:
+            call_at(true,M) -> i(G_,M,CID,Cref,U,E) ; (U=[At], E=[u(At,Cref,[])] )
+        )).
 i(G,M,_CID,Cref,U,E) :- unknown(G,M), !, (U=[at(G,M)],E=[ u(at(G,M),Cref,[]) ]).
-%TODO: on(G,2020) means "G true on some instant in 2020"; who matches that with '20210107' ?
+%TODO: on(G,2020) means "G true on some instant in 2020"; who matches that with '20210107' ? check for clauses and hypos
 i(G,M,CID,Cref,U,E) :- 
     newGoalID(NewID), create_counter(Counter),
     (true ;( % before failing, save our failure information if no solutions were found
@@ -202,6 +217,12 @@ i(G,M,CID,Cref,U,E) :-
     inc_counter(Counter), % one more solution found; this is a nonbacktrackable operation
     append(Uargs,U_,U),
     (catch(M:irrelevant_explanation(NewG),_,fail) -> E=Eargs ; (E=[s(G,Ref,Children)], append(Eargs,Children_,Children) )).
+
+% unknown(+Goal,+Module) whether the knowledge source is currently unable to provide a result 
+unknown(G,M) :- var(G), !, throw(variable_unknown_call_at(M)).
+unknown(on(G,_Time),M) :- !, unknown(G,M).
+unknown(G,M) :- functor(G,F,N),functor(GG,F,N), \+ hypothetical_fact(M,GG,_,_,_), \+ myClause2(GG,_,M,_,_,_,_,_).
+
 
 myCall(G) :- sandbox:safe_call(G).
 
@@ -250,6 +271,8 @@ myClause(H,M,Body,Ref,IsProlog,URL,E) :- myClause2(H,_Time,M,Body,Ref,IsProlog,U
 
 % Supports the injecting of facts for a query:
 :- thread_local hypothetical_fact/5. % Module, FactTemplate, Fact, ClauseLikeBody, FakeClauseRef
+hypothetical_fact_with_time(Module,Template,Head,Time,Ref) :-
+    hypothetical_fact(Module,Template,Head,taxlogBody(_Body,Time,_URL,_E),Ref).
 
 % myClause2(PlainHead,Time,Module,Body,Ref,IsProlog,URL,LocalExplanation)
 myClause2(H,Time,M,Body,Ref,IsProlog,URL,E) :- 
@@ -257,10 +280,10 @@ myClause2(H,Time,M,Body,Ref,IsProlog,URL,E) :-
     % backtrack over hypothetical facts if some is present, hence the 'soft-cut':
     % too strong, forgets existing facts: (hypothetical_fact(M,H,Fact,Body_,_) *-> H=Fact ; M:clause(H,Body_,Ref)),
     (hypothetical_fact(M,H,H,Body_,Ref) ; M:clause(H,Body_,Ref)),
-    ((Body_= taxlogBody(Body,Time,URL,E_), E_\==[] ) -> (
-            (IsProlog=true, E=[s(E_,Ref,[])])
+    ((Body_= taxlogBody(Body,Time_,URL,E_), E_\==[] ) -> (
+            (Time=Time_, IsProlog=true, E=[s(E_,Ref,[])])
         ); 
-        Body_=taxlogBody(Body,Time,URL,E) -> (IsProlog=false) ; 
+        Body_=taxlogBody(Body,Time_,URL,E) -> (Time=Time_, IsProlog=false) ; 
         (Body_=Body,IsProlog=true,E=[],URL='')).
 
 refToOrigin(Ref,URL) :-
@@ -281,12 +304,6 @@ refToModuleAndSourceAndOrigin(Ref,M,Source,Origin) :-
         clause_property(Ref,module(M))
     )
         ; (Source="", M='???')).
-    
-    
-% unknown(+Goal,+Module) whether the knowledge source is currently unable to provide a result 
-unknown(G,M) :- var(G), !, throw(variable_unknown_call_at(M)).
-unknown(on(G,_Time),M) :- !, functor(G,F,N),functor(GG,F,N), \+ hypothetical_fact(M,GG,_,_,_), \+ myClause2(GG,_,M,_,_,_,_,_).
-unknown(G,M) :- functor(G,F,N),functor(GG,F,N), \+ hypothetical_fact(M,GG,_,_,_), \+ myClause2(GG,_,M,_,_,_,_,_).
 
 :- multifile prolog:meta_goal/2. % for xref
 prolog:meta_goal(at(G,M),[M_:G]) :- nonvar(M), atom_string(M_,M).
@@ -323,7 +340,7 @@ run_examples :-
 
 run_examples(Module) :-
     call_at(true,Module),
-    forall( catch(Module:example(Desc,Scenarios),_,fail), (
+    forall( catch(Module:example(Desc,Scenarios),error(existence_error(_, _), _),fail), (
         format(" Running example ~w~n",Desc),
         run_scenarios(Scenarios,Module,1,[],_U,_E)
     )).
@@ -331,7 +348,8 @@ run_examples(Module) :-
 %consider sequence of scenario fact sets; for now, a simple concatenation:
 run_scenarios([scenario(Facts,G)|Scenarios],M,N,PreviousFacts,U,E) :- !,
     append(PreviousFacts,Facts,Facts_),
-    query_once_with_facts(at(G,M),Facts_,U1,E1),
+    query_once_with_facts(at(G,M),Facts_,U1,E1,Result),
+    format("  Scenario ~w result   : ~w~n",[N,Result]),
     format("  Scenario ~w unknowns   : ~w~n",[N,U1]),
     format("  Scenario ~w explanation: ~w~n",[N,E1]),
     NewN is N+1,
@@ -340,8 +358,9 @@ run_scenarios([scenario(Facts,G)|Scenarios],M,N,PreviousFacts,U,E) :- !,
 run_scenarios([],_,_,_,[],[]).
 
 % example_fact_sequence(+Module,?ExampleName,-Facts)
-example_fact_sequence(M,Name,Facts) :- 
-    catch(M:example(Name,Scenarios),_,fail),
+example_fact_sequence(M_,Name,Facts) :- 
+    atom_string(M,M_),
+    call_at( catch(M:example(Name,Scenarios),error(existence_error(_, _), _),fail), M),
     findall(SF,member(scenario(SF,_Assertion),Scenarios),Facts_),
     append(Facts_,Facts).
 
@@ -357,6 +376,7 @@ once_with_facts(G,M_,Facts,DoUndo) :-
     atom_string(M,M_),
     call_at(true,M), % make sure the module is loaded
     assert_and_remember(Facts,M,from_with_facts,Undo),
+    (true; DoUndo==true, once(Undo), fail),
     once(M:G),
     (DoUndo==true -> once(Undo) ; true).
 
@@ -500,7 +520,7 @@ before(Earlier,Later) :-
 %! immediately_before(?Earlier,?Later) is det.
 %  Later is 24h after Earlier; at least one must be known
 immediately_before(Earlier,Later) :- 
-    assertion(nonvar(Earlier);nonvar(Later)),
+    ((nonvar(Earlier);nonvar(Later)) -> true ; throw("Unbound arguments in immediately_before"-[])),
     (nonvar(Earlier) -> (parse_time(Earlier,E), L is E+24*3600 ) ; true),
     (nonvar(Later) -> (parse_time(Later,L), E is L-24*3600) ; true),
     (var(Earlier) -> format_time(string(Earlier),"%FT%T%z",E) ; true),
@@ -521,6 +541,7 @@ in(X,List) :- must_be(list,List), member(X,List).
 
 sandbox:safe_primitive(reasoner:query(_,_,_,_)).
 sandbox:safe_primitive(reasoner:query_once_with_facts(_,_,_,_,_)).
+sandbox:safe_primitive(reasoner:query_with_facts(_,_,_,_,_)).
 
 :- use_module(swish(lib/html_output),[html/1]). 
 % hack to avoid SWISH errors:
