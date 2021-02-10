@@ -160,3 +160,7 @@ rollover_cost(Cost) if
 % https://www.ato.gov.au/general/tax-and-corporate-australia/a-strong-domestic-tax-regime/#Generalantiavoidancerule can we encode this elsewhere?
 % membership interests calculation:???
 % integrity rule?
+
+/** <examples>
+?- query_with_facts(rollover_applies(Event),"Andrew email Feb 4 2021",Unknowns,Explanation,Result).
+*/

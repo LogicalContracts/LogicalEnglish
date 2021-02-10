@@ -108,7 +108,10 @@ setup_kp_modules :- forall(kp(M), (
 %  loads the knowledge page, failing if it cannot
 loaded_kp(Name) :- shouldMapModule(_,Name), !. % SWISH module already loaded 
 loaded_kp(Name) :- must_be(nonvar,Name), \+ kp_location(Name,_,_), !, 
-    print_message(error,"Unknown knowledge page: ~w"-[Name]), fail.
+    (\+ reported_missing_kp(Name) -> (
+        assert(reported_missing_kp(Name)), print_message(error,"Unknown knowledge page: ~w"-[Name])) 
+        ; true), 
+    fail.
 loaded_kp(Name) :- % some version already loaded:
     module_property(Name,last_modified_generation(T)), T>0, 
     !,
