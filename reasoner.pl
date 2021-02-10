@@ -136,8 +136,9 @@ i(then(if(C),else(T,Else)), M, CID, Cref, U, E) :- !,
         append(EC,EE,E)
     )).
 i(then(if(C),Then),M,CID,Cref,U,E) :- !, i(then(if(C),else(Then,true)),M,CID,Cref,U,E).
-% this is actually never used... SWI expands forall(X,C) into \+ (X, \+C)
-i(forall(A,B),M,CID,Cref,U,E) :- !, E=[s(forall(A,B),meta,Children)],
+% sometimes this is not used... SWI seems to expands forall(X,C) into \+ (X, \+C)
+i(forall(A,B),M,CID,Cref,U,E) :- !, 
+    E=[s(forall(A,B),meta,Children)],
     newGoalID(ForID),
     findall(X, (
         i(A,M,ForID,Cref,UA,EA), 
@@ -169,7 +170,7 @@ i(bagof(X,G,L),M,CID,Cref,U,E) :- !, E=[s(bagof(X,G,L),meta,Children)],
     squeezeTuples(Tuples,L,U,Children).
 i(aggregate(Template,G,Result),M,CID,Cref,U,E) :- !, E=[s(aggregate(Template,G,Result),meta,Children)],
     % uses a bit too much of SWI internals at swipl-devel/library/aggregate.pl
-    aggregate:template_to_pattern(bag, Template, Pattern, G, Goal, Aggregate),
+    aggregate:template_to_pattern(bag, Template, Pattern, M:G, Goal, Aggregate),
     i(bagof(Pattern, Goal, List),M,CID,Cref,U_,[s(_Bagof,_ClauseRef,Children_)]),
     catch( ( aggregate:aggregate_list(Aggregate, List, Result), U=U_, Children=Children_ ), 
         error(instantiation_error,_Cx), 
@@ -178,7 +179,10 @@ i(aggregate(Template,G,Result),M,CID,Cref,U,E) :- !, E=[s(aggregate(Template,G,R
 i(findall(X,G,L),M,CID,Cref,U,E) :- !, E=[s(findall(X,G,L),meta,Children)],
     findall(X/Ui/Ei, i(G,M,CID,Cref,Ui,Ei), Tuples), 
     squeezeTuples(Tuples,L,U,Children).
-i(Q,M,_CID,Cref,U,E) :- functor(Q,question,N), (N=1;N=2), !, U=[at(Q,M)], E=[u(at(Q,M),Cref,[])].
+i(Q,M,_CID,Cref,U,E) :- functor(Q,question,N), (N=1;N=2), !, 
+    Q=..[_,Q_|_],
+    (Q_=Format-Args -> format(string(Q__),Format,Args); Q_=Q__),
+    U=[at(Q__,M)], E=[u(at(Q__,M),Cref,[])].
 i(G,M,CID,Cref,U,E) :- system_predicate(G), !, 
     evalArgExpressions(G,M,NewG,CID,Cref,Uargs,E_),
     % floundering originates unknown:
@@ -212,7 +216,7 @@ i(G,M,CID,Cref,U,E) :-
     evalArgExpressions(G,M,NewG,CID,Cref,Uargs,Eargs), % failures in the expression (which would be weird btw...) stay directly under CID
     myClause(G,M,B,Ref,IsProlog,_URL,LocalE),
     (IsProlog==false -> i(B,M,NewID,Ref,U_,Children_) ; (
-        catch( myCall(B), error(Error,_), U_=[at(Error,M)]),
+        catch( myCall(B), error(Error,_), U_=[at(Error,M)]), % should this call be qualified with M? What when M is the SWISH module...?
         (var(U_)->U_=[];true),
         Children_=LocalE
     )),
@@ -552,6 +556,8 @@ in(X,List) :- must_be(list,List), member(X,List).
 sandbox:safe_primitive(reasoner:query(_,_,_,_)).
 sandbox:safe_primitive(reasoner:query_once_with_facts(_,_,_,_,_)).
 sandbox:safe_primitive(reasoner:query_with_facts(_,_,_,_,_)).
+
+
 
 :- use_module(swish(lib/html_output),[html/1]). 
 % hack to avoid SWISH errors:
