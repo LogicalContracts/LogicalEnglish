@@ -50,6 +50,8 @@ taxlog2prolog((because(on(H,T),Why):-B), neck(clause)-[ delimiter-[delimiter-[Sp
 taxlog2prolog(mainGoal(G,Description),delimiter-[Spec,classify],(mainGoal(G,Description):-(_=1->true;GG))) :- !, % hack to avoid 'unreferenced' highlight in SWISH
     functor(G,F,N), functor(GG,F,N), % avoid "Singleton-marked variable appears more than once"
     taxlogBodySpec(G,Spec).
+taxlog2prolog((example(T,Sequence):-Body), neck(clause)-[delimiter-[classify,Spec],classify],(example(T,Sequence):-Body)) :- !,  
+    (Sequence==[]->Spec=classify ; (Spec=list-SeqSpec, scenarioSequenceSpec(Sequence,SeqSpec))).
 taxlog2prolog(example(T,Sequence),delimiter-[classify,Spec],example(T,Sequence)) :- !,  
     (Sequence==[]->Spec=classify ; (Spec=list-SeqSpec, scenarioSequenceSpec(Sequence,SeqSpec))).
 taxlog2prolog(irrelevant_explanation(G),delimiter-[Spec],irrelevant_explanation(G)) :- !, 
@@ -64,9 +66,13 @@ scenarioSpec(scenario(Facts,Assertion),delimiter-[FactsSpec,Spec]) :-
     (Facts==[] -> FactsSpec=classify ; (factsSpecs(Facts,FS), FactsSpec=list-FS)),
     taxlogBodySpec(Assertion,Spec).
 
+factsSpecs(Facts,classify) :- var(Facts), !.
 factsSpecs([Fact_|Facts],[FactSpec|Specs]) :- !,  
     (Fact_= -Fact -> FactSpec= delimiter-[FS] ; (Fact=Fact_,FactSpec=FS)),
-    (taxlog2prolog(Fact,FS,_)->true;taxlogHeadSpec(Fact,FS)), 
+    nonvar(Fact),
+    (Fact=if(H,B)->(
+        taxlogHeadSpec(H,FSH),taxlogBodySpec(B,FSB),FS=neck(if)-[FSH,FSB]);
+        taxlogHeadSpec(Fact,FS) ), 
     factsSpecs(Facts,Specs).
 factsSpecs([],[]).
 

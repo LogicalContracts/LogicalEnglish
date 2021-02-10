@@ -54,12 +54,9 @@ example( "Andrew email Feb 4 2021", [
         owns(company1,company1_revenue_asset) on T at BASICS if T @=< BEFORE,
         %TODO: add time here, and below...?
         partner_in_partnership(andrew,company1) at BASICS, partner_in_partnership(miguel,company1) at BASICS, 
-        has_aggregated_turnover(company1,5300000) 
-            at "https://www.ato.gov.au/business/small-business-entity-concessions/eligibility/aggregation/",
-        has_aggregated_turnover(andrew,1000000) 
-            at "https://www.ato.gov.au/business/small-business-entity-concessions/eligibility/aggregation/",
-        has_aggregated_turnover(miguel,500000) 
-            at "https://www.ato.gov.au/business/small-business-entity-concessions/eligibility/aggregation/",
+        has_aggregated_turnover(company1,5300000) at AGGREGATION,
+        has_aggregated_turnover(andrew,1000000) at AGGREGATION,
+        has_aggregated_turnover(miguel,500000) at AGGREGATION,
         is_a_small_business_entity(company1) at SBE, is_a_small_business_entity(andrew) at SBE, is_a_small_business_entity(miguel) at SBE,
         transfer_event(EVENT,company1_goodwill,WHEN,company1,[andrew,miguel]),
         % with the rule as it is below, no point in injecting more than one event:
@@ -70,8 +67,7 @@ example( "Andrew email Feb 4 2021", [
         owns(company1,company1_trading_stock) on T at BASICS if T @>= WHEN,
         owns(company1,company1_plant_and_equipment) on T at BASICS if T @>= WHEN,
         owns(company1,company1_revenue_asset) on T at BASICS if T @>= WHEN,
-        part_of_genuine_restructure(EVENT)
-            at "https://www.ato.gov.au/law/view/document?DocID=COG/LCG20163/NAT/ATO/00001&PiT=99991231235958",
+        part_of_genuine_restructure(EVENT) at "https://www.ato.gov.au/law/view/document?DocID=COG/LCG20163/NAT/ATO/00001&PiT=99991231235958",
         is_used_in_business_of(company1_goodwill,company1) at BASICS,
         asset_type(company1_goodwill,trading_stock) at myDb17,
         family_trust(_,_) if false
@@ -83,6 +79,7 @@ example( "Andrew email Feb 4 2021", [
         WHEN='20200701', immediately_before(BEFORE,WHEN),
         SBE= "https://www.ato.gov.au/General/Capital-gains-tax/Small-business-CGT-concessions/Basic-conditions-for-the-small-business-CGT-concessions/Small-business-entity/",
         BASICS="https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/",
+        AGGREGATION="https://www.ato.gov.au/business/small-business-entity-concessions/eligibility/aggregation/",
         findall(is_a_small_business_entity(E) at SBE, E in [company1,andrew,miguel], MoreFacts).
 
 % mere linguistics...? :
