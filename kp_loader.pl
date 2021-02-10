@@ -106,6 +106,7 @@ setup_kp_modules :- forall(kp(M), (
 %! loaded_kp(++KnowledgePageName) is nondet.
 %
 %  loads the knowledge page, failing if it cannot
+loaded_kp(Name) :- shouldMapModule(_,Name), !. % SWISH module already loaded 
 loaded_kp(Name) :- must_be(nonvar,Name), \+ kp_location(Name,_,_), !, 
     print_message(error,"Unknown knowledge page: ~w"-[Name]), fail.
 loaded_kp(Name) :- % some version already loaded:
