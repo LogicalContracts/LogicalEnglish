@@ -191,11 +191,13 @@ i(at(G,KP),M,CID,Cref,U,E) :- shouldMapModule(KP,UUID), !,
 i(At,_Mod,CID,Cref,U,E) :- At=at(G_,M_), !,
     atom_string(M,M_),
     (G_=on(G,Time)->true;G=G_),
-    (hypothetical_fact_with_time(M,G,G__,Time_,Ref) *-> ( % hypo facts: use them, ignoring the real module:
-        G=G__, Time=Time_, U=[], E=[s(At,Ref,[])] 
+    (hypothetical_clause_with_time(M,G,G__,Time_,Body,Ref) *-> ( % hypo facts: use them, ignoring the real module:
+            % hypo rules can NOT depend on unknowns
+            i(Body,M,-1,Ref,[],_Why), % the hypo body may fail, effectively overriding any other solutions of the next (non hypo) branch
+            G=G__, Time=Time_, U=[], E=[s(At,Ref,[])] 
         ) ; (
             % attempt to load and continue, or report it as unknown:
-            call_at(true,M) -> i(G_,M,CID,Cref,U,E) ; (U=[At], E=[u(At,Cref,[])] )
+            loaded_kp(M) -> i(G_,M,CID,Cref,U,E) ; (U=[At], E=[u(At,Cref,[])] )
         )).
 i(G,M,_CID,Cref,U,E) :- unknown(G,M), !, (U=[at(G,M)],E=[ u(at(G,M),Cref,[]) ]).
 %TODO: on(G,2020) means "G true on some instant in 2020"; who matches that with '20210107' ? check for clauses and hypos
@@ -271,10 +273,10 @@ myClause(H,M,Body,Ref,IsProlog,URL,E) :- myClause2(H,_Time,M,Body,Ref,IsProlog,U
 
 % Supports the injecting of facts for a query:
 :- thread_local hypothetical_fact/5. % Module, FactTemplate, Fact, ClauseLikeBody, FakeClauseRef
-hypothetical_fact_with_time(Module,Template,Head,Time,Ref) :-
-    hypothetical_fact(Module,Template,Head,taxlogBody(Body,Time,_URL,_E),Ref),
-    % hypo rules can NOT depend on unknowns:
-    i(Body,Module,-1,Ref,[],_Why).
+
+hypothetical_clause_with_time(Module,Template,Head,Time,Body,Ref) :-
+    hypothetical_fact(Module,Template,Head,taxlogBody(Body,Time,_URL,_E),Ref).
+
 
 % myClause2(PlainHead,Time,Module,Body,Ref,IsProlog,URL,LocalExplanation)
 myClause2(H,Time,M,Body,Ref,IsProlog,URL,E) :- 
@@ -342,7 +344,7 @@ run_examples :-
     )).
 
 run_examples(Module) :-
-    call_at(true,Module),
+    loaded_kp(Module),
     forall( catch(Module:example(Desc,Scenarios),error(existence_error(_, _), _),fail), (
         format(" Running example ~w~n",Desc),
         run_scenarios(Scenarios,Module,1,[],_U,_E)
@@ -363,7 +365,9 @@ run_scenarios([],_,_,_,[],[]).
 % example_fact_sequence(+Module,?ExampleName,-Facts)
 example_fact_sequence(M_,Name,Facts) :- 
     atom_string(M,M_),
-    call_at( catch(M:example(Name,Scenarios),error(existence_error(_, _), _),fail), M),
+    loaded_kp(M),
+    (catch(M:example(Name,Scenarios),error(existence_error(_, _), _),fail) *-> true ; 
+        (print_message(error,"Missing scenario for example: ~w"-[Name]), fail)),
     findall(SF,member(scenario(SF,_Assertion),Scenarios),Facts_),
     append(Facts_,Facts).
 
@@ -377,7 +381,7 @@ example_fact_sequence(M_,Name,Facts) :-
 once_with_facts(G,M_,Facts,DoUndo) :-
     must_be(boolean,DoUndo),
     atom_string(M,M_),
-    call_at(true,M), % make sure the module is loaded
+    loaded_kp(M), % make sure the module is loaded
     assert_and_remember(Facts,M,from_with_facts,Undo),
     (true; DoUndo==true, once(Undo), fail),
     once(M:G),
@@ -386,7 +390,7 @@ once_with_facts(G,M_,Facts,DoUndo) :-
 % call_with_facts(+Goal,+Module,+AdditionalFacts) This does NOT undo the fact changes
 call_with_facts(G,M_,Facts) :-
     atom_string(M,M_),
-    call_at(true,M), % make sure the module is loaded
+    loaded_kp(M), % make sure the module is loaded
     assert_and_remember(Facts,M,from_with_facts,_Undo),
     call(M:G).
 
@@ -394,6 +398,7 @@ call_with_facts(G,M_,Facts) :-
 % assert a list of timed facts, and returns a goal to undo the asserts
 assert_and_remember([-Fact|Facts],M,Why,(Undo,Undos)) :- !,
     must_be(nonvar,Fact),
+    assertion( \+ (functor(Fact,':-',_);functor(Fact,if,_)) ),
     canonic_fact_time(Fact,M,CF,Time), assert_and_remember_(delete,CF,_,Time,Why,Undo),
     assert_and_remember(Facts,M,Why,Undos).
 assert_and_remember([Fact_|Facts],M,Why,(Undo,Undos)) :- must_be(nonvar,Fact_),

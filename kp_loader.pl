@@ -1,5 +1,5 @@
 :- module(_,[
-    call_at/2, kp_dir/1, kp_location/3, kp/1, shouldMapModule/2, moduleMapping/2, myDeclaredModule/1,
+    loaded_kp/1, kp_dir/1, kp_location/3, kp/1, shouldMapModule/2, moduleMapping/2, myDeclaredModule/1,
     discover_kps_in_dir/1, discover_kps_in_dir/0, discover_kps_gitty/0, setup_kp_modules/0, load_kps/0,
     load_gitty_files/1, load_gitty_files/0, save_gitty_files/1, save_gitty_files/0, delete_gitty_file/1, update_gitty_file/3,
     xref_all/0, xref_clean/0, kp_predicates/0, reset_errors/0,
@@ -80,9 +80,15 @@ declare_our_metas(Module) :-
     Module:meta_predicate(because(0,-)).
 
 % load_named_file(+File,+Module,+InGittyStorage)
-load_named_file(File,Module,true) :- !,
+load_named_file(File,Module,InGittyStorage) :-
+    load_named_file_(File,Module,InGittyStorage),
+    kp_file_modified(Module,Modified,InGittyStorage),
+    retractall(kp_location(Module,File,_,InGittyStorage)),
+    assert(kp_location(Module,File,Modified,InGittyStorage)).
+
+load_named_file_(File,Module,true) :- !,
     use_gitty_file(Module:File,[/* useless: module(Module)*/]).
-load_named_file(File,Module,false) :- 
+load_named_file_(File,Module,false) :- 
     load_files(File,[module(Module)]).
 
 load_kps :- 
@@ -97,19 +103,33 @@ setup_kp_modules :- forall(kp(M), (
     declare_our_metas(M)
     )).
 
-%! call_at(:Goal,++KnowledgePageName) is nondet.
+%! loaded_kp(++KnowledgePageName) is nondet.
 %
-%  Execute goal at the indicated knowledge page, loading it if necessary
-call_at(Goal,Name) :- must_be(nonvar,Name), module_property(Name,last_modified_generation(T)), T>0, !, 
-    Name:Goal.
-call_at(Goal,Name) :- kp_location(Name,File,InGitty), !, 
+%  loads the knowledge page, failing if it cannot
+loaded_kp(Name) :- must_be(nonvar,Name), \+ kp_location(Name,_,_), !, 
+    print_message(error,"Unknown knowledge page: ~w"-[Name]), fail.
+loaded_kp(Name) :- % some version already loaded:
+    module_property(Name,last_modified_generation(T)), T>0, 
+    !,
+    once(( kp_file_modified(Name,FT,InGitty), kp_location(Name,File,LastModified,InGitty) )), 
+    (FT>LastModified -> (
+        load_named_file(File,Name,InGitty), 
+        print_message(informational,"Reloaded ~w"-[Name])
+        ) ; true).
+loaded_kp(Name) :- kp_location(Name,File,InGitty), !, % first load:
     load_named_file(File,Name,InGitty),
-    (\+ reported_loaded_kp(Name) -> (print_message(informational,loaded(Name,File)), assert(reported_loaded_kp(Name))) ; true),
-    Name:Goal.
-call_at(Goal,Name) :- 
+    (\+ reported_loaded_kp(Name) -> (
+        print_message(informational,loaded(Name,File)), assert(reported_loaded_kp(Name))) 
+        ; true).
+loaded_kp(Name) :- 
     \+ reported_missing_kp(Name), 
-    print_message(error,no_kp(Goal,Name)), 
+    print_message(error,no_kp(Name)), 
     assert(reported_missing_kp(Name)), fail.
+
+kp_file_modified(Name,Time,InGitty) :- 
+    kp_location(Name,File,InGitty),
+    (InGitty==true -> (storage_meta_data(File, Meta), Time=Meta.time) ; time_file(File,Time)).
+
 
 :-thread_local reported_missing_kp/1.
 :-thread_local reported_loaded_kp/1.
@@ -152,7 +172,7 @@ xref_all :-
     )).
 
 prolog:message(xreferencing(URL,File)) --> ['Xreferencing module ~w in file ~w'-[URL,File]].
-prolog:message(no_kp(Goal,Name)) --> ["Could not find knowledge page ~w for goal ~w"-[Name,Goal]].
+prolog:message(no_kp(Name)) --> ["Could not find knowledge page ~w"-[Name]].
 
 xref_clean :-
     forall(kp_location(URL,_,_), xref_clean(URL)).

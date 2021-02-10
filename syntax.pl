@@ -43,28 +43,39 @@ taxlog2prolog(if(at(H,Url),B), neck(if)-[delimiter-[SpecH,classify],SpecB], (H:-
     taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB).
 taxlog2prolog(if(on(H,T),B), neck(if)-[delimiter-[SpecH,classify],SpecB], (H:-taxlogBody(B,T,'',[]))) :- !,
     taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB).
-taxlog2prolog(if(H,B),neck(if)-[SpecH,SpecB],(H:-taxlogBody(B,_,'',[]))) :- 
+taxlog2prolog(if(H,B),neck(if)-[SpecH,SpecB],(H:-taxlogBody(B,_,'',[]))) :- !,
     taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB).
 taxlog2prolog((because(on(H,T),Why):-B), neck(clause)-[ delimiter-[delimiter-[SpecH,classify],classify], SpecB ], (H:-taxlogBody(B,T,'',Why))) :- Why\==[], !,
     taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB).
-taxlog2prolog(mainGoal(G,Description),delimiter-[Spec,classify],(mainGoal(G,Description):-(_=1->true;GG))) :- % hack to avoid 'unreferenced' highlight in SWISH
+taxlog2prolog(mainGoal(G,Description),delimiter-[Spec,classify],(mainGoal(G,Description):-(_=1->true;GG))) :- !, % hack to avoid 'unreferenced' highlight in SWISH
     functor(G,F,N), functor(GG,F,N), % avoid "Singleton-marked variable appears more than once"
     taxlogBodySpec(G,Spec).
-taxlog2prolog(example(T,Sequence),delimiter-[classify,classify],example(T,Sequence)).
-%TODO: colour the examples; the following is not working; how do we specify the colour of lists...? :
-%taxlog2prolog(example(T,Sequence),delimiter-[classify,Spec],example(T,Sequence)) :- scenarioSequenceSpec(Sequence,Spec).
-taxlog2prolog(irrelevant_explanation(G),delimiter-[Spec],irrelevant_explanation(G)) :- taxlogBodySpec(G,Spec).
+taxlog2prolog(example(T,Sequence),delimiter-[classify,Spec],example(T,Sequence)) :- !,  
+    (Sequence==[]->Spec=classify ; (Spec=list-SeqSpec, scenarioSequenceSpec(Sequence,SeqSpec))).
+taxlog2prolog(irrelevant_explanation(G),delimiter-[Spec],irrelevant_explanation(G)) :- !, 
+    taxlogBodySpec(G,Spec).
 
-scenarioSequenceSpec([scenario(_Facts,Assertion)|Scenarios],list-[delimiter-[classify,AssertionSpec],Specs]) :- !,
-    taxlogBodySpec(Assertion,AssertionSpec),
+scenarioSequenceSpec([S|Scenarios],[Spec|Specs]) :- !,
+    scenarioSpec(S,Spec),
     scenarioSequenceSpec(Scenarios,Specs).
-scenarioSequenceSpec([scenario(_Facts,Assertion)],list-[delimiter-[classify,Spec]]) :- taxlogBodySpec(Assertion,Spec).
+scenarioSequenceSpec([],[]).
+
+scenarioSpec(scenario(Facts,Assertion),delimiter-[FactsSpec,Spec]) :- 
+    (Facts==[] -> FactsSpec=classify ; (factsSpecs(Facts,FS), FactsSpec=list-FS)),
+    taxlogBodySpec(Assertion,Spec).
+
+factsSpecs([Fact_|Facts],[FactSpec|Specs]) :- !,  
+    (Fact_= -Fact -> FactSpec= delimiter-[FS] ; (Fact=Fact_,FactSpec=FS)),
+    (taxlog2prolog(Fact,FS,_)->true;taxlogHeadSpec(Fact,FS)), 
+    factsSpecs(Facts,Specs).
+factsSpecs([],[]).
 
 taxlogHeadSpec(H,head(Class, H)) :- current_source(UUID),
     !,
     xref_module(UUID,Me),
-    (xref_called(_Other,Me:H, _) -> (Class=exported) ;
-        xref_called(UUID, H, _By) -> (Class=head) ;
+    (H=on(RealH,_T)->true;H=RealH),
+    (xref_called(_Other,Me:RealH, _) -> (Class=exported) ;
+        xref_called(UUID, RealH, _By) -> (Class=head) ;
         Class=unreferenced).
 taxlogHeadSpec(H,head(head, H)).
 
@@ -113,13 +124,16 @@ taxlogBodySpec(findall(_X,G,_L),control-[classify,SpecG,classify]) :- !,
     taxlogBodySpec(G,SpecG). 
 taxlogBodySpec(question(_,_),delimiter-[classify,classify]). % to avoid multiline colouring bug
 taxlogBodySpec(question(_),delimiter-[classify]).
-taxlogBodySpec(at(G,M_),delimiter-[SpecG,classify]) :- nonvar(M_), nonvar(G), !, % assuming atomic goals
-    atom_string(M,M_),
-    (my_xref_defined(M,G,_)-> SpecG=goal(imported(M),G) ; SpecG=goal(undefined,G)).
 taxlogBodySpec(M:G,delimiter-[classify,SpecG]) :- !, taxlogBodySpec(at(G,M),delimiter-[SpecG,classify]).
+taxlogBodySpec(at(G_,M_),Spec) :- nonvar(M_), nonvar(G_), !, % assuming atomic goals
+    atom_string(M,M_), %TODO: this might be cleaned up/refactored with the next clauses:
+    (G_=on(G,_) -> Spec=delimiter-[delimiter-[SpecG,classify],classify]; (G=G_, Spec=delimiter-[SpecG,classify])),
+    (my_xref_defined(M,G,_)-> SpecG=goal(imported(M),G) ; SpecG=goal(undefined,G)).
 taxlogBodySpec(on(G,_T),delimiter-[SpecG,classify] ) :- !,
     taxlogBodySpec(G,SpecG).
-taxlogBodySpec(G,goal(Class,G)-classify) :-  current_source(UUID), taxlogGoalSpec(G, UUID, Class), !. 
+taxlogBodySpec(G,Spec) :-  
+    (compound(G)->Spec=goal(Class,G)-classify;Spec=goal(Class,G)), current_source(UUID), taxlogGoalSpec(G, UUID, Class),
+    !. 
 taxlogBodySpec(_G,classify).
 
 taxlogGoalSpec(G, UUID, Class) :-
