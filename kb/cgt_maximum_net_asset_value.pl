@@ -24,10 +24,10 @@ example("Andrew email Feb 5 2021",[
     /* Andrew has net CGT assets 4,000,000, has affiliate with net assets 1,000,000, has connected entity with net CGT assets of 2,000,000 */
     scenario([
         owns(andrew,cgt_asset_1) at myDB1,
-        is_cgt_asset(cgt_asset_1,4000000) at "https://www.ato.gov.au/General/Capital-gains-tax/CGT-assets-and-exemptions/",
-        is_earnout_cgt_asset(cgt_asset_1) at "https://www.ato.gov.au/General/Capital-gains-tax/In-detail/Business-assets/Earnout-arrangements-and-CGT/",
+        is_cgt_asset(cgt_asset_1) at "https://www.ato.gov.au/General/Capital-gains-tax/CGT-assets-and-exemptions/",
+        is_earnout_cgt_asset(cgt_asset_1,4000000) at "https://www.ato.gov.au/General/Capital-gains-tax/In-detail/Business-assets/Earnout-arrangements-and-CGT/",
         affiliate(andrew,affiliate1),
-        owns(affiliate1,asset1), cgt_assets_net_value(asset1,1000000),
+        owns(affiliate1,cgt_asset_1), cgt_assets_net_value(cgt_asset_1,1000000),
         connected_to(andrew,entity) at "https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/connected-entities/",
         owns(entity,asset2) at myDB1,
         is_cgt_asset(asset2,2000000) at "https://www.ato.gov.au/General/Capital-gains-tax/CGT-assets-and-exemptions/",
@@ -122,3 +122,8 @@ is_individual(TPN) on Date because 'according to myDB_entities' :-
 is_earnout_cgt_asset(Asset,Value) if 
     is_earnout_cgt_asset(Asset,Value) 
         at "https://www.ato.gov.au/General/Capital-gains-tax/In-detail/Business-assets/Earnout-arrangements-and-CGT/".
+
+/** <examples>
+?- query_with_facts(satisfies_maximum_net_asset_value_test(TaxPayer),"Andrew email Feb 5 2021",Unknowns,Explanation,Result).
+*/
+    

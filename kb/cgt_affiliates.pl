@@ -25,3 +25,7 @@ affiliate(Entity,Affiliate) on Date if
 % stub for an "external" Prolog call
 is_individual_or_company(Affiliate) on Date because 'according to myDB_entities' :- 
     myDB_entities:is_individual_or_company_on(Affiliate,Date).
+
+/** <examples> 
+?- query_with_facts(affiliate(andrew,company) on '20200101',[acts_in_accordance_with_directions_from(company,andrew)],Unknowns,Explanation,Result).
+*/
