@@ -71,9 +71,10 @@ i( at(G,KP),OnceTimed,Unknowns,Result) :- !,
     Caller = i(at(G,KP),M,top_goal,top_clause,U__,E__),
     (OnceTimed==true -> IG = call_with_time_limit( Limit, Caller) ; IG = Caller), 
     ( catch( (IG,E_=E__,U=U__), time_limit_exceeded, (E_=[], U=[time_limit_exceeded], print_message(warning,"Time limit of ~w seconds exceeded by ~w at ~w"-[Limit,G,KP])) ) *-> 
-        (expand_failure_trees_and_simp(E_,E), Result=true(E)) ;
-        (expand_failure_trees_and_simp([f(ID,_,_)],E), U=[], Result=false(E)) ),
-    maplist(niceModule,U,Unknowns).
+        (expand_failure_trees_and_simp(E_,FailedUnknowns,E), Result=true(E)) ;
+        (expand_failure_trees_and_simp([f(ID,_,_)],FailedUnknowns,E), U=[], Result=false(E)) ),
+    append(U,FailedUnknowns,U_),
+    maplist(niceModule,U_,Unknowns).
 i( G,_,_,_) :- print_message(error,"Top goal ~w should be qualified with ' at knowledge_page'"-[G]), fail.
 
 % i(+Goal,+AlreadyLoadedAndMappedModule,+CallerGoalID,+CallerClauseRef,-Unknowns,-Why) 
@@ -84,7 +85,7 @@ i( G,_,_,_) :- print_message(error,"Top goal ~w should be qualified with ' at kn
 %   s(nodeLiteral,ClauseRef,childrenNodes); (s)success) [] denotes.. some self-evident literal; 
 %   u(nodeLiteral,CallerClauseRef,[]); u)nknown (or system predicate floundering), basically similar to s
 %  if nextGoalID(ID), i(G,...) fails with zero solutions, there will be a failed tree asserted with root failed(ID,...)
-%  failures for not(G) goals will also leave asserted a fact failed_success(ID,Why)
+%  failures for not(G) goals will also leave asserted a fact failed_success(ID,Unknowns,Why)
 %  successes for not(G) goals will have a Why with the underlying failure, f(NegatedGoalID,CallerID,FreeVar); 
 %  these can be expanded by expand_failure_trees into f(G,CallerClausRef,Children)
 %  there may be orphan failed(ID,...) facts, because we're focusing on solution-less failures only
@@ -101,16 +102,15 @@ i(or(A,B), M, CID, Cref, U, E) :- !, i((A;B),M,CID,Cref,U,E).
 i((A;B), M, CID, Cref, U, E) :- !, (i(A,M,CID,Cref,U,E) ; i(B,M,CID,Cref,U,E)).
 i(must(I,M), Mod, CID, Cref, U, E) :- !, i(then(I,M), Mod, CID, Cref, U, E).
 i(\+ G,M,CID, Cref, U,E) :- !, i( not(G),M,CID,Cref,U,E).
-i(not(G), M, CID, Cref, U, NotE) :- !, 
-    U=[],
+i(not(G), M, CID, Cref, NotU, NotE) :- !, 
     newGoalID(NotID),
     % our negation as failure requires no unknowns:
-    ( i( G, M, NotID, Cref, [], E) -> (
+    ( i( G, M, NotID, Cref, U, E) -> (
         assert( failed(NotID,CID,Cref,not(G))),
-        assert( failed_success(NotID,E)),
+        assert( failed_success(NotID,U,E)),
         fail
     ) ; (
-        NotE = [f(NotID,CID,_NotHere_TheyAreAsserted)]
+        NotE = [f(NotID,CID,_NotHere_TheyAreAsserted)], NotU=[]
     )).
 i(!,_,_,_,_,_) :- throw(no_cuts_allowed).
 i(';'(C->T,Else), M, CID, Cref, U, E) :- !,% should we forbid Prolog if-then-elses..?
@@ -152,9 +152,9 @@ i(forall(A,B),M,CID,Cref,U,E) :- !,
             X=failed(UB/Ei)
             ))
         ), Tuples),
-    (member(failed(_/Ei),Tuples) -> (
+    (member(failed(UB/Ei),Tuples) -> (
         assert( failed(ForID,CID,Cref,forall(A,B))),
-        assert( failed_success(ForID,Ei)), 
+        assert( failed_success(ForID,UB,Ei)), 
         fail
     ) ; (
         findall(Ui,member(Ui/_,Tuples),U_), append(U_,U),
@@ -232,7 +232,7 @@ unknown(G,M) :- functor(G,F,N),functor(GG,F,N), \+ hypothetical_fact(M,GG,_,_,_)
 
 myCall(G) :- sandbox:safe_call(G).
 
-:- thread_local last_goal_id/1, failed/4, failed_success/2.
+:- thread_local last_goal_id/1, failed/4, failed_success/3.
 
 nextGoalID(ID) :- 
     (last_goal_id(Old) -> true ; Old=0), ID is Old+1.
@@ -438,28 +438,28 @@ canonic_fact_time(F,M,M:F,_).
 
 %%%%% Explanations
 
-expand_failure_trees_and_simp(E,ES) :-
-    expand_failure_trees(E,Expanded), 
+expand_failure_trees_and_simp(E,FailedUnknowns,ES) :-
+    expand_failure_trees(E,[],FailedUnknowns,Expanded), 
     simplify_explanation(Expanded,ES).
 
-% expand_failure_trees(+Why,-ExpandedWhy)
-expand_failure_trees([s(X,Ref,Children)|Wn],[s(X,Ref,NewChildren)|EWn]) :- !, 
-    expand_failure_trees(Children,NewChildren), expand_failure_trees(Wn,EWn).
-expand_failure_trees([u(X,Ref,Children)|Wn],[u(X,Ref,NewChildren)|EWn]) :- !, 
-    expand_failure_trees(Children,NewChildren), expand_failure_trees(Wn,EWn).
-expand_failure_trees([f(ID,CID,Children)|Wn],[f(G,Cref,Children)|EWn]) :- failed_success(ID,Why), !, 
+% expand_failure_trees(+Why,Unknowns,NewUnknowns,-ExpandedWhy)  the unknows are only those in failed branches
+expand_failure_trees([s(X,Ref,Children)|Wn],U1,Un,[s(X,Ref,NewChildren)|EWn]) :- !, 
+    expand_failure_trees(Children,U1,U2,NewChildren), expand_failure_trees(Wn,U2,Un,EWn).
+expand_failure_trees([u(X,Ref,Children)|Wn],U1,Un,[u(X,Ref,NewChildren)|EWn]) :- !, 
+    expand_failure_trees(Children,U1,U2,NewChildren), expand_failure_trees(Wn,U2,Un,EWn).
+expand_failure_trees([f(ID,CID,Children)|Wn],U1,Un,[f(G,Cref,Children)|EWn]) :- failed_success(ID,U,Why), !, 
     must_be(var,Children),
     must(failed(ID,CID,Cref,G),one),
     %Children = Why,
-    expand_failure_trees(Why,Children),
-    expand_failure_trees(Wn,EWn).
-expand_failure_trees([f(ID,CID,Children)|Wn],Expanded) :- 
+    expand_failure_trees(Why,U1,U2,Children),
+    expand_failure_trees(Wn,U2,Un_,EWn), append(Un_,U,Un).
+expand_failure_trees([f(ID,CID,Children)|Wn],U1,Un,Expanded) :- 
     must_be(var,Children),
     findall(f(ChildID,ID,_),failed(ChildID,ID,_Cref,_ChildG),Children),
-    expand_failure_trees(Children,NewChildren),
-    expand_failure_trees(Wn,EWn),
+    expand_failure_trees(Children,U1,U2,NewChildren),
+    expand_failure_trees(Wn,U2,Un,EWn),
     (failed(ID,CID,Cref,G) -> Expanded=[f(G,Cref,NewChildren)|EWn]; append(NewChildren,EWn,Expanded)).
-expand_failure_trees([],[]).
+expand_failure_trees([],U,U,[]).
 
 % simplify_explanation(+ExpandedWhy,-LeanerWhy)
 simplify_explanation(Why,Simp) :- simplify_explanation(Why,[],_,Simp).

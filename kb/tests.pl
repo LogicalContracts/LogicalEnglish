@@ -26,8 +26,11 @@ t(a).
 
 e(b).
 
+foo if not bar.
+
 testForall(L) if xpto and
     forall(member(X,L), c(X)).
+
 
 /** <examples>
 ?- query_with_facts(testForall([0,1,2,3]) at 'http://tests.com',[d(3)],Unknowns,Explanation,Result).
