@@ -317,7 +317,7 @@ refToModuleAndSourceAndOrigin(Ref,M,Source,Origin) :-
 :- multifile prolog:meta_goal/2. % for xref
 prolog:meta_goal(at(G,M),[M_:G]) :- nonvar(M), atom_string(M_,M).
 % next two handled by declare_our_metas:
-%prolog:meta_goal(on(G,_Time),[G]).
+prolog:meta_goal(on(G,_Time),[G]).
 %prolog:meta_goal(because(G,_Why),[G]).
 prolog:meta_goal(and(A,B),[A,B]).
 prolog:meta_goal(or(A,B),[A,B]).

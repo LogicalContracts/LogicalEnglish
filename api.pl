@@ -104,9 +104,3 @@ handle_api_draft(Request) :-
     format(string(NewEditor),"/p/~a",[Filename]),
     http_redirect(see_other,NewEditor,Request).    
 
-url_simple(URL,Simple) :- 
-    parse_url(URL,L), memberchk(path(P),L), atomics_to_string(LL,'/',P), 
-    ((last(LL,Simple),Simple\='') -> true ;
-        append(_,[Simple,_],LL)),
-    !.
-url_simple(URL,URL).

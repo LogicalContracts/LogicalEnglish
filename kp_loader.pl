@@ -312,7 +312,14 @@ edit_kp(URL) :-
         format(string(URL),"http://localhost:3050/p/~a",[File]), www_open_url(URL)
         )).
 
-
+url_simple(URL,Simple) :- 
+    parse_url(URL,L), memberchk(path(P),L), atomics_to_string(LL,'/',P), 
+    ((last(LL,Simple),Simple\='') -> true ;
+        LL = [Simple] -> true;
+        append(_,[Simple,_],LL)),
+    !.
+url_simple(URL,URL).
+    
 %%%% Knowledge pages graph
 
 :- multifile user:'swish renderer'/2. % to avoid SWISH warnings in other files
@@ -320,21 +327,24 @@ edit_kp(URL) :-
 
 knowledgePagesGraph(dot(digraph([rankdir='LR'|Graph]))) :- 
     % xref_defined(KP, Goal, ?How)
-    setof(edge(From->To,[]), KP^Called^By^ByF^ByN^OtherKP^G^CalledF^CalledN^(
-        kp(KP), xref_called(KP, Called, By),
+    setof(edge(From->To,[]), KP^Called^By^ByF^ByN^OtherKP^G^CalledF^CalledN^Called_^ArgGoals^(
+        kp(KP), xref_called(KP, Called_, By),
+        (prolog:meta_goal(Called_,ArgGoals) -> (member(Called,ArgGoals), nonvar(Called)); Called=Called_),
         functor(By,ByF,ByN), From = at(ByF/ByN,KP),
         (Called=OtherKP:G -> true ; (OtherKP=KP, G=Called)),
         functor(G,CalledF,CalledN), To = at(CalledF/CalledN,OtherKP) 
         %term_string(From_,From,[quoted(false)]), term_string(To_,To,[quoted(false)]), url_simple(ArcRole_,ArcRole)
         ),Edges), 
-    setof(node(ID,[/*shape=Shape*/]), KP^Goal^How^GF^GN^From^EA^(
+    setof(node(ID,[/*shape=Shape*/label=Label]), KP^Goal^How^GF^GN^From^EA^Pred^Abrev^(
         (
             kp(KP), xref_defined(KP, Goal, How),
             functor(Goal,GF,GN),
             ID = at(GF/GN,KP)
             ;
             member(edge(From->ID,EA),Edges) % calls to undefined predicates
-        )
+        ),
+        ID=at(Pred,KP), url_simple(KP,Abrev),
+        format(string(Label),"~w at ~w",[Pred,Abrev])
         %(hypercube(R,ID) -> Shape=box3d ; Shape=ellipse)
         ), Nodes),
     append(Nodes,Edges,Items),
