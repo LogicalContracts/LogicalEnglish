@@ -61,7 +61,9 @@ clauseNavigator_(Ref,span([a([onclick=Handler]," TaxLog")|Origin])) :-
     blob(Ref,clause), clause_property(Ref,file(F_)), clause_property(Ref,line_count(L)),
     myClause2(_H,_Time,Module_,_Body,Ref,_IsProlog,_URL,_E), 
     !,
-    (shouldMapModule(Module,Module_)-> kp_location(Module,F,true) ;(
+    % Module_ will be the temporary SWISH module with the current window's program
+    % This seems to break links to source: (shouldMapModule(Module,Module_)-> kp_location(Module,F,true) ;(
+    (moduleMapping(Module,Module_)-> kp_location(Module,F,true) ;(
         % strip swish "file" header if present:
         ((sub_atom(F_,0,_,R,'swish://'), sub_atom(F_,R,_,0,F)) -> true ; F=F_)
         )),

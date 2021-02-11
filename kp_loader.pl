@@ -385,7 +385,9 @@ token_references(Request) :-
 user:term_expansion((:-module(M,L)),(:-module(M,L))) :- !, assert(myDeclaredModule(M)). 
 :- multifile pengines:prepare_module/3.
 :- thread_local myCurrentModule/1. % the new temporary SWISH module where our query runs
-pengines:prepare_module(Module, swish, _Options) :- assert(myCurrentModule(Module)).
+pengines:prepare_module(Module, swish, _Options) :- 
+    % this seems to hold always, but commenting it out just in case...: assertion( \+ myCurrentModule(_)),
+    assert(myCurrentModule(Module)).
 
 % there is (just arrived from the SWISH editor) a fresher version To of the declared module From
 % ...OR there WAS, and although it no longer exists
