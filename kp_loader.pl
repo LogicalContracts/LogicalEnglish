@@ -2,8 +2,8 @@
     loaded_kp/1, kp_dir/1, kp_location/3, kp/1, shouldMapModule/2, moduleMapping/2, myDeclaredModule/1,
     discover_kps_in_dir/1, discover_kps_in_dir/0, discover_kps_gitty/0, setup_kp_modules/0, load_kps/0,
     load_gitty_files/1, load_gitty_files/0, save_gitty_files/1, save_gitty_files/0, delete_gitty_file/1, update_gitty_file/3,
-    xref_all/0, xref_clean/0, kp_predicates/0, reset_errors/0,
-    edit_kp/1]).
+    xref_all/0, xref_clean/0, kp_predicates/0, reset_errors/0, my_xref_defined/3,
+    edit_kp/1, knowledgePagesGraph/1, knowledgePagesGraph/2]).
 
 :- use_module(library(prolog_xref)).
 :- use_module(library(broadcast)).
@@ -181,9 +181,19 @@ prolog:message(no_kp(Name)) --> ["Could not find knowledge page ~w"-[Name]].
 xref_clean :-
     forall(kp_location(URL,_,_), xref_clean(URL)).
 
-kp_predicates :- %TODO: ignore subtrees of because/2
+kp_predicates :- kp_predicates(_).
+
+% This also LOADS the modules, to access the examples:
+kp_predicates(KP) :- %TODO: ignore subtrees of because/2
+    print_message(informational,"Loading all Knowledge Pages.."-[]),
+    forall(kp(KP),loaded_kp(KP)),
     forall(kp(KP),(
-        format("KP: ~w~n",[KP]),
+        format("---~nKP: ~w~n",[KP]),
+        format("  Examples:~n"),
+        forall(catch(KP:example(Name,Scenarios),_,fail),(
+            aggregate(sum(N),( member(scenario(Facts,_Assertion),Scenarios), length(Facts,N)), Total),
+            format("    ~w: ~w facts~n",[Name,Total])
+            )),
         format("  Instance data:~n"),
         forall(xref_defined(KP,G,thread_local(_)), (
             functor(G,F,N), format("    ~w~n",[F/N])
@@ -193,10 +203,28 @@ kp_predicates :- %TODO: ignore subtrees of because/2
             functor(G,F,N), format("    ~w~n",[F/N])
         )),
         format("  External predicates called:~n"),
-        forall((xref_called(KP, Called, _By),Called=Other:G,Other\=KP), (
-            functor(G,F,N), format("    ~w~n",[F/N])
-        ))
+        forall((
+            xref_called(KP, Called, _By),
+            Called=Other:G, Other\=KP,
+            (\+ prolog:meta_goal(G,_))
+            ), 
+            (functor(G,F,N), format("    ~w (~w)~n",[F/N,Other]))
+        ),
+        format("  UNDEFINED predicates:~n"),
+        forall((
+            xref_called(KP, Called, _),
+            Called=Other:G, Other\=KP,
+            (\+ prolog:meta_goal(G,_)),
+            \+ my_xref_defined(Other,G,_)
+            ), 
+            (functor(G,F,N), format("    ~w (~w)~n",[F/N,Other]))
+        )
+
     )). 
+
+my_xref_defined(M,G,Class) :- % check that the source has already been xref'ed, otherwise xref would try to load it and cause a "iri_scheme" error:
+    xref_current_source(M), xref_defined(M,G,Class).
+
 
 :- thread_local myDeclaredModule/1. % remembers the module declared in the last SWISH window loaded
 
@@ -312,6 +340,8 @@ edit_kp(URL) :-
         format(string(URL),"http://localhost:3050/p/~a",[File]), www_open_url(URL)
         )).
 
+url_simple(URL,Simple) :- \+ sub_atom(URL,_,_,_,'/'), !, 
+    Simple=URL.
 url_simple(URL,Simple) :- 
     parse_url(URL,L), memberchk(path(P),L), atomics_to_string(LL,'/',P), 
     ((last(LL,Simple),Simple\='') -> true ;
@@ -325,13 +355,13 @@ url_simple(URL,URL).
 :- multifile user:'swish renderer'/2. % to avoid SWISH warnings in other files
 :- use_rendering(user:graphviz).
 
-knowledgePagesGraph(dot(digraph([rankdir='LR'|Graph]))) :- 
+knowledgePagesGraph(KP,dot(digraph([rankdir='LR'|Graph]))) :- 
     % xref_defined(KP, Goal, ?How)
-    setof(edge(From->To,[]), KP^Called^By^ByF^ByN^OtherKP^G^CalledF^CalledN^Called_^ArgGoals^(
-        kp(KP), xref_called(KP, Called_, By),
-        (prolog:meta_goal(Called_,ArgGoals) -> (member(Called,ArgGoals), nonvar(Called)); Called=Called_),
+    setof(edge(From->To,[]), KP^Called^By^ByF^ByN^OtherKP^G^CalledF^CalledN^How^(
+        kp(KP), xref_called(KP, Called, By),
         functor(By,ByF,ByN), From = at(ByF/ByN,KP),
-        (Called=OtherKP:G -> true ; (OtherKP=KP, G=Called)),
+        (Called=OtherKP:G -> true ; ( once(xref_defined(KP,Called,How)), OtherKP=KP, G=Called)),
+        \+ prolog:meta_goal(G,_),
         functor(G,CalledF,CalledN), To = at(CalledF/CalledN,OtherKP) 
         %term_string(From_,From,[quoted(false)]), term_string(To_,To,[quoted(false)]), url_simple(ArcRole_,ArcRole)
         ),Edges), 
@@ -351,8 +381,10 @@ knowledgePagesGraph(dot(digraph([rankdir='LR'|Graph]))) :-
     Graph=Items.
     %(var(SizeInches) -> Graph=Items ; Graph = [size=SizeInches|Items]).
 
+knowledgePagesGraph(G) :- knowledgePagesGraph(_,G).
+
 :- multifile sandbox:safe_primitive/1.
-sandbox:safe_primitive(kp_loader:knowledgePagesGraph(_)).
+sandbox:safe_primitive(kp_loader:knowledgePagesGraph(_,_)).
 sandbox:safe_primitive(kp_loader:load_gitty_files). %TODO: this should be restricted to power users
 sandbox:safe_primitive(kp_loader:save_gitty_files).
 

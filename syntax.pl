@@ -18,7 +18,7 @@
     taxlog2prolog/3
     ]).
 
-:- use_module(kp_loader,[kp_location/3]).
+:- use_module(kp_loader,[kp_location/3,my_xref_defined/3]).
 
 :- use_module(library(prolog_xref)).
 :- use_module(library(prolog_colour)).
@@ -158,9 +158,6 @@ my_goal_classification(G,Class) :-
 :- else.
 :- print_message(error,"You need SWI-Prolog 8.2 or later"-[]), halt(1).
 :- endif.
-
-my_xref_defined(M,G,Class) :- % check that the source has already been xref'ed, otherwise xref would try to load it and cause a "iri_scheme" error:
-    xref_current_source(M), xref_defined(M,G,Class).
 
 :- if(current_module(swish)). %%% only when running with the SWISH web server:
 % hack to find the editor (e.g. its module name) that triggered the present highlighting
