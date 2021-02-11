@@ -478,7 +478,7 @@ simplify_explanation([],V,V,[]).
 
 % expand_explanation_refs(+ExpandedWhy,+ExtraFacts,+TheirModule,-ExpandedRefLessWhy)
 % TODO: recover original variable names? seems to require either some hacking with clause_info or reparsing
-% transforms explanation: each nodetype(Literal,ClauseRef,Children) --> nodetype(Literal,ClauseRef,SourceString,OriginURL,Children)
+% transforms explanation: each nodetype(Literal,ClauseRef,Children) --> nodetype(Literal,ClauseRef,Module,SourceString,OriginURL,Children)
 expand_explanation_refs([Node|Nodes],Facts,M,[NewNode|NewNodes]) :- !,
     Node=..[Type,X,Ref,Children], 
     refToModuleAndSourceAndOrigin(Ref,Module,Source,Origin),
