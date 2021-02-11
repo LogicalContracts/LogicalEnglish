@@ -365,13 +365,14 @@ sandbox:safe_primitive(kp_loader:save_gitty_files).
 :- http_handler(codemirror(xref),   token_references,        []).
 token_references(Request) :-
     %http_read_json_dict(Request, Query, [value_string_as(atom)]),
-    http_parameters(Request, [arity(_Arity,[]),text(Text,[]),type(Type,[]),file(Module,[optional(true)]),uuid(UUID,[optional(true)])]),
+    http_parameters(Request, [arity(Arity,[integer]),text(Text,[]),type(Type,[]),file(Module,[optional(true)]),uuid(UUID,[optional(true)])]),
     % UUID is the SWISH internal module for our current editor's text
     % mylog(gotQuery/Type/Text/Arity/Module/UUID),
     % asserta(my_request(Query)), % for debugging
     (nonvar(UUID) -> (xref_module(UUID,MyModule), Ignorable=[UUID,MyModule]); Ignorable=[]),
-    catch(term_string(Term,Text),_,fail), 
-    functor(Term,Functor,_),
+    catch(term_string(Term_,Text),_,fail), 
+    functor(Term_,Functor,_),
+    (atom(Term_) -> functor(Term,Functor,Arity); Term=Term_), % hack to fix longclicks on body goals
     (sub_atom(Type, 0, _, _, head) -> ( % a clause head
         must_be(var,Module),
         findall( _{title:Title,line:Line,file:File,target:Functor}, ( % regex built on the Javascript side from target
