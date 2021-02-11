@@ -134,11 +134,12 @@ taxlogBodySpec(M:G,delimiter-[classify,SpecG]) :- !, taxlogBodySpec(at(G,M),deli
 taxlogBodySpec(at(G_,M_),Spec) :- nonvar(M_), nonvar(G_), !, % assuming atomic goals
     atom_string(M,M_), %TODO: this might be cleaned up/refactored with the next clauses:
     (G_=on(G,_) -> Spec=delimiter-[delimiter-[SpecG,classify],classify]; (G=G_, Spec=delimiter-[SpecG,classify])),
-    (my_xref_defined(M,G,_)-> SpecG=goal(imported(M),G) ; SpecG=goal(undefined,G)).
+    (my_xref_defined(M,G,_)-> SpecG=goal(imported(M),G)-classify ; SpecG=goal(undefined,G)-classify).
 taxlogBodySpec(on(G,_T),delimiter-[SpecG,classify] ) :- !,
     taxlogBodySpec(G,SpecG).
 taxlogBodySpec(G,Spec) :-  
-    (compound(G)->Spec=goal(Class,G)-classify;Spec=goal(Class,G)), current_source(UUID), taxlogGoalSpec(G, UUID, Class),
+    (compound(G)->Spec=goal(Class,G)-classify;Spec=goal(Class,G)), 
+    current_source(UUID), taxlogGoalSpec(G, UUID, Class),
     !. 
 taxlogBodySpec(_G,classify).
 
