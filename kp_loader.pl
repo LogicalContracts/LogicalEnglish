@@ -2,7 +2,7 @@
     loaded_kp/1, kp_dir/1, kp_location/3, kp/1, shouldMapModule/2, moduleMapping/2, myDeclaredModule/1,
     discover_kps_in_dir/1, discover_kps_in_dir/0, discover_kps_gitty/0, setup_kp_modules/0, load_kps/0,
     load_gitty_files/1, load_gitty_files/0, save_gitty_files/1, save_gitty_files/0, delete_gitty_file/1, update_gitty_file/3,
-    xref_all/0, xref_clean/0, kp_predicates/0, reset_errors/0, my_xref_defined/3,
+    xref_all/0, xref_clean/0, kp_predicates/0, reset_errors/0, my_xref_defined/3, url_simple/2,
     edit_kp/1, knowledgePagesGraph/1, knowledgePagesGraph/2]).
 
 :- use_module(library(prolog_xref)).
