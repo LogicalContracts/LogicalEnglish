@@ -1,8 +1,6 @@
 % Written by Miguel Calejo for LodgeIT, Australia, and AORALaw, UK; copyright LodgeIT+AORALaw (50% each) 2020
 % PRELIMINARY DRAFT
 
-% For now, residing in the 'user' module
-
 % Web page from which the present knowledge page was encoded
 :-module('https://www.gov.uk/guidance/stamp-duty-reserve-tax-reliefs-and-exemptions',[]).
 
@@ -54,12 +52,24 @@ example("Chris Feb 12 - 1B2",[
         married_or_in_civil_partnership(ben,adam,When) at myDB_456 if false,
         shares_transfer(adam,ben,sharesID,'20171210'),
         shares_received_as_gift if false,
+        shares_inherited_in_will if false,
+        shares_transferred_on_divorce_or_dissolution if false,
+        settlement_to_shareholders_on_business_wound_up if false,
         shares_in_trust_that__ on T if T@>='20180101',
         trading_in_market(sharesID,merkurMarket,_Anytime) at myDB_789,
         growth_market(merkurMarket) on When at "https://www.gov.uk/hmrc-internal-manuals/stamp-taxes-shares-manual/stsm041330" if When@>='20180401' % dummy date
+         ], not exempt_transfer)
+]).
+example("Chris Feb 12 - 1C",[
+    /*
+    Cathy bought some shares from a broker, which were transferred to her on 1 Jan 2021.
+    The shares were for stock of The International Bank for Reconstruction and Development
+    Expected result: exempt, see https://www.gov.uk/hmrc-internal-manuals/stamp-taxes-shares-manual/stsm041040 
+    */
+    scenario([
+        shares_transfer(broker,cathy,'International Bank for Reconstruction and Development','20210101')
          ], exempt_transfer)
 ]).
-
 :- thread_local shares_transfer/4.
 exempt_transfer(FromTaxPayer,ToTaxPayer,SecurityIdentifier,When) :-
     assert(shares_transfer(FromTaxPayer,ToTaxPayer,SecurityIdentifier,When)), % should retractall, but assuming this is a new, transient thread
@@ -90,12 +100,13 @@ exempt_transfer if
     or shares_transferred_on_divorce_or_dissolution % it would be nice to know that stepbrothers cannot be married, ergo not divorced...
     or shares_in_trust_that__ on T % is this the case for a change of trustee, or transfer from one trust to another??
     or shares_trading_on_growth_market_but_unlisted_on_recognized 
-    or settlement_to_shareholders_on_business_wound_up.
+    or settlement_to_shareholders_on_business_wound_up
+    or shares_transfer(_From,_To,SecurityID,_When) and exemption(SecurityID) at 'https://www.gov.uk/hmrc-internal-manuals/stamp-taxes-shares-manual/stsm041040'.
 
 % Unlike suggested by Chris on Dec 2, this is NOT quite reflecting the full STSM041260... just the market lists:
 shares_trading_on_growth_market_but_unlisted_on_recognized if
     shares_transfer(_From,_To,ID,When) and trading_in_market(ID,Market)
-    and growth_market(Market) on When at "https://www.gov.uk/hmrc-internal-manuals/stamp-taxes-shares-manual/stsm041330"
+    and growth_market(merkurMarket) on When at "https://www.gov.uk/hmrc-internal-manuals/stamp-taxes-shares-manual/stsm041330"
     and forall( 
         recognized_stock_exchange(Exchange) on When
             at "https://www.gov.uk/government/publications/recognised-stock-exchanges-definition-legislation-and-tables/recognised-stock-exchanges-definition-legislation-and-tables-of-recognised-exchanges", 

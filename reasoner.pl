@@ -1,5 +1,5 @@
 :- module(_ThisFileName,[query/4, query_with_facts/5, query_once_with_facts/5, expand_explanation_refs/4, explanation_node_type/2,
-    run_examples/0, myClause2/8, niceModule/2, refToOrigin/2,
+    run_examples/0, run_examples/1, myClause2/8, niceModule/2, refToOrigin/2,
     after/2, not_before/2, before/2, immediately_before/2, same_date/2, this_year/1, in/2]).
 
 /** <module> Tax-KB reasoner and utils
@@ -192,21 +192,11 @@ i(G,M,CID,Cref,U,E) :- system_predicate(G), !,
 i(M:G,Mod,CID,Cref,U,E) :- !, i(at(G,M),Mod,CID,Cref,U,E).
 i(at(G,KP),M,CID,Cref,U,E) :- shouldMapModule(KP,UUID), !, 
     i(at(G,UUID),M,CID,Cref,U,E). % use SWISH's latest editor version
-i(At,_Mod,CID,Cref,U,E) :- At=at(G_,M_), !,
+i(At,_Mod,CID,Cref,U,E) :- At=at(G,M_), !,
     atom_string(M,M_),
-    (G_=on(G,Time)->NewG_=on(NewG,Time);(G=G_, NewG_=NewG)),
-    evalArgExpressions(G,M,NewG,CID,Cref,Uargs,Eargs), 
-    (hypothetical_clause_with_time(M,NewG,G__,Time_,Body,Ref) *-> ( % hypo facts: use them, ignoring the real module:
-            NewG=G__, Time=Time_, 
-            % hypo rules can NOT depend on unknowns
-            i(Body,M,-1,Ref,[],_Why), % the hypo body may fail, effectively overriding any other solutions of the next (non hypo) branch
-            U=Uargs, E=[s(At,Ref,[])|Eargs] 
-        ) ; (
-            % attempt to load and continue, or report it as unknown:
-            loaded_kp(M) -> 
-                ( i(NewG_,M,CID,Cref,U_,E_), append(Uargs,U_,U), append(Eargs,E_,E) ) ; 
-                (U=[At|Uargs], E=[u(At,Cref,[])|Eargs] )
-        )).
+    ( (loaded_kp(M); hypothetical_fact(M,_,_,_,_)) -> 
+                i(G,M,CID,Cref,U,E) ; 
+                (U=[At], E=[u(At,Cref,[])] )).
 i(G,M,_CID,Cref,U,E) :- unknown(G,M), !, (U=[at(G,M)],E=[ u(at(G,M),Cref,[]) ]).
 %TODO: on(G,2020) means "G true on some instant in 2020"; who matches that with '20210107' ? check for clauses and hypos
 i(G,M,CID,Cref,U,E) :- 
@@ -353,6 +343,7 @@ run_examples :-
         run_examples(M)
     )).
 
+%TODO: 'true' assertions right now can have unknowns; this needs to be customizable
 run_examples(Module) :-
     loaded_kp(Module),
     forall( catch(Module:example(Desc,Scenarios),error(existence_error(_, _), _),fail), (
