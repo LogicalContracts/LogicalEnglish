@@ -225,6 +225,16 @@ kp_predicates(KP) :- %TODO: ignore subtrees of because/2
 my_xref_defined(M,G,Class) :- % check that the source has already been xref'ed, otherwise xref would try to load it and cause a "iri_scheme" error:
     xref_current_source(M), xref_defined(M,G,Class).
 
+url_simple(URL,Simple) :- \+ sub_atom(URL,_,_,_,'/'), !, 
+    Simple=URL.
+url_simple(URL,Simple) :- 
+    parse_url(URL,L), memberchk(path(P),L), atomics_to_string(LL,'/',P), 
+    ((last(LL,Simple),Simple\='') -> true ;
+        LL = [Simple] -> true;
+        append(_,[Simple,_],LL)),
+    !.
+url_simple(URL,URL).
+    
 
 :- thread_local myDeclaredModule/1. % remembers the module declared in the last SWISH window loaded
 
@@ -340,16 +350,6 @@ edit_kp(URL) :-
         format(string(URL),"http://localhost:3050/p/~a",[File]), www_open_url(URL)
         )).
 
-url_simple(URL,Simple) :- \+ sub_atom(URL,_,_,_,'/'), !, 
-    Simple=URL.
-url_simple(URL,Simple) :- 
-    parse_url(URL,L), memberchk(path(P),L), atomics_to_string(LL,'/',P), 
-    ((last(LL,Simple),Simple\='') -> true ;
-        LL = [Simple] -> true;
-        append(_,[Simple,_],LL)),
-    !.
-url_simple(URL,URL).
-    
 %%%% Knowledge pages graph
 
 :- multifile user:'swish renderer'/2. % to avoid SWISH warnings in other files
@@ -466,4 +466,7 @@ save_gitty_files(_) :- throw('this only works on SWISH ').
 save_gitty_files :- throw('this only works on SWISH ').
 delete_gitty_file(_) :- throw('this only works on SWISH ').
 update_gitty_file(_,_,_) :- throw('this only works on SWISH ').
+
+knowledgePagesGraph(_,_) :- throw('this only works on SWISH').
+knowledgePagesGraph(_) :- throw('this only works on SWISH').
 :- endif.

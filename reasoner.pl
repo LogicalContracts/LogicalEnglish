@@ -149,7 +149,7 @@ i(forall(A,B),M,CID,Cref,U,E) :- !,
             % failed; was there a relevant failure under B?
             ((nextGoalID(Other), Other\=ID) -> EB=[f(ID,CID,_NotYet)] ; EB=[]),
             append(EA,EB,Ei),
-            X=failed(UB/Ei)
+            X=failed(UA/Ei)
             ))
         ), Tuples),
     (member(failed(UB/Ei),Tuples) -> (
@@ -194,14 +194,18 @@ i(at(G,KP),M,CID,Cref,U,E) :- shouldMapModule(KP,UUID), !,
     i(at(G,UUID),M,CID,Cref,U,E). % use SWISH's latest editor version
 i(At,_Mod,CID,Cref,U,E) :- At=at(G_,M_), !,
     atom_string(M,M_),
-    (G_=on(G,Time)->true;G=G_),
-    (hypothetical_clause_with_time(M,G,G__,Time_,Body,Ref) *-> ( % hypo facts: use them, ignoring the real module:
+    (G_=on(G,Time)->NewG_=on(NewG,Time);(G=G_, NewG_=NewG)),
+    evalArgExpressions(G,M,NewG,CID,Cref,Uargs,Eargs), 
+    (hypothetical_clause_with_time(M,NewG,G__,Time_,Body,Ref) *-> ( % hypo facts: use them, ignoring the real module:
+            NewG=G__, Time=Time_, 
             % hypo rules can NOT depend on unknowns
             i(Body,M,-1,Ref,[],_Why), % the hypo body may fail, effectively overriding any other solutions of the next (non hypo) branch
-            G=G__, Time=Time_, U=[], E=[s(At,Ref,[])] 
+            U=Uargs, E=[s(At,Ref,[])|Eargs] 
         ) ; (
             % attempt to load and continue, or report it as unknown:
-            loaded_kp(M) -> i(G_,M,CID,Cref,U,E) ; (U=[At], E=[u(At,Cref,[])] )
+            loaded_kp(M) -> 
+                ( i(NewG_,M,CID,Cref,U_,E_), append(Uargs,U_,U), append(Eargs,E_,E) ) ; 
+                (U=[At|Uargs], E=[u(At,Cref,[])|Eargs] )
         )).
 i(G,M,_CID,Cref,U,E) :- unknown(G,M), !, (U=[at(G,M)],E=[ u(at(G,M),Cref,[]) ]).
 %TODO: on(G,2020) means "G true on some instant in 2020"; who matches that with '20210107' ? check for clauses and hypos
@@ -214,7 +218,7 @@ i(G,M,CID,Cref,U,E) :-
         fail
         )),
     evalArgExpressions(G,M,NewG,CID,Cref,Uargs,Eargs), % failures in the expression (which would be weird btw...) stay directly under CID
-    myClause(G,M,B,Ref,IsProlog,_URL,LocalE),
+    myClause(NewG,M,B,Ref,IsProlog,_URL,LocalE),
     (IsProlog==false -> i(B,M,NewID,Ref,U_,Children_) ; (
         catch( myCall(B), error(Error,_), U_=[at(Error,M)]), % should this call be qualified with M? What when M is the SWISH module...?
         (var(U_)->U_=[];true),
@@ -285,10 +289,11 @@ hypothetical_clause_with_time(Module,Template,Head,Time,Body,Ref) :-
 % myClause2(PlainHead,Time,Module,Body,Ref,IsProlog,URL,LocalExplanation)
 myClause2(H,Time,M,Body,Ref,IsProlog,URL,E) :- 
     (nonvar(Ref) -> clause_property(Ref,module(M)) ; true),
-    % backtrack over hypothetical facts if some is present, hence the 'soft-cut':
-    % ...actually too strong, would forget existing facts in same module: (hypothetical_fact(M,H,Fact,Body_,_) *-> H=Fact ; M:clause(H,Body_,Ref)),
+    % this would allow existing facts and rules to persist even with similar hypos: (hypothetical_fact(M,H,H,Body_,Ref) ; M:clause(H,Body_,Ref)),
+    % backtrack over hypothetical facts if some is present, ONLY, hence the 'soft-cut':
+    % ...actually too strong, would forget existing facts in same module: 
+    (hypothetical_fact(M,H,Fact,Body_,Ref) *-> H=Fact ; M:clause(H,Body_,Ref)),
     % hypos with rules cause their bodies to become part of our resolvent via Body:
-    (hypothetical_fact(M,H,H,Body_,Ref) ; M:clause(H,Body_,Ref)),
     ((Body_= taxlogBody(Body,Time_,URL,E_), E_\==[] ) -> (
             (Time=Time_, IsProlog=true, E=[s(E_,Ref,[])])
         ); 
@@ -448,9 +453,9 @@ expand_failure_trees([s(X,Ref,Children)|Wn],U1,Un,[s(X,Ref,NewChildren)|EWn]) :-
     expand_failure_trees(Children,U1,U2,NewChildren), expand_failure_trees(Wn,U2,Un,EWn).
 expand_failure_trees([u(X,Ref,Children)|Wn],U1,Un,[u(X,Ref,NewChildren)|EWn]) :- !, 
     expand_failure_trees(Children,U1,U2,NewChildren), expand_failure_trees(Wn,U2,Un,EWn).
-expand_failure_trees([f(ID,CID,Children)|Wn],U1,Un,[f(G,Cref,Children)|EWn]) :- failed_success(ID,U,Why), !, 
+expand_failure_trees([f(ID,_CID_,Children)|Wn],U1,Un,[f(G,Cref,Children)|EWn]) :- failed_success(ID,U,Why), !, 
     must_be(var,Children),
-    must(failed(ID,CID,Cref,G),one),
+    must(failed(ID,_CID,Cref,G),one), % CID was causing a failure of this for shares_trading_on_growth_market_but_unlisted_on_recognized
     %Children = Why,
     expand_failure_trees(Why,U1,U2,Children),
     expand_failure_trees(Wn,U2,Un_,EWn), append(Un_,U,Un).
