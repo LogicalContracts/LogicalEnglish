@@ -1,6 +1,6 @@
 :- module(_ThisFileName,[query/4, query_with_facts/5, query_once_with_facts/5, expand_explanation_refs/4, explanation_node_type/2,
     run_examples/0, run_examples/1, myClause2/8, niceModule/2, refToOrigin/2,
-    after/2, not_before/2, before/2, immediately_before/2, same_date/2, this_year/1, in/2]).
+    after/2, not_before/2, before/2, immediately_before/2, same_date/2, this_year/1, uk_tax_year/4, in/2]).
 
 /** <module> Tax-KB reasoner and utils
 @author Miguel Calejo
@@ -543,6 +543,20 @@ same_date(T1,T2) :-
 %! this_year(?Year) is det.
 %  The current year
 this_year(Y) :- get_time(Now), stamp_date_time(Now,date(Y,_M,_D,_,_,_,_,_,_),local).
+
+%! uk_tax_year(?DateInTaxYear,?FirstYear,-StartDate,-EndDate)
+%  Given either a Date or a number for the first year, returns a tax year date range
+uk_tax_year(D,FirstYear,Start,End) :- nonvar(D), !, FirstYear=StartYear,
+    parse_time(D,Time), stamp_date_time(Time,DT,local), DT=..[date,Year,Month,Day|_],
+    ((Month>4;Month=4,Day>=6) -> StartYear = Year ; StartYear is Year-1),
+    EndYear is StartYear+1,
+    format_time(string(Start),"%F",date(StartYear,4,6)),
+    format_time(string(End),"%F",date(EndYear,4,5)).
+uk_tax_year(Start,StartYear,Start,End) :- must_be(integer,StartYear),
+    EndYear is StartYear+1,
+    format_time(string(Start),"%F",date(StartYear,4,6)),
+    format_time(string(End),"%F",date(EndYear,4,5)).
+
 
 %! in(X,List) is nondet.
 %  X is in List
