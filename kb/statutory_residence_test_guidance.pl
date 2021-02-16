@@ -18,12 +18,27 @@ Determine if Alex was a UK residence for tax purposes for the tax year 6 Apr 201
 -	Assume that Alex took no ‘significant breaks’ (I can’t find a definition for this!) from his work in Dubai.
 -	Assume that Alex worked 8 hours each work-day – 40 hrs per full week.
 Expected result: non-resident by virtue of https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11140 
-    
+   (third automatic overseas test)
+NOTE: out of scope of original example, added a stub at 'https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11150'
+   to allow testing this knowledge page
 */
-   scenario([
-    % NOTE: out of scope of original example
-            ], not srt(alex) on'20180406')
-   ]).
+    scenario([
+        works_sufficient_hours_overseas(alex) at RDRM11150,
+        no_significant_breaks_from_overseas_work(alex) at THIRD_OT,
+        days_working_in_uk_more_than(alex,_,0) at THIRD_OT,
+        days_in_uk(alex,Start,End,DaysInUK) at myDb123,
+        second_automatic_uk_test(_) at RDRM11130 if false,
+        third_automatic_uk_test(_) at RDRM11370 if false,
+        ties_test(_) at RDRM11510 if false
+        ], not srt(alex) on A_DATE)
+    ]) :- 
+    A_DATE='20180406', uk_tax_year(A_DATE,_,Start,End),
+    RDRM11150="https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11150",
+    RDRM11130="https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11330",
+    RDRM11370="https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11370",
+    RDRM11510="https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11510",
+    THIRD_OT='https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11140',
+    subtract_days(End,'20190326',Days), DaysInUK is 15 /*leave*/ +Days.
 
 example("Chris Feb 12 - 2B",[
 /*
@@ -104,17 +119,23 @@ ties_test(I) on Date if
 first_automatic_overseas_test(I) on Date if % cf. https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11120
     uk_tax_year(Date,ThisYear,_,_) and between(ThisYear-3,ThisYear-1,PreviousYear) 
     and uk_tax_year(PreviousDate,PreviousYear,PreviousStart,PreviousEnd) 
-    and srt(I) on PreviousDate and days_in_uk(I,PreviousStart,PreviousEnd,Duration) and Duration <16.
+    and days_in_uk(I,PreviousStart,PreviousEnd,Duration) and Duration <16
+    and srt(I) on PreviousDate. % HACK: this needs to be after the previous condition, to avoid going back in time ad eternum
 
-second_automatic_overseas_test(I) if
-    uk_tax_year(Date,ThisYear,Start,End) and 
-    forall( (between(ThisYear-3,ThisYear-1,PreviousYear) and uk_tax_year(PreviousDate,PreviousYear,PreviousStart,PreviousEnd)), 
-        not srt(I) on PreviousYear)
-    and days_in_uk(I,Start,End,Duration) and Duration <46.
+second_automatic_overseas_test(I) on Date if
+    uk_tax_year(Date,ThisYear,Start,End)  
+    and days_in_uk(I,Start,End,Duration) and Duration <46
+    % HACK: this needs to be after the previous condition, to avoid going back in time ad eternum
+    and forall( (between(ThisYear-3,ThisYear-1,PreviousYear) and uk_tax_year(PreviousDate,PreviousYear,_PreviousStart,_PreviousEnd)), 
+        not srt(I) on PreviousDate). 
 
-third_automatic_overseas_test(Individual) if
-    third_automatic_overseas_test(Individual) at "https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11140".
+third_automatic_overseas_test(Individual) on Date if
+    third_automatic_overseas_test(Individual) on Date at "https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11140".
 
 days_in_uk(Individual,Start,End,TotalDays) if
     days_in_uk(Individual,Start,End,TotalDays) at myDb123.
 
+/** <examples>
+?- query_with_facts(srt(Individual) on '20180406' at 'https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11040',"Chris Feb 12 - 2A",Unknowns,Explanation,Result).
+*/
+    

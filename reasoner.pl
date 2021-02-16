@@ -1,6 +1,6 @@
 :- module(_ThisFileName,[query/4, query_with_facts/5, query_once_with_facts/5, expand_explanation_refs/4, explanation_node_type/2,
     run_examples/0, run_examples/1, myClause2/8, niceModule/2, refToOrigin/2,
-    after/2, not_before/2, before/2, immediately_before/2, same_date/2, this_year/1, uk_tax_year/4, in/2]).
+    after/2, not_before/2, before/2, immediately_before/2, same_date/2, subtract_days/3, this_year/1, uk_tax_year/4, in/2]).
 
 /** <module> Tax-KB reasoner and utils
 @author Miguel Calejo
@@ -246,11 +246,12 @@ evalArgExpressions(G,M,NewG,CID,Cref,U,E) :-
     NewG=..[F|Results], 
     append(Us,U), append(Es,E).
 
-% evalExpression(+Module,+Expression,-Result,+CallerID,+CallerClauseRef,-Unknowns,-WhyExplanation) expands (only) user functions
+% evalExpression(+Module,+CallerID,+CallerClauseRef,+Expression,-Result,+CallerID,+CallerClauseRef,-Unknowns,-WhyExplanation) expands (only) user functions
 % TODO: add arithmetic expressions too...?
 evalExpression(_M,_CID,_Cref,X,X,[],[]) :- var(X), !.
 evalExpression(M,CID,Cref,Exp,R,U,[s(function(Exp),Ref,Children)]) :- M:clause(function(Exp,R),Body,Ref), !,
     once( i(Body,M,CID,Cref,U,Children) ).
+evalExpression(_M,_CID,_Cref,Exp,R,[],[]) :- Exp=..[F,_|_], member(F,[+,-,*,/]), !, R is Exp.
 evalExpression(_M,_CID,_,X,X,[],[]).
 
 %wrapTemplateGoal(+Gtemplate,+Module,+CallerID,+CallerClauseRef,+Unknowns,+Explanation,-WrappedGtemplate)
@@ -540,6 +541,12 @@ immediately_before(Earlier,Later) :-
 same_date(T1,T2) :- 
     format_time(string(S),"%F",T1), format_time(string(S),"%F",T2).
 
+%! subtract_days(+LaterDate,+EarlierDate,-Days)
+%  How many days (24 hours intervals) later
+subtract_days(LaterDate,EarlierDate,Days) :-
+    parse_time(LaterDate,Later), parse_time(EarlierDate,Earlier),
+    Days is round(Later-Earlier) div (24*3600).
+
 %! this_year(?Year) is det.
 %  The current year
 this_year(Y) :- get_time(Now), stamp_date_time(Now,date(Y,_M,_D,_,_,_,_,_,_),local).
@@ -553,6 +560,7 @@ uk_tax_year(D,FirstYear,Start,End) :- nonvar(D), !, FirstYear=StartYear,
     format_time(string(Start),"%F",date(StartYear,4,6)),
     format_time(string(End),"%F",date(EndYear,4,5)).
 uk_tax_year(Start,StartYear,Start,End) :- must_be(integer,StartYear),
+    assertion(StartYear>1899), % format_time limitation
     EndYear is StartYear+1,
     format_time(string(Start),"%F",date(StartYear,4,6)),
     format_time(string(End),"%F",date(EndYear,4,5)).
