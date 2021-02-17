@@ -38,7 +38,7 @@ query_with_facts(Goal,Facts_,OnceUndo,Questions,taxlogExplanation(E),Outcome) :-
         Result_=..[Outcome,E_],
         expand_explanation_refs(E_,Facts,M,E)
         ),
-    retractall(hypothetical_fact(_,_,_,_,_)),
+    retractall(hypothetical_fact(_,_,_,_,_,_)),
     (OnceUndo==true -> once_with_facts(Caller, M, Facts, true) ; call_with_facts(Caller, M, Facts)),
     list_without_variants(U,Questions). % remove duplicates
 
@@ -125,16 +125,19 @@ i(';'(C->T,Else), M, CID, Cref, U, E) :- !,% should we forbid Prolog if-then-els
     )).
 i((If->Then),M,CID,Cref,U,E) :- !, 
     i((If->Then;fail),M,CID,Cref,U,E).
+% i(then(if(C),else(T,Else)), M, CID, Cref, U, E) :- !,
+%     nextGoalID(ID),
+%     (i(C,M,CID,Cref,UC,EC) *-> (
+%         i(T,M,CID,Cref,UT,ET), 
+%         append(UC,UT,U), append(EC,ET,E)
+%     ) ; (
+%         ((nextGoalID(Other), Other\=ID) -> EC=[f(ID,CID,_NotYet)] ; EC=[]),
+%         i(Else,M,CID,Cref,U,EE), % no unknowns under C for sure
+%         append(EC,EE,E)
+%     )).
+% Now simply using the following, because the above loses explanations for successful C and failed Then
 i(then(if(C),else(T,Else)), M, CID, Cref, U, E) :- !,
-    nextGoalID(ID),
-    (i(C,M,CID,Cref,UC,EC) *-> (
-        i(T,M,CID,Cref,UT,ET), 
-        append(UC,UT,U), append(EC,ET,E)
-    ) ; (
-        ((nextGoalID(Other), Other\=ID) -> EC=[f(ID,CID,_NotYet)] ; EC=[]),
-        i(Else,M,CID,Cref,U,EE), % no unknowns under C for sure
-        append(EC,EE,E)
-    )).
+    i((C,T;not(C),Else), M, CID, Cref, U, E).
 i(then(if(C),Then),M,CID,Cref,U,E) :- !, i(then(if(C),else(Then,true)),M,CID,Cref,U,E).
 % sometimes this is not used... SWI seems to expands forall(X,C) into \+ (X, \+C)
 i(forall(A,B),M,CID,Cref,U,E) :- !, 
@@ -194,7 +197,7 @@ i(at(G,KP),M,CID,Cref,U,E) :- shouldMapModule(KP,UUID), !,
     i(at(G,UUID),M,CID,Cref,U,E). % use SWISH's latest editor version
 i(At,_Mod,CID,Cref,U,E) :- At=at(G,M_), !,
     atom_string(M,M_),
-    ( (loaded_kp(M); hypothetical_fact(M,_,_,_,_)) -> 
+    ( (loaded_kp(M); hypothetical_fact(M,_,_,_,_,_)) -> 
                 i(G,M,CID,Cref,U,E) ; 
                 (U=[At], E=[u(At,Cref,[])] )).
 i(G,M,_CID,Cref,U,E) :- unknown(G,M), !, (U=[at(G,M)],E=[ u(at(G,M),Cref,[]) ]).
@@ -221,7 +224,7 @@ i(G,M,CID,Cref,U,E) :-
 % unknown(+Goal,+Module) whether the knowledge source is currently unable to provide a result 
 unknown(G,M) :- var(G), !, throw(variable_unknown_call_at(M)).
 unknown(on(G,_Time),M) :- !, unknown(G,M).
-unknown(G,M) :- functor(G,F,N),functor(GG,F,N), \+ hypothetical_fact(M,GG,_,_,_), \+ myClause2(GG,_,M,_,_,_,_,_).
+unknown(G,M) :- functor(G,F,N),functor(GG,F,N), \+ myClause2(GG,_,M,_,_,_,_,_).
 
 
 myCall(G) :- sandbox:safe_call(G).
@@ -271,19 +274,15 @@ myClause(on(H,Time),M,Body,Ref,IsProlog,URL,E) :- !, myClause2(H,Time,M,Body,Ref
 myClause(H,M,Body,Ref,IsProlog,URL,E) :- myClause2(H,_Time,M,Body,Ref,IsProlog,URL,E).
 
 % Supports the injecting of facts for a query:
-:- thread_local hypothetical_fact/5. % Module, FactTemplate, Fact, ClauseLikeBody, FakeClauseRef
-
-hypothetical_clause_with_time(Module,Template,Head,Time,Body,Ref) :-
-    hypothetical_fact(Module,Template,Head,taxlogBody(Body,Time,_URL,_E),Ref).
-
+:- thread_local hypothetical_fact/6. % Module, FactTemplate, Fact, ClauseLikeBody, FakeClauseRef, redefine/extend
 
 % myClause2(PlainHead,Time,Module,Body,Ref,IsProlog,URL,LocalExplanation)
 myClause2(H,Time,M,Body,Ref,IsProlog,URL,E) :- 
     (nonvar(Ref) -> clause_property(Ref,module(M)) ; true),
-    % this would allow existing facts and rules to persist even with similar hypos: (hypothetical_fact(M,H,H,Body_,Ref) ; M:clause(H,Body_,Ref)),
-    % backtrack over hypothetical facts if some is present, ONLY, hence the 'soft-cut':
-    % ...actually too strong, would forget existing facts in same module: 
-    (hypothetical_fact(M,H,Fact,Body_,Ref) *-> H=Fact ; M:clause(H,Body_,Ref)),
+    (hypothetical_fact(M,H,_,_,_,extend) -> % allow existing facts and rules to persist even with similar hypos:
+        (hypothetical_fact(M,H,H,Body_,Ref,_) ; M:clause(H,Body_,Ref)) ; %... or override them:
+        (hypothetical_fact(M,H,Fact,Body_,Ref,_) *-> H=Fact ; M:clause(H,Body_,Ref))
+    ),
     % hypos with rules cause their bodies to become part of our resolvent via Body:
     ((Body_= taxlogBody(Body,Time_,URL,E_), E_\==[] ) -> (
             (Time=Time_, IsProlog=true, E=[s(E_,Ref,[])])
@@ -401,16 +400,18 @@ call_with_facts(G,M_,Facts) :-
 assert_and_remember([-Fact|Facts],M,Why,(Undo,Undos)) :- !,
     must_be(nonvar,Fact),
     assertion( \+ (functor(Fact,':-',_);functor(Fact,if,_)) ),
-    canonic_fact_time(Fact,M,CF,Time), assert_and_remember_(delete,CF,_,Time,Why,Undo),
+    canonic_fact_time(Fact,M,CF,Time), assert_and_remember_(delete,redefine,CF,_,Time,Why,Undo),
     assert_and_remember(Facts,M,Why,Undos).
-assert_and_remember([Fact_|Facts],M,Why,(Undo,Undos)) :- must_be(nonvar,Fact_),
+assert_and_remember([Fact__|Facts],M,Why,(Undo,Undos)) :- must_be(nonvar,Fact__),
+    (Fact__= (+ Fact_) -> How=extend ; (Fact__=Fact_,How=redefine)),
     % Note: the following MUST be kept in sync with taxlog2prolog/3; essencially, this assumes no transform occurs:
     (Fact_ = if(Fact,Body) -> true ; (Fact=Fact_,Body=true)), %TODO: verify that rules are not functions etc
-    canonic_fact_time(Fact,M,CF,Time), assert_and_remember_(add,CF,Body,Time,Why,Undo),
+    canonic_fact_time(Fact,M,CF,Time), assert_and_remember_(add,How,CF,Body,Time,Why,Undo),
     assert_and_remember(Facts,M,Why,Undos).
 assert_and_remember([],_,_,true).
 
-assert_and_remember_(Operation,M:Fact,Body,Time,Why,Undo) :- 
+assert_and_remember_(Operation,How,M:Fact,Body,Time,Why,Undo) :- 
+    assertion(How==extend;How==redefine),
    %TODO: Adds could check if there's a matching clause already, to avoid spurious facts at the end of some example runs
     % abolish caused 'No permission to modify thread_local_procedure'; weird interaction with yall.pl ..??
     % ( \+ predicate_property(M:Fact,_) -> (functor(Fact,F,N), thread_local(M:F/N)) ;
@@ -422,8 +423,8 @@ assert_and_remember_(Operation,M:Fact,Body,Time,Why,Undo) :-
     % this seems to require either using a variant test... or demanding facts to be ground
     % hypothetical_fact(M,H,Fact,Body_,Ref)
     functor(Fact,F,N), functor(Template,F,N), 
-    Add = assert( hypothetical_fact(M,Template,Fact,taxlogBody(Body,Time,'',Why),hypothetical) ),
-    Delete = retractall( hypothetical_fact(M,Template,Fact,taxlogBody(Body,Time,'',Why),_) ),
+    Add = assert( hypothetical_fact(M,Template,Fact,taxlogBody(Body,Time,'',Why),hypothetical,How) ),
+    Delete = retractall( hypothetical_fact(M,Template,Fact,taxlogBody(Body,Time,'',Why),_,_) ),
     (Operation==add ->( Undo=Delete, Add) ; ( Undo=Add, Delete )).
 
 % canonic_fact_time(+Fact,+DefaultModule,Module:Fact_,Time)

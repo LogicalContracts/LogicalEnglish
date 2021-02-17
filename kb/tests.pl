@@ -12,6 +12,8 @@ ultimate_owner(Asset,Owner,1) on _T if % full ownership, partial definition
     owns(Owner,Asset)
         at "https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/".
 
+failingIFTE if 
+	if (d(13) or t(_)) then false else true.
 
 a(X,Y) if 
     if c(X) then t(Y) else e(Y).
