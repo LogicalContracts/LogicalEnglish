@@ -45,7 +45,7 @@ taxlog2prolog(if(on(H,T),B), neck(if)-[delimiter-[SpecH,classify],SpecB], (H:-ta
     taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB).
 taxlog2prolog(if(H,B),neck(if)-[SpecH,SpecB],(H:-taxlogBody(B,_,'',[]))) :- !,
     taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB).
-taxlog2prolog((because(on(H,T),Why):-B), neck(clause)-[ delimiter-[delimiter-[SpecH,classify],classify], SpecB ], (H:-taxlogBody(B,T,'',Why))) :- Why\==[], !,
+taxlog2prolog((because(on(H,T),Why):-B), neck(clause)-[ delimiter-[delimiter-[SpecH,classify],classify], SpecB ], (H:-taxlogBody(call(B),T,'',Why))) :- Why\==[], !,
     taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB).
 taxlog2prolog(mainGoal(G,Description),delimiter-[Spec,classify],(mainGoal(G,Description):-(_=1->true;GG))) :- !, % hack to avoid 'unreferenced' highlight in SWISH
     functor(G,F,N), functor(GG,F,N), % avoid "Singleton-marked variable appears more than once"

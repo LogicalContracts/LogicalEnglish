@@ -195,7 +195,7 @@ i(G,M,CID,Cref,U,E) :- system_predicate(G), !,
 i(M:G,Mod,CID,Cref,U,E) :- !, i(at(G,M),Mod,CID,Cref,U,E).
 i(at(G,KP),M,CID,Cref,U,E) :- shouldMapModule(KP,UUID), !, 
     i(at(G,UUID),M,CID,Cref,U,E). % use SWISH's latest editor version
-i(At,Mod,CID,Cref,U,E) :- At=at(G,M_), !,
+i(At,Mod,CID,Cref,U,E) :- At=at(G,M_), !, 
     atom_string(M,M_),
     ( (loaded_kp(M); hypothetical_fact(M,_,_,_,_,_)) -> 
                 i(G,M,CID,Cref,U,E) ; 
@@ -284,7 +284,7 @@ myClause2(H,Time,M,Body,Ref,IsProlog,URL,E) :-
         (hypothetical_fact(M,H,Fact,Body_,Ref,_) *-> H=Fact ; M:clause(H,Body_,Ref))
     ),
     % hypos with rules cause their bodies to become part of our resolvent via Body:
-    ((Body_= taxlogBody(Body,Time_,URL,E_), E_\==[] ) -> (
+    ((Body_= taxlogBody(Body,Time_,URL,E_), Body=call(_) ) -> (
             (Time=Time_, IsProlog=true, E=[s(E_,M,Ref,[])])
         ); 
         Body_=taxlogBody(Body,Time_,URL,E) -> (Time=Time_, IsProlog=false) ; 
