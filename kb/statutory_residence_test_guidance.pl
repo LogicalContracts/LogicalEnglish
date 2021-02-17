@@ -52,11 +52,11 @@ Determine if Beatrice was a UK resident the tax year 6 Apr 2019 – 5 Apr 2020
 -	Beatrice worked overseas for 160 days in the same period.
 -	The remaining days were spent on holiday outside the UK.
 -	Assume that Beatrice worked 8 hours each work-day – 40 hrs per full week.
-Expected result: resident, does not qualify for 3rd automatic test due to her having a ‘relevant job’ as 
+Expected result: resident, does not qualify for 3rd automatic (UK) test due to her having a ‘relevant job’ as 
     per https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11780
 */
     scenario([
-    % NOTE: out of scope of original example
+    % NOTE: out of scope of original example; requires 'https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11370'
         ], srt(beatrice) on '20190406')
     ]).
 
@@ -78,7 +78,7 @@ Employment:
 Expected result: non-resident due to 2nd automatic test; see https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11130
 */
     scenario([
-    % NOTE: out of scope of original example
+    % NOTE: out of scope of original example, requires 'https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11330'
         ],not srt(chris) on '20190406')
     ]).
     
@@ -89,8 +89,10 @@ Facts as per Example 2C1; assume that Chris remains in the UK for the remainder 
 Expected result: resident
     */
     scenario(Facts, srt(chris) on '20200406')
-    % NOTE: out of scope of original example
-    ]) :- example("Chris Feb 12 - 2C1",[scenario(Facts2C1,_)]), Facts=Facts2C1. %TODO: add assumption
+    % NOTE: out of scope of original example, as previous one
+    ]) :- 
+        example("Chris Feb 12 - 2C1",[scenario(Facts2C1,_)]), 
+        Facts=[ + (days_in_uk(chris,'20210406','20220405',Days) if subtract_days('20210406','20220405',Days) ) |Facts2C1]. 
         
 % Assumptions: 
 %   all predicates hold on NOW unlesss indicated otherwise with 'on'; 

@@ -89,7 +89,16 @@ Each such fact identifies a predicate to be exposed via the (REST) API.
 
 	example(Title,StatesAndAssertions).
 	
-This represents an example of the application of the knowledge rules in the module, providing it with "instance" data specific to some taxpayer, asset, etc. Regulatory (guidance) text sometimes provides them, to lighten their explanations. ``StatesAndAssertions``is an ordered list of ``scenario(Facts, Postcondition)``. Facts is a list of predicate facts (Fact or Fact on Time), each optionally prefixed with ``- `` for deletion. To try an example, for each all facts in the StatesAndAssertions sequence are added/deleted, and the PostCondition (assertion) is evaluated.
+This represents an example of the application of the knowledge rules in the module, providing it with "instance" data specific to some taxpayer, asset, etc. Regulatory (guidance) text sometimes provides them, to lighten their explanations. ``StatesAndAssertions``is an ordered list of ``scenario(Facts, Postcondition)``. Facts is a list of predicate facts (Fact or Fact on Time), with some variants:
+
+ * a prefix ``- `` denotes deletion; the rest of the term must be a fact (nbot a rule). 
+ * a prefix ``+`` denotes extension: the fact or rule is added to existing facts and rules (instead of redefining them if no prefix is used); if a single + is used for a predicate, all other example facts and rules for that predicate are also additions (not redefinitions)
+ * Head if Body adds a clause; if Body is ``false``, the rule effectively asserts not(Head) as per Negation As Failure
+ * Other terms are regarded as facts
+ * Head at KP adds the fact (or rule) to the module KP
+ 
+
+To try an example, for each all facts in the StatesAndAssertions sequence are added/deleted, and the PostCondition (assertion) is evaluated at the end.
 
 These example facts are also test cases: all assertions must be true.
 
