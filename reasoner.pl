@@ -1,4 +1,4 @@
-:- module(_ThisFileName,[query/4, query_with_facts/5, query_once_with_facts/5, expand_explanation_refs/4, explanation_node_type/2,
+:- module(_ThisFileName,[query/4, query_with_facts/5, query_once_with_facts/5, explanation_node_type/2,
     run_examples/0, run_examples/1, myClause2/8, niceModule/2, refToOrigin/2,
     after/2, not_before/2, before/2, immediately_before/2, same_date/2, subtract_days/3, this_year/1, uk_tax_year/4, in/2]).
 
@@ -36,7 +36,7 @@ query_with_facts(Goal,Facts_,OnceUndo,Questions,taxlogExplanation(E),Outcome) :-
     Caller = Me:(
         i(at(G,M),OnceUndo,U,Result_),
         Result_=..[Outcome,E_],
-        expand_explanation_refs(E_,Facts,M,E)
+        expand_explanation_refs(E_,Facts,E)
         ),
     retractall(hypothetical_fact(_,_,_,_,_,_)),
     (OnceUndo==true -> once_with_facts(Caller, M, Facts, true) ; call_with_facts(Caller, M, Facts)),
@@ -72,7 +72,7 @@ i( at(G,KP),OnceTimed,Unknowns,Result) :- !,
     (OnceTimed==true -> IG = call_with_time_limit( Limit, Caller) ; IG = Caller), 
     ( catch( (IG,E_=E__,U=U__), time_limit_exceeded, (E_=[], U=[time_limit_exceeded], print_message(warning,"Time limit of ~w seconds exceeded by ~w at ~w"-[Limit,G,KP])) ) *-> 
         (expand_failure_trees_and_simp(E_,FailedUnknowns,E), Result=true(E)) ;
-        (expand_failure_trees_and_simp([f(ID,_,_)],FailedUnknowns,E), U=[], Result=false(E)) ),
+        (expand_failure_trees_and_simp([f(ID,_,_,_)],FailedUnknowns,E), U=[], Result=false(E)) ),
     append(U,FailedUnknowns,U_),
     maplist(niceModule,U_,Unknowns).
 i( G,_,_,_) :- print_message(error,"Top goal ~w should be qualified with ' at knowledge_page'"-[G]), fail.
@@ -82,12 +82,12 @@ i( G,_,_,_) :- print_message(error,"Top goal ~w should be qualified with ' at kn
 % Unknowns contains a list of at(GoalOrErrorTerm,Module)
 % otherwise, result unknown, depending on solutions to goals in Unknowns; 
 %  explanation is a list of proof-like trees: 
-%   s(nodeLiteral,ClauseRef,childrenNodes); (s)success) [] denotes.. some self-evident literal; 
-%   u(nodeLiteral,CallerClauseRef,[]); u)nknown (or system predicate floundering), basically similar to s
+%   s(nodeLiteral,Module,ClauseRef,childrenNodes); (s)success) [] denotes.. some self-evident literal; 
+%   u(nodeLiteral,Module,CallerClauseRef,[]); u)nknown (or system predicate floundering), basically similar to s
 %  if nextGoalID(ID), i(G,...) fails with zero solutions, there will be a failed tree asserted with root failed(ID,...)
 %  failures for not(G) goals will also leave asserted a fact failed_success(ID,Unknowns,Why)
-%  successes for not(G) goals will have a Why with the underlying failure, f(NegatedGoalID,CallerID,FreeVar); 
-%  these can be expanded by expand_failure_trees into f(G,CallerClausRef,Children)
+%  successes for not(G) goals will have a Why with the underlying failure, f(NegatedGoalID,Module,CallerID,FreeVar); 
+%  these can be expanded by expand_failure_trees into f(G,Module,CallerClausRef,Children)
 %  there may be orphan failed(ID,...) facts, because we're focusing on solution-less failures only
 %  this predicate is NOT thread safe
 %TODO: add meta_predicate(i(0,...)) declarations...?
@@ -106,11 +106,11 @@ i(not(G), M, CID, Cref, NotU, NotE) :- !,
     newGoalID(NotID),
     % our negation as failure requires no unknowns:
     ( i( G, M, NotID, Cref, U, E) -> (
-        assert( failed(NotID,CID,Cref,not(G))),
+        assert( failed(NotID,M,CID,Cref,not(G))),
         assert( failed_success(NotID,U,E)),
         fail
     ) ; (
-        NotE = [f(NotID,CID,_NotHere_TheyAreAsserted)], NotU=[]
+        NotE = [f(NotID,M,CID,_NotHere_TheyAreAsserted)], NotU=[]
     )).
 i(!,_,_,_,_,_) :- throw(no_cuts_allowed).
 i(';'(C->T,Else), M, CID, Cref, U, E) :- !,% should we forbid Prolog if-then-elses..?
@@ -120,7 +120,7 @@ i(';'(C->T,Else), M, CID, Cref, U, E) :- !,% should we forbid Prolog if-then-els
         append(UC,UT,U), append(EC,ET,E)
     ) ; (
         % any further failures under the (failed) condition?
-        ((nextGoalID(Other), Other\=ID) -> EC=[f(ID,CID,_NotYet)] ; EC=[]),
+        ((nextGoalID(Other), Other\=ID) -> EC=[f(ID,M,CID,_NotYet)] ; EC=[]),
         i(Else,M,CID,Cref,U,EE), append(EC,EE,E) 
     )).
 i((If->Then),M,CID,Cref,U,E) :- !, 
@@ -131,7 +131,7 @@ i((If->Then),M,CID,Cref,U,E) :- !,
 %         i(T,M,CID,Cref,UT,ET), 
 %         append(UC,UT,U), append(EC,ET,E)
 %     ) ; (
-%         ((nextGoalID(Other), Other\=ID) -> EC=[f(ID,CID,_NotYet)] ; EC=[]),
+%         ((nextGoalID(Other), Other\=ID) -> EC=[f(ID,M,CID,_NotYet)] ; EC=[]),
 %         i(Else,M,CID,Cref,U,EE), % no unknowns under C for sure
 %         append(EC,EE,E)
 %     )).
@@ -141,7 +141,7 @@ i(then(if(C),else(T,Else)), M, CID, Cref, U, E) :- !,
 i(then(if(C),Then),M,CID,Cref,U,E) :- !, i(then(if(C),else(Then,true)),M,CID,Cref,U,E).
 % sometimes this is not used... SWI seems to expands forall(X,C) into \+ (X, \+C)
 i(forall(A,B),M,CID,Cref,U,E) :- !, 
-    E=[s(forall(A,B),meta,Children)],
+    E=[s(forall(A,B),M,meta,Children)],
     newGoalID(ForID),
     findall(X, (
         i(A,M,ForID,Cref,UA,EA), 
@@ -150,64 +150,64 @@ i(forall(A,B),M,CID,Cref,U,E) :- !,
             append(UA,UB,Ui),append(EA,EB,Ei),X=Ui/Ei
         ) ; (
             % failed; was there a relevant failure under B?
-            ((nextGoalID(Other), Other\=ID) -> EB=[f(ID,CID,_NotYet)] ; EB=[]),
+            ((nextGoalID(Other), Other\=ID) -> EB=[f(ID,M,CID,_NotYet)] ; EB=[]),
             append(EA,EB,Ei),
             X=failed(UA/Ei)
             ))
         ), Tuples),
     (member(failed(UB/Ei),Tuples) -> (
-        assert( failed(ForID,CID,Cref,forall(A,B))),
+        assert( failed(ForID,M,CID,Cref,forall(A,B))),
         assert( failed_success(ForID,UB,Ei)), 
         fail
     ) ; (
         findall(Ui,member(Ui/_,Tuples),U_), append(U_,U),
         findall(Ei,member(_/Ei,Tuples),Children_), append(Children_,Children)
     )).
-i(setof(X,G,L),M,CID,Cref,U,E) :- !, E=[s(setof(X,G,L),meta,Children)],
+i(setof(X,G,L),M,CID,Cref,U,E) :- !, E=[s(setof(X,G,L),M,meta,Children)],
     wrapTemplateGoal(G,M,CID,Cref,Ui,Ei,Wrapped), %TODO: should we introduce an explicit failed node for aggregates?
     setof(X/Ui/Ei, Wrapped, Tuples),
     squeezeTuples(Tuples,L,U,Children).
-i(bagof(X,G,L),M,CID,Cref,U,E) :- !, E=[s(bagof(X,G,L),meta,Children)],
+i(bagof(X,G,L),M,CID,Cref,U,E) :- !, E=[s(bagof(X,G,L),M,meta,Children)],
     wrapTemplateGoal(G,M,CID,Cref,Ui,Ei,Wrapped),
     bagof(X/Ui/Ei, Wrapped, Tuples),
     squeezeTuples(Tuples,L,U,Children).
-i(aggregate(Template,G,Result),M,CID,Cref,U,E) :- !, E=[s(aggregate(Template,G,Result),meta,Children)],
+i(aggregate(Template,G,Result),M,CID,Cref,U,E) :- !, E=[s(aggregate(Template,G,Result),M,meta,Children)],
     % uses a bit too much of SWI internals at swipl-devel/library/aggregate.pl
     aggregate:template_to_pattern(bag, Template, Pattern, M:G, Goal, Aggregate),
-    i(bagof(Pattern, Goal, List),M,CID,Cref,U_,[s(_Bagof,_ClauseRef,Children_)]),
+    i(bagof(Pattern, Goal, List),M,CID,Cref,U_,[s(_Bagof,_M,_ClauseRef,Children_)]),
     catch( ( aggregate:aggregate_list(Aggregate, List, Result), U=U_, Children=Children_ ), 
         error(instantiation_error,_Cx), 
-        (append(U_,[at(instantiation_error(G),M)],U), append(Children_,[u(instantiation_error(G),unknown,[])],Children)) 
+        (append(U_,[at(instantiation_error(G),M)],U), append(Children_,[u(instantiation_error(G),M,unknown,[])],Children)) 
         ).
-i(findall(X,G,L),M,CID,Cref,U,E) :- !, E=[s(findall(X,G,L),meta,Children)],
+i(findall(X,G,L),M,CID,Cref,U,E) :- !, E=[s(findall(X,G,L),M,meta,Children)],
     findall(X/Ui/Ei, i(G,M,CID,Cref,Ui,Ei), Tuples), 
     squeezeTuples(Tuples,L,U,Children).
 i(Q,M,_CID,Cref,U,E) :- functor(Q,question,N), (N=1;N=2), !, 
     Q=..[_,Q_|_],
     (Q_=Format-Args -> format(string(Q__),Format,Args); Q_=Q__),
-    U=[at(Q__,M)], E=[u(at(Q__,M),Cref,[])].
+    U=[at(Q__,M)], E=[u(at(Q__,M),M,Cref,[])].
 i(G,M,CID,Cref,U,E) :- system_predicate(G), !, 
     evalArgExpressions(G,M,NewG,CID,Cref,Uargs,E_),
     % floundering originates unknown:
     catch(( myCall(M:NewG), U=Uargs, E=E_), 
         error(instantiation_error,_Cx), 
-        (append(Uargs,[at(instantiation_error(G),M)],U), append(E_,[u(instantiation_error(G),Cref,[])],E) )).
+        (append(Uargs,[at(instantiation_error(G),M)],U), append(E_,[u(instantiation_error(G),M,Cref,[])],E) )).
 i(M:G,Mod,CID,Cref,U,E) :- !, i(at(G,M),Mod,CID,Cref,U,E).
 i(at(G,KP),M,CID,Cref,U,E) :- shouldMapModule(KP,UUID), !, 
     i(at(G,UUID),M,CID,Cref,U,E). % use SWISH's latest editor version
-i(At,_Mod,CID,Cref,U,E) :- At=at(G,M_), !,
+i(At,Mod,CID,Cref,U,E) :- At=at(G,M_), !,
     atom_string(M,M_),
     ( (loaded_kp(M); hypothetical_fact(M,_,_,_,_,_)) -> 
                 i(G,M,CID,Cref,U,E) ; 
-                (U=[At], E=[u(At,Cref,[])] )).
-i(G,M,_CID,Cref,U,E) :- unknown(G,M), !, (U=[at(G,M)],E=[ u(at(G,M),Cref,[]) ]).
+                (U=[At], E=[u(At,Mod,Cref,[])] )).
+i(G,M,_CID,Cref,U,E) :- unknown(G,M), !, (U=[at(G,M)],E=[ u(at(G,M),M,Cref,[]) ]).
 %TODO: on(G,2020) means "G true on some instant in 2020"; who matches that with '20210107' ? check for clauses and hypos
 i(G,M,CID,Cref,U,E) :- 
     newGoalID(NewID), create_counter(Counter),
     (true ;( % before failing, save our failure information if no solutions were found
         get_counter(Counter,0),
         \+ catch(M:irrelevant_explanation(G),_,fail),
-        assert( failed(NewID,CID,Cref,G)),
+        assert( failed(NewID,M,CID,Cref,G)),
         fail
         )),
     evalArgExpressions(G,M,NewG,CID,Cref,Uargs,Eargs), % failures in the expression (which would be weird btw...) stay directly under CID
@@ -219,7 +219,7 @@ i(G,M,CID,Cref,U,E) :-
     )),
     inc_counter(Counter), % one more solution found; this is a nonbacktrackable operation
     append(Uargs,U_,U),
-    (catch(M:irrelevant_explanation(NewG),_,fail) -> E=Eargs ; (E=[s(G,Ref,Children)], append(Eargs,Children_,Children) )).
+    (catch(M:irrelevant_explanation(NewG),_,fail) -> E=Eargs ; (E=[s(G,M,Ref,Children)], append(Eargs,Children_,Children) )).
 
 % unknown(+Goal,+Module) whether the knowledge source is currently unable to provide a result 
 unknown(G,M) :- var(G), !, throw(variable_unknown_call_at(M)).
@@ -229,7 +229,7 @@ unknown(G,M) :- functor(G,F,N),functor(GG,F,N), \+ myClause2(GG,_,M,_,_,_,_,_).
 
 myCall(G) :- sandbox:safe_call(G).
 
-:- thread_local last_goal_id/1, failed/4, failed_success/3.
+:- thread_local last_goal_id/1, failed/5, failed_success/3.
 
 nextGoalID(ID) :- 
     (last_goal_id(Old) -> true ; Old=0), ID is Old+1.
@@ -252,7 +252,7 @@ evalArgExpressions(G,M,NewG,CID,Cref,U,E) :-
 % evalExpression(+Module,+CallerID,+CallerClauseRef,+Expression,-Result,+CallerID,+CallerClauseRef,-Unknowns,-WhyExplanation) expands (only) user functions
 % TODO: add arithmetic expressions too...?
 evalExpression(_M,_CID,_Cref,X,X,[],[]) :- var(X), !.
-evalExpression(M,CID,Cref,Exp,R,U,[s(function(Exp),Ref,Children)]) :- M:clause(function(Exp,R),Body,Ref), !,
+evalExpression(M,CID,Cref,Exp,R,U,[s(function(Exp),M,Ref,Children)]) :- M:clause(function(Exp,R),Body,Ref), !,
     once( i(Body,M,CID,Cref,U,Children) ).
 evalExpression(_M,_CID,_Cref,Exp,R,[],[]) :- Exp=..[F,_|_], member(F,[+,-,*,/]), !, R is Exp.
 evalExpression(_M,_CID,_,X,X,[],[]).
@@ -285,7 +285,7 @@ myClause2(H,Time,M,Body,Ref,IsProlog,URL,E) :-
     ),
     % hypos with rules cause their bodies to become part of our resolvent via Body:
     ((Body_= taxlogBody(Body,Time_,URL,E_), E_\==[] ) -> (
-            (Time=Time_, IsProlog=true, E=[s(E_,Ref,[])])
+            (Time=Time_, IsProlog=true, E=[s(E_,M,Ref,[])])
         ); 
         Body_=taxlogBody(Body,Time_,URL,E) -> (Time=Time_, IsProlog=false) ; 
         (Body_=Body,IsProlog=true,E=[],URL='')).
@@ -300,14 +300,14 @@ refToOrigin(Ref,URL) :-
         )).
 refToOrigin(Ref_,Ref) :- term_string(Ref_,Ref).
 
-% refToModuleAndSourceAndOrigin(ClauseRef,-Module,-SourceCode,-TextOriginURL)
-refToModuleAndSourceAndOrigin(Ref,M,Source,Origin) :-
+% refToSourceAndOrigin(ClauseRef,-SourceCode,-TextOriginURL)
+refToSourceAndOrigin(Ref,Source,Origin) :-
     refToOrigin(Ref,Origin),
     ((blob(Ref,clause),clause(H,B,Ref)) -> (
-        with_output_to(string(Source),portray_clause((H:-B))),
-        clause_property(Ref,module(M))
+        with_output_to(string(Source),portray_clause((H:-B)))
+
     )
-        ; (Source="", M='???')).
+        ; Source="").
 
 :- multifile prolog:meta_goal/2. % for xref
 prolog:meta_goal(at(G,M),[M_:G]) :- (nonvar(M) -> atom_string(M_,M) ; M=M_).
@@ -442,50 +442,51 @@ expand_failure_trees_and_simp(E,FailedUnknowns,ES) :-
     simplify_explanation(Expanded,ES).
 
 % expand_failure_trees(+Why,Unknowns,NewUnknowns,-ExpandedWhy)  the unknows are only those in failed branches
-expand_failure_trees([s(X,Ref,Children)|Wn],U1,Un,[s(X,Ref,NewChildren)|EWn]) :- !, 
+expand_failure_trees([s(X,M,Ref,Children)|Wn],U1,Un,[s(X,M,Ref,NewChildren)|EWn]) :- !, 
     expand_failure_trees(Children,U1,U2,NewChildren), expand_failure_trees(Wn,U2,Un,EWn).
-expand_failure_trees([u(X,Ref,Children)|Wn],U1,Un,[u(X,Ref,NewChildren)|EWn]) :- !, 
+expand_failure_trees([u(X,M,Ref,Children)|Wn],U1,Un,[u(X,M,Ref,NewChildren)|EWn]) :- !, 
     expand_failure_trees(Children,U1,U2,NewChildren), expand_failure_trees(Wn,U2,Un,EWn).
-expand_failure_trees([f(ID,_CID_,Children)|Wn],U1,Un,[f(G,Cref,Children)|EWn]) :- failed_success(ID,U,Why), !, 
+expand_failure_trees([f(ID,M,_CID_,Children)|Wn],U1,Un,[f(G,M,Cref,Children)|EWn]) :- failed_success(ID,U,Why), !, 
     must_be(var,Children),
-    must(failed(ID,_CID,Cref,G),one), % CID was causing a failure of this for shares_trading_on_growth_market_but_unlisted_on_recognized
+    must(failed(ID,M,_CID,Cref,G),one), % CID was causing a failure of this for shares_trading_on_growth_market_but_unlisted_on_recognized
     %Children = Why,
     expand_failure_trees(Why,U1,U2,Children),
     expand_failure_trees(Wn,U2,Un_,EWn), append(Un_,U,Un).
-expand_failure_trees([f(ID,CID,Children)|Wn],U1,Un,Expanded) :- 
+expand_failure_trees([f(ID,Module,CID,Children)|Wn],U1,Un,Expanded) :- 
     must_be(var,Children),
-    findall(f(ChildID,ID,_),failed(ChildID,ID,_Cref,_ChildG),Children),
+    findall(f(ChildID,M,ID,_),failed(ChildID,M,ID,_Cref,_ChildG),Children),
     expand_failure_trees(Children,U1,U2,NewChildren),
     expand_failure_trees(Wn,U2,Un,EWn),
-    (failed(ID,CID,Cref,G) -> Expanded=[f(G,Cref,NewChildren)|EWn]; append(NewChildren,EWn,Expanded)).
+    (failed(ID,Module,CID,Cref,G) -> Expanded=[f(G,Module,Cref,NewChildren)|EWn]; append(NewChildren,EWn,Expanded)).
 expand_failure_trees([],U,U,[]).
 
 % simplify_explanation(+ExpandedWhy,-LeanerWhy)
 simplify_explanation(Why,Simp) :- simplify_explanation(Why,[],_,Simp).
 
-% simplify_explanation(+Why,+VisitedNodes,-NewVisitedNodes,-Simplified) ...Nodes are lists of (s/f/u)(Literal)
-simplify_explanation([E1|En],Visited,NewVisited,Simplified) :- E1=..[Type,X,Ref,Children], Node=..[Type,X],
+% simplify_explanation(+Why,+VisitedNodes,-NewVisitedNodes,-Simplified) ...Nodes are lists of (s/f/u)(Literal,Module)
+simplify_explanation([E1|En],Visited,NewVisited,Simplified) :- E1=..[Type,X,M,Ref,Children], Node=..[Type,X,M],
     ((member(Node_,Visited), variant(Node_,Node))->
         simplify_explanation(En,Visited,NewVisited,Simplified) ;
         ( 
             simplify_explanation(Children,[Node|Visited],V2,SimpChildren), simplify_explanation(En,V2,NewVisited,SimpN), 
-            E1Simp=..[Type,X,Ref,SimpChildren],
+            E1Simp=..[Type,X,M,Ref,SimpChildren],
             Simplified=[E1Simp|SimpN]
             )
         ).
 simplify_explanation([],V,V,[]).
 
-% expand_explanation_refs(+ExpandedWhy,+ExtraFacts,+TheirModule,-ExpandedRefLessWhy)
+% expand_explanation_refs(+ExpandedWhy,+ExtraFacts,-ExpandedRefLessWhy)
 % TODO: recover original variable names? seems to require either some hacking with clause_info or reparsing
-% transforms explanation: each nodetype(Literal,ClauseRef,Children) --> nodetype(Literal,ClauseRef,Module,SourceString,OriginURL,Children)
-expand_explanation_refs([Node|Nodes],Facts,M,[NewNode|NewNodes]) :- !,
-    Node=..[Type,X,Ref,Children], 
-    refToModuleAndSourceAndOrigin(Ref,Module,Source,Origin),
-    ((M=Module, member(XX,Facts), variant(XX,X)) -> NewOrigin=userFact ; NewOrigin=Origin),
+% transforms explanation: each nodetype(Literal,Module,ClauseRef,Children) --> nodetype(Literal,ClauseRef,Module,SourceString,OriginURL,Children)
+expand_explanation_refs([Node|Nodes],Facts,[NewNode|NewNodes]) :- !,
+    Node=..[Type,X,Module,Ref,Children], 
+    refToSourceAndOrigin(Ref,Source,Origin),
+    %TODO: is the following test against facts necessary???:
+    ((member(XX,Facts), variant(XX,X)) -> NewOrigin=userFact ; NewOrigin=Origin),
     NewNode=..[Type,X,Ref,Module,Source,NewOrigin,NewChildren],
-    expand_explanation_refs(Children,Facts,M,NewChildren),
-    expand_explanation_refs(Nodes,Facts,M,NewNodes).
-expand_explanation_refs([],_,_,[]).
+    expand_explanation_refs(Children,Facts,NewChildren),
+    expand_explanation_refs(Nodes,Facts,NewNodes).
+expand_explanation_refs([],_,[]).
 
 
 % [s(a(1,a),<clause>(0x7f95c763bc30),[s(c(1),<clause>(0x7f95c763bd90),[]),s(t(a),<clause>(0x7f95c763c000),[])])]
