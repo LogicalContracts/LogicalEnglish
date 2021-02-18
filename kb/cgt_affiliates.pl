@@ -20,8 +20,9 @@ affiliate(Entity,Affiliate) on Date if
 affiliate(Entity,Affiliate) on Date if
     Date before '20090101' % date when affiliate definition changed
     and must_be(nonvar,Entity) and must_be(nonvar,Affiliate)
-    and question( "Is '~w' an affiliate of '~w' as per the older legislation" - [Affiliate,Entity]).
+    and affiliate_per_older_legislation(Affiliate,Entity).
 
+question( affiliate_per_older_legislation(Affiliate,Entity), "Is '~w' an affiliate of '~w' as per the older legislation" - [Affiliate,Entity]).
 
 % stub for an "external" Prolog call
 is_individual_or_company(Affiliate) on Date because 'according to myDB_entities' :- 

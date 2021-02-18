@@ -1,4 +1,4 @@
-:- module(_ThisFileName,[query/4, query_with_facts/5, query_once_with_facts/5, explanation_node_type/2,
+:- module(_ThisFileName,[query/4, query_with_facts/5, query_once_with_facts/5, explanation_node_type/2, render_questions/2,
     run_examples/0, run_examples/1, myClause2/8, niceModule/2, refToOrigin/2,
     after/2, not_before/2, before/2, immediately_before/2, same_date/2, subtract_days/3, this_year/1, uk_tax_year/4, in/2]).
 
@@ -46,6 +46,17 @@ query_with_facts(Goal,Facts_,OnceUndo,Questions,taxlogExplanation(E),Outcome) :-
 %  query considering the given facts (or accumulated facts of all scenarios the given example name), undoes them at the end; limited execution time
 query_once_with_facts(Goal,Facts_,Questions,E,Outcome) :-
     query_with_facts(Goal,Facts_,true,Questions,E,Outcome).
+
+%! render_questions(+Unknowns,-Questions) is det
+%   Transform unknown goals into question(...) terms
+render_questions([U1|Un],[Q1|Qn]) :- !, render_question(U1,Q1), render_questions(Un,Qn).
+render_questions([],[]).
+
+render_question(at(U,M),question(U,Q)) :- catch(M:question(U,QT),_,fail), !, 
+    (QT=Format-Args -> format(string(Q),Format,Args); Q=QT).
+render_question(at(U,M),question(U,Q,Answer)) :- catch(M:question(U,QT,Answer),_,fail), !, 
+    (QT=Format-Args -> format(string(Q),Format,Args); Q=QT).
+render_question(G,Q) :- format(string(Q)," Is ~w true?",[G]).
 
 % list_without_variants(+L,-NL) 
 % Remove duplicates from list L, without binding variables, and keeping last occurrences in their original order
@@ -182,10 +193,11 @@ i(aggregate(Template,G,Result),M,CID,Cref,U,E) :- !, E=[s(aggregate(Template,G,R
 i(findall(X,G,L),M,CID,Cref,U,E) :- !, E=[s(findall(X,G,L),M,meta,Children)],
     findall(X/Ui/Ei, i(G,M,CID,Cref,Ui,Ei), Tuples), 
     squeezeTuples(Tuples,L,U,Children).
-i(Q,M,_CID,Cref,U,E) :- functor(Q,question,N), (N=1;N=2), !, 
-    Q=..[_,Q_|_],
-    (Q_=Format-Args -> format(string(Q__),Format,Args); Q_=Q__),
-    U=[at(Q__,M)], E=[u(at(Q__,M),M,Cref,[])].
+% questions are now annotation facts for rendering unknowns, not goals, so this is commented out:
+% i(Q,M,_CID,Cref,U,E) :- functor(Q,question,N), (N=1;N=2), !, 
+%     Q=..[_,Q_|_],
+%     (Q_=Format-Args -> format(string(Q__),Format,Args); Q_=Q__),
+%     U=[at(Q__,M)], E=[u(at(Q__,M),M,Cref,[])].
 i(G,M,CID,Cref,U,E) :- system_predicate(G), !, 
     evalArgExpressions(G,M,NewG,CID,Cref,Uargs,E_),
     % floundering originates unknown:
@@ -577,7 +589,7 @@ in(X,List) :- must_be(list,List), member(X,List).
 sandbox:safe_primitive(reasoner:query(_,_,_,_)).
 sandbox:safe_primitive(reasoner:query_once_with_facts(_,_,_,_,_)).
 sandbox:safe_primitive(reasoner:query_with_facts(_,_,_,_,_)).
-
+sandbox:safe_primitive(reasoner:render_questions(_,_)).
 
 
 :- use_module(swish(lib/html_output),[html/1]). 

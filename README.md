@@ -110,10 +110,10 @@ This is meant mostly as a convenience/readability feature, e.g. being able to wr
 
 **TODO**: document contexts where functions can be used
 
-Some predicates are so hard to specify that they may actually require a question to a human:
+Unknown predicate literals are in fact the "juice" for question to a human, which can be rendered with more detail if available, via the following optional facts:
 
-	question(QuestionTerm)		a yes/no question
-	question(QuestionTerm,Answer)	elicit an answer from the user
+	question(Literal,QuestionTerm)		a yes/no question
+	question(Literal, QuestionTerm, Answer)	elicit an answer from the user; the Answer and Literal terms need to share some variable
 
 QuestionTerm can be a string, or a ```FormatString-ArgumentsList``` term, to allow for binding the question string with values, using the [format/2](https://www.swi-prolog.org/pldoc/doc_for?object=format/2) syntax.
 

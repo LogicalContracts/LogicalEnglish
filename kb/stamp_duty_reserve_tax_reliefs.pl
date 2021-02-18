@@ -112,8 +112,7 @@ shares_trading_on_growth_market_but_unlisted_on_recognized if
             at "https://www.gov.uk/government/publications/recognised-stock-exchanges-definition-legislation-and-tables/recognised-stock-exchanges-definition-legislation-and-tables-of-recognised-exchanges", 
         not trading_in_market(ID,Exchange) on When).
 
-shares_received_as_gift if
-    question("Did you receive the shares as a gift, without paying anything (either money or some other consideration)").
+question( shares_received_as_gift, "Did you receive the shares as a gift, without paying anything (either money or some other consideration)").
 
 married_or_in_civil_partnership(P1,P2) if
     % assumes myDB_456 checks also the symmetrical relationship
@@ -125,6 +124,6 @@ trading_in_market(SecurityID,MarketID) if
 %TODO: later (cf. Chris email Dec 2, 2020): Transfers that qualify for Stamp Duty Reserve Tax RELIEF 
 
 /** <examples>
-?- query_with_facts(exempt_transfer,"Chris Feb 12 - 1A",Unknowns,Explanation,Result).
+?- query_with_facts(exempt_transfer,"Chris Feb 12 - 1A",Unknowns,Explanation,Result), render_questions(Unknowns,Questions).
 ?- (Unknowns=[];Unknowns=_), query_with_facts(exempt_transfer,"Chris Feb 12 - 1B1",Unknowns,Explanation,Result).
 */

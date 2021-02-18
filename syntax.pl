@@ -54,6 +54,8 @@ taxlog2prolog((example(T,Sequence):-Body), neck(clause)-[delimiter-[classify,Spe
     (Sequence==[]->Spec=classify ; (Spec=list-SeqSpec, scenarioSequenceSpec(Sequence,SeqSpec))).
 taxlog2prolog(example(T,Sequence),delimiter-[classify,Spec],example(T,Sequence)) :- !,  
     (Sequence==[]->Spec=classify ; (Spec=list-SeqSpec, scenarioSequenceSpec(Sequence,SeqSpec))).
+taxlog2prolog(question(X,QuestionTerm),delimiter-[classify,classify],question(X,QuestionTerm)) :- !.
+taxlog2prolog(question(X,QuestionTerm,Answer),delimiter-[classify,classify,classify],question(X,QuestionTerm,Answer)) :- !.
 taxlog2prolog(irrelevant_explanation(G),delimiter-[Spec],irrelevant_explanation(G)) :- !, 
     taxlogBodySpec(G,Spec).
 
@@ -128,8 +130,9 @@ taxlogBodySpec(aggregate(_X,G,_L),control-[classify,SpecG,classify]) :- !,
     taxlogBodySpec(G,SpecG). 
 taxlogBodySpec(findall(_X,G,_L),control-[classify,SpecG,classify]) :- !, 
     taxlogBodySpec(G,SpecG). 
-taxlogBodySpec(question(_,_),delimiter-[classify,classify]). % to avoid multiline colouring bug
-taxlogBodySpec(question(_),delimiter-[classify]).
+% questions are no longer goals, just annotations for (rendering unknown) goal literals
+%taxlogBodySpec(question(_,_),delimiter-[classify,classify]). % to avoid multiline colouring bug
+%taxlogBodySpec(question(_),delimiter-[classify]).
 taxlogBodySpec(M:G,delimiter-[classify,SpecG]) :- !, taxlogBodySpec(at(G,M),delimiter-[SpecG,classify]).
 taxlogBodySpec(at(G_,M_),Spec) :- nonvar(M_), nonvar(G_), !, % assuming atomic goals
     atom_string(M,M_), %TODO: this might be cleaned up/refactored with the next clauses:

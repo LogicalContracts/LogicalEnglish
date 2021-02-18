@@ -39,6 +39,11 @@ example("Andrew email Feb 5 2021",[
 satisfies_maximum_net_asset_value_test(TFN) on Date if 
     cgt_assets_net_value(TFN,Value) on Date and Value =< 6000000.
 
+cgt_assets_net_value(You,Value) on Date if 
+    aggregate(sum(AssetNet), (
+        relevant_asset(You,Asset) and is_cgt_asset(Asset) and not asset_to_exclude(You,Asset) and net_value(Asset,AssetNet) on Date
+        ), Value).
+    
 relevant_asset(You,Asset) if 
     owns(You,Asset).
 relevant_asset(You,Asset) if 
@@ -79,10 +84,6 @@ net_value(Asset,Value) on Date if
 
 % "Partner in a partnership": seems just an example
 
-cgt_assets_net_value(You,Value) on Date if 
-    aggregate(sum(AssetNet), (
-        relevant_asset(You,Asset) and is_cgt_asset(Asset) and not asset_to_exclude(You,Asset) and net_value(Asset,AssetNet) on Date
-        ), Value).
 
 
 % proxy predicates to other knowledge pages:

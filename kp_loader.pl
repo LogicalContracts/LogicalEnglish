@@ -96,12 +96,14 @@ load_kps :-
         load_named_file(File,URL,InGitty)
     )).
 
-setup_kp_modules :- forall(kp(M), (
+setup_kp_modules :- forall(kp(M), setup_kp_module(M) ).
+
+setup_kp_module(M) :-
     M:discontiguous((if)/2),
     M:discontiguous((on)/2),
     M:discontiguous((because)/2),
-    declare_our_metas(M)
-    )).
+    M:discontiguous(question/2), M:discontiguous(question/3),
+    declare_our_metas(M).
 
 %! loaded_kp(++KnowledgePageName) is nondet.
 %
@@ -430,6 +432,7 @@ user:term_expansion((:-module(M,L)),(:-module(M,L))) :- !, assert(myDeclaredModu
 :- thread_local myCurrentModule/1. % the new temporary SWISH module where our query runs
 pengines:prepare_module(Module, swish, _Options) :- 
     % this seems to hold always, but commenting it out just in case...: assertion( \+ myCurrentModule(_)),
+    setup_kp_module(Module),
     assert(myCurrentModule(Module)).
 
 % there is (just arrived from the SWISH editor) a fresher version To of the declared module From
