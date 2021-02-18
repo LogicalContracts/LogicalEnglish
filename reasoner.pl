@@ -52,9 +52,9 @@ query_once_with_facts(Goal,Facts_,Questions,E,Outcome) :-
 render_questions([U1|Un],[Q1|Qn]) :- !, render_question(U1,Q1), render_questions(Un,Qn).
 render_questions([],[]).
 
-render_question(at(U,M),question(U,Q)) :- catch(M:question(U,QT),_,fail), !, 
+render_question(at(U,M_),question(U,Q)) :- (shouldMapModule(M_,M)->true;M=M_), catch(M:question(U,QT),_,fail), !, 
     (QT=Format-Args -> format(string(Q),Format,Args); Q=QT).
-render_question(at(U,M),question(U,Q,Answer)) :- catch(M:question(U,QT,Answer),_,fail), !, 
+render_question(at(U,M_),question(U,Q,Answer)) :- (shouldMapModule(M_,M)->true;M=M_), catch(M:question(U,QT,Answer),_,fail), !, 
     (QT=Format-Args -> format(string(Q),Format,Args); Q=QT).
 render_question(G,Q) :- format(string(Q)," Is ~w true?",[G]).
 

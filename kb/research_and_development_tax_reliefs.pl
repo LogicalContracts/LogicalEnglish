@@ -10,7 +10,6 @@ mainGoal(r_d_relief(_ProjectID,_ExtraDeduction,_TaxCredit), "Determine if a proj
 
 example("email Chris Feb 17 - 3A",[
     scenario([
-        theProject(ID),
         project_team(ID,[adam,brad,claire]),
         project_subject_experts(ID,[diana,elaine,fred]),
         aims_advance_in_field(ID),
@@ -20,23 +19,41 @@ example("email Chris Feb 17 - 3A",[
         ], not qualify_for_r_d(ID))
     ]) :- ID = wirelessFridge.
 
+example("email Chris Feb 17 - 3B",[
+    scenario([
+        project_team(ID,[brown]),
+        aims_advance_in_field(ID),
+        other_attempts_have_failed(ID),
+        uncertainties_involved_explained_by(_AnyExpert,"it might not levitate"),
+        there_was_uncertainty(ID), % override rule below, as we don't know the specific experts
+        overcame_uncertainty(ID,"it worked well!")
+        ], not qualify_for_r_d(ID))
+    ]) :- ID = hoverboard.
+
+example("email Chris Feb 17 - 3C",[
+    scenario([
+        project_team(ID,[george,hillary]),
+        other_attempts_have_failed(ID),
+        there_was_uncertainty(ID), % override rule below, as we don't know the specific experts
+        overcame_uncertainty(ID,"it bound properly!")
+        ], not qualify_for_r_d(ID))
+    ]) :- ID = candyfloss.
+
+
+/* doesn't seem very useful, using extra arguments for project further below:
 :- thread_local theProject/1.
 function(project(), Result) if 
     theProject(Result).
-
+*/
 
 :- thread_local project_team/2. % ProjectID, MemberList
 :- thread_local project_subject_experts/2. % ProjectID, ExpertsList
-r_d_relief(ProjectID,ExtraDeduction,TaxCredit) :-
-    assert(theProject(ProjectID)),
-    r_d_relief(ExtraDeduction,TaxCredit).
 
 % Assumptions: 
-%   all predicates hold on NOW unlesss indicated otherwise with 'on'; 
+%   all predicates hold on FOREVER unlesss indicated otherwise with 'on'; 
 %   datetimes in iso_8601 format
-%   external predicates MUST be aware of the local main event time, "now"
 
-r_d_relief(ExtraDeduction,TaxCredit) if
+r_d_relief(ProjectID,ExtraDeduction,TaxCredit) if
     qualify_for_r_d(project()) and ( % specific qualifying conditions are to be encoded in these:
         sme_r_d_relief(ExtraDeduction,TaxCredit) at "https://www.gov.uk/guidance/corporation-tax-research-and-development-tax-relief-for-small-and-medium-sized-enterprises" 
         or 
@@ -74,4 +91,6 @@ question( overcame_uncertainty(P,How), "Explain the work done in ~w to overcome 
 
 /** <examples>
 ?- query_with_facts(qualify_for_r_d(Project) at 'https://www.gov.uk/guidance/corporation-tax-research-and-development-rd-relief',"email Chris Feb 17 - 3A",Unknowns,Explanation,Result).
+?- query_with_facts(qualify_for_r_d(Project) at 'https://www.gov.uk/guidance/corporation-tax-research-and-development-rd-relief',"email Chris Feb 17 - 3B",Unknowns,Explanation,Result).
+?- query_with_facts(qualify_for_r_d(Project) at 'https://www.gov.uk/guidance/corporation-tax-research-and-development-rd-relief',"email Chris Feb 17 - 3C",Unknowns,Explanation,Result), render_questions(Unknowns,Q).
 */
