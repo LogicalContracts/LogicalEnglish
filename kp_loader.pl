@@ -2,7 +2,7 @@
     loaded_kp/1, kp_dir/1, kp_location/3, kp/1, shouldMapModule/2, moduleMapping/2, myDeclaredModule/1,
     discover_kps_in_dir/1, discover_kps_in_dir/0, discover_kps_gitty/0, setup_kp_modules/0, load_kps/0,
     load_gitty_files/1, load_gitty_files/0, save_gitty_files/1, save_gitty_files/0, delete_gitty_file/1, update_gitty_file/3,
-    xref_all/0, xref_clean/0, kp_predicates/0, reset_errors/0, my_xref_defined/3, url_simple/2,
+    xref_all/0, xref_clean/0, print_kp_predicates/0, reset_errors/0, my_xref_defined/3, url_simple/2,
     edit_kp/1, knowledgePagesGraph/1, knowledgePagesGraph/2]).
 
 :- use_module(library(prolog_xref)).
@@ -183,10 +183,11 @@ prolog:message(no_kp(Name)) --> ["Could not find knowledge page ~w"-[Name]].
 xref_clean :-
     forall(kp_location(URL,_,_), xref_clean(URL)).
 
-kp_predicates :- kp_predicates(_).
+
+print_kp_predicates :- print_kp_predicates(_).
 
 % This also LOADS the modules, to access the examples:
-kp_predicates(KP) :- %TODO: ignore subtrees of because/2
+print_kp_predicates(KP) :- %TODO: ignore subtrees of because/2
     print_message(informational,"Loading all Knowledge Pages.."-[]),
     forall(kp(KP),loaded_kp(KP)),
     forall(kp(KP),(
@@ -212,6 +213,7 @@ kp_predicates(KP) :- %TODO: ignore subtrees of because/2
             ), 
             (functor(G,F,N), format("    ~w (~w)~n",[F/N,Other]))
         ),
+        %TODO: report local undefineds too!!!
         format("  UNDEFINED predicates:~n"),
         forall((
             xref_called(KP, Called, _),

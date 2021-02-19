@@ -2,13 +2,14 @@
 
 :- module(_,[
     load_content/1, content/2, refreshTokens/1, content_tokens/4, content_tokens_in/5,
-    t_word/2, t_lemma/2, t_pos/2, t_tag/2, t_head/2, t_dep/2, t_i/2, t_offset/2, t_absorbed/2, member_with/3,
+    t_word/2, t_lemma/2, t_pos/2, t_tag/2, t_head/2, t_dep/2, t_i/2, t_offset/2, t_absorbed/2, member_with/3, member_with/2,
     sentence/2, parseAndSee/4, parseAndSee/5,
     depgraph/2, hierplane/2]).
 % Spacy interface: parsing, representation of text chunks and sentences with tokens, utility predicates
 % Text and tokens are kept associated with URLs/paths, with an implicit textual hierarchy
 
-% load_file(+ContentFileOrDicts)  loads content from a a file or a ItemsArray list; each item is a _{url:U,text:T} dict
+%! load_file(+ContentFileOrDicts)  
+%  loads content from a file or an ItemsArray list; each item is a _{url:U,text:T} dict
 load_content(File) :- atomic(File), !,
     setup_call_cleanup(open(File,read,S),(
         repeat,
@@ -99,6 +100,8 @@ t_absorbed(t(_I,_Offset,_Word,_Lemma,_POS,_Tag,_Head,_Dep,Absorbed),Absorbed). %
 t_absorb(t(I,Offset,Word,Lemma,POS,Tag,Head,Dep,Old), Absorbed, t(I,Offset,Word,Lemma,POS,Tag,Head,Dep,New)) :-
     must_be(list,Old), must_be(list,Absorbed), append(Old,Absorbed,New).
 
+%! member_with(?Conditions,?Token,+Tokens)
+%  Tokens has a Token complying to Condition (or a list thereof); each condition is a token_field_name=value, e.g. pos=verb
 member_with(i=I,T,Tokens):-!, t_i(T,I), (nonvar(I) -> memberchk(T,Tokens) ; member(T,Tokens)). % i is a key!
 member_with(head=Head,T,Tokens):-!, t_head(T,Head), member(T,Tokens).
 member_with(pos=POS,T,Tokens):-!, t_pos(T,POS), member(T,Tokens). 
@@ -109,6 +112,8 @@ member_with(lemma=L,T,Tokens):-!, t_lemma(T,L), member(T,Tokens).
 member_with([C|Conditions],T,Tokens):-!, member_with(C,T,Tokens), member_with(Conditions,T,Tokens).
 member_with([],T,Tokens) :- !, member(T,Tokens).
 member_with(AV,_,_) :- domain_error(token_attribute=value,AV).
+
+member_with(Conditions,Tokens) :- member_with(Conditions,_,Tokens).
 
 select_with(i=I,T,Tokens,NewTokens):- !, t_i(T,I), select(T,Tokens,NewTokens). 
 select_with(AV,_,_,_) :- domain_error(token_attribute=value,AV).
@@ -224,9 +229,9 @@ tokens_to_children_trees(Tokens,_,[],Tokens).
 
 
 %%% For spaCy:
-% Meaning of dependency labels: https://spacy.io/api/annotation#dependency-parsing
+% Meaning of dependency labels: https://v2.spacy.io/api/annotation#dependency-parsing
 
-% tags (finer, not the coarser universal POS): https://spacy.io/api/annotation#pos-tagging
+% tags (finer, not the coarser universal POS): https://v2.spacy.io/api/annotation#pos-tagging
 % the following was copied from the above and then:
 %   tagToPOS(Tag,POS,M,D), string_lower(Tag,TagL), string_lower(POS,POSL), atom_string(Tag_,TagL), atom_string(POS_,POSL), 
 %    format("tagToPOS(~q,~q, ~q,~q).~n",[Tag_,POS_,M,D]), fail.
@@ -358,7 +363,7 @@ spaCyParse(Text,CollapseNouns,CollapsePuncts,Model,Dict) :-
     atom_string(Text,Text_),
     replace_complicated_words(Text_,Text__),
     %(Text_\=Text__ -> print_message(informational,Text__);true),
-    spaCyURL(URL),
+    (spaCyURL(URL) -> true ; (print_message(error,"Missing spaCy URL"), fail)),
     format(atom(Post),'{"text":"~a", "model":"~a", "collapse_phrases": ~w, "collapse_punctuation": ~w }',[Text__,Model,CollapseNouns,CollapsePuncts]),
     catch( (http_post(URL, atom(Post), Result, []), atom_json_dict(Result,Dict,[])), Ex, (print_message(error,"spaCy failed for ~a: ~w"-[Text, Ex]), Dict=[])).
 

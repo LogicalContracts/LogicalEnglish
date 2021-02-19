@@ -1,13 +1,21 @@
-:- module(_,[draft_string/2]).
+:- module(_,[draft_string/2, test_draft/2]).
 
 :- use_module('spacy/spacy.pl').
 
 % Knowledge page drafting aids, assuming loaded content and using Spacy parses and known knowledge pages (modules)
 
-% TextURL,Functor,Args,Why   
+%! test_draft(+Text,-DraftedCode)
+%  Draft some source code from a given text string
+test_draft(Text,DraftedCode) :-
+    load_content( [_{url:testURL,text:Text}] ),
+    draft_string(testURL,DraftedCode).
+
 %  Args is (for now..) a list of role names
 %  Why includes relevant sentences and tokens within the TextURL's text, Spacy extraction
-:- thread_local predicate_draft/4. 
+:- thread_local predicate_draft/4. % TextURL,Functor,Args,Why 
+
+draft_string(URL,S) :- 
+    draft(URL,Tmp), read_file_to_string(Tmp,S,[]).
 
 % draft(+URL,-TmpPrologFile)
 draft(URL,TmpFile):-
@@ -18,6 +26,7 @@ draft(URL,TmpFile):-
         content_tokens_in(URL,SpecificURL,SI,Tokens,Extraction),
         detected_predicate(Tokens,Functor,Args,Reason)
         ),
+        %TODO: detect duplicates/variants
         assert(predicate_draft(URL,Functor,Args,Extraction/SpecificURL/SI/Reason)
     )),
     tmp_file_stream(TmpFile, S, [encoding(text),extension(pl)]),
@@ -31,16 +40,13 @@ draft(URL,TmpFile):-
         )),
     close(S).
 
-draft_string(URL,S) :- 
-    draft(URL,Tmp), read_file_to_string(Tmp,S,[]).
-
 % detected_predicate(+Tokens,-Functor,-Args,-Reason)
 % See predicates and notes on tags etc. in spacy.pl 
 detected_predicate(Tokens,F,Args,VerbToken) :- 
     member_with([lemma=L_,tag=VerbTag,pos=verb,i=Vi_], VerbToken, Tokens), 
     VerbTag\=md, % must not be a modal auxiliary
     (L_=="be" -> (
-        member_with([head=Vi_,dep=acomp,lemma=RealL,i=Vi],_,Tokens), 
+        member_with([head=Vi_,dep=acomp,lemma=RealL,i=Vi],Tokens), 
         atomic_list_concat([L_,'_',RealL],LL), atom_string(L,LL)
         ) ; (
             L=L_, Vi=Vi_
@@ -48,7 +54,10 @@ detected_predicate(Tokens,F,Args,VerbToken) :-
     ), 
     atom_string(F,L),
     findall(Arg,(
-        member_with([head=Vi,dep=prep,lemma=Arg_],_ArgToken,Tokens),
+        (
+            member_with([head=Vi,dep=nsubj],Tokens), Arg_="Subject" 
+            ; member_with([head=Vi,dep=dobj],Tokens), Arg_="Object"
+            ; member_with([head=Vi,dep=prep,lemma=Arg_],Tokens)),
         atom_string(Arg,Arg_)
         ),Args).
 
