@@ -104,9 +104,12 @@ rollover_applies(Event) if
     and setof(Owner/Share, ultimate_owner(Asset,Owner,Share) on Before, PreviousOwners)
     and setof(Owner/Share, ultimate_owner(Asset,Owner,Share) on When, NewOwners) % assuming that When is the first moment after the transfer
     and ( 
-        NewOwners = PreviousOwners or 
+        NewOwners = PreviousOwners 
+        or 
         % there is a family trust to which all owners belong:
-        family_trust(_FT,GroupMembers) and forall(Owner/_ in PreviousOwners, Owner in GroupMembers) and forall(Owner/_ in NewOwners, Owner in GroupMembers)
+        family_trust(FT,GroupMembers) and family_trust_election_ocurred(FT)
+        and forall(Owner/_ in PreviousOwners, Owner in GroupMembers) 
+        and forall(Owner/_ in NewOwners, Owner in GroupMembers)
     )
     and elligible_asset(Asset).
 
