@@ -1,8 +1,9 @@
 :- module(_,[
-    loaded_kp/1, kp_dir/1, kp_location/3, kp/1, shouldMapModule/2, moduleMapping/2, myDeclaredModule/1, system_predicate/1,
+    loaded_kp/1, all_kps_loaded/0, kp_dir/1, kp_location/3, kp/1, shouldMapModule/2, moduleMapping/2, myDeclaredModule/1, system_predicate/1,
     discover_kps_in_dir/1, discover_kps_in_dir/0, discover_kps_gitty/0, setup_kp_modules/0, load_kps/0,
     load_gitty_files/1, load_gitty_files/0, save_gitty_files/1, save_gitty_files/0, delete_gitty_file/1, update_gitty_file/3,
     xref_all/0, xref_clean/0, print_kp_predicates/0, reset_errors/0, my_xref_defined/3, url_simple/2,
+    kp_predicate_mention/3, predicate_literal/2,
     edit_kp/1, knowledgePagesGraph/1, knowledgePagesGraph/2]).
 
 :- use_module(library(prolog_xref)).
@@ -105,11 +106,15 @@ setup_kp_module(M) :-
     M:discontiguous(question/2), M:discontiguous(question/3),
     declare_our_metas(M).
 
+all_kps_loaded:-
+    print_message(informational,"Loading all Knowledge Pages.."-[]),
+    forall(kp(KP),loaded_kp(KP)).
+
 %! loaded_kp(++KnowledgePageName) is nondet.
 %
 %  loads the knowledge page, failing if it cannot
-loaded_kp(Name) :- shouldMapModule(_,Name), !. % SWISH module already loaded 
-loaded_kp(Name) :- must_be(nonvar,Name), \+ kp_location(Name,_,_), !, 
+loaded_kp(Name) :- must_be(nonvar,Name), shouldMapModule(_,Name), !. % SWISH module already loaded 
+loaded_kp(Name) :- \+ kp_location(Name,_,_), !, 
     (\+ reported_missing_kp(Name) -> (
         assert(reported_missing_kp(Name)), print_message(error,"Unknown knowledge page: ~w"-[Name])) 
         ; true), 
@@ -183,15 +188,40 @@ prolog:message(no_kp(Name)) --> ["Could not find knowledge page ~w"-[Name]].
 xref_clean :-
     forall(kp_location(URL,_,_), xref_clean(URL)).
 
-% kp_predicate(Module,PredicateTemplate) :-
 
+% kp_predicate_mention(?Module,?PredicateTemplate,?How) How is called_by(KP)/defined
+% Considers undefined predicates too; ignores mentions from example scenarios
+kp_predicate_mention(KP,G,How) :-
+    kp(Here),
+    ( KP=Here, xref_defined(Here,G,_), How=defined ; 
+      xref_called(Here, Called, _By), How=called_by(Here), (Called=KP:G->true;(Called=G,Here=KP) )),
+    \+ prolog:meta_goal(G,_), \+ system_predicate(G).
+
+%! predicate_argnames(+KP,?PredicateTemplate) is nondet.
+%  Grounds argument variables with their source names, using system meta information from the clauses mentioning the predicate
+%  Kp must be already loaded
+predicate_literal(M,Pred) :- must_be(nonvar,M),
+    (M:clause(Pred,Body,Ref) ; my_xref_called(M,Pred,By), clause(M:By,Body,Ref), \+ \+ contains_term(Pred,Body)), 
+    clause_info(Ref,_,_,_,[variable_names(Names)]),
+    bind_vars_with_names(Pred:-Body,Names).
+%TODO: should use a contains_term with variant/2 instead
+
+%! bind_vars_with_names(?Term,+VarNames)
+% VarNames is a list of Name=Var
+bind_vars_with_names(T,VN) :- bind_vars_with_names(T,VN,_).
+
+bind_vars_with_names(_,[],[]) :- !.
+bind_vars_with_names(V,[Name=Var|VN],NewVN) :- var(V), !, 
+    (var(Var) -> (Var=V,Name=Var,NewVN=VN) ; (bind_vars_with_names(V,VN,NewVN))).
+bind_vars_with_names(X,VN,VN) :- atomic(X), !.
+bind_vars_with_names([X1|Xn],VN1,VNn) :- !, bind_vars_with_names(X1,VN1,VN2), bind_vars_with_names(Xn,VN2,VNn).
+bind_vars_with_names(X,VN1,VNn) :- compound_name_arguments(X,_,Args), bind_vars_with_names(Args,VN1,VNn).
 
 print_kp_predicates :- print_kp_predicates(_).
 
 % This also LOADS the modules, to access the examples:
 print_kp_predicates(KP) :- %TODO: ignore subtrees of because/2
-    print_message(informational,"Loading all Knowledge Pages.."-[]),
-    forall(kp(KP),loaded_kp(KP)),
+    all_kps_loaded,
     forall(kp(KP),(
         format("---~nKP: ~w~n",[KP]),
         format("  Examples:~n"),
@@ -228,12 +258,20 @@ print_kp_predicates(KP) :- %TODO: ignore subtrees of because/2
 
     )). 
 
-my_xref_defined(M,G,Class) :- % check that the source has already been xref'ed, otherwise xref would try to load it and cause a "iri_scheme" error:
+% check that the source has already been xref'ed, otherwise xref would try to load it and cause an "iri_scheme" error:
+my_xref_defined(M,G,Class) :- 
     xref_current_source(M), xref_defined(M,G,Class).
+my_xref_called(M,Pred,By) :-
+    xref_current_source(M), xref_called(M,Pred,By).
 
 system_predicate(G) :- predicate_property(G,built_in). 
 system_predicate(G) :- kp_dir(D), predicate_property(G,file(F)), \+ sub_atom(F,_,_,_,D).
-
+system_predicate(example(_,_)).
+system_predicate(mainGoal(_,_)).
+system_predicate(question(_,_)).
+system_predicate(question(_,_,_)).
+system_predicate(irrelevant_explanation(_)).
+system_predicate(function(_,_)).
 
 url_simple(URL,Simple) :- \+ sub_atom(URL,_,_,_,'/'), !, 
     Simple=URL.

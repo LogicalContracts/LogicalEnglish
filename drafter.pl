@@ -1,6 +1,7 @@
 :- module(_,[draft_string/2, test_draft/2]).
 
 :- use_module('spacy/spacy.pl').
+:- use_module(kp_loader).
 
 % Knowledge page drafting aids, assuming loaded content and using Spacy parses and known knowledge pages (modules)
 
@@ -63,6 +64,41 @@ detected_predicate(Tokens,F,Args,VerbToken) :-
 
 capitalize(X,NewX) :- 
     name(X,[First|Codes]), to_upper(First,U), name(NewX,[U|Codes]).
+
+%! nameToWords(PrologAtom,Words) is det
+%  Breaks a predicate or variable name into words, if detected via underscores 
+nameToWords(X,[Word]) :- \+ atomic(X), !, term_string(X,Word).
+nameToWords(X,Words) :- atomics_to_string(Words,'_',X), Words=[_,_|_], !.
+nameToWords(X,Words) :- X\='', camelsToList(X,Words), Words=[_,_|_], !.
+nameToWords(X,[X]).
+
+camelsToList(X,L) :- 
+    must_be(atomic,X), assertion(X\==''), atom_codes(X,Codes), 
+    %(code_type(C,upper)->Type=upper;code_type(C,lower)->Type=lower;Type=other),
+    camelsToList(Codes,xpto,[],L).
+
+% camelsToList(CharCodes,LastType,NextWordCharsSoFar,Words)
+camelsToList([C|Codes],Type,NextCodes,NewWords) :- code_type(C,upper), Type\=upper, !,
+    (NextCodes=[]->NewWords=Words ; NewWords=[W|Words]),
+    atom_codes(W,NextCodes), camelsToList([C|Codes],upper,[],Words).
+camelsToList([C|Codes],_,NextCodes,Words) :- !,
+    (code_type(C,upper)->Type=upper;code_type(C,lower)->Type=lower;Type=other),
+    append(NextCodes,[C],NewNextCodes),
+    camelsToList(Codes,Type,NewNextCodes,Words).
+camelsToList([],_,NextCodes,Words) :- 
+    (NextCodes=[] -> Words=[] ; (atom_codes(W,NextCodes), Words=[W])).
+
+%! predicateWords(?KP,?Pred,-FunctorWords,-WordArgsList)
+%  Pred is a predicate literal template
+% E.g. predicateWords(KP,Pred,PredsWords), member(F/N/Fwords/Awords,PredsWords), atomics_to_string(Fwords,' ',Fstring),  format("~w:  ~a~n",[F/N,Fstring]), forall(member(A,Awords),(atomics_to_string(A,' ',Astring),format("  ~a~n",[Astring]))), fail.
+predicateWords(KP,Pred,PredsWords) :-
+    setof(F/Arity/Fwords/ArgsWords, How^Args^( 
+        kp_predicate_mention(KP,Pred,How), 
+        functor(Pred,F,Arity), nameToWords(F,Fwords),
+        predicate_literal(KP,Pred), Pred=..[F|Args],
+        findall(ArgWords, (member(Arg,Args), nameToWords(Arg,ArgWords)), ArgsWords)
+    ),PredsWords).
+
 
 %TODO: handle more verb patterns, e.g. have+dobj, etc.
 %TODO: generate rules, extract nouns/concepts/class hierarchies, knowledge page/reference extractor

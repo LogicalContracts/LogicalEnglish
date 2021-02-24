@@ -59,6 +59,8 @@ taxlog2prolog(question(X,QuestionTerm,Answer),delimiter-[classify,classify,class
 taxlog2prolog(irrelevant_explanation(G),delimiter-[Spec],irrelevant_explanation(G)) :- !, 
     taxlogBodySpec(G,Spec).
 
+% note: keep the above cases coherent with kp_loader:system_predicate/1
+
 scenarioSequenceSpec([S|Scenarios],[Spec|Specs]) :- !,
     scenarioSpec(S,Spec),
     scenarioSequenceSpec(Scenarios,Specs).
