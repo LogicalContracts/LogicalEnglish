@@ -1,14 +1,14 @@
 % Copyright Miguel Calejo, 2019-2020; open source, licensed with 3-clause BSD
 
 :- module(_,[
-    load_content/1, content/2, refreshTokens/1, content_tokens/4, content_tokens_in/5,
+    load_content/1, load_content_from_text_file/2, content/2, refreshTokens/1, content_tokens/4, content_tokens_in/5,
     t_word/2, t_lemma/2, t_pos/2, t_tag/2, t_head/2, t_dep/2, t_i/2, t_offset/2, t_absorbed/2, member_with/3, member_with/2,
     sentence/2, parseAndSee/4, parseAndSee/5,
     depgraph/2, hierplane/2]).
 % Spacy interface: parsing, representation of text chunks and sentences with tokens, utility predicates
 % Text and tokens are kept associated with URLs/paths, with an implicit textual hierarchy
 
-%! load_file(+ContentFileOrDicts)  
+%! load_content(+ContentFileOrDicts)  
 %  loads content from a file or an ItemsArray list; each item is a _{url:U,text:T} dict
 load_content(File) :- atomic(File), !,
     setup_call_cleanup(open(File,read,S),(
@@ -23,7 +23,25 @@ load_content(File) :- atomic(File), !,
 load_content(Items) :- 
     must_be(list,Items), 
     forall(member(Item,Items), update_content(Item.url,Item.text) ).
-    
+
+load_content_from_text_file(File,URLbase) :-
+    format(string(URLbase),"file://~a",[File]),
+    open(File,read,S),
+    create_counter(LC),
+    repeat, 
+    inc_counter(LC,LN), 
+    read_line_to_string(S,Line), 
+    (
+        Line==end_of_file, !, close(S) 
+        ; 
+        Line \= "",
+        \+ sub_atom(Line,0,_,_,'#'), % not a comment
+        format(string(URL),"~a#~w",[URLbase,LN]), 
+        update_content(URL,Line), 
+        fail
+    ).
+
+
 % content(URL,Text)
 % all the text chunks to process, each with a unique URL denoting its origin
 content(Path,Text) :- 

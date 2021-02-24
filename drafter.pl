@@ -1,4 +1,4 @@
-:- module(_,[draft_string/2, test_draft/2]).
+:- module(_,[draft_string/2, draft_string_from_file/2, test_draft/2]).
 
 :- use_module('spacy/spacy.pl').
 :- use_module(kp_loader).
@@ -11,6 +11,11 @@ test_draft(Text,DraftedCode) :-
     load_content( [_{url:testURL,text:Text}] ),
     draft_string(testURL,DraftedCode).
 
+%  Draft some source code from a given text file
+draft_string_from_file(File,DraftedCode) :-
+    load_content_from_text_file(File,URL),
+    draft_string(URL,DraftedCode).
+
 %  Args is (for now..) a list of role names
 %  Why includes relevant sentences and tokens within the TextURL's text, Spacy extraction
 :- thread_local predicate_draft/4. % TextURL,Functor,Args,Why 
@@ -18,11 +23,13 @@ test_draft(Text,DraftedCode) :-
 draft_string(URL,S) :- 
     draft(URL,Tmp), read_file_to_string(Tmp,S,[]).
 
+
 % draft(+URL,-TmpPrologFile)
 draft(URL,TmpFile):-
     must_be(atomic,URL), must_be(var,TmpFile),
     retractall(predicate_draft(URL,_,_,_)),
     refreshTokens(URL),
+    % Now that we've (re) parsed tokens, detect we shall:
     forall((
         content_tokens_in(URL,SpecificURL,SI,Tokens,Extraction),
         detected_predicate(Tokens,Functor,Args,Reason)
@@ -30,6 +37,7 @@ draft(URL,TmpFile):-
         %TODO: detect duplicates/variants
         assert(predicate_draft(URL,Functor,Args,Extraction/SpecificURL/SI/Reason)
     )),
+    % Now generate the Prolog code:
     tmp_file_stream(TmpFile, S, [encoding(text),extension(pl)]),
     format(S,":- module('~a',[]).~n~n",[URL]),
     forall(predicate_draft(URL,Functor,Args_,Why),(
@@ -66,7 +74,7 @@ capitalize(X,NewX) :-
     name(X,[First|Codes]), to_upper(First,U), name(NewX,[U|Codes]).
 
 %! nameToWords(PrologAtom,Words) is det
-%  Breaks a predicate or variable name into words, if detected via underscores 
+%  Breaks a predicate or variable name into words, if detected via underscores or CamelCase
 nameToWords(X,[Word]) :- \+ atomic(X), !, term_string(X,Word).
 nameToWords(X,Words) :- atomics_to_string(Words,'_',X), Words=[_,_|_], !.
 nameToWords(X,Words) :- X\='', camelsToList(X,Words), Words=[_,_|_], !.

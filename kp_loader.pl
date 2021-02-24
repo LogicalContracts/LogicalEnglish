@@ -192,9 +192,10 @@ xref_clean :-
 % kp_predicate_mention(?Module,?PredicateTemplate,?How) How is called_by(KP)/defined
 % Considers undefined predicates too; ignores mentions from example scenarios
 kp_predicate_mention(KP,G,How) :-
-    kp(Here),
-    ( KP=Here, xref_defined(Here,G,_), How=defined ; 
-      xref_called(Here, Called, _By), How=called_by(Here), (Called=KP:G->true;(Called=G,Here=KP) )),
+    kp(KP),
+    ( xref_defined(KP,G,_), How=defined ; 
+      xref_called(KP, Called, _By), (Called=_:G->true;Called=G), How=called_by(KP)
+      ),
     \+ prolog:meta_goal(G,_), \+ system_predicate(G).
 
 %! predicate_argnames(+KP,?PredicateTemplate) is nondet.
