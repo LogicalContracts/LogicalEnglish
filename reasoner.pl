@@ -343,9 +343,6 @@ prolog:called_by(taxlogBody(G,_,_,_), M, M, [G]).
 
 % does NOT fix the "G is not called" bug: prolog:called_by(mainGoal(G,_), M, M, [G]).
 
-system_predicate(G) :- predicate_property(G,built_in). 
-system_predicate(G) :- kp_dir(D), predicate_property(G,file(F)), \+ sub_atom(F,_,_,_,D).
-
 
 %%%% Support for automated tests/examples
 

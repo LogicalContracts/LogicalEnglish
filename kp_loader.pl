@@ -1,5 +1,5 @@
 :- module(_,[
-    loaded_kp/1, kp_dir/1, kp_location/3, kp/1, shouldMapModule/2, moduleMapping/2, myDeclaredModule/1,
+    loaded_kp/1, kp_dir/1, kp_location/3, kp/1, shouldMapModule/2, moduleMapping/2, myDeclaredModule/1, system_predicate/1,
     discover_kps_in_dir/1, discover_kps_in_dir/0, discover_kps_gitty/0, setup_kp_modules/0, load_kps/0,
     load_gitty_files/1, load_gitty_files/0, save_gitty_files/1, save_gitty_files/0, delete_gitty_file/1, update_gitty_file/3,
     xref_all/0, xref_clean/0, print_kp_predicates/0, reset_errors/0, my_xref_defined/3, url_simple/2,
@@ -183,6 +183,8 @@ prolog:message(no_kp(Name)) --> ["Could not find knowledge page ~w"-[Name]].
 xref_clean :-
     forall(kp_location(URL,_,_), xref_clean(URL)).
 
+% kp_predicate(Module,PredicateTemplate) :-
+
 
 print_kp_predicates :- print_kp_predicates(_).
 
@@ -213,13 +215,13 @@ print_kp_predicates(KP) :- %TODO: ignore subtrees of because/2
             ), 
             (functor(G,F,N), format("    ~w (~w)~n",[F/N,Other]))
         ),
-        %TODO: report local undefineds too!!!
         format("  UNDEFINED predicates:~n"),
         forall((
-            xref_called(KP, Called, _),
-            Called=Other:G, Other\=KP,
+            xref_called(KP, Called, _), 
+            (Called=Other:G -> Other\=KP ; (Called=G,Other=KP)),
             (\+ prolog:meta_goal(G,_)),
-            \+ my_xref_defined(Other,G,_)
+            \+ my_xref_defined(Other,G,_),
+            \+ system_predicate(G)
             ), 
             (functor(G,F,N), format("    ~w (~w)~n",[F/N,Other]))
         )
@@ -228,6 +230,10 @@ print_kp_predicates(KP) :- %TODO: ignore subtrees of because/2
 
 my_xref_defined(M,G,Class) :- % check that the source has already been xref'ed, otherwise xref would try to load it and cause a "iri_scheme" error:
     xref_current_source(M), xref_defined(M,G,Class).
+
+system_predicate(G) :- predicate_property(G,built_in). 
+system_predicate(G) :- kp_dir(D), predicate_property(G,file(F)), \+ sub_atom(F,_,_,_,D).
+
 
 url_simple(URL,Simple) :- \+ sub_atom(URL,_,_,_,'/'), !, 
     Simple=URL.
