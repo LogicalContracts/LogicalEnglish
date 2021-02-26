@@ -199,8 +199,8 @@ kp_predicate_mention(KP,G,How) :-
     \+ prolog:meta_goal(G,_), \+ system_predicate(G).
 
 %! predicate_argnames(+KP,?PredicateTemplate) is nondet.
-%  Grounds argument variables with their source names, using system meta information from the clauses mentioning the predicate
-%  Kp must be already loaded
+%  Grounds argument variables with their source names AS MUCH AS POSSIBLE, using system meta information from the clauses mentioning the predicate
+%  KP must be already loaded. Anonymous variables are not ground.
 predicate_literal(M,Pred) :- must_be(nonvar,M),
     (M:clause(Pred,Body,Ref) ; my_xref_called(M,Pred,By), clause(M:By,Body,Ref), \+ \+ contains_term(Pred,Body)), 
     clause_info(Ref,_,_,_,[variable_names(Names)]),

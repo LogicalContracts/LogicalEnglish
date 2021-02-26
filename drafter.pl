@@ -75,9 +75,15 @@ capitalize(X,NewX) :-
 
 %! nameToWords(PrologAtom,Words) is det
 %  Breaks a predicate or variable name into words, if detected via underscores or CamelCase
+nameToWords(V,'ANONVAR') :- var(V), !.
+nameToWords('',[]) :- !.
+nameToWords([X1|Xn],Words) :- !, 
+    nameToWords(X1,W1), nameToWords(Xn,Wn), append(W1,Wn,Words).
+nameToWords([],[]) :- !.
 nameToWords(X,[Word]) :- \+ atomic(X), !, term_string(X,Word).
-nameToWords(X,Words) :- atomics_to_string(Words,'_',X), Words=[_,_|_], !.
-nameToWords(X,Words) :- X\='', camelsToList(X,Words), Words=[_,_|_], !.
+nameToWords(X,Words) :- atomics_to_string(Words_,'_',X), Words_=[_,_|_], !, nameToWords(Words_,Words).
+nameToWords(X,Words) :- atomics_to_string(Words_,' ',X), Words_=[_,_|_], !, nameToWords(Words_,Words).
+nameToWords(X,Words) :- camelsToList(X,Words_), Words_=[_,_|_], !, nameToWords(Words_,Words).
 nameToWords(X,[X]).
 
 camelsToList(X,L) :- 
@@ -98,7 +104,7 @@ camelsToList([],_,NextCodes,Words) :-
 
 %! predicateWords(?KP,?Pred,-FunctorWords,-WordArgsList)
 %  Pred is a predicate literal template
-% E.g. predicateWords(KP,Pred,PredsWords), member(F/N/Fwords/Awords,PredsWords), atomics_to_string(Fwords,' ',Fstring),  format("~w:  ~a~n",[F/N,Fstring]), forall(member(A,Awords),(atomics_to_string(A,' ',Astring),format("  ~a~n",[Astring]))), fail.
+% E.g. all_kps_loaded, predicateWords(KP,Pred,PredsWords), member(F/N/Fwords/Awords,PredsWords), atomics_to_string(Fwords,' ',Fstring),  format("~w:  ~a~n",[F/N,Fstring]), forall(member(A,Awords),(atomics_to_string(A,' ',Astring),format("  ~a~n",[Astring]))), fail.
 predicateWords(KP,Pred,PredsWords) :-
     setof(F/Arity/Fwords/ArgsWords, How^Args^( 
         kp_predicate_mention(KP,Pred,How), 
@@ -106,6 +112,27 @@ predicateWords(KP,Pred,PredsWords) :-
         predicate_literal(KP,Pred), Pred=..[F|Args],
         findall(ArgWords, (member(Arg,Args), nameToWords(Arg,ArgWords)), ArgsWords)
     ),PredsWords).
+
+uniquePredicateSentences(KP,Sentences) :-
+    setof(PredsWords,Pred^predicateWords(KP,Pred,PredsWords),L),
+    append(L,All),
+    setof(Fwords, F^Arity^ArgsWords^member(F/Arity/Fwords/ArgsWords,All), Sentences).
+
+uniqueArgSentences(KP,Sentences) :-
+    setof(PredsWords,Pred^predicateWords(KP,Pred,PredsWords),L),
+    append(L,All),
+    setof(ArgsWords, F^Arity^Fwords^member(F/Arity/Fwords/ArgsWords,All), Sentences).
+
+% ignores one letter words
+% e.g. ?- forall(uniquePredicateWords(KP,Words), format("~w~n  ~w~n",[KP,Words])).
+uniquePredicateWords(KP,Words) :-
+    setof(PredsWords,Pred^predicateWords(KP,Pred,PredsWords),L),
+    append(L,All),
+    setof(Word, F^Arity^Fwords^ArgsWords^ArgWords^C1^C2^Rest^(
+        member(F/Arity/Fwords/ArgsWords,All), 
+        (member(Word,Fwords); member(ArgWords,ArgsWords), member(Word,ArgWords)),
+        atom_codes(Word,[C1,C2|Rest])
+        ), Words).
 
 
 %TODO: handle more verb patterns, e.g. have+dobj, etc.
