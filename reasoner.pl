@@ -184,6 +184,8 @@ i(bagof(X,G,L),M,CID,Cref,U,E) :- !, E=[s(bagof(X,G,L),M,meta,Children)],
     squeezeTuples(Tuples,L,U,Children).
 i(aggregate(Template,G,Result),M,CID,Cref,U,E) :- !, E=[s(aggregate(Template,G,Result),M,meta,Children)],
     % uses a bit too much of SWI internals at swipl-devel/library/aggregate.pl
+    %TODO: when sum(_) and count(_) fail, we could consider a success instead (and use the explanation for not G)
+    %  this in fact exists, it's aggregate_all, might want to use it instead (but still needing the not G treatment)
     aggregate:template_to_pattern(bag, Template, Pattern, M:G, Goal, Aggregate),
     i(bagof(Pattern, Goal, List),M,CID,Cref,U_,[s(_Bagof,_M,_ClauseRef,Children_)]),
     catch( ( aggregate:aggregate_list(Aggregate, List, Result), U=U_, Children=Children_ ), 
@@ -412,7 +414,7 @@ assert_and_remember([-Fact|Facts],M,Why,(Undo,Undos)) :- !,
     canonic_fact_time(Fact,M,CF,Time), assert_and_remember_(delete,redefine,CF,_,Time,Why,Undo),
     assert_and_remember(Facts,M,Why,Undos).
 assert_and_remember([Fact__|Facts],M,Why,(Undo,Undos)) :- must_be(nonvar,Fact__),
-    (Fact__= (+ Fact_) -> How=extend ; (Fact__=Fact_,How=redefine)),
+    (Fact__= (++ Fact_) -> How=extend ; (Fact__=Fact_,How=redefine)),
     % Note: the following MUST be kept in sync with taxlog2prolog/3; essencially, this assumes no transform occurs:
     (Fact_ = if(Fact,Body) -> true ; (Fact=Fact_,Body=true)), %TODO: verify that rules are not functions etc
     canonic_fact_time(Fact,M,CF,Time), assert_and_remember_(add,How,CF,Body,Time,Why,Undo),

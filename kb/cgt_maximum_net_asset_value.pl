@@ -27,10 +27,10 @@ example("Andrew email Feb 5 2021",[
         is_cgt_asset(cgt_asset_1) at "https://www.ato.gov.au/General/Capital-gains-tax/CGT-assets-and-exemptions/",
         is_earnout_cgt_asset(cgt_asset_1,4000000) at "https://www.ato.gov.au/General/Capital-gains-tax/In-detail/Business-assets/Earnout-arrangements-and-CGT/",
         affiliate(andrew,affiliate1),
-        owns(affiliate1,cgt_asset_1), cgt_assets_net_value(cgt_asset_1,1000000),
+        ++ owns(affiliate1,cgt_asset_2), ++ net_value(cgt_asset_2,1000000),
         connected_to(andrew,entity) at "https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/connected-entities/",
-        owns(entity,asset2) at myDB1,
-        is_cgt_asset(asset2,2000000) at "https://www.ato.gov.au/General/Capital-gains-tax/CGT-assets-and-exemptions/",
+        owns(entity,asset3) at myDB1,
+        is_cgt_asset(asset3,2000000) at "https://www.ato.gov.au/General/Capital-gains-tax/CGT-assets-and-exemptions/",
         is_used_in_business_of(_,_) at myDB2 if false
         ], not satisfies_maximum_net_asset_value_test(andrew))
     ]).
@@ -40,6 +40,7 @@ satisfies_maximum_net_asset_value_test(TFN) on Date if
     cgt_assets_net_value(TFN,Value) on Date and Value =< 6000000.
 
 cgt_assets_net_value(You,Value) on Date if 
+    %TODO: aggregate counter intuitively fails here; see note in reasoner.pl
     aggregate(sum(AssetNet), (
         relevant_asset(You,Asset) and is_cgt_asset(Asset) and not asset_to_exclude(You,Asset) and net_value(Asset,AssetNet) on Date
         ), Value).

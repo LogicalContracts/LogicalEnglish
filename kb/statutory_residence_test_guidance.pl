@@ -24,7 +24,7 @@ NOTE: out of scope of original example, added a stub at 'https://www.gov.uk/hmrc
 */
     scenario([
         % a plus sign indicates this hypothetical extends, not redefines, existing rules and facts:
-        + (srt(alex) on Date if before(Date,'20180406') ), % not quite what was stated, but close
+        ++ (srt(alex) on Date if before(Date,'20180406') ), % not quite what was stated, but close
         works_sufficient_hours_overseas(alex) at RDRM11150,
         no_significant_breaks_from_overseas_work(alex) at THIRD_OT,
         days_working_in_uk_more_than(alex,_,0) at THIRD_OT,

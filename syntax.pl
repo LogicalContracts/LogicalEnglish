@@ -1,4 +1,5 @@
 :- module(_,[
+    op(1195,fx, user:(++)), % for hypothetical facts and rules 
     op(1190,xfx,user:(if)),
     op(1187,xfx,user:(then)),
     op(1187,xfx,user:(must)),
