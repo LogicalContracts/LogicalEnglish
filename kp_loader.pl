@@ -1,8 +1,8 @@
 :- module(_,[
-    loaded_kp/1, all_kps_loaded/0, kp_dir/1, kp_location/3, kp/1, shouldMapModule/2, moduleMapping/2, myDeclaredModule/1, system_predicate/1,
+    loaded_kp/1, all_kps_loaded/0, all_kps_loaded/1, kp_dir/1, kp_location/3, kp/1, shouldMapModule/2, moduleMapping/2, myDeclaredModule/1, system_predicate/1,
     discover_kps_in_dir/1, discover_kps_in_dir/0, discover_kps_gitty/0, setup_kp_modules/0, load_kps/0,
     load_gitty_files/1, load_gitty_files/0, save_gitty_files/1, save_gitty_files/0, delete_gitty_file/1, update_gitty_file/3,
-    xref_all/0, xref_clean/0, print_kp_predicates/0, reset_errors/0, my_xref_defined/3, url_simple/2,
+    xref_all/0, xref_clean/0, print_kp_predicates/0, print_kp_predicates/1, reset_errors/0, my_xref_defined/3, url_simple/2,
     kp_predicate_mention/3, predicate_literal/2,
     edit_kp/1, knowledgePagesGraph/1, knowledgePagesGraph/2]).
 
@@ -106,8 +106,10 @@ setup_kp_module(M) :-
     M:discontiguous(question/2), M:discontiguous(question/3),
     declare_our_metas(M).
 
-all_kps_loaded:-
-    print_message(informational,"Loading all Knowledge Pages.."-[]),
+all_kps_loaded :- all_kps_loaded(_).
+
+all_kps_loaded(KP):-
+    print_message(informational,"Loading Knowledge Page(s)..(~w)"-[KP]),
     forall(kp(KP),loaded_kp(KP)).
 
 %! loaded_kp(++KnowledgePageName) is nondet.
@@ -434,8 +436,11 @@ knowledgePagesGraph(G) :- knowledgePagesGraph(_,G).
 
 :- multifile sandbox:safe_primitive/1.
 sandbox:safe_primitive(kp_loader:knowledgePagesGraph(_,_)).
+sandbox:safe_primitive(kp_loader:print_kp_predicates(_)).
 sandbox:safe_primitive(kp_loader:load_gitty_files). %TODO: this should be restricted to power users
 sandbox:safe_primitive(kp_loader:save_gitty_files).
+sandbox:safe_primitive(kp_loader:all_kps_loaded).
+
 
 %%%% assist editor navigation; cf. swish/web/js/codemirror/mode/prolog/prolog_server.js
 

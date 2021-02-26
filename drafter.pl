@@ -1,4 +1,6 @@
-:- module(_,[draft_string/2, draft_string_from_file/2, test_draft/2]).
+:- module(_,[
+    draft_string/2, draft_string_from_file/2, test_draft/2,
+    predicateWords/3, uniquePredicateWords/2, uniqueArgSentences/2, uniquePredicateSentences/2]).
 
 :- use_module('spacy/spacy.pl').
 :- use_module(kp_loader).
@@ -106,6 +108,7 @@ camelsToList([],_,NextCodes,Words) :-
 %  Pred is a predicate literal template
 % E.g. all_kps_loaded, predicateWords(KP,Pred,PredsWords), member(F/N/Fwords/Awords,PredsWords), atomics_to_string(Fwords,' ',Fstring),  format("~w:  ~a~n",[F/N,Fstring]), forall(member(A,Awords),(atomics_to_string(A,' ',Astring),format("  ~a~n",[Astring]))), fail.
 predicateWords(KP,Pred,PredsWords) :-
+    all_kps_loaded(KP),
     setof(F/Arity/Fwords/ArgsWords, How^Args^( 
         kp_predicate_mention(KP,Pred,How), 
         functor(Pred,F,Arity), nameToWords(F,Fwords),
@@ -138,3 +141,5 @@ uniquePredicateWords(KP,Words) :-
 %TODO: handle more verb patterns, e.g. have+dobj, etc.
 %TODO: generate rules, extract nouns/concepts/class hierarchies, knowledge page/reference extractor
 
+:- multifile sandbox:safe_primitive/1.
+sandbox:safe_primitive(drafter:predicateWords(_,_,_)).
