@@ -117,7 +117,7 @@ predicateWords(KP,Pred,PredsWords) :-
     ),PredsWords).
 
 printAllPredicateWords(KP) :-
-    predicateWords(KP,Pred,PredsWords), 
+    predicateWords(KP,_Pred,PredsWords), 
     member(F/N/Fwords/Awords,PredsWords), atomics_to_string(Fwords,' ',Fstring),  
     format("~w:  ~a~n",[F/N,Fstring]), 
     forall(member(A,Awords),(atomics_to_string(A,' ',Astring),format("  ~a~n",[Astring]))), 

@@ -22,19 +22,6 @@ term_rendering(Explanation, _Vars, _Options) -->
 		]) 
 	).
 
-:- multifile user:extra_swish_resource/1. % declare a link or script resource to include in the SWISH page's head
-user:extra_swish_resource(script("
-    function myPlayFile(filename,line){
-    console.log(filename+' '+line);
-	var available = $('body').find('.storage').storage('match', {file:filename});
-	if (available) {
-		var message = null;
-		$('body').find('.storage').storage('match', {file:filename}) . storage('expose',null);
-		$('.active').find('.prolog-editor').prologEditor('gotoLine', line, null).focus();  
-	} else $('body').swish('playFile', { file:filename, line:line }); 
-}
-")).
-
 % explanationHTML(ExpandedExplanationTree,TermerizedHTMLlist)
 % works ok but not inside SWISH because of its style clobbering ways:
 explanationHTML(s(G,Ref,_,_,_,C),[li(title="Rule inference step",["~w"-[NG],Navigator]),ul(CH)]) :- 
@@ -52,24 +39,4 @@ explanationHTML(f(G,Ref,_,_,_,C),[li(title="Failed goal",[span(style="color:red"
 %explanationHTML(at(G,K),[li([p("~w"-[G]),p(i(K))])]).
 explanationHTML([C1|Cn],CH) :- explanationHTML(C1,CH1), explanationHTML(Cn,CHn), append(CH1,CHn,CH).
 explanationHTML([],[]).
-
-% clauseNavigator(+ClauseRef,-HTML)
-% clauseNavigator(Ref,a([onclick="myPlayFile('cgt_affiliates.pl',26);"],"SOURCE")).
-clauseNavigator(C,H) :- clauseNavigator_(C,H).
-
-clauseNavigator_(Ref,span([a([onclick=Handler]," TaxLog")|Origin])) :- 
-    blob(Ref,clause), clause_property(Ref,file(F_)), clause_property(Ref,line_count(L)),
-    myClause2(_H,_Time,Module_,_Body,Ref,_IsProlog,_URL,_E), 
-    !,
-    % Module_ will be the temporary SWISH module with the current window's program
-    % This seems to break links to source: (shouldMapModule(Module,Module_)-> kp_location(Module,F,true) ;(
-    (moduleMapping(Module,Module_)-> kp_location(Module,F,true) ;(
-        % strip swish "file" header if present:
-        ((sub_atom(F_,0,_,R,'swish://'), sub_atom(F_,R,_,0,F)) -> true ; F=F_)
-        )),
-    refToOrigin(Ref,URL),
-    % could probably use https://www.swi-prolog.org/pldoc/doc_for?object=js_call//1 , but having trouble embedding that as attribute above:
-    format(string(Handler),"myPlayFile('~a',~w);",[F,L]),
-    Origin = [a([href=URL, target='_self']," Text")].
-clauseNavigator_(Ref,i(" ~w"-[Ref])).
 

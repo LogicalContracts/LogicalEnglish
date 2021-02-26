@@ -59,8 +59,47 @@ swish_config:config(include_alias,	example).
 :- use_module('../spacy/hierplane_renderer.pl',[]).
 :- use_rendering(hierplane,[]).
 
+% This Javascript function and clauseNavigator are used by the renderers below
+:- multifile user:extra_swish_resource/1. % declare a link or script resource to include in the SWISH page's head
+user:extra_swish_resource(script("
+    function myPlayFile(filename,line){
+    console.log(filename+' '+line);
+	var available = $('body').find('.storage').storage('match', {file:filename});
+	if (available) {
+		var message = null;
+		$('body').find('.storage').storage('match', {file:filename}) . storage('expose',null);
+		$('.active').find('.prolog-editor').prologEditor('gotoLine', line, null).focus();  
+	} else $('body').swish('playFile', { file:filename, line:line }); 
+}
+")).
+
+% clauseNavigator(+ClauseRef,-HTML)
+% clauseNavigator(Ref,a([onclick="myPlayFile('cgt_affiliates.pl',26);"],"SOURCE")).
+clauseNavigator(C,H) :- clauseNavigator_(C,H,_).
+clauseNavigator(C,H,AP) :- clauseNavigator_(C,H,AP).
+
+% returns an element, as well as an anchor property
+clauseNavigator_(Ref,span([a([onclick=Handler]," TaxLog")|Origin]), onclick=Handler) :- 
+    blob(Ref,clause), clause_property(Ref,file(F_)), clause_property(Ref,line_count(L)),
+    myClause2(_H,_Time,Module_,_Body,Ref,_IsProlog,_URL,_E), 
+    !,
+    % Module_ will be the temporary SWISH module with the current window's program
+    % This seems to break links to source: (shouldMapModule(Module,Module_)-> kp_location(Module,F,true) ;(
+    (moduleMapping(Module,Module_)-> kp_location(Module,F,true) ;(
+        % strip swish "file" header if present:
+        ((sub_atom(F_,0,_,R,'swish://'), sub_atom(F_,R,_,0,F)) -> true ; F=F_)
+        )),
+    refToOrigin(Ref,URL),
+    % could probably use https://www.swi-prolog.org/pldoc/doc_for?object=js_call//1 , but having trouble embedding that as attribute above:
+    format(string(Handler),"myPlayFile('~a',~w);",[F,L]),
+    Origin = [a([href=URL, target='_self']," Text")].
+clauseNavigator_(Ref,i(" ~w"-[Ref]),onclick='').
+
+
 :- use_module('explanation_renderer',[]).
 :- use_rendering(explanation_renderer).
+:- use_module('unknowns_renderer',[]).
+:- use_rendering(unknowns_renderer).
 
 :- initialization( (
 	(getenv('LOAD_KB',true) -> (
@@ -72,12 +111,13 @@ swish_config:config(include_alias,	example).
 )).
 
 :- use_module(swish(lib/render)).
-
+/* We now use the unknowns_renderer instead
 :- use_rendering(user:table, [
 	header(at('Unknown Predicate','Knowledge Page')),
 	%_I,_Offset,Word,_Lemma,_POS,_Tag,_Head,_Dep,_Absorbed
     header(t('#','Offset','Word','Lemma','POS','Tag','Head','Dep','Absorbed')) 
     ]).
+*/
 
 :- use_rendering(graphviz).
 

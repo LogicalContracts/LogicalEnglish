@@ -25,7 +25,7 @@ query_with_facts(Goal,Facts,Questions,E,Outcome) :-
 %  if OnceUndo, only one solution, and time execution is limited
 %  Result will be true/false/unknown
 %  This is NOT reentrant
-query_with_facts(Goal,Facts_,OnceUndo,Questions,taxlogExplanation(E),Outcome) :-
+query_with_facts(Goal,Facts_,OnceUndo,unknowns(Unknowns),taxlogExplanation(E),Outcome) :-
     must_be(boolean,OnceUndo),
     (Goal=at(G,M__) -> atom_string(M_,M__) ; 
         myDeclaredModule(M_) -> Goal=G; 
@@ -40,7 +40,7 @@ query_with_facts(Goal,Facts_,OnceUndo,Questions,taxlogExplanation(E),Outcome) :-
         ),
     retractall(hypothetical_fact(_,_,_,_,_,_)),
     (OnceUndo==true -> once_with_facts(Caller, M, Facts, true) ; call_with_facts(Caller, M, Facts)),
-    list_without_variants(U,Questions). % remove duplicates
+    list_without_variants(U,Unknowns). % remove duplicates, keeping the first clase reference for each group
 
 %! query_once_with_facts(+Goal,?FactsListOrExampleName,-Unknowns,-Explanation,-Result)
 %  query considering the given facts (or accumulated facts of all scenarios the given example name), undoes them at the end; limited execution time
@@ -60,10 +60,10 @@ render_question(G,Q) :- format(string(Q)," Is ~w true?",[G]).
 
 % list_without_variants(+L,-NL) 
 % Remove duplicates from list L, without binding variables, and keeping last occurrences in their original order
-list_without_variants([X|L],[X|NL]) :- !, remove_all_variants(L,X,LL), list_without_variants(LL,NL).
+list_without_variants([X/Cref|L],[X/Cref|NL]) :- !, remove_all_variants(L,X,LL), list_without_variants(LL,NL).
 list_without_variants([],[]).
 % remove_all_variants(+List,+Term,-NewList)
-remove_all_variants(L,T,NL) :- select(X,L,LL), variant(X,T), !, remove_all_variants(LL,T,NL).
+remove_all_variants(L,T,NL) :- select(X/_Cref,L,LL), variant(X,T), !, remove_all_variants(LL,T,NL).
 remove_all_variants(L,_,L).
 
 niceModule(Goal,NiceGoal) :- nonvar(Goal), Goal=at(G,Ugly), moduleMapping(Nice,Ugly), !, NiceGoal=at(G,Nice).
@@ -90,7 +90,7 @@ i( G,_,_,_) :- print_message(error,"Top goal ~w should be qualified with ' at kn
 
 % i(+Goal,+AlreadyLoadedAndMappedModule,+CallerGoalID,+CallerClauseRef,-Unknowns,-Why) 
 % failure means false; success with empty Unknowns list means true; 
-% Unknowns contains a list of at(GoalOrErrorTerm,Module)
+% Unknowns contains a list of at(GoalOrErrorTerm,Module)/c(CallerClauseRef)  ..c a hack to avoid a SWISH rendering bug
 % otherwise, result unknown, depending on solutions to goals in Unknowns; 
 %  explanation is a list of proof-like trees: 
 %   s(nodeLiteral,Module,ClauseRef,childrenNodes); (s)success) [] denotes.. some self-evident literal; 
@@ -101,8 +101,6 @@ i( G,_,_,_) :- print_message(error,"Top goal ~w should be qualified with ' at kn
 %  these can be expanded by expand_failure_trees into f(G,Module,CallerClausRef,Children)
 %  there may be orphan failed(ID,...) facts, because we're focusing on solution-less failures only
 %  this predicate is NOT thread safe
-%TODO: add meta_predicate(i(0,...)) declarations...?
-%TODO: ?? _-system is an "unknown" likely irrelevant, a consequence of others
 %i(G,M,_,_,_,_) :- nextGoalID(ID), writeln(ID-G/M), fail.
 i(G,M,_,_,_,_) :- var(G), !, throw(variable_call_at(M)).
 i(true, _, _, _, U, E) :- !, U=[], E=[].
@@ -190,7 +188,7 @@ i(aggregate(Template,G,Result),M,CID,Cref,U,E) :- !, E=[s(aggregate(Template,G,R
     i(bagof(Pattern, Goal, List),M,CID,Cref,U_,[s(_Bagof,_M,_ClauseRef,Children_)]),
     catch( ( aggregate:aggregate_list(Aggregate, List, Result), U=U_, Children=Children_ ), 
         error(instantiation_error,_Cx), 
-        (append(U_,[at(instantiation_error(G),M)],U), append(Children_,[u(instantiation_error(G),M,unknown,[])],Children)) 
+        (append(U_,[at(instantiation_error(G),M)/c(Cref)],U), append(Children_,[u(instantiation_error(G),M,unknown,[])],Children)) 
         ).
 i(findall(X,G,L),M,CID,Cref,U,E) :- !, E=[s(findall(X,G,L),M,meta,Children)],
     findall(X/Ui/Ei, i(G,M,CID,Cref,Ui,Ei), Tuples), 
@@ -205,7 +203,7 @@ i(G,M,CID,Cref,U,E) :- system_predicate(G), !,
     % floundering originates unknown:
     catch(( myCall(M:NewG), U=Uargs, E=E_), 
         error(instantiation_error,_Cx), 
-        (append(Uargs,[at(instantiation_error(G),M)],U), append(E_,[u(instantiation_error(G),M,Cref,[])],E) )).
+        (append(Uargs,[at(instantiation_error(G),M)/c(Cref)],U), append(E_,[u(instantiation_error(G),M,Cref,[])],E) )).
 i(M:G,Mod,CID,Cref,U,E) :- !, i(at(G,M),Mod,CID,Cref,U,E).
 i(at(G,KP),M,CID,Cref,U,E) :- shouldMapModule(KP,UUID), !, 
     i(at(G,UUID),M,CID,Cref,U,E). % use SWISH's latest editor version
@@ -213,8 +211,9 @@ i(At,Mod,CID,Cref,U,E) :- At=at(G,M_), !,
     atom_string(M,M_),
     ( (loaded_kp(M); hypothetical_fact(M,_,_,_,_,_)) -> 
                 i(G,M,CID,Cref,U,E) ; 
-                (U=[At], E=[u(At,Mod,Cref,[])] )).
-i(G,M,_CID,Cref,U,E) :- unknown(G,M), !, (U=[at(G,M)],E=[ u(at(G,M),M,Cref,[]) ]).
+                (U=[At/c(Cref)], E=[u(At,Mod,Cref,[])] )).
+i(G,M,_CID,Cref,U,E) :- unknown(G,M), !, 
+    (U=[at(G,M)/c(Cref)],E=[ u(at(G,M),M,Cref,[]) ]).
 %TODO: on(G,2020) means "G true on some instant in 2020"; who matches that with '20210107' ? check for clauses and hypos
 i(G,M,CID,Cref,U,E) :- 
     newGoalID(NewID), create_counter(Counter),
@@ -227,7 +226,7 @@ i(G,M,CID,Cref,U,E) :-
     evalArgExpressions(G,M,NewG,CID,Cref,Uargs,Eargs), % failures in the expression (which would be weird btw...) stay directly under CID
     myClause(NewG,M,B,Ref,IsProlog,_URL,LocalE),
     (IsProlog==false -> i(B,M,NewID,Ref,U_,Children_) ; (
-        catch( myCall(B), error(Error,_), U_=[at(Error,M)]), % should this call be qualified with M? What when M is the SWISH module...?
+        catch( myCall(B), error(Error,_), U_=[at(Error,M)/c(Cref)]), % should this call be qualified with M? What when M is the SWISH module...?
         (var(U_)->U_=[];true),
         Children_=LocalE
     )),
