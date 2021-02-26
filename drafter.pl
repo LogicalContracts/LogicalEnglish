@@ -1,6 +1,6 @@
 :- module(_,[
     draft_string/2, draft_string_from_file/2, test_draft/2,
-    predicateWords/3, uniquePredicateWords/2, uniqueArgSentences/2, uniquePredicateSentences/2]).
+    predicateWords/3, printAllPredicateWords/1, uniquePredicateWords/2, uniqueArgSentences/2, uniquePredicateSentences/2]).
 
 :- use_module('spacy/spacy.pl').
 :- use_module(kp_loader).
@@ -77,7 +77,7 @@ capitalize(X,NewX) :-
 
 %! nameToWords(PrologAtom,Words) is det
 %  Breaks a predicate or variable name into words, if detected via underscores or CamelCase
-nameToWords(V,'ANONVAR') :- var(V), !.
+nameToWords(V,['ANONVAR']) :- var(V), !.
 nameToWords('',[]) :- !.
 nameToWords([X1|Xn],Words) :- !, 
     nameToWords(X1,W1), nameToWords(Xn,Wn), append(W1,Wn,Words).
@@ -115,6 +115,14 @@ predicateWords(KP,Pred,PredsWords) :-
         predicate_literal(KP,Pred), Pred=..[F|Args],
         findall(ArgWords, (member(Arg,Args), nameToWords(Arg,ArgWords)), ArgsWords)
     ),PredsWords).
+
+printAllPredicateWords(KP) :-
+    predicateWords(KP,Pred,PredsWords), 
+    member(F/N/Fwords/Awords,PredsWords), atomics_to_string(Fwords,' ',Fstring),  
+    format("~w:  ~a~n",[F/N,Fstring]), 
+    forall(member(A,Awords),(atomics_to_string(A,' ',Astring),format("  ~a~n",[Astring]))), 
+    fail.
+printAllPredicateWords(_).
 
 uniquePredicateSentences(KP,Sentences) :-
     setof(PredsWords,Pred^predicateWords(KP,Pred,PredsWords),L),
