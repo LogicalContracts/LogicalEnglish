@@ -33,6 +33,12 @@ foo if not bar.
 testForall(L) if xpto and
     forall(member(X,L), c(X)).
 
+testFailedAggregate(X,Total) if aggregate(sum(X),c(X),Total).
+
+testFailedAggregateAll(X,Total) if aggregate_all(sum(X),c(X),Total).
+
+testFindall(X,L) if findall(X,c(X),L).
+
 
 /** <examples>
 ?- query_with_facts(testForall([0,1,2,3]) at 'http://tests.com',[d(3)],Unknowns,Explanation,Result).

@@ -109,6 +109,7 @@ i( G,_,_,_) :- print_message(error,"Top goal ~w should be qualified with ' at kn
 %  there may be orphan failed(ID,...) facts, because we're focusing on solution-less failures only
 %  this predicate is NOT thread safe
 %i(G,M,_,_,_,_) :- nextGoalID(ID), writeln(ID-G/M), fail.
+%i(G,M,_,_,_,_) :- nextGoalID(ID), print_message(informational,"~w"-[ID-G/M]), fail.
 i(G,M,_,_,_,_) :- var(G), !, throw(variable_call_at(M)).
 i(true, _, _, _, U, E) :- !, U=[], E=[].
 i(false, _, _, _, _U, _E) :- !, fail.
@@ -189,29 +190,42 @@ i(bagof(X,G,L),M,CID,Cref,U,E) :- !, E=[s(bagof(X,G,L),M,meta,Children)],
     squeezeTuples(Tuples,L,U,Children).
 i(aggregate(Template,G,Result),M,CID,Cref,U,E) :- !, E=[s(aggregate(Template,G,Result),M,meta,Children)],
     % uses a bit too much of SWI internals at swipl-devel/library/aggregate.pl
-    %TODO: when sum(_) and count(_) fail, we could consider a success instead (and use the explanation for not G)
-    %  this in fact exists, it's aggregate_all, might want to use it instead (but still needing the not G treatment)
+    % note that aggregate/3 fails when there are no solutions, unlike aggregate_all (for count and sum)
     aggregate:template_to_pattern(bag, Template, Pattern, M:G, Goal, Aggregate),
     i(bagof(Pattern, Goal, List),M,CID,Cref,U_,[s(_Bagof,_M,_ClauseRef,Children_)]),
     catch( ( aggregate:aggregate_list(Aggregate, List, Result), U=U_, Children=Children_ ), 
         error(instantiation_error,_Cx), 
         (append(U_,[at(instantiation_error(G),M)/c(Cref)],U), append(Children_,[u(instantiation_error(G),M,unknown,[])],Children)) 
         ).
-i(findall(X,G,L),M,CID,Cref,U,E) :- !, E=[s(findall(X,G,L),M,meta,Children)],
-    findall(X/Ui/Ei, i(G,M,CID,Cref,Ui,Ei), Tuples), 
-    squeezeTuples(Tuples,L,U,Children).
+i(aggregate_all(Template,G,Result),M,CID,Cref,U,AggrE) :- !, AggrE=[s(aggregate_all(Template,G,Result),M,meta,E)],
+    % uses a bit too much of SWI internals at swipl-devel/library/aggregate.pl
+    aggregate:template_to_pattern(all, Template, Pattern, M:G, Goal, Aggregate),
+    i(findall(Pattern, Goal, List),M,CID,Cref,U_,E_),
+    catch( ( aggregate:aggregate_list(Aggregate, List, Result), U=U_, E=E_ ), 
+        error(instantiation_error,_Cx), 
+        (append(U_,[at(instantiation_error(G),M)/c(Cref)],U), append(E_,[u(instantiation_error(G),M,unknown,[])],E)) 
+        ).
+i(findall(X,G,L),M,CID,Cref,U,E) :- !, 
+    newGoalID(FindallID),
+    findall(X/Ui/Ei, i(G,M,FindallID,Cref,Ui,Ei), Tuples), 
+    (Tuples==[] -> ( % we want to know why there were no solutions:
+        L=[], E = [f(FindallID,M,CID,_NotHere_TheyAreAsserted)], U=[]
+        ) ; (
+        squeezeTuples(Tuples,L,U,Children),
+        E=[s(findall(X,G,L),M,meta,Children)]
+        )).
 % questions are now annotation facts for rendering unknowns, not goals, so this is commented out:
 % i(Q,M,_CID,Cref,U,E) :- functor(Q,question,N), (N=1;N=2), !, 
 %     Q=..[_,Q_|_],
 %     (Q_=Format-Args -> format(string(Q__),Format,Args); Q_=Q__),
 %     U=[at(Q__,M)], E=[u(at(Q__,M),M,Cref,[])].
+i(M:G,Mod,CID,Cref,U,E) :- !, i(at(G,M),Mod,CID,Cref,U,E).
 i(G,M,CID,Cref,U,E) :- system_predicate(G), !, 
     evalArgExpressions(G,M,NewG,CID,Cref,Uargs,E_),
     % floundering originates unknown:
     catch(( myCall(M:NewG), U=Uargs, E=E_), 
         error(instantiation_error,_Cx), 
         (append(Uargs,[at(instantiation_error(G),M)/c(Cref)],U), append(E_,[u(instantiation_error(G),M,Cref,[])],E) )).
-i(M:G,Mod,CID,Cref,U,E) :- !, i(at(G,M),Mod,CID,Cref,U,E).
 i(at(G,KP),M,CID,Cref,U,E) :- shouldMapModule(KP,UUID), !, 
     i(at(G,UUID),M,CID,Cref,U,E). % use SWISH's latest editor version
 i(At,Mod,CID,Cref,U,E) :- At=at(G,M_), !, 
@@ -233,7 +247,7 @@ i(G,M,CID,Cref,U,E) :-
     evalArgExpressions(G,M,NewG,CID,Cref,Uargs,Eargs), % failures in the expression (which would be weird btw...) stay directly under CID
     myClause(NewG,M,B,Ref,IsProlog,_URL,LocalE),
     (IsProlog==false -> i(B,M,NewID,Ref,U_,Children_) ; (
-        catch( myCall(B), error(Error,_), U_=[at(Error,M)/c(Cref)]), % should this call be qualified with M? What when M is the SWISH module...?
+        catch( myCall(B), error(Error,_), (U_=[at(Error,M)/c(Cref)])), % should this call be qualified with M? What when M is the SWISH module...?
         (var(U_)->U_=[];true),
         Children_=LocalE
     )),
@@ -304,7 +318,7 @@ myClause2(H,Time,M,Body,Ref,IsProlog,URL,E) :-
         (hypothetical_fact(M,H,Fact,Body_,Ref,_) *-> H=Fact ; M:clause(H,Body_,Ref))
     ),
     % hypos with rules cause their bodies to become part of our resolvent via Body:
-    ((Body_= taxlogBody(Body,Time_,URL,E_), Body=call(_) ) -> (
+    ((Body_= taxlogBody(Body,Time_,URL,E_), (Body=call(_);Body==true) ) -> (
             (Time=Time_, IsProlog=true, E=[s(E_,M,Ref,[])])
         ); 
         Body_=taxlogBody(Body,Time_,URL,E) -> (Time=Time_, IsProlog=false) ; 

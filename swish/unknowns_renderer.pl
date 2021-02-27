@@ -22,7 +22,7 @@ term_rendering(Unknowns, _Vars, _Options) -->
 		]) 
 	).
 
-
+unknownsHTML([],span(i(none))) :- !.
 unknownsHTML(U,table(class('render-table'),[thead(tr(class(hrow),[th("Unknown Predicate"),th("Knowledge Page")])),tbody(Rows)])) :- 
     unknownsRows(U,Rows).
 
