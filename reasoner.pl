@@ -490,16 +490,15 @@ expand_failure_trees([s(X,M,Ref,Children)|Wn],U1,Un,[s(X,M,Ref,NewChildren)|EWn]
     expand_failure_trees(Children,U1,U2,NewChildren), expand_failure_trees(Wn,U2,Un,EWn).
 expand_failure_trees([u(X,M,Ref,Children)|Wn],U1,Un,[u(X,M,Ref,NewChildren)|EWn]) :- !, 
     expand_failure_trees(Children,U1,U2,NewChildren), expand_failure_trees(Wn,U2,Un,EWn).
-expand_failure_trees([f(ID,M,_CID_,Children)|Wn],U1,Un,[f(G,M,Cref,Children)|EWn]) :- failed_success(ID,U,Why), !, 
-    must_be(var,Children),
-    must(failed(ID,M,_CID,Cref,G),one), % CID was causing a failure of this for shares_trading_on_growth_market_but_unlisted_on_recognized
-    %Children = Why,
-    expand_failure_trees(Why,U1,U2,Children),
-    expand_failure_trees(Wn,U2,Un_,EWn), append(Un_,U,Un).
 expand_failure_trees([f(ID,Module,CID,Children)|Wn],U1,Un,Expanded) :- 
     must_be(var,Children),
     findall(f(ChildID,M,ID,_),failed(ChildID,M,ID,_Cref,_ChildG),Children),
-    expand_failure_trees(Children,U1,U2,NewChildren),
+    expand_failure_trees(Children,U1,U2_,NewChildren_),
+    ((NewChildren_==[],failed_success(ID,SU,Why)) -> ( % no failure suspects, but we have a (last) solution:
+        append(U2_,SU,U2__), expand_failure_trees(Why,U2__,U2,NewChildren)) 
+        ; (U2_=U2, NewChildren_ = NewChildren)  
+        ),
+
     expand_failure_trees(Wn,U2,Un,EWn),
     (failed(ID,Module,CID,Cref,G) -> Expanded=[f(G,Module,Cref,NewChildren)|EWn]; append(NewChildren,EWn,Expanded)).
 expand_failure_trees([],U,U,[]).

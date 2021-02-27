@@ -25,23 +25,26 @@ example("Andrew email Feb 5 2021",[
     scenario([
         owns(andrew,cgt_asset_1) at myDB1,
         is_cgt_asset(cgt_asset_1) at "https://www.ato.gov.au/General/Capital-gains-tax/CGT-assets-and-exemptions/",
-        is_earnout_cgt_asset(cgt_asset_1,4000000) at "https://www.ato.gov.au/General/Capital-gains-tax/In-detail/Business-assets/Earnout-arrangements-and-CGT/",
+        is_earnout_cgt_asset(cgt_asset_1,4000000) at EARNOUT,
+        % is_share_in_company(cgt_asset_1,entity) at myDB1 if false,
+        % asset_to_exclude(andrew,_) if false, %http://localhost:3050/p/tests.pl#tabbed-tab-0 Andrew doesn't want any asset excluded!
         affiliate(andrew,affiliate1),
         ++ owns(affiliate1,cgt_asset_2), ++ net_value(cgt_asset_2,1000000),
         connected_to(andrew,entity) at "https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/connected-entities/",
         owns(entity,asset3) at myDB1,
-        is_cgt_asset(asset3,2000000) at "https://www.ato.gov.au/General/Capital-gains-tax/CGT-assets-and-exemptions/",
+        is_cgt_asset(asset3) at "https://www.ato.gov.au/General/Capital-gains-tax/CGT-assets-and-exemptions/",
+        is_earnout_cgt_asset(asset3,2000000) at EARNOUT,
         is_used_in_business_of(_,_) at myDB2 if false
         ], not satisfies_maximum_net_asset_value_test(andrew))
-    ]).
+    ]) :- EARNOUT="https://www.ato.gov.au/General/Capital-gains-tax/In-detail/Business-assets/Earnout-arrangements-and-CGT/".
 
 % note: referred from cgt_concessions_basic_conditions_sb.pl
 satisfies_maximum_net_asset_value_test(TFN) on Date if 
     cgt_assets_net_value(TFN,Value) on Date and Value =< 6000000.
 
 cgt_assets_net_value(You,Value) on Date if 
-    %TODO: aggregate counter intuitively fails here; see note in reasoner.pl
-    aggregate(sum(AssetNet), (
+    %aggregate/3 fails for empty list, so this is what we need to sum:
+    aggregate_all(sum(AssetNet), (
         relevant_asset(You,Asset) and is_cgt_asset(Asset) and not asset_to_exclude(You,Asset) and net_value(Asset,AssetNet) on Date
         ), Value).
     
@@ -74,7 +77,7 @@ net_value(Asset,Value) on Date if
     if is_earnout_cgt_asset(Asset,Value) then true 
     else (
         market_value(Asset,Market) on Date and 
-        aggregate( sum(Liability), (
+        aggregate_all( sum(Liability), (
             liability(Asset,Type,Liability) and 
             % From "Meaning of 'net value'"; contradicts exclusions in "Liabilities to include" !!!
             % from "Liabilities to include"; also refers https://www.ato.gov.au/law/view/document?DocID=TXD/TD200714/NAT/ATO/00001
