@@ -40,7 +40,11 @@ query_with_facts(Goal,Facts_,OnceUndo,unknowns(Unknowns),taxlogExplanation(E),Ou
         ),
     retractall(hypothetical_fact(_,_,_,_,_,_)),
     (OnceUndo==true -> once_with_facts(Caller, M, Facts, true) ; call_with_facts(Caller, M, Facts)),
-    list_without_variants(U,Unknowns). % remove duplicates, keeping the first clase reference for each group
+    list_without_variants(U,Unknowns_), % remove duplicates, keeping the first clause reference for each group
+    mapModulesInUnknwons(Unknowns_,Unknowns).
+
+
+
 
 %! query_once_with_facts(+Goal,?FactsListOrExampleName,-Unknowns,-Explanation,-Result)
 %  query considering the given facts (or accumulated facts of all scenarios the given example name), undoes them at the end; limited execution time
@@ -68,6 +72,9 @@ remove_all_variants(L,_,L).
 
 niceModule(Goal,NiceGoal) :- nonvar(Goal), Goal=at(G,Ugly), moduleMapping(Nice,Ugly), !, NiceGoal=at(G,Nice).
 niceModule(G,G).
+
+mapModulesInUnknwons([G/Cref|U], [NG/Cref|NU]) :- !, niceModule(G,NG), mapModulesInUnknwons(U,NU).
+mapModulesInUnknwons([],[]).
 
 % i(+AtGoal,+OnceTimed,-Unknowns,-ExplainedResult) always succeeds, with result true(Explanation) or false(Explanation)
 % top level interpreter predicate; true with Unknowns\=[].... means 'unknown'
