@@ -73,7 +73,7 @@ scenarioSpec(scenario(Facts,Assertion),delimiter-[FactsSpec,Spec]) :-
 
 factsSpecs(Facts,classify) :- var(Facts), !.
 factsSpecs([Fact_|Facts],[FactSpec|Specs]) :- !,  
-    (Fact_= -Fact -> FactSpec= delimiter-[FS] ; (Fact=Fact_,FactSpec=FS)),
+    (Fact_= -Fact -> FactSpec= delimiter-[FS] ; Fact_= '++'(Fact) -> FactSpec= delimiter-[FS]; (Fact=Fact_,FactSpec=FS)),
     nonvar(Fact),
     (Fact=if(H,B)->(
         taxlogHeadSpec(H,FSH),taxlogBodySpec(B,FSB),FS=neck(if)-[FSH,FSB]);

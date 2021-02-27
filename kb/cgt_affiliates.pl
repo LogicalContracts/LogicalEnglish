@@ -8,6 +8,13 @@
 % indicate future API entry point: predicate pattern, description
 mainGoal(affiliate(_Entity,_Affiliate),"Determine if a given entity is affiliate of another (also given)").
 
+example(test,[scenario([
+    acts_in_accordance_with_directions_from(company,andrew), 
+    is_trust(_) if false, 
+    is_partnership(_) if false, 
+    is_superannuation_fund(_) if false, 
+    is_individual_or_company(_)
+    ],true)]).
 % Assumptions: 
 %   datetimes in iso_8601 format
 
@@ -36,5 +43,6 @@ is_superannuation_fund(Entity) if
 	is_superannuation_fund(Entity) at entitiesDB.
 
 /** <examples> 
+?- query_with_facts(affiliate(andrew,company) on '20200101',test,Unknowns,Explanation,Result).
 ?- query_with_facts(affiliate(andrew,company) on '20200101',[acts_in_accordance_with_directions_from(company,andrew)],Unknowns,Explanation,Result).
 */
