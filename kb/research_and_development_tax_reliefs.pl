@@ -27,7 +27,7 @@ example("email Chris Feb 17 - 3B",[
         uncertainties_involved_explained_by(_AnyExpert,"it might not levitate"),
         there_was_uncertainty(ID), % override rule below, as we don't know the specific experts
         overcame_uncertainty(ID,"it worked well!")
-        ], not qualify_for_r_d(ID))
+        ], qualify_for_r_d(ID))
     ]) :- ID = hoverboard.
 
 example("email Chris Feb 17 - 3C",[
