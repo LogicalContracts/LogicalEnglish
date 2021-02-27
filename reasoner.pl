@@ -213,7 +213,10 @@ i(findall(X,G,L),M,CID,Cref,U,E) :- !,
         ) ; (
         squeezeTuples(Tuples,L,U,Children),
         E=[s(findall(X,G,L),M,meta,Children)]
-        )).
+        )),
+    ((E=[],U=[]) -> true ; % findall succeeds always, so we keep its last and only solution's explanation:
+        (assert(failed(FindallID,M,CID,Cref,findall(X,G,L))), assert(failed_success(FindallID,U,E)))
+    ).
 % questions are now annotation facts for rendering unknowns, not goals, so this is commented out:
 % i(Q,M,_CID,Cref,U,E) :- functor(Q,question,N), (N=1;N=2), !, 
 %     Q=..[_,Q_|_],
@@ -238,10 +241,17 @@ i(G,M,_CID,Cref,U,E) :- unknown(G,M), !,
 %TODO: on(G,2020) means "G true on some instant in 2020"; who matches that with '20210107' ? check for clauses and hypos
 i(G,M,CID,Cref,U,E) :- 
     newGoalID(NewID), create_counter(Counter),
-    (true ;( % before failing, save our failure information if no solutions were found
-        get_counter(Counter,0),
+    LastSolutionHolder = hacky(none),
+    (true ;( % before failing, save our failure information 
         \+ catch(M:irrelevant_explanation(G),_,fail),
-        assert( failed(NewID,M,CID,Cref,G)),
+        get_counter(Counter,Nsolutions),
+        assert(failed(NewID,M,CID,Cref,G)),
+        (Nsolutions==0 -> true ; (
+            % we keep the explanation for our last solution, in case no more failure explanations are available for our ancestors
+            % and we want some path to the reasons for that failure; this is costly, but less than the full suspects tree
+            arg(1,LastSolutionHolder,U_+E_),
+            assert(failed_success(NewID,U_,E_))
+            )),
         fail
         )),
     evalArgExpressions(G,M,NewG,CID,Cref,Uargs,Eargs), % failures in the expression (which would be weird btw...) stay directly under CID
@@ -253,7 +263,9 @@ i(G,M,CID,Cref,U,E) :-
     )),
     inc_counter(Counter), % one more solution found; this is a nonbacktrackable operation
     append(Uargs,U_,U),
-    (catch(M:irrelevant_explanation(NewG),_,fail) -> E=Eargs ; (E=[s(G,M,Ref,Children)], append(Eargs,Children_,Children) )).
+    (catch(M:irrelevant_explanation(NewG),_,fail) -> E=Eargs ; (E=[s(G,M,Ref,Children)], append(Eargs,Children_,Children) )),
+    % we keep the explanation and unknowns for the last solution:
+    ((E=[],U=[]) -> true ; copy_term(U+E,U_+E_), nb_setarg(1,LastSolutionHolder,U_+E_)).
 
 % unknown(+Goal,+Module) whether the knowledge source is currently unable to provide a result 
 unknown(G,M) :- var(G), !, throw(variable_unknown_call_at(M)).

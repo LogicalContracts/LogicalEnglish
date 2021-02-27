@@ -39,6 +39,10 @@ testFailedAggregateAll(X,Total) if aggregate_all(sum(X),c(X),Total).
 
 testFindall(X,L) if findall(X,c(X),L).
 
+testFindall2(X,L) if findall(X,c(X),L) and L==[].
+
+myRule(X) if c(X) and X>10.
+
 
 /** <examples>
 ?- query_with_facts(testForall([0,1,2,3]) at 'http://tests.com',[d(3)],Unknowns,Explanation,Result).
