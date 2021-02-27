@@ -131,6 +131,8 @@ taxlogBodySpec(_^G,delimiter-[classify,SpecG]) :- !,
 % this is needed only to deal with multiline instances of aggregate... (or of any predicate of our own colouring, apparently:-( )
 taxlogBodySpec(aggregate(_X,G,_L),control-[classify,SpecG,classify]) :- !, 
     taxlogBodySpec(G,SpecG). 
+taxlogBodySpec(aggregate_all(_X,G,_L),control-[classify,SpecG,classify]) :- !, 
+    taxlogBodySpec(G,SpecG). 
 taxlogBodySpec(findall(_X,G,_L),control-[classify,SpecG,classify]) :- !, 
     taxlogBodySpec(G,SpecG). 
 % questions are no longer goals, just annotations for (rendering unknown) goal literals
