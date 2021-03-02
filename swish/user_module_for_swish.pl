@@ -88,7 +88,7 @@ clauseNavigator_(Ref,span([a([onclick=Handler]," TaxLog")|Origin]), onclick=Hand
     % This seems to break links to source: (shouldMapModule(Module,Module_)-> kp_location(Module,F,true) ;(
     (moduleMapping(Module,Module_)-> must(kp_location(Module,F,true),one) ;(
         % strip swish "file" header if present:
-		(sub_atom(F_,0,_,R,'swish://'), sub_atom(F_,R,_,0,F)) -> true ; F=F_
+		(sub_atom(F_,0,_,R,'swish://'), sub_atom(F_,_,R,0,F)) -> true ; F=F_
         )),
     refToOrigin(Ref,URL),
     % could probably use https://www.swi-prolog.org/pldoc/doc_for?object=js_call//1 , but having trouble embedding that as attribute above:
