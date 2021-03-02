@@ -287,7 +287,7 @@ url_simple(URL,Simple) :-
 url_simple(URL,URL).
     
 
-:- thread_local myDeclaredModule/1. % remembers the module declared in the last SWISH window loaded
+:- thread_local myDeclaredModule_/1. % remembers the module declared in the last SWISH window loaded
 
 :- if(current_module(swish)). %%% only when running with the SWISH web server:
 :- use_module(swish(lib/storage)).
@@ -479,7 +479,7 @@ token_references(Request) :-
     reply_json_dict(Locations).
 
 % This at the end, as it activates the term expansion (no harm done otherwise, just some performance..):
-user:term_expansion((:-module(M,L)),(:-module(M,L))) :- !, assert(myDeclaredModule(M)). 
+user:term_expansion((:-module(M,L)),(:-module(M,L))) :- !, assert(myDeclaredModule_(M)). 
 :- multifile pengines:prepare_module/3.
 :- thread_local myCurrentModule/1. % the new temporary SWISH module where our query runs
 pengines:prepare_module(Module, swish, _Options) :- 
@@ -488,10 +488,14 @@ pengines:prepare_module(Module, swish, _Options) :-
     assert(myCurrentModule(Module)).
 
 % there is (just arrived from the SWISH editor) a fresher version To of the declared module From
-% ...OR there WAS, and although it no longer exists
-shouldMapModule(From,To) :- myDeclaredModule(From), myCurrentModule(To), !, 
-    (moduleMapping(From,To)->true;assert(moduleMapping(From,To))).
-:- dynamic moduleMapping/2. % remembers previous mappings, to support UI navigation later, e.g. from explanations
+% ...OR there WAS,  although it no longer exists
+shouldMapModule(From,To) :- myDeclaredModule(From), kp(From), myCurrentModule(To), !, 
+    (moduleMapping(From,To)->true;(assert(moduleMapping(From,To)))).
+:- dynamic moduleMapping/2. % Nice module->transient SWISH module; remembers previous mappings, to support UI navigation later, e.g. from explanations
+
+% filters the SWISH declared module with known KPs; the term_expansion hack catches a lot of other modules too, such as 'http_stream'
+myDeclaredModule(M) :- myDeclaredModule_(M), kp(M), !.
+
 
 current_user(User,Email) :- 
     pengine_user(U), get_dict(user,U,User), Email=U.user_info.email, 

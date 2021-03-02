@@ -11,11 +11,12 @@
 
 % For debugging:
 % can not print output as usual, would interfere with http responses; uncomment the following for a log:
-
-mylog(M) :- mylogFile(S), thread_self(T), writeq(S,T:M), nl(S), flush_output(S).
+/*
+mylog(M_) :- mylogFile(S), thread_self(T), (M_=Template-Args -> (format(S,"~w:",[T]), format(S,Template,Args), nl(S)) ; (M_=M,writeq(S,T:M), nl(S))), flush_output(S).
 :- prolog_load_context(directory, D), atomic_list_concat([D,/,'mylog.txt'],F), open(F,write,S), assert(mylogFile(S)), mylog('Log started').
 % :- asserta((prolog:message(A,B,C) :-  mylog(message-A), fail)).
 sandbox:safe_primitive(user:mylog(_M)). 
+*/
 
 :- multifile prolog:message//1.
 % too strong, would override swipl-devel/boot/messages.pl:  prolog:message(X) --> {atomic(X)}, ['~w'-[X]].
@@ -85,9 +86,9 @@ clauseNavigator_(Ref,span([a([onclick=Handler]," TaxLog")|Origin]), onclick=Hand
     !,
     % Module_ will be the temporary SWISH module with the current window's program
     % This seems to break links to source: (shouldMapModule(Module,Module_)-> kp_location(Module,F,true) ;(
-    (moduleMapping(Module,Module_)-> kp_location(Module,F,true) ;(
+    (moduleMapping(Module,Module_)-> must(kp_location(Module,F,true),one) ;(
         % strip swish "file" header if present:
-        ((sub_atom(F_,0,_,R,'swish://'), sub_atom(F_,R,_,0,F)) -> true ; F=F_)
+		(sub_atom(F_,0,_,R,'swish://'), sub_atom(F_,R,_,0,F)) -> true ; F=F_
         )),
     refToOrigin(Ref,URL),
     % could probably use https://www.swi-prolog.org/pldoc/doc_for?object=js_call//1 , but having trouble embedding that as attribute above:

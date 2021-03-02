@@ -1,6 +1,7 @@
 :- module(_ThisFileName,[query/4, query_with_facts/5, query_once_with_facts/5, explanation_node_type/2, render_questions/2,
     run_examples/0, run_examples/1, myClause2/8, niceModule/2, refToOrigin/2,
-    after/2, not_before/2, before/2, immediately_before/2, same_date/2, subtract_days/3, this_year/1, uk_tax_year/4, in/2]).
+    after/2, not_before/2, before/2, immediately_before/2, same_date/2, subtract_days/3, this_year/1, uk_tax_year/4, in/2,
+    must/2]).
 
 /** <module> Tax-KB reasoner and utils
 @author Miguel Calejo
