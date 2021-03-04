@@ -1,5 +1,5 @@
 :- module(_ThisFileName,[query/4, query_with_facts/5, query_once_with_facts/5, explanation_node_type/2, render_questions/2,
-    run_examples/0, run_examples/1, myClause2/8, myClause/4, niceModule/2, refToOrigin/2,
+    run_examples/0, run_examples/1, myClause2/8, myClause/4, taxlogWrapper/8, niceModule/2, refToOrigin/2,
     after/2, not_before/2, before/2, immediately_before/2, same_date/2, subtract_days/3, this_year/1, uk_tax_year/4, in/2,
     must/2]).
 
@@ -334,11 +334,14 @@ myClause2(H,Time,M,Body,Ref,IsProlog,URL,E) :-
         (hypothetical_fact(M,H,Fact,Body_,Ref,_) *-> H=Fact ; M:clause(H,Body_,Ref))
     ),
     % hypos with rules cause their bodies to become part of our resolvent via Body:
-    ((Body_= taxlogBody(Body,Time_,URL,E_), (Body=call(_);Body==true) ) -> (
-            (Time=Time_, IsProlog=true, E=[s(E_,M,Ref,[])])
-        ); 
-        Body_=taxlogBody(Body,Time_,URL,E) -> (Time=Time_, IsProlog=false) ; 
-        (Body_=Body,IsProlog=true,E=[],URL='')).
+    taxlogWrapper(Body_,Time,M,Body,Ref,IsProlog,URL,E).
+
+% taxlogWrapper(RawBody,Time,Module,Body,ClauseRef,IsProlog,URL,E)
+% keep this in sync with syntax.pl
+taxlogWrapper(taxlogBody(Body,Time_,URL,E_),Time,M,Body,Ref,IsProlog,URL,E) :- (Body=call(_);Body==true), !,
+    Time=Time_, IsProlog=true, E=[s(E_,M,Ref,[])].
+taxlogWrapper(taxlogBody(Body,Time_,URL,E),Time,_M,Body,_Ref,IsProlog,URL,E) :- !, Time=Time_, IsProlog=false.
+taxlogWrapper(Body_,_Time,_M,Body,_Ref,IsProlog,URL,E) :- Body_=Body,IsProlog=true,E=[],URL=''.
 
 refToOrigin(Ref,URL) :-
     blob(Ref,clause), 
