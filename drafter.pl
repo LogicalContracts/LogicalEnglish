@@ -1,5 +1,6 @@
 :- module(_,[
     draft_string/2, draft_string_from_file/2, test_draft/2,
+    nameToWords/2,
     predicateWords/3, printAllPredicateWords/1, uniquePredicateWords/2, uniqueArgSentences/2, uniquePredicateSentences/2]).
 
 :- use_module('spacy/spacy.pl').
@@ -91,14 +92,23 @@ nameToWords(X,[X]).
 camelsToList(X,L) :- 
     must_be(atomic,X), assertion(X\==''), atom_codes(X,Codes), 
     %(code_type(C,upper)->Type=upper;code_type(C,lower)->Type=lower;Type=other),
-    camelsToList(Codes,xpto,[],L).
+    camelsToList(Codes,white,[],L).
 
 % camelsToList(CharCodes,LastType,NextWordCharsSoFar,Words)
-camelsToList([C|Codes],Type,NextCodes,NewWords) :- code_type(C,upper), Type\=upper, !,
+camelsToList([C|Codes],LastType,NextCodes,NewWords) :- 
+    %Changers=[upper,digit], member(Changer,Changers), code_type(C,Changer), Type\=Changer, 
+    code_type(C,Type), 
+    LastType\=Type,
+    member(LastType-Type,[lower-upper,upper-digit,lower-digit,digit-lower,digit-upper]),
+    !,
     (NextCodes=[]->NewWords=Words ; NewWords=[W|Words]),
-    atom_codes(W,NextCodes), camelsToList([C|Codes],upper,[],Words).
-camelsToList([C|Codes],_,NextCodes,Words) :- !,
-    (code_type(C,upper)->Type=upper;code_type(C,lower)->Type=lower;Type=other),
+    atom_codes(W,NextCodes), camelsToList([C|Codes],Type,[],Words).
+camelsToList([C|Codes],LastType,NextCodes,Words) :- !,
+    (code_type(C,LastType)->Type=LastType;
+        code_type(C,lower)->Type=lower;
+        code_type(C,upper)->Type=upper;
+        code_type(C,digit)->Type=digit;
+        once(code_type(C,Type))),
     append(NextCodes,[C],NewNextCodes),
     camelsToList(Codes,Type,NewNextCodes,Words).
 camelsToList([],_,NextCodes,Words) :- 

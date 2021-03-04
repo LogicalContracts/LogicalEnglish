@@ -1,5 +1,5 @@
 :- module(_ThisFileName,[query/4, query_with_facts/5, query_once_with_facts/5, explanation_node_type/2, render_questions/2,
-    run_examples/0, run_examples/1, myClause2/8, niceModule/2, refToOrigin/2,
+    run_examples/0, run_examples/1, myClause2/8, myClause/4, niceModule/2, refToOrigin/2,
     after/2, not_before/2, before/2, immediately_before/2, same_date/2, subtract_days/3, this_year/1, uk_tax_year/4, in/2,
     must/2]).
 
@@ -317,7 +317,9 @@ squeezeTuples(Tuples,L,U,Es) :-
     findall(Ui, member(_/Ui/_,Tuples), U_), append(U_,U),
     findall(Ei, member(_/_/Ei,Tuples), Es_), append(Es_,Es).
 
-% myClause(+Head,+Module,-Body,-IsProlog,-LocalExplanation)  IsProlog is true if the body should be called directly, without interpretation
+myClause(H,M,Body,Ref) :- myClause(H,M,Body,Ref,_,_,_).
+
+% myClause(+Head,+Module,-Body,-Ref,-IsProlog,-OriginURL,-LocalExplanation)  IsProlog is true if the body should be called directly, without interpretation
 myClause(on(H,Time),M,Body,Ref,IsProlog,URL,E) :- !, myClause2(H,Time,M,Body,Ref,IsProlog,URL,E).
 myClause(H,M,Body,Ref,IsProlog,URL,E) :- myClause2(H,_Time,M,Body,Ref,IsProlog,URL,E).
 

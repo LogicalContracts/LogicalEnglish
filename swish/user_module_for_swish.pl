@@ -56,6 +56,7 @@ swish_config:config(include_alias,	example).
 :- use_module('../api.pl').
 :- use_module('../spacy/spacy.pl').
 :- use_module('../drafter.pl').
+:- use_module('../logical_english.pl').
 
 :- use_module('../spacy/hierplane_renderer.pl',[]).
 :- use_rendering(hierplane,[]).
@@ -112,13 +113,13 @@ clauseNavigator_(Ref,i(" ~w"-[Ref]),onclick='').
 )).
 
 :- use_module(swish(lib/render)).
-/* We now use the unknowns_renderer instead
+
 :- use_rendering(user:table, [
-	header(at('Unknown Predicate','Knowledge Page')),
+	% header(at('Unknown Predicate','Knowledge Page')),  We now use the unknowns_renderer instead
 	%_I,_Offset,Word,_Lemma,_POS,_Tag,_Head,_Dep,_Absorbed
     header(t('#','Offset','Word','Lemma','POS','Tag','Head','Dep','Absorbed')) 
     ]).
-*/
+
 
 :- use_rendering(graphviz).
 

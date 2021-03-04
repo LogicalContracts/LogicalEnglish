@@ -89,7 +89,7 @@ Each such fact identifies a predicate to be exposed via the (REST) API.
 
 	example(Title,StatesAndAssertions).
 	
-This represents an example of the application of the knowledge rules in the module, providing it with "instance" data specific to some taxpayer, asset, etc. Regulatory (guidance) text sometimes provides them, to lighten their explanations. ``StatesAndAssertions``is an ordered list of ``scenario(Facts, Postcondition)``. Facts is a list of predicate facts (Fact or Fact on Time), with some variants:
+This represents a test case, an example of the application of the knowledge rules in the module, providing it with "instance" data specific to some taxpayer, asset, etc. Regulatory (guidance) text sometimes provides them, to lighten their explanations. ``StatesAndAssertions``is an ordered list of ``scenario(Facts, Postcondition)``. Facts is a list of predicate facts (Fact or Fact on Time), with some variants:
 
  * a prefix ``- `` denotes deletion; the rest of the term must be a fact (nbot a rule). 
  * a prefix ``++`` denotes extension: the fact or rule is added to existing facts and rules (instead of redefining them if no prefix is used); if a single + is used for a predicate, all other example facts and rules for that predicate are also additions (not redefinitions)
