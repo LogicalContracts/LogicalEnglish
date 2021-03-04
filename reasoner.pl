@@ -639,15 +639,5 @@ kbModule(M) :- pengine_self(M).
 
 :- else. % On command-line SWI-Prolog, no user restrictions:
 
-:- use_module(library(http/html_write)).
-html(Spec) :-
-    phrase(html(Spec), Tokens),
-    with_output_to(
-        string(HTML),
-        print_html(current_output, Tokens)),
-    format('~w', [HTML]).
-
-myhtml(Out) :- writeln(Out), writeln("---------"), html(Out).
-
 kbModule(user).
 :- endif.

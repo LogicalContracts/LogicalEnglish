@@ -288,6 +288,9 @@ url_simple(URL,URL).
     
 
 :- thread_local myDeclaredModule_/1. % remembers the module declared in the last SWISH window loaded
+% filters the SWISH declared module with known KPs; the term_expansion hack catches a lot of other modules too, such as 'http_stream'
+myDeclaredModule(M) :- myDeclaredModule_(M), kp(M), !.
+
 
 :- if(current_module(swish)). %%% only when running with the SWISH web server:
 :- use_module(swish(lib/storage)).
@@ -486,15 +489,12 @@ pengines:prepare_module(Module, swish, _Options) :-
     % this seems to hold always, but commenting it out just in case...: assertion( \+ myCurrentModule(_)),
     setup_kp_module(Module),
     assert(myCurrentModule(Module)).
-
+    % should we perhaps use pengine_self...??
 % there is (just arrived from the SWISH editor) a fresher version To of the declared module From
 % ...OR there WAS,  although it no longer exists
 shouldMapModule(From,To) :- myDeclaredModule(From), kp(From), myCurrentModule(To), !, 
     (moduleMapping(From,To)->true;(assert(moduleMapping(From,To)))).
 :- dynamic moduleMapping/2. % Nice module->transient SWISH module; remembers previous mappings, to support UI navigation later, e.g. from explanations
-
-% filters the SWISH declared module with known KPs; the term_expansion hack catches a lot of other modules too, such as 'http_stream'
-myDeclaredModule(M) :- myDeclaredModule_(M), kp(M), !.
 
 
 current_user(User,Email) :- 

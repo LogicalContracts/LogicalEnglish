@@ -1,8 +1,8 @@
-:- module(_,[]).
+:- module(_,[print_kp_le/1]).
 
 :- use_module(reasoner).
 :- use_module(drafter).
- 
+
 /*
 sketch of a DCG; inadequate for an actual implementation, because we need dynamic (multiple length) terminals
 
@@ -42,6 +42,29 @@ argument(the(Name)) --> shortVarName(Name).
 */
 
 %%%% And now for something completely different: LE generation from Taxlog
+
+% Ex: logical_english:test_kp_le('https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/maximum-net-asset-value-test/').
+test_kp_le(KP) :-
+    F='/Users/mc/git/TaxKB/treta.html',
+    tell(F), print_kp_le(KP), told, www_open_url(F).
+
+print_kp_le(KP) :- 
+    loaded_kp(KP), le_kp_html(KP,HTML), myhtml(HTML).
+
+le_kp_html(KP,div([h3(KP)|PredsHTML])) :-
+    findall([hr([]),div(style='border-style: inset',PredHTML)], (
+        kp_predicate_mention(KP,Pred,defined), 
+        findall(div(ClauseHTML), (le_clause(Pred,KP,_Ref,LE), le_html(LE,ClauseHTML)), PredHTML)
+        ),PredsHTML_),
+    append(PredsHTML_,PredsHTML).
+    
+%le_html(+TermerisedLE,-TermerisedHTML)
+le_html(if(Conclusion,Conditions),[div([ConclusionHTML,span(b(' if'))] ), div(style='padding-left:50px;',ConditionsHTML)]) :- !,
+    le_html(Conclusion,ConclusionHTML), le_html(Conditions,ConditionsHTML).
+le_html(or(A,B),[Ahtml,b(' or '),Bhtml]) :- !, le_html(A,Ahtml), le_html(B,Bhtml).
+le_html(and(A,B),[Ahtml,b(' and '),Bhtml]) :- !, le_html(A,Ahtml), le_html(B,Bhtml).
+le_html(LE,"??~w??"-[LE]).
+
 
 %le_clause(?H,+Module,-Ref,-LEterm)
 % LEterms:
@@ -128,9 +151,12 @@ conditions(aggregate_all(Expr,Cond,Aggregate),VarNames,V1,Vn,aggregate_all(Op,Ea
 conditions(P,VarNames,V1,Vn,Predicate) :- 
     atomicSentence(P,VarNames,V1,Vn,Predicate).
 
-
-
 % find_var_name(Var,VarNames,Name) VarNames is a list of Name=Var or v(Words,Var)
 % finds the name for a (free, unbound) variable
 find_var_name(V,[VN|_VarNames],Name) :- VN=..[_,Name,Var], V==Var, !.
 find_var_name(V,[_|VarNames],Name) :- find_var_name(V,VarNames,Name).
+
+:- if(current_module(swish)). %%%%% On SWISH:
+:- multifile sandbox:safe_primitive/1.
+sandbox:safe_primitive(logical_english:print_kp_le(_)).
+:- endif.

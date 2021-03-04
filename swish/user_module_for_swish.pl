@@ -58,6 +58,19 @@ swish_config:config(include_alias,	example).
 :- use_module('../drafter.pl').
 :- use_module('../logical_english.pl').
 
+:- use_module(swish(lib/html_output),[html/1]).
+myhtml(H) :-  pengine_self(SwishModule), !, SwishModule:html(H).
+myhtml(Spec) :-  % for command line usage:
+	phrase(html(Spec), Tokens),
+	with_output_to(
+		string(HTML),
+		print_html(current_output, Tokens)),
+	format('~w', [HTML]).
+
+
+sandbox:safe_primitive(user:myhtml(_)). 
+
+
 :- use_module('../spacy/hierplane_renderer.pl',[]).
 :- use_rendering(hierplane,[]).
 

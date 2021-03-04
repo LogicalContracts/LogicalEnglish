@@ -18,6 +18,17 @@ prolog:message(S-Args) --> {atomic(S),is_list(Args)},[S-Args].
 :- open('mylog.txt',write,S), assert(mylogFile(S)).
 mylog(M) :- mylogFile(S), thread_self(T), writeq(S,T:M), nl(S), flush_output(S).
 
+:- use_module(library(http/html_write)).
+html(Spec) :-
+    phrase(html(Spec), Tokens),
+    with_output_to(
+        string(HTML),
+        print_html(current_output, Tokens)),
+    format('~w', [HTML]).
+
+myhtml(Out) :- writeln(Out), writeln("---------"), html(Out).
+
+
 :- multifile prolog_colour:term_colours/2.
 % Wire our colouring logic into SWI's:
 prolog_colour:term_colours(T,C) :- taxlog2prolog(T,C,_).
