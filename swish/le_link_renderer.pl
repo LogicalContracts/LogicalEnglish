@@ -10,7 +10,7 @@
 % Just a form containing the HTML in a hidden field, to be posted to the "external" rendering page
 
 term_rendering(LE, _Vars, _Options) --> 
-	{LE=logicalEnglish(HTML), is_list(HTML), mylog(html/HTML)}, 
+	{LE=logicalEnglish(HTML), is_list(HTML)}, 
     !,
     {phrase(html(HTML), Tokens), with_output_to( string(Text), print_html(current_output, Tokens) )},
 	html( 
