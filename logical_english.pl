@@ -1,6 +1,7 @@
-:- module(_,[print_kp_le/1]).
+:- module(_,[print_kp_le/1, le/2, le/1]).
 
 :- use_module(reasoner).
+:- use_module(kp_loader).
 :- use_module(drafter).
 
 /*
@@ -45,21 +46,39 @@ argument(the(Name)) --> shortVarName(Name).
 
 % Ex: logical_english:test_kp_le('https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/maximum-net-asset-value-test/').
 test_kp_le(KP) :-
-    F='/Users/mc/git/TaxKB/treta.html',
+    tmp_file(le,Tmp), atom_concat(Tmp, '.html', F),
     tell(F), print_kp_le(KP), told, www_open_url(F).
+
+% "invokes" our SWISH renderer
+le(KP,logicalEnglish([HTML])) :-
+    loaded_kp(KP), le_kp_html(KP,HTML).
+
+% Obtain navigation link to Logical English for the current SWISH editor
+le(logicalEnglish([HTML])) :- 
+    myDeclaredModule(KP), % no need to load, it's loaded already
+    le_kp_html(KP,HTML).
 
 print_kp_le(KP) :- 
     loaded_kp(KP), le_kp_html(KP,HTML), myhtml(HTML).
 
-le_kp_html(KP,div([h3(KP)|PredsHTML])) :-
+%%%%% LE proper
+
+le_kp_html(KP, div(p(i([
+        "Knowledge page carefully crafted in ", 
+        a([href=EditURL,target='_blank'],"Taxlog/Prolog"), 
+        " from the legislation at",br([]),
+        a([href=KP,target='_blank'],KP)|PredsHTML
+    ])))) :-
+    (shouldMapModule(KP,KP_) -> true ; KP=KP_), %KP_ is the latest SWISH window module
+    swish_editor_path(KP,EditURL),
     findall([\["&nbsp;"],div(style='border-style: inset',PredHTML)], (
         kp_predicate_mention(KP,Pred,defined), 
-        findall(div(ClauseHTML), (le_clause(Pred,KP,_Ref,LE), le_html(LE,ClauseHTML)), PredHTML)
+        findall(div(ClauseHTML), (le_clause(Pred,KP_,_Ref,LE), le_html(LE,ClauseHTML)), PredHTML)
         ),PredsHTML_),
     append(PredsHTML_,PredsHTML).
     
 %le_html(+TermerisedLE,-TermerisedHTMLlist)
-le_html(LE,_) :- mylog(LE),fail.
+%le_html(LE,_) :- mylog(LE),fail.
 le_html(if(Conclusion,Conditions), [div(Top), div(style='padding-left:30px;',ConditionsHTML)]) :- !,
     le_html(Conclusion,ConclusionHTML), le_html(Conditions,ConditionsHTML),
     append(ConclusionHTML,[span(b(' if'))], Top).
@@ -74,8 +93,10 @@ le_html(if_then_else(Condition,Then,Else),HTML) :- !,
     append([["{ if "],CH,[" then it must be the case that "],TH,[" or otherwise "],EH,[" }"]],HTML).
 le_html(at(Conditions,KP),HTML) :- !,
     le_html(Conditions,CH), le_html(KP,KPH), 
-    (KPH=[HREF]->true;HREF='??'),
-    append([CH,[" according to ",a([href=HREF,target('_blank')],KPH)]],HTML).
+    (KPH=[HREF_]->true;HREF_='??'),
+    % if we have a page, navigate to it:
+    ((KP=value(Word), kp(Word)) -> format(string(HREF),"/logicalEnglish?kp=~a",[Word]); HREF=HREF_),
+    append([CH,[" according to ",a([href=HREF,target('_blank')],"other legislation")]],HTML).
 le_html(on(Conditions,Time),HTML) :- !,
     (Time=a(T) -> TimeQualifier = [" at a time "|T]; 
         (le_html(Time,TH), TimeQualifier = [" at "|TH]) ),
@@ -199,7 +220,35 @@ conditions(P,VarNames,V1,Vn,Predicate) :-
 find_var_name(V,[VN|_VarNames],Name) :- VN=..[_,Name,Var], V==Var, !.
 find_var_name(V,[_|VarNames],Name) :- find_var_name(V,VarNames,Name).
 
+%%%% Serving Logical English versions of the KB
+
+:- use_module(library(http/http_dispatch)).
+:- use_module(library(http/http_parameters)).
+:- use_module(library(http/html_write)).
+
+:- http_handler('/logicalEnglish', handle_le, []).  % parameters: either of kp or html (this uri encoded)
+handle_le(Request) :-
+    http_parameters(Request, [kp(Module_,[default('')]), html(ReadyHTML,[default('')])]),
+    (ReadyHTML\='' -> ( 
+        uri_encoded(path,ReadyHTML_,ReadyHTML),
+        \[ReadyHTML_]=TheHTML, 
+        assertion(Module_=='') 
+        ) ; (
+        atom_string(Module,Module_),
+        loaded_kp(Module), le_kp_html(Module,TheHTML)
+    )),
+    reply_html_page([title("Logical English version")],[
+        h2("Logical English"),
+        \["<!-- "], % HTML comment
+        "Your request: ~w"-[Request],
+        \["-->"]
+        |TheHTML
+    ]).
+
+
 :- if(current_module(swish)). %%%%% On SWISH:
 :- multifile sandbox:safe_primitive/1.
 sandbox:safe_primitive(logical_english:print_kp_le(_)).
+sandbox:safe_primitive(logical_english:le(_)).
+sandbox:safe_primitive(logical_english:le(_,_)).
 :- endif.

@@ -111,10 +111,12 @@ clauseNavigator_(Ref,span([a([onclick=Handler]," TaxLog")|Origin]), onclick=Hand
 clauseNavigator_(Ref,i(" ~w"-[Ref]),onclick='').
 
 
-:- use_module('explanation_renderer',[]).
+:- use_module(explanation_renderer,[]).
 :- use_rendering(explanation_renderer).
-:- use_module('unknowns_renderer',[]).
+:- use_module(unknowns_renderer,[]).
 :- use_rendering(unknowns_renderer).
+:- use_module(le_link_renderer,[]).
+:- use_rendering(le_link_renderer).
 
 :- initialization( (
 	(getenv('LOAD_KB',true) -> (

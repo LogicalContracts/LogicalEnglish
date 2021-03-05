@@ -1,10 +1,11 @@
 :- module(_,[
-    loaded_kp/1, all_kps_loaded/0, all_kps_loaded/1, kp_dir/1, kp_location/3, kp/1, shouldMapModule/2, moduleMapping/2, myDeclaredModule/1, system_predicate/1,
+    loaded_kp/1, all_kps_loaded/0, all_kps_loaded/1, kp_dir/1, kp_location/3, kp/1, 
+    shouldMapModule/2, moduleMapping/2, myDeclaredModule/1, myCurrentModule/1, system_predicate/1,
     discover_kps_in_dir/1, discover_kps_in_dir/0, discover_kps_gitty/0, setup_kp_modules/0, load_kps/0,
     load_gitty_files/1, load_gitty_files/0, save_gitty_files/1, save_gitty_files/0, delete_gitty_file/1, update_gitty_file/3,
     xref_all/0, xref_clean/0, print_kp_predicates/0, print_kp_predicates/1, reset_errors/0, my_xref_defined/3, url_simple/2,
     kp_predicate_mention/3, predicate_literal/2,
-    edit_kp/1, knowledgePagesGraph/1, knowledgePagesGraph/2]).
+    edit_kp/1, swish_editor_path/2, knowledgePagesGraph/1, knowledgePagesGraph/2]).
 
 :- use_module(library(prolog_xref)).
 :- use_module(library(broadcast)).
@@ -24,7 +25,9 @@ Can also export and import SWISH storage to/from a file system directory.
 :- dynamic kp_location/4. % URL,File,ModifiedTime,InGitty
 kp_location(URL,File,InGitty) :- kp_location(URL,File,_,InGitty).
 
-kp(URL) :- kp_location(URL,_,_).
+kp(URL_) :- 
+    (nonvar(URL_) -> atom_string(URL,URL_);URL=URL_),
+    kp_location(URL,_,_).
 
 %! discover_kps_in_dir(+Dir) is det.
 %
@@ -194,7 +197,7 @@ xref_clean :-
 % kp_predicate_mention(?Module,?PredicateTemplate,?How) How is called_by(KP)/defined
 % Considers undefined predicates too; ignores mentions from example scenarios
 kp_predicate_mention(KP,G,How) :-
-    kp(KP),
+    (nonvar(KP) -> true ; kp(KP)),
     ( xref_defined(KP,G,_), How=defined ; 
       xref_called(KP, Called, _By), (Called=_:G->true;Called=G), How=called_by(KP)
       ),
@@ -398,11 +401,16 @@ reactToSaved(updated(GittyFile,_Commit)) :- % discover (module name may have cha
 %! edit_kp(URL) is det
 %
 % Open the current gitty version of the knowledge page in SWISH's editor
-edit_kp(URL) :-
-    kp_location(URL,File,InGitty),
-    (InGitty==(false) -> print_message(error,"~w is not in SWISH storage"-[URL]);(
-        format(string(URL),"http://localhost:3050/p/~a",[File]), www_open_url(URL)
+edit_kp(KP) :-
+    kp_location(KP,_File,InGitty),
+    (InGitty==(false) -> print_message(error,"~w is not in SWISH storage"-[KP]);(
+        swish_editor_path(KP,Path),
+        format(string(URL),"http://localhost:3050~a",[Path]), www_open_url(URL)
         )).
+
+swish_editor_path(KP,Path) :- must_be(nonvar,KP),
+    kp_location(KP,File,true),
+    format(string(Path),"/p/~a",[File]), !.
 
 %%%% Knowledge pages graph
 
