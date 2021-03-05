@@ -52,28 +52,69 @@ print_kp_le(KP) :-
     loaded_kp(KP), le_kp_html(KP,HTML), myhtml(HTML).
 
 le_kp_html(KP,div([h3(KP)|PredsHTML])) :-
-    findall([hr([]),div(style='border-style: inset',PredHTML)], (
+    findall([\["&nbsp;"],div(style='border-style: inset',PredHTML)], (
         kp_predicate_mention(KP,Pred,defined), 
         findall(div(ClauseHTML), (le_clause(Pred,KP,_Ref,LE), le_html(LE,ClauseHTML)), PredHTML)
         ),PredsHTML_),
     append(PredsHTML_,PredsHTML).
     
-%le_html(+TermerisedLE,-TermerisedHTML)
-le_html(if(Conclusion,Conditions),[div([ConclusionHTML,span(b(' if'))] ), div(style='padding-left:50px;',ConditionsHTML)]) :- !,
-    le_html(Conclusion,ConclusionHTML), le_html(Conditions,ConditionsHTML).
-le_html(or(A,B),[Ahtml,b(' or '),Bhtml]) :- !, le_html(A,Ahtml), le_html(B,Bhtml).
-le_html(and(A,B),[Ahtml,b(' and '),Bhtml]) :- !, le_html(A,Ahtml), le_html(B,Bhtml).
-le_html(LE,"??~w??"-[LE]).
+%le_html(+TermerisedLE,-TermerisedHTMLlist)
+le_html(LE,_) :- mylog(LE),fail.
+le_html(if(Conclusion,Conditions), [div(Top), div(style='padding-left:30px;',ConditionsHTML)]) :- !,
+    le_html(Conclusion,ConclusionHTML), le_html(Conditions,ConditionsHTML),
+    append(ConclusionHTML,[span(b(' if'))], Top).
+le_html(Binary, HTML) :- Binary=..[Op,A,B], member(Op,[and,or]), !, 
+    le_html(A,Ahtml), le_html(B,Bhtml), append([Ahtml,[b(" ~w "-[Op])],Bhtml],HTML).
+%TOOO: to avoid this verbose form, generate negated predicates with Spacy help, or simply declare the negated forms
+le_html(not(A),HTML) :- !, le_html(A,Ahtml), HTML=["it is not the case that "|Ahtml]. 
+le_html(if_then_else(Condition,true,Else),HTML) :- !,
+    le_html(Condition,CH), le_html(Else,EH), append([["{ "],CH,[" or otherwise "],EH, ["}"]],HTML).
+le_html(if_then_else(Condition,Then,Else),HTML) :- !,
+    le_html(Condition,CH), le_html(Then,TH), le_html(Else,EH), 
+    append([["{ if "],CH,[" then it must be the case that "],TH,[" or otherwise "],EH,[" }"]],HTML).
+le_html(at(Conditions,KP),HTML) :- !,
+    le_html(Conditions,CH), le_html(KP,KPH), 
+    (KPH=[HREF]->true;HREF='??'),
+    append([CH,[" according to ",a([href=HREF,target('_blank')],KPH)]],HTML).
+le_html(on(Conditions,Time),HTML) :- !,
+    (Time=a(T) -> TimeQualifier = [" at a time "|T]; 
+        (le_html(Time,TH), TimeQualifier = [" at "|TH]) ),
+    le_html(Conditions,CH), %TODO: should we swap the time qualifier for big conditions, e.g. ..., at Time, blabla
+    append([CH,TimeQualifier],HTML).
+le_html(aggregate_all(Op,Each,SuchThat,Result),HTML) :- !,
+    le_html(Result,RH), le_html(SuchThat,STH), 
+    (Each=a(Words) -> EachH = ["each "|Words] ; le_html(Each,EachH)),
+    append([RH, [" is the ~w of each "-[Op]],EachH,[" such that "],STH],HTML).
+le_html(predicate(Functor,[]), HTML) :- !, predicate_html(Functor,HTML).
+le_html(predicate(Functor,[Arg]), HTML) :- !, predicate_html(Functor,PH), le_html(Arg,AH), append([AH,[" "],PH],HTML).
+le_html(predicate(Functor,[A,B]), HTML) :- !, predicate_html(Functor,PH), le_html(A,AH), le_html(B,BH), append([AH,[" "],PH,[" "],BH],HTML).
+le_html(predicate(Functor,[A1|Args]),HTML) :- !, 
+    predicate_html(Functor,PH), le_html(A1,A1H),
+    findall([", "|AH], (member(A,Args),le_html(A,AH)), ArgsH_),
+    append(ArgsH_,ArgsH),
+    append([PH,[" ( "],A1H,ArgsH,[")"]],HTML).
+le_html(a(Words), [span(VS,[Det," ",Name])]) :- !, 
+    var_style(VS), atomics_to_string(Words," ",Name), atom_chars(Name,[First|_]),
+    (member(First,[a,e,i,o,u,'A','E','I','O','U']) -> Det=an ; Det=a).
+le_html(the(Words), [span(VS,["the ",Name])]) :- !, 
+    var_style(VS), atomics_to_string(Words," ",Name).
+le_html(value(X), ["~w"-[X]]) :- !.
+le_html(LE, ["??~w??"-[LE]]).
 
+predicate_html(Words,[b(Name)]) :- atomics_to_string(Words, " ", Name).
+
+var_style(style="color:#880000").
 
 %le_clause(?H,+Module,-Ref,-LEterm)
 % LEterms:
 %  if(Conclusion,Conditions), or/and/not/must(Condition,Obligation), if_then_else(Condition,Then,Else)
 %   predicate(FunctorWords,Args); each Arg is a a/the(Words) or some_thing (anonymous var) or value(Term)
 %   predicate(the(Words),unknown_arguments) for meta variables :-)
+%   triu/false
 %   aggregate_all(Operator,Each,Condition,Result)
 %   at(Predicate,KP)  ...Predicate (cf. RefLink)...
 %   on(Predicate,TimeExpression) ...Predicate at time ...
+%TODO: return explicit time on the head
 le_clause(H,M,Ref,LE) :-
     must_be(nonvar,H),
     myClause(H,M,_,Ref), 
@@ -109,6 +150,8 @@ atomicSentence(at(Cond,KP),VarNames,V1,Vn,at(Conditions,Reference)) :- !,
 atomicSentence(on(Cond,Time),VarNames,V1,Vn,on(Conditions,Moment)) :- !,
     conditions(Cond,VarNames,V1,V2,Conditions),
     arguments([Time],VarNames,V2,Vn,[Moment]).
+atomicSentence(true,_,V,V,true) :- !.
+atomicSentence(false,_,V,V,false) :- !.
 atomicSentence(Literal,VarNames,V1,Vn,predicate(Functor,Arguments)) :- Literal=..[F|Args],
     nameToWords(F,Functor), arguments(Args,VarNames,V1,Vn,Arguments).
 
@@ -147,7 +190,7 @@ conditions(\+ A,VarNames,V1,Vn,Condition) :- !, conditions(not(A),VarNames,V1,Vn
 conditions(aggregate_all(Expr,Cond,Aggregate),VarNames,V1,Vn,aggregate_all(Op,Each,SuchThat,Result)) :- Expr=..[Op,Arg], !,
     arguments([Arg],VarNames,V1,V2,[Each]),
     conditions(Cond,VarNames,V2,V3,SuchThat),
-    arguments([Aggregate],VarNames,V3,Vn,Result).
+    arguments([Aggregate],VarNames,V3,Vn,[Result]).
 conditions(P,VarNames,V1,Vn,Predicate) :- 
     atomicSentence(P,VarNames,V1,Vn,Predicate).
 
