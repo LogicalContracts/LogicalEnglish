@@ -96,7 +96,10 @@ le_html(at(Conditions,KP),HTML) :- !,
     (KPH=[HREF_]->true;HREF_='??'),
     % if we have a page, navigate to it:
     ((KP=value(Word), kp(Word)) -> format(string(HREF),"/logicalEnglish?kp=~a",[Word]); HREF=HREF_),
-    append([CH,[" according to ",a([href=HREF,target('_blank')],"other legislation")]],HTML).
+    Label="other legislation",
+    %TODO: distinguish external data, broken links...
+    %(sub_atom(HREF,0,_,_,'http') -> Label="other legislation" ; Label="existing data"),
+    append([CH,[" according to ",a([href=HREF,target('_blank')],Label)]],HTML).
 le_html(on(Conditions,Time),HTML) :- !,
     (Time=a(T) -> TimeQualifier = [" at a time "|T]; 
         (le_html(Time,TH), TimeQualifier = [" at "|TH]) ),
@@ -208,6 +211,7 @@ conditions((A,B),VarNames,V1,Vn,Condition) :- !, conditions(and(A,B),VarNames,V1
 conditions(';'(C->T,E),VarNames,V1,Vn,LE) :- !, conditions(then(if(C),else(T,E)),VarNames,V1,Vn,LE). % not quite the same meaning!
 conditions((A;B),VarNames,V1,Vn,Condition) :- !, conditions(or(A,B),VarNames,V1,Vn,Condition).
 conditions(\+ A,VarNames,V1,Vn,Condition) :- !, conditions(not(A),VarNames,V1,Vn,Condition).
+conditions(call(G),VarNames,V1,Vn,Condition) :- !, conditions(G,VarNames,V1,Vn,Condition).
 conditions(aggregate_all(Expr,Cond,Aggregate),VarNames,V1,Vn,aggregate_all(Op,Each,SuchThat,Result)) :- Expr=..[Op,Arg], !,
     arguments([Arg],VarNames,V1,V2,[Each]),
     conditions(Cond,VarNames,V2,V3,SuchThat),
