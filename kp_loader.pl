@@ -1,5 +1,5 @@
 :- module(_,[
-    loaded_kp/1, all_kps_loaded/0, all_kps_loaded/1, kp_dir/1, kp_location/3, kp/1, 
+    loaded_kp/1, all_kps_loaded/0, all_kps_loaded/1, kp_dir/1, kp_location/3, kp/1, must_succeed/2,
     shouldMapModule/2, moduleMapping/2, myDeclaredModule/1, myCurrentModule/1, system_predicate/1,
     discover_kps_in_dir/1, discover_kps_in_dir/0, discover_kps_gitty/0, setup_kp_modules/0, load_kps/0,
     load_gitty_files/1, load_gitty_files/0, save_gitty_files/1, save_gitty_files/0, delete_gitty_file/1, update_gitty_file/3,
@@ -289,6 +289,11 @@ url_simple(URL,Simple) :-
     !.
 url_simple(URL,URL).
     
+:- meta_predicate(must_succeed(0,+)).
+must_succeed(G,_) :- G, !.
+must_succeed(G,M) :- throw("weird_failure_of of ~w: ~w"-[G,M]).
+
+must_succeed(G) :- must_succeed(G,'').
 
 :- thread_local myDeclaredModule_/1. % remembers the module declared in the last SWISH window loaded
 % filters the SWISH declared module with known KPs; the term_expansion hack catches a lot of other modules too, such as 'http_stream'
@@ -389,14 +394,15 @@ reactToSaved(updated(GittyFile,_Commit)) :- % xref
     xref_source(URL,[silent(true)]).
 */
 
-reactToSaved(created(GittyFile,Commit)) :- 
+reactToSaved(created(GittyFile,Commit)) :-
     reactToSaved(updated(GittyFile,Commit)).
 reactToSaved(updated(GittyFile,_Commit)) :- % discover (module name may have changed...) and xref
+    %mylog(updated(GittyFile,_Commit)),
     storage_file(GittyFile,Data,Meta), 
     open_string(Data,In),
-    process_file(In,GittyFile,Meta.time,true), 
-    kp_location(URL,GittyFile,true), 
-    xref_source(URL,[silent(true)]).
+    must_succeed(process_file(In,GittyFile,Meta.time,true)), 
+    (kp_location(URL,GittyFile,true) -> xref_source(URL,[silent(true)]) ; 
+        print_message(warning,"Could not find URL for ~w"-[GittyFile])).
 
 %! edit_kp(URL) is det
 %

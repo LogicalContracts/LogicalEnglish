@@ -1,7 +1,7 @@
 :- module(_ThisFileName,[query/4, query_with_facts/5, query_once_with_facts/5, explanation_node_type/2, render_questions/2,
     run_examples/0, run_examples/1, myClause2/8, myClause/4, taxlogWrapper/8, niceModule/2, refToOrigin/2,
-    after/2, not_before/2, before/2, immediately_before/2, same_date/2, subtract_days/3, this_year/1, uk_tax_year/4, in/2,
-    must/2]).
+    after/2, not_before/2, before/2, immediately_before/2, same_date/2, subtract_days/3, this_year/1, uk_tax_year/4, in/2
+    ]).
 
 /** <module> Tax-KB reasoner and utils
 @author Miguel Calejo
@@ -563,10 +563,6 @@ nodeAttributes(unknown(at(G,K)), [label=S]) :- format(string(S),"~w",G).
 nodeAttributes(failed(at(G,K)), [color=red,label=S]) :- format(string(S),"~w",G).
 nodeAttributes(at(G,K), [color=green,label=S]) :- format(string(S),"~w",G).
 */
-
-:- meta_predicate(must(0,+)).
-must(G,_) :- G, !.
-must(G,M) :- throw(weird_failure_of(G,M)).
 
 %%%% Common background knowledge, probably to go elsewhere:
 
