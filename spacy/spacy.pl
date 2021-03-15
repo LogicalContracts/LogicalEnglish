@@ -2,8 +2,8 @@
 
 :- module(_,[
     load_content/1, load_content_from_text_file/2, content/2, refreshTokens/1, content_tokens/4, content_tokens_in/5,
-    t_word/2, t_lemma/2, t_pos/2, t_tag/2, t_head/2, t_dep/2, t_i/2, t_offset/2, t_absorbed/2, member_with/3, member_with/2,
-    sentence/2, parseAndSee/4, parseAndSee/5,
+    t_word/2, t_lemma/2, t_pos/2, t_tag/2, t_head/2, t_dep/2, t_i/2, t_offset/2, t_absorbed/2, member_with/3, member_with/2, root/2,
+    sentence/2, parseAndSee/4, parseAndSee/5, spaCyParseTokens/3,
     depgraph/2, hierplane/2]).
 % Spacy interface: parsing, representation of text chunks and sentences with tokens, utility predicates
 % Text and tokens are kept associated with URLs/paths, with an implicit textual hierarchy

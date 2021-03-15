@@ -1,5 +1,5 @@
 :- module(_,[
-    loaded_kp/1, all_kps_loaded/0, all_kps_loaded/1, kp_dir/1, kp_location/3, kp/1, must_succeed/2,
+    loaded_kp/1, all_kps_loaded/0, all_kps_loaded/1, kp_dir/1, taxkb_dir/1, kp_location/3, kp/1, must_succeed/2,
     shouldMapModule/2, moduleMapping/2, myDeclaredModule/1, myCurrentModule/1, system_predicate/1,
     discover_kps_in_dir/1, discover_kps_in_dir/0, discover_kps_gitty/0, setup_kp_modules/0, load_kps/0,
     load_gitty_files/1, load_gitty_files/0, save_gitty_files/1, save_gitty_files/0, delete_gitty_file/1, update_gitty_file/3,
@@ -12,8 +12,11 @@
 
 :- multifile prolog:message//1.
 
-:- dynamic kp_dir/1.
-:- prolog_load_context(directory, D), retractall(kp_dir(_)), atomic_list_concat([D,'/kb'], KD), assert(kp_dir(KD)), print_message(informational,"KB directory is ~a"-[KD]).
+:- dynamic kp_dir/1, taxkb_dir/1.
+:- prolog_load_context(directory, D), 
+    retractall(taxkb_dir(_)), assert(taxkb_dir(D)), 
+    retractall(kp_dir(_)), atomic_list_concat([D,'/kb'], KD), assert(kp_dir(KD)), 
+    print_message(informational,"KB directory is ~a"-[KD]).
 
 /** <module> Dynamic module loader.
 

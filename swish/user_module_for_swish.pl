@@ -220,6 +220,15 @@ html_post_resources([]) --> {true}.
 % extra_swish_resource(link([ type('text/css'),rel('stylesheet'),href('/lps/lps.css') ])).
 % extra_swish_resource(script(JS)) :- google_analytics_script(JS).
 
+:- multifile user:file_search_path/2.
+user:file_search_path(taxkb_resources, D) :- taxkb_dir(XD), concat_atom([XD,"/swish/web"],D).
+
+:- http_handler(root(taxkb), serve_taxkb_resources, [prefix]). 
+serve_taxkb_resources(Request) :- 
+	option(path(Info), Request),  
+	http_reply_file(taxkb_resources(Info), [], Request).
+
+
 :- multifile prolog_colour:term_colours/2.
 % Wire our colouring logic into SWI's:
 prolog_colour:term_colours(T,C) :- taxlog2prolog(T,C,_).
