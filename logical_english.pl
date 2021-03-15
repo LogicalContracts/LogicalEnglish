@@ -135,6 +135,7 @@ predicate_html(Words,[b(Name)]) :- atomics_to_string(Words, " ", Name).
 var_style(style="color:#880000").
 
 %le_clause(?H,+Module,-Ref,-LEterm)
+% H is a predicate head, with or without time; if the ruel has explicit time in head, time will be explicit in the LE too
 % LEterms:
 %  if(Conclusion,Conditions), or/and/not/must(Condition,Obligation), if_then_else(Condition,Then,Else)
 %   predicate(FunctorWords,Args); each Arg is a a/the(Words) or some_thing (anonymous var) or le_value(Term)
@@ -153,8 +154,8 @@ le_clause(H,M,Ref,LE) :-
     prolog_clause:read_term_at_line(File, LineNo, M, Clause_, _TermPos0, VarNames),
     expand_term(Clause_,RawClause),
     (RawClause = (RealH:-RawBody) -> true ; (RawClause=RealH, RawBody=true)),
-    taxlogWrapper(RawBody,Time,M,B,Ref,_IsProlog,_URL,_E),
-    (H=on(_,Time)->TheH=on(RealH,Time);TheH=RealH),
+    taxlogWrapper(RawBody,Explicit,Time,M,B,Ref,_IsProlog,_URL,_E),
+    ((H=on(_,Time);Explicit==true)->TheH=on(RealH,Time);TheH=RealH),
     % ...now for the normal stuff:
     atomicSentence(TheH,VarNames,[],Vars1,Head),
     (B==true -> (LE=Head, VarsN=Vars1) ; (
@@ -185,27 +186,24 @@ atomicSentence(Literal,VarNames,V1,Vn,predicate(Functor,Arguments)) :- Literal=.
     nameToWords(F,Functor), arguments(Args,VarNames,V1,Vn,Arguments).
 
 arguments([],_,V,V,[]) :- !.
-arguments([A1|An],VarNames,V1,Vn,[Argument|Arguments]) :- var(A1), !,
+arguments([A1|An],VarNames,V1,Vn,[Argument|Arguments]) :- 
+    argument(A1,VarNames,V1,V2,Argument), arguments(An,VarNames,V2,Vn,Arguments).
+
+% argument(+A1,+VarNames,+V1,-Vn,-Argument)
+argument(A1,VarNames,V1,Vn,Argument) :- var(A1), !,
     (find_var_name(A1,V1,Words) -> (
-        Argument=the(Words),
-        arguments(An,VarNames,V1,Vn,Arguments)
+        Argument=the(Words), Vn=V1
         ) ; find_var_name(A1,VarNames,Name) -> (
             nameToWords(Name,Words),
             Argument=a(Words),
-            arguments(An,VarNames,[v(Words,A1)|V1],Vn,Arguments)
+            Vn = [v(Words,A1)|V1]
         ) ; (
-            Argument=some_thing,
-            arguments(An,VarNames,V1,Vn,Arguments)
-            )
-    ).
-arguments([A1|An],VarNames,V1,Vn,[le_value(A1)|Arguments]) :- atomic(A1),!,
-    arguments(An,VarNames,V1,Vn,Arguments).
-arguments([A1|An],VarNames,V1,Vn,[NewA1|Arguments]) :- is_list(A1),!,
-    arguments(A1,VarNames,V1,V2,NewA1),
-    arguments(An,VarNames,V2,Vn,Arguments).
-arguments([A1|An],VarNames,V1,Vn,[NewA1|Arguments]) :- A1=..[F|Args], !, % terms in general; add case for isExpressionFunctor(F)?
-    arguments(Args,VarNames,V1,V2,NewArgs), NewA1=..[F|NewArgs],
-    arguments(An,VarNames,V2,Vn,Arguments).
+            Argument=some_thing, Vn=V1
+    )).
+argument(A1,_VarNames,V,V,le_value(A1)) :-  atomic(A1),!.
+argument(A1,VarNames,V1,Vn,NewA1) :- is_list(A1),!, arguments(A1,VarNames,V1,Vn,NewA1).
+argument(A1,VarNames,V1,Vn,NewA1) :-  A1=..[F|Args], !, % terms in general; add case for isExpressionFunctor(F)?
+    arguments(Args,VarNames,V1,Vn,NewArgs), NewA1=..[F|NewArgs].
 
 conditions(V,_VarNames,V1,V1,Predicate) :- var(V), !,
     (find_var_name(V,V1,Words) -> Predicate=predicate(the(Words,unknown_arguments)) ; throw("Anonymous variable as body goal"-[])).

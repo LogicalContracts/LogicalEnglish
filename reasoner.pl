@@ -1,5 +1,5 @@
 :- module(_ThisFileName,[query/4, query_with_facts/5, query_once_with_facts/5, explanation_node_type/2, render_questions/2,
-    run_examples/0, run_examples/1, myClause2/8, myClause/4, taxlogWrapper/8, niceModule/2, refToOrigin/2,
+    run_examples/0, run_examples/1, myClause2/8, myClause/4, taxlogWrapper/9, niceModule/2, refToOrigin/2,
     after/2, not_before/2, before/2, immediately_before/2, same_date/2, subtract_days/3, this_year/1, uk_tax_year/4, in/2,
     isExpressionFunctor/1
     ]).
@@ -338,14 +338,14 @@ myClause2(H,Time,M,Body,Ref,IsProlog,URL,E) :-
         (hypothetical_fact(M,H,Fact,Body_,Ref,_) *-> H=Fact ; M:clause(H,Body_,Ref))
     ),
     % hypos with rules cause their bodies to become part of our resolvent via Body:
-    taxlogWrapper(Body_,Time,M,Body,Ref,IsProlog,URL,E).
+    taxlogWrapper(Body_,_ExplicitTime,Time,M,Body,Ref,IsProlog,URL,E).
 
-% taxlogWrapper(RawBody,Time,Module,Body,ClauseRef,IsProlog,URL,E)
+% taxlogWrapper(RawBody,ExplicitTime,Time,Module,Body,ClauseRef,IsProlog,URL,E)
 % keep this in sync with syntax.pl
-taxlogWrapper(taxlogBody(Body,Time_,URL,E_),Time,M,Body,Ref,IsProlog,URL,E) :- (Body=call(_);Body==true), !,
+taxlogWrapper(taxlogBody(Body,Explicit,Time_,URL,E_),Explicit,Time,M,Body,Ref,IsProlog,URL,E) :- (Body=call(_);Body==true), !,
     Time=Time_, IsProlog=true, E=[s(E_,M,Ref,[])].
-taxlogWrapper(taxlogBody(Body,Time_,URL,E),Time,_M,Body,_Ref,IsProlog,URL,E) :- !, Time=Time_, IsProlog=false.
-taxlogWrapper(Body_,_Time,_M,Body,_Ref,IsProlog,URL,E) :- Body_=Body,IsProlog=true,E=[],URL=''.
+taxlogWrapper(taxlogBody(Body,Explicit,Time_,URL,E),Explicit,Time,_M,Body,_Ref,IsProlog,URL,E) :- !, Time=Time_, IsProlog=false.
+taxlogWrapper(Body_,false,_Time,_M,Body,_Ref,IsProlog,URL,E) :- Body_=Body,IsProlog=true,E=[],URL=''.
 
 refToOrigin(Ref,URL) :-
     blob(Ref,clause), 
@@ -370,7 +370,7 @@ refToSourceAndOrigin(Ref,Source,Origin) :-
 prolog:meta_goal(at(G,M),[M_:G]) :- (nonvar(M) -> atom_string(M_,M) ; M=M_).
 % next two handled by declare_our_metas:
 prolog:meta_goal(on(G,_Time),[G]).
-prolog:meta_goal(taxlogBody(G,_,_,_),[G]).
+prolog:meta_goal(taxlogBody(G,_,_,_,_),[G]).
 %prolog:meta_goal(because(G,_Why),[G]).
 prolog:meta_goal(and(A,B),[A,B]).
 prolog:meta_goal(or(A,B),[A,B]).
@@ -384,7 +384,7 @@ prolog:meta_goal(aggregate_all(_,G,_),[G]). % is this necessary...?
 :- multifile prolog:called_by/4.
 prolog:called_by(on(G,_T), M, M, [G]). % why is this needed, given meta_goal(on(..))...?
 prolog:called_by(because(G,_Why), M, M, [G]). % why is this needed, given meta_goal(on(..))...?
-prolog:called_by(taxlogBody(G,_,_,_), M, M, [G]). 
+prolog:called_by(taxlogBody(G,_,_,_,_), M, M, [G]). 
 %prolog:called_by(aggregate(_,G,_), M, M, [G]). % why is this needed, given meta_goal(on(..))...?
 
 % does NOT fix the "G is not called" bug: prolog:called_by(mainGoal(G,_), M, M, [G]).
@@ -455,17 +455,17 @@ call_with_facts(G,M_,Facts) :-
 assert_and_remember([-Fact|Facts],M,Why,(Undo,Undos)) :- !,
     must_be(nonvar,Fact),
     assertion( \+ (functor(Fact,':-',_);functor(Fact,if,_)) ),
-    canonic_fact_time(Fact,M,CF,Time), assert_and_remember_(delete,redefine,CF,_,Time,Why,Undo),
+    canonic_fact_time(Fact,M,CF,Time,ExplicitTime), assert_and_remember_(delete,redefine,CF,ExplicitTime,_,Time,Why,Undo),
     assert_and_remember(Facts,M,Why,Undos).
 assert_and_remember([Fact__|Facts],M,Why,(Undo,Undos)) :- must_be(nonvar,Fact__),
     (Fact__= (++ Fact_) -> How=extend ; (Fact__=Fact_,How=redefine)),
     % Note: the following MUST be kept in sync with taxlog2prolog/3; essencially, this assumes no transform occurs:
     (Fact_ = if(Fact,Body) -> true ; (Fact=Fact_,Body=true)), %TODO: verify that rules are not functions etc
-    canonic_fact_time(Fact,M,CF,Time), assert_and_remember_(add,How,CF,Body,Time,Why,Undo),
+    canonic_fact_time(Fact,M,CF,Time,ExplicitTime), assert_and_remember_(add,How,CF,ExplicitTime,Body,Time,Why,Undo),
     assert_and_remember(Facts,M,Why,Undos).
 assert_and_remember([],_,_,true).
 
-assert_and_remember_(Operation,How,M:Fact,Body,Time,Why,Undo) :- 
+assert_and_remember_(Operation,How,M:Fact,Explicit,Body,Time,Why,Undo) :- 
     assertion(How==extend;How==redefine),
    %TODO: Adds could check if there's a matching clause already, to avoid spurious facts at the end of some example runs
     % abolish caused 'No permission to modify thread_local_procedure'; weird interaction with yall.pl ..??
@@ -478,17 +478,17 @@ assert_and_remember_(Operation,How,M:Fact,Body,Time,Why,Undo) :-
     % this seems to require either using a variant test... or demanding facts to be ground
     % hypothetical_fact(M,H,Fact,Body_,Ref)
     functor(Fact,F,N), functor(Template,F,N), 
-    Add = assert( hypothetical_fact(M,Template,Fact,taxlogBody(Body,Time,'',Why),hypothetical,How) ),
-    Delete = retractall( hypothetical_fact(M,Template,Fact,taxlogBody(Body,Time,'',Why),_,_) ),
+    Add = assert( hypothetical_fact(M,Template,Fact,taxlogBody(Body,Explicit,Time,'',Why),hypothetical,How) ),
+    Delete = retractall( hypothetical_fact(M,Template,Fact,taxlogBody(Body,_Explicit,Time,'',Why),_,_) ),
     (Operation==add ->( Undo=Delete, Add) ; ( Undo=Add, Delete )).
 
-% canonic_fact_time(+Fact,+DefaultModule,Module:Fact_,Time)
-canonic_fact_time(M_:on(F,T),_,M:F,T) :- !, atom_string(M,M_).
-canonic_fact_time(M_:F,_,M:F,_) :- !, atom_string(M,M_).
-canonic_fact_time(at(on(F,T),M),_,M_:F,T) :- !, atom_string(M_,M).
-canonic_fact_time(at(F,M),_,M_:F,_) :- !, atom_string(M_,M).
-canonic_fact_time(on(F,T),M,M:F,T) :- !.
-canonic_fact_time(F,M,M:F,_).
+% canonic_fact_time(+Fact,+DefaultModule,Module:Fact_,Time,-ExplicitTime)
+canonic_fact_time(M_:on(F,T),_,M:F,T,true) :- !, atom_string(M,M_).
+canonic_fact_time(M_:F,_,M:F,_,false) :- !, atom_string(M,M_).
+canonic_fact_time(at(on(F,T),M),_,M_:F,T,true) :- !, atom_string(M_,M).
+canonic_fact_time(at(F,M),_,M_:F,_,false) :- !, atom_string(M_,M).
+canonic_fact_time(on(F,T),M,M:F,T,true) :- !.
+canonic_fact_time(F,M,M:F,_,false).
 
 %%%%% Explanations
 

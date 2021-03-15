@@ -129,3 +129,7 @@ Access to data in external DBs or other services is done via (unrestricted, poss
 The ```is_sme``` Taxlog predicate (which is interpreted) calls the ```call_my_DB ``` Prolog predicate directly, sharing time and getting an explanation for the DB result. The provided SomeExplanation term is regarded as an informal predicate literal in the overall explanation tree.
 
 (TODO: fix this hack) SomeExplanation MUST be textually different from '[]'.
+
+## Logical English
+
+- Must save the SWISH editor before using le(LElink).

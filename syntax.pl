@@ -26,27 +26,27 @@
 
 /*
 Transforms source rules into our "no time on heads" representation, using a body wrapper to carry extra information:
-    taxlogBody(RealBody,Time,URL,Why)
+    taxlogBody(RealBody,HasTimeOnHead,Time,URL,Why)
 
-P on T if Body  -->  P :- taxlogBody(Body,T,'',[])
-P on T because Why :- PrologBody   -->   P :- taxlogBody(PrologBody,T,'',Why)
-P if Body  --> P  :- taxlogBody(Body,_,'',[])
+P on T if Body  -->  P :- taxlogBody(Body,true,T,'',[])
+P on T because Why :- PrologBody   -->   P :- taxlogBody(PrologBody,true,T,'',Why)
+P if Body  --> P  :- taxlogBody(Body,false,_,'',[])
 Admissible variants with a specific URL:
-P on T at URL if Body --> P :- taxlogBody(Body,T,URL,[])
-P at URL if Body  -->  P :- taxlogBody(Body,_,URL,[])
+P on T at URL if Body --> P :- taxlogBody(Body,true,T,URL,[])
+P at URL if Body  -->  P :- taxlogBody(Body,false,_,URL,[])
 */
 
 taxlog2prolog(if(function(Call,Result),Body), neck(if)-[delimiter-[head(meta,Call),classify],SpecB], (function(Call,Result):-Body)) :- !,
     taxlogBodySpec(Body,SpecB).
-taxlog2prolog(if(at(on(H,T),Url),B), neck(if)-[delimiter-[delimiter-[SpecH,classify],classify],SpecB], (H:-taxlogBody(B,T,Url,[]))) :- !,
+taxlog2prolog(if(at(on(H,T),Url),B), neck(if)-[delimiter-[delimiter-[SpecH,classify],classify],SpecB], (H:-taxlogBody(B,true,T,Url,[]))) :- !,
     taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB).
-taxlog2prolog(if(at(H,Url),B), neck(if)-[delimiter-[SpecH,classify],SpecB], (H:-taxlogBody(B,_T,Url,[]))) :- !,
+taxlog2prolog(if(at(H,Url),B), neck(if)-[delimiter-[SpecH,classify],SpecB], (H:-taxlogBody(B,false,_T,Url,[]))) :- !,
     taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB).
-taxlog2prolog(if(on(H,T),B), neck(if)-[delimiter-[SpecH,classify],SpecB], (H:-taxlogBody(B,T,'',[]))) :- !,
+taxlog2prolog(if(on(H,T),B), neck(if)-[delimiter-[SpecH,classify],SpecB], (H:-taxlogBody(B,true,T,'',[]))) :- !,
     taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB).
-taxlog2prolog(if(H,B),neck(if)-[SpecH,SpecB],(H:-taxlogBody(B,_,'',[]))) :- !,
+taxlog2prolog(if(H,B),neck(if)-[SpecH,SpecB],(H:-taxlogBody(B,false,_,'',[]))) :- !,
     taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB).
-taxlog2prolog((because(on(H,T),Why):-B), neck(clause)-[ delimiter-[delimiter-[SpecH,classify],classify], SpecB ], (H:-taxlogBody(call(B),T,'',Why))) :- Why\==[], !,
+taxlog2prolog((because(on(H,T),Why):-B), neck(clause)-[ delimiter-[delimiter-[SpecH,classify],classify], SpecB ], (H:-taxlogBody(call(B),true,T,'',Why))) :- Why\==[], !,
     taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB).
 taxlog2prolog(mainGoal(G,Description),delimiter-[Spec,classify],(mainGoal(G,Description):-(_=1->true;GG))) :- !, % hack to avoid 'unreferenced' highlight in SWISH
     functor(G,F,N), functor(GG,F,N), % avoid "Singleton-marked variable appears more than once"
