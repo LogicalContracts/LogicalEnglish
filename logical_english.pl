@@ -95,7 +95,7 @@ le_html(at(Conditions,KP),HTML) :- !,
     le_html(Conditions,CH), le_html(KP,KPH), 
     (KPH=[HREF_]->true;HREF_='??'),
     % if we have a page, navigate to it:
-    ((KP=value(Word), kp(Word)) -> format(string(HREF),"/logicalEnglish?kp=~a",[Word]); HREF=HREF_),
+    ((KP=le_value(Word), kp(Word)) -> format(string(HREF),"/logicalEnglish?kp=~a",[Word]); HREF=HREF_),
     Label="other legislation",
     %TODO: distinguish external data, broken links...
     %(sub_atom(HREF,0,_,_,'http') -> Label="other legislation" ; Label="existing data"),
@@ -108,7 +108,7 @@ le_html(on(Conditions,Time),HTML) :- !,
 le_html(aggregate_all(Op,Each,SuchThat,Result),HTML) :- !,
     le_html(Result,RH), le_html(SuchThat,STH), 
     (Each=a(Words) -> EachH = ["each "|Words] ; le_html(Each,EachH)),
-    append([RH, [" is the ~w of each "-[Op]],EachH,[" such that "],STH],HTML).
+    append([RH, [" is the ~w of "-[Op]],EachH,[" such that "],STH],HTML).
 le_html(predicate(Functor,[]), HTML) :- !, predicate_html(Functor,HTML).
 le_html(predicate(Functor,[Arg]), HTML) :- !, predicate_html(Functor,PH), le_html(Arg,AH), append([AH,[" "],PH],HTML).
 le_html(predicate(Functor,[A,B]), HTML) :- !, predicate_html(Functor,PH), le_html(A,AH), le_html(B,BH), append([AH,[" "],PH,[" "],BH],HTML).
@@ -122,8 +122,13 @@ le_html(a(Words), [span(VS,[Det," ",Name])]) :- !,
     (member(First,[a,e,i,o,u,'A','E','I','O','U']) -> Det=an ; Det=a).
 le_html(the(Words), [span(VS,["the ",Name])]) :- !, 
     var_style(VS), atomics_to_string(Words," ",Name).
-le_html(value(X), ["~w"-[X]]) :- !.
-le_html(LE, ["??~w??"-[LE]]).
+le_html(le_value(X), ["~w"-[X]]) :- !.
+le_html(L,["[",span(LH),"]"]) :- is_list(L), !, 
+    findall([","|XH], (member(X,L), le_html(X,XH)), LHS), append(LHS,LH_), 
+    (LH_=[] -> LH=[""] ; LH_=[_Comma|LH]).
+le_html(LE,["??~w??"-[LE]]) :- atomic(LE), !.
+le_html(Term,HTML) :- Term=..[F|Args], !, le_html(predicate([F],Args),HTML).
+le_html(LE, ["?~w?"-[LE]]). 
 
 predicate_html(Words,[b(Name)]) :- atomics_to_string(Words, " ", Name).
 
@@ -132,7 +137,7 @@ var_style(style="color:#880000").
 %le_clause(?H,+Module,-Ref,-LEterm)
 % LEterms:
 %  if(Conclusion,Conditions), or/and/not/must(Condition,Obligation), if_then_else(Condition,Then,Else)
-%   predicate(FunctorWords,Args); each Arg is a a/the(Words) or some_thing (anonymous var) or value(Term)
+%   predicate(FunctorWords,Args); each Arg is a a/the(Words) or some_thing (anonymous var) or le_value(Term)
 %   predicate(the(Words),unknown_arguments) for meta variables :-)
 %   triu/false
 %   aggregate_all(Operator,Each,Condition,Result)
@@ -193,8 +198,14 @@ arguments([A1|An],VarNames,V1,Vn,[Argument|Arguments]) :- var(A1), !,
             arguments(An,VarNames,V1,Vn,Arguments)
             )
     ).
-arguments([A1|An],VarNames,V1,Vn,[value(A1)|Arguments]) :- 
+arguments([A1|An],VarNames,V1,Vn,[le_value(A1)|Arguments]) :- atomic(A1),!,
     arguments(An,VarNames,V1,Vn,Arguments).
+arguments([A1|An],VarNames,V1,Vn,[NewA1|Arguments]) :- is_list(A1),!,
+    arguments(A1,VarNames,V1,V2,NewA1),
+    arguments(An,VarNames,V2,Vn,Arguments).
+arguments([A1|An],VarNames,V1,Vn,[NewA1|Arguments]) :- A1=..[F|Args], !, % terms in general; add case for isExpressionFunctor(F)?
+    arguments(Args,VarNames,V1,V2,NewArgs), NewA1=..[F|NewArgs],
+    arguments(An,VarNames,V2,Vn,Arguments).
 
 conditions(V,_VarNames,V1,V1,Predicate) :- var(V), !,
     (find_var_name(V,V1,Words) -> Predicate=predicate(the(Words,unknown_arguments)) ; throw("Anonymous variable as body goal"-[])).

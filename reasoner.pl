@@ -1,6 +1,7 @@
 :- module(_ThisFileName,[query/4, query_with_facts/5, query_once_with_facts/5, explanation_node_type/2, render_questions/2,
     run_examples/0, run_examples/1, myClause2/8, myClause/4, taxlogWrapper/8, niceModule/2, refToOrigin/2,
-    after/2, not_before/2, before/2, immediately_before/2, same_date/2, subtract_days/3, this_year/1, uk_tax_year/4, in/2
+    after/2, not_before/2, before/2, immediately_before/2, same_date/2, subtract_days/3, this_year/1, uk_tax_year/4, in/2,
+    isExpressionFunctor/1
     ]).
 
 /** <module> Tax-KB reasoner and utils
@@ -302,8 +303,11 @@ evalArgExpressions(G,M,NewG,CID,Cref,U,E) :-
 evalExpression(_M,_CID,_Cref,X,X,[],[]) :- var(X), !.
 evalExpression(M,CID,Cref,Exp,R,U,[s(function(Exp),M,Ref,Children)]) :- M:clause(function(Exp,R),Body,Ref), !,
     once( i(Body,M,CID,Cref,U,Children) ).
-evalExpression(_M,_CID,_Cref,Exp,R,[],[]) :- Exp=..[F,_|_], member(F,[+,-,*,/]), !, R is Exp.
+evalExpression(_M,_CID,_Cref,Exp,R,[],[]) :- Exp=..[F,_|_], isExpressionFunctor(F), !, R is Exp.
 evalExpression(_M,_CID,_,X,X,[],[]).
+
+isExpressionFunctor(F) :- memberchk(F,[+,-,*,/]).
+
 
 %wrapTemplateGoal(+Gtemplate,+Module,+CallerID,+CallerClauseRef,+Unknowns,+Explanation,-WrappedGtemplate)
 % e.g. X^Y^g --> i(X^Y^i(g,Module,CID,Cref,Unknowns,Explanation))
