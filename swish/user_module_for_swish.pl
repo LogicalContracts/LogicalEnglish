@@ -12,7 +12,7 @@
 % For debugging:
 % can not print output as usual, would interfere with http responses; uncomment the following for a log:
 /*
-mylog(M_) :- mylogFile(S), thread_self(T), (M_=Template-Args -> (format(S,"~w:",[T]), format(S,Template,Args), nl(S)) ; (M_=M,writeq(S,T:M), nl(S))), flush_output(S).
+mylog(M_) :- mylogFile(S), thread_self(T), ((M_=Template-Args,is_list(Args)) -> (format(S,"~w:",[T]), format(S,Template,Args), nl(S)) ; (M_=M,writeq(S,T:M), nl(S))), flush_output(S).
 :- prolog_load_context(directory, D), atomic_list_concat([D,/,'mylog.txt'],F), open(F,write,S), assert(mylogFile(S)), mylog('Log started').
 % :- asserta((prolog:message(A,B,C) :-  mylog(message-A), fail)).
 sandbox:safe_primitive(user:mylog(_M)). 

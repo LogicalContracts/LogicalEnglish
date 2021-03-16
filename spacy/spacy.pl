@@ -368,11 +368,13 @@ bindArcs([],_).
 %parserURL("http://localhost:8080/dep").
 spaCyURL(U) :- getenv('SPACY_HOST',Host), format(string(U),"http://~a/sents_dep",[Host]).
 
+%! spaCyParse(+TextOrWordsList,+CollapseNouns,+CollapsePuncts,-Dict) 
 % for REST service in https://github.com/jgontrum/spacy-api-docker
 spaCyParse(Text,CollapseNouns,CollapsePuncts,Dict) :-
     spaCyParse(Text,CollapseNouns,CollapsePuncts,en,Dict).
 
-spaCyParse(Text,CollapseNouns,CollapsePuncts,Model,Dict) :-
+spaCyParse(TextOrList,CollapseNouns,CollapsePuncts,Model,Dict) :-
+    (is_list(TextOrList) -> atomic_list_concat(TextOrList," ",Text); TextOrList=Text),
     user_can_parse,
     assertion(CollapseNouns==1;CollapseNouns==0), 
     assertion(CollapsePuncts==1;CollapsePuncts==0), 
