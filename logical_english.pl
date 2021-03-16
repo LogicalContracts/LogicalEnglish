@@ -216,17 +216,17 @@ atomicSentenceStyle(le_predicate(Functor,[_,_,_|_]),_Words,S,Tip) :- !, % arity>
     bad_style(BS),
     once(( spaCyParseTokens(Functor,_,Tokens), member_with([dep=root,pos=POS,lemma=Lemma],Tokens))),
     (POS==verb -> (S='', Tip="verb 'to ~a'"-Lemma) ; 
-    (   (shouldReportError(missing_verb(POS,Lemma)) -> S=BS ; S=''), 
+    (   (shouldReportError(missing_verb(Functor,POS,Lemma)) -> S=BS ; S=''), 
         Tip="predicate should have a verb, has a ~a instead (~a)"-[POS,Lemma] )
     ).
-atomicSentenceStyle(_,Words,S,Tip) :- 
+atomicSentenceStyle(le_predicate(Functor,_),Words,S,Tip) :- 
     findall(SI/Tokens,spaCyParseTokens(Words,SI,Tokens),Sentences),
     bad_style(BS),
     (Sentences=[_/Tokens] -> (
         member_with([dep=root,pos=POS,lemma=Lemma],Tokens),
         (POS==verb -> (S='', Tip="verb 'to ~a'"-Lemma) ; 
             (
-                (shouldReportError(missing_verb(POS,Lemma)) -> S=BS ; S=''),  
+                (shouldReportError(missing_verb(Functor,POS,Lemma)) -> S=BS ; S=''),  
                 Tip="predicate sentence should have a verb, has a ~a instead (~a)"-[POS,Lemma] )
         )
         );
