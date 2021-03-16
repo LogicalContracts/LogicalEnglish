@@ -77,7 +77,7 @@ le_kp_html(KP, div(style='font-family: "Century Schoolbook", Times, serif;', [
     findall([\["&nbsp;"],div(style='border-style: inset',PredHTML)], (
         kp_predicate_mention(KP,Pred,defined), 
         \+ \+ le_clause(Pred,KP_,_,_), % we have more than, say, a thread_local declaration...
-        findall(div(ClauseHTML), (le_clause(Pred,KP_,_Ref,LE), le_html(LE,_,ClauseHTML)), PredHTML)
+        findall(div(style='padding:5px;',ClauseHTML), (le_clause(Pred,KP_,_Ref,LE), le_html(LE,_,ClauseHTML)), PredHTML)
         ),PredsHTML_),
     append(PredsHTML_,PredsHTML).
 
@@ -120,7 +120,7 @@ le_html(aggregate_all(Op,Each_,SuchThat,Result),Words,HTML) :- !,
     must_succeed(Each_=le_argument(Each)),
     le_html(Result,RW,RH), le_html(SuchThat,STW,STH), 
     (Each=a(EWords) -> (EachH = ["each "|EWords], EachW=[each|EWords]) ; le_html(Each,EachW,EachH)),
-    append([RH, [" is the ~w of "-[Op]],EachH,[" such that "],STH],HTML),
+    append([RH, [" is the ~w of "-[Op]],EachH,[" such that {"],STH,[" }"]],HTML),
     append([RW, [is, the, Op, of],EachW,[such, that],STW],Words).
 % propositional predicate
 le_html(le_predicate(Functor,[]), Words, [span([title=Tip,style=S],HTML)]) :- !, 
@@ -174,7 +174,11 @@ le_html(L,Words,["[",span(LH),"]"]) :- is_list(L), !,
 le_html(LE,Words,["~w"-[LE]]) :- atomic(LE), !, Words=[LE].
 le_html(LE,[Word],["~w"-[LE]]) :- compound(LE), compound_name_arity(LE,F,0), !, format(string(Word),"~w()",[F]).
 le_html(Binary, Words, HTML) :- compound(Binary), compound_name_arguments(Binary,Op,[A,B]), member(Op,[and,or]), !, 
-    le_html(A,AW,Ahtml), le_html(B,BW,Bhtml), append([Ahtml,[b(" ~w "-[Op])],Bhtml],HTML),
+    le_html(A,AW,Ahtml), le_html(B,BW,Bhtml), 
+    %length(AW,LA), length(BW,LB),
+    (Op==or -> HTML = [div(Ahtml),b(" ~w "-[Op]),div(Bhtml)] ; 
+        append([Ahtml,[b(" ~w "-[Op])],Bhtml],HTML) 
+    ),
     append([AW,[Op],BW],Words).
 le_html(Term,Words,HTML) :- compound(Term), compound_name_arguments(Term,F,[A,B]), infixOperator(F), !, 
     le_html(A,AW,AH), le_html(B,BW,BH),
