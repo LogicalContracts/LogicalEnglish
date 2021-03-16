@@ -100,7 +100,7 @@ clauseNavigator_(Ref,span([a([onclick=Handler]," TaxLog")|Origin]), onclick=Hand
     !,
     % Module_ will be the temporary SWISH module with the current window's program
     % This seems to break links to source: (shouldMapModule(Module,Module_)-> kp_location(Module,F,true) ;(
-    (moduleMapping(Module,Module_)-> must(kp_location(Module,F,true),one) ;(
+    (moduleMapping(Module,Module_)-> must_succeed(kp_location(Module,F,true),one) ;(
         % strip swish "file" header if present:
 		(sub_atom(F_,0,_,R,'swish://'), sub_atom(F_,_,R,0,F)) -> true ; F=F_
         )),

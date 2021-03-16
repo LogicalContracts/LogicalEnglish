@@ -77,7 +77,7 @@ capitalize(X,NewX) :-
     name(X,[First|Codes]), to_upper(First,U), name(NewX,[U|Codes]).
 
 %! nameToWords(PrologAtom,Words) is det
-%  Breaks a predicate or variable name into words, if detected via underscores or CamelCase
+%  Breaks a predicate or variable name into words, if detected via underscores or spaces or CamelCase
 nameToWords(V,['ANONVAR']) :- var(V), !.
 nameToWords('',[]) :- !.
 nameToWords([X1|Xn],Words) :- !, 

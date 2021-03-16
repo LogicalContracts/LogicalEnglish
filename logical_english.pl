@@ -63,13 +63,14 @@ print_kp_le(KP) :-
     loaded_kp(KP), le_kp_html(KP,HTML), myhtml(HTML).
 
 %%%%% LE proper
-
-le_kp_html(KP, div(p(i([
+%  font-family: Arial, Helvetica, sans-serif; apparently Century Schoolbook is hot for legalese
+le_kp_html(KP, div(style='font-family: "Century Schoolbook", Times, serif;', [
+    p(i([
         "Knowledge page carefully crafted in ", 
         a([href=EditURL,target='_blank'],"Taxlog/Prolog"), 
         " from the legislation at",br([]),
-        a([href=KP,target='_blank'],KP)|PredsHTML
-    ])))) :-
+        a([href=KP,target='_blank'],KP)
+        ]))| PredsHTML ]) ) :-
     retractall(reported_predicate_error(_)),
     (shouldMapModule(KP,KP_) -> true ; KP=KP_), %KP_ is the latest SWISH window module
     swish_editor_path(KP,EditURL),
@@ -107,7 +108,7 @@ le_html(at(Conditions,KP),Words,HTML) :- !,
     Label="other legislation",
     %TODO: distinguish external data, broken links...
     %(sub_atom(HREF,0,_,_,'http') -> Label="other legislation" ; Label="existing data"),
-    append([CH,[" according to ",a([href=HREF,target('_blank')],Label)]],HTML),
+    append([CH, [span(style='font-style:italic;',[" according to ",a([href=HREF,target('_blank')],Label)])] ],HTML),
     append([CW,[according,to|KPW]],Words).
 le_html(on(Conditions,Time),Words,HTML) :- !,
     (Time=a(T) -> (TimeQualifier = [" at a time "|T], TQW = [at,a,time|T]); 
@@ -115,9 +116,10 @@ le_html(on(Conditions,Time),Words,HTML) :- !,
     le_html(Conditions,CW,CH), %TODO: should we swap the time qualifier for big conditions, e.g. ..., at Time, blabla
     append([CH,TimeQualifier],HTML),
     append([CW,TQW],Words).
-le_html(aggregate_all(Op,Each,SuchThat,Result),Words,HTML) :- !,
+le_html(aggregate_all(Op,Each_,SuchThat,Result),Words,HTML) :- !,
+    must_succeed(Each_=le_argument(Each)),
     le_html(Result,RW,RH), le_html(SuchThat,STW,STH), 
-    (Each=a(Words) -> (EachH = ["each "|Words], EachW=[each|Words]) ; le_html(Each,EachW,EachH)),
+    (Each=a(EWords) -> (EachH = ["each "|EWords], EachW=[each|EWords]) ; le_html(Each,EachW,EachH)),
     append([RH, [" is the ~w of "-[Op]],EachH,[" such that "],STH],HTML),
     append([RW, [is, the, Op, of],EachW,[such, that],STW],Words).
 le_html(le_predicate(Functor,[]), Words, [span([title=Tip,style=S],HTML)]) :- !, 
@@ -199,6 +201,7 @@ bad_style('background: url(taxkb/underline.gif) bottom repeat-x;').
 %  Uses Spacy to form an opinion on the writing style, reporting it as either empty ('') or curly underline plus a text tip
 %  Only the first occurrence gets a red curlyline, but all get the tooltip
 atomicSentenceStyle(le_predicate([F],Args),_Words,S,Tip) :- length(Args,Arity), functor(Pred,F,Arity), system_predicate(Pred), !,
+    %TODO: this misses system predicates with multiple words
     S='', Tip="system predicate".
 atomicSentenceStyle(le_predicate(Functor,[_,_,_|_]),_Words,S,Tip) :- !, % arity>=3, no point in parsing it all
     bad_style(BS),
