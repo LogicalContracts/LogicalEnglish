@@ -122,19 +122,28 @@ le_html(aggregate_all(Op,Each_,SuchThat,Result),Words,HTML) :- !,
     (Each=a(EWords) -> (EachH = ["each "|EWords], EachW=[each|EWords]) ; le_html(Each,EachW,EachH)),
     append([RH, [" is the ~w of "-[Op]],EachH,[" such that "],STH],HTML),
     append([RW, [is, the, Op, of],EachW,[such, that],STW],Words).
+% propositional predicate
 le_html(le_predicate(Functor,[]), Words, [span([title=Tip,style=S],HTML)]) :- !, 
     predicate_html(Functor,HTML), Words=Functor,
     atomicSentenceStyle(le_predicate(Functor,[]),Words,S,Tip).
+% unary predicate
 le_html(le_predicate(Functor,[Arg]), Words, [span([title=Tip,style=S],HTML)]) :- !, 
     predicate_html(Functor,PH), le_html(Arg,AW,AH), 
     append([AH,[" "],PH],HTML),
     append([AW,Functor],Words),
     atomicSentenceStyle(le_predicate(Functor,[Arg]),Words,S,Tip).
+% binary 
 le_html(le_predicate(Functor,[A,B]), Words, [span([title=Tip,style=S],HTML)]) :- !, 
     predicate_html(Functor,PH), le_html(A,AW,AH), le_html(B,BW,BH), 
     append([AH,[" "],PH,[" "],BH],HTML),
     append([AW,Functor,BW],Words),
     atomicSentenceStyle(le_predicate(Functor,[A,B]),Words,S,Tip).
+% ternary: assume the first and third arguments are more important (subject/object)
+le_html(le_predicate(Functor,[A,B,C]), Words, [span([title=Tip,style=S],HTML)]) :- !, 
+    predicate_html(Functor,PH), le_html(A,AW,AH), le_html(B,BW,BH), le_html(C,CW,CH), 
+    append([AH,[" "],PH,[" "],CH,[" with "],BH],HTML),
+    append([AW,Functor,CW,[with|BW]],Words),
+    atomicSentenceStyle(le_predicate(Functor,[A,C]),Words,S,Tip). % fake a sentence with the predicate as binary
 le_html(le_predicate(Functor,[A1|Args]), Words, [span([title=Tip,style=S],HTML)]) :- !, 
     predicate_html(Functor,PH), le_html(A1,A1W,A1H),
     findall([", "|AH]/AW, (member(A,Args),le_html(A,AW,AH)), Pairs),
