@@ -1,6 +1,6 @@
 :- module(_,[
     loaded_kp/1, all_kps_loaded/0, all_kps_loaded/1, kp_dir/1, taxkb_dir/1, kp_location/3, kp/1, must_succeed/2, must_succeed/1,
-    shouldMapModule/2, moduleMapping/2, myDeclaredModule/1, myCurrentModule/1, system_predicate/1,
+    shouldMapModule/2, moduleMapping/2, myDeclaredModule/1, system_predicate/1,
     discover_kps_in_dir/1, discover_kps_in_dir/0, discover_kps_gitty/0, setup_kp_modules/0, load_kps/0,
     load_gitty_files/1, load_gitty_files/0, save_gitty_files/1, save_gitty_files/0, delete_gitty_file/1, update_gitty_file/3,
     xref_all/0, xref_clean/0, print_kp_predicates/0, print_kp_predicates/1, reset_errors/0, my_xref_defined/3, url_simple/2,
@@ -91,7 +91,8 @@ load_named_file(File,Module,InGittyStorage) :-
     load_named_file_(File,Module,InGittyStorage),
     kp_file_modified(Module,Modified,InGittyStorage),
     retractall(kp_location(Module,File,_,InGittyStorage)),
-    assert(kp_location(Module,File,Modified,InGittyStorage)).
+    assert(kp_location(Module,File,Modified,InGittyStorage)),
+    (xref_source(Module,[silent(true)]) -> true ; print_message(warning,"failed xref_source"-[])).
 
 load_named_file_(File,Module,true) :- !,
     use_gitty_file(Module:File,[/* useless: module(Module)*/]).
@@ -302,6 +303,10 @@ must_succeed(G) :- must_succeed(G,'').
 % filters the SWISH declared module with known KPs; the term_expansion hack catches a lot of other modules too, such as 'http_stream'
 myDeclaredModule(M) :- myDeclaredModule_(M), kp(M), !.
 
+swish_editor_path(KP,Path) :- must_be(nonvar,KP),
+    (kp_location(KP,File,true)->true;File=not_on_swish_storage),
+    format(string(Path),"/p/~a",[File]), !.
+
 
 :- if(current_module(swish)). %%% only when running with the SWISH web server:
 :- use_module(swish(lib/storage)).
@@ -416,10 +421,6 @@ edit_kp(KP) :-
         swish_editor_path(KP,Path),
         format(string(URL),"http://localhost:3050~a",[Path]), www_open_url(URL)
         )).
-
-swish_editor_path(KP,Path) :- must_be(nonvar,KP),
-    kp_location(KP,File,true),
-    format(string(Path),"/p/~a",[File]), !.
 
 %%%% Knowledge pages graph
 

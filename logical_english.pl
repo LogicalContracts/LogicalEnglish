@@ -1,9 +1,10 @@
-:- module(_,[print_kp_le/1, le/2, le/1]).
+:- module(_,[print_kp_le/1, le/2, le/1, test_kp_le/2, test_kp_le/1]).
 
 :- use_module(reasoner).
 :- use_module(kp_loader).
 :- use_module(drafter).
 :- use_module('spacy/spacy.pl').
+:- use_module(library(prolog_clause)).
 
 /*
 sketch of a DCG; inadequate for an actual implementation, because we need dynamic (multiple length) terminals
@@ -46,31 +47,37 @@ argument(the(Name)) --> shortVarName(Name).
 %%%% And now for something completely different: LE generation from Taxlog
 
 % Ex: logical_english:test_kp_le('https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/maximum-net-asset-value-test/').
-test_kp_le(KP) :-
+test_kp_le(KP,Options) :-
     tmp_file(le,Tmp), atom_concat(Tmp, '.html', F),
-    tell(F), print_kp_le(KP), told, www_open_url(F).
+    tell(F), print_kp_le(KP,Options), told, www_open_url(F).
+
+test_kp_le(KP) :- test_kp_le(KP,[]).
 
 % "invokes" our SWISH renderer
-le(KP,logicalEnglish([HTML])) :-
-    loaded_kp(KP), le_kp_html(KP,HTML).
+le(LE) :-
+    le([],LE).
 
 % Obtain navigation link to Logical English for the current SWISH editor
-le(logicalEnglish([HTML])) :- 
+le(Options,logicalEnglish([HTML])) :- 
     myDeclaredModule(KP), % no need to load, it's loaded already
-    le_kp_html(KP,HTML).
+    le_kp_html(KP,Options,HTML).
 
-print_kp_le(KP) :- 
-    loaded_kp(KP), le_kp_html(KP,HTML), myhtml(HTML).
+print_kp_le(KP) :- print_kp_le(KP,[]).
+
+print_kp_le(KP,Options) :- 
+    loaded_kp(KP), le_kp_html(KP,Options,HTML), myhtml(HTML).
 
 %%%%% LE proper
 %  font-family: Arial, Helvetica, sans-serif; apparently Century Schoolbook is hot for legalese
-le_kp_html(KP, div(style='font-family: "Century Schoolbook", Times, serif;', [
+le_kp_html(KP, Options, div(style='font-family: "Century Schoolbook", Times, serif;', [
     p(i([
         "Knowledge page carefully crafted in ", 
         a([href=EditURL,target='_blank'],"Taxlog/Prolog"), 
         " from the legislation at",br([]),
         a([href=KP,target='_blank'],KP)
         ]))| PredsHTML ]) ) :-
+    retractall(option(_)), OL=[no_indefinites],
+    must_succeed( forall(member(O,Options), (member(O,OL), assert(option(O)))), "Bad Logical English option, admissibles are in ~w"-[OL] ),
     retractall(reported_predicate_error(_)),
     (shouldMapModule(KP,KP_) -> true ; KP=KP_), %KP_ is the latest SWISH window module
     swish_editor_path(KP,EditURL),
@@ -81,7 +88,10 @@ le_kp_html(KP, div(style='font-family: "Century Schoolbook", Times, serif;', [
         ),PredsHTML_),
     append(PredsHTML_,PredsHTML).
 
-:- thread_local reported_predicate_error/1.
+le_kp_html(KP,HTML) :- 
+    le_kp_html(KP,[],HTML).
+
+:- thread_local reported_predicate_error/1, option/1.
 shouldReportError(E) :- reported_predicate_error(E), !, fail.
 shouldReportError(E) :- assert(reported_predicate_error(E)).
 
@@ -98,7 +108,7 @@ le_html(if_then_else(Condition,true,Else),Words,HTML) :- !,
     append([["{"],CW,[or,otherwise],EW, ["}"]],Words).
 le_html(if_then_else(Condition,Then,Else),Words,HTML) :- !,
     le_html(Condition,CW,CH), le_html(Then,TW,TH), le_html(Else,EW,EH), 
-    append([["{ if "],CH,[" then it must be the case that "],TH,[" or otherwise "],EH,[" }"]],HTML),
+    append([["{ ",b("if ")],CH,[b(" then")," it must be the case that "],TH,[b(" or otherwise ")],EH,[" }"]],HTML),
     append([["{", if],CW,[then, it, must, be, the, case, that],TW,[or, otherwise],EW,["}"]],Words).
 le_html(at(Conditions,KP),Words,HTML) :- !,
     le_html(Conditions,CW,CH), le_html(KP,KPW,KPH), 
@@ -155,10 +165,12 @@ le_html(le_predicate(Functor,[A1|Args]), Words, [span([title=Tip,style=S],HTML)]
     atomicSentenceStyle(le_predicate(Functor,[A1|Args]),Words,S,Tip).
 le_html(le_argument(X),Words,HTML) :- !,
     le_html(X,Words,HTML).
-le_html(a(Words), TheWords, [span(VS,[Det," ",Name])]) :- !, 
+le_html(a(Words), TheWords, HTML) :- !, 
     var_style(VS), atomics_to_string(Words," ",Name), atom_chars(Name,[First|_]),
     (member(First,[a,e,i,o,u,'A','E','I','O','U']) -> Det=an ; Det=a),
-    TheWords=[Det|Words].
+    (option(no_indefinites) -> (HTML=[span(VS,[Name])], TheWords=Words) ; 
+        (HTML = [span(VS,[Det," ",Name])], TheWords=[Det|Words])
+        ).
 le_html(the(Words), TheWords, [span(VS,["the ",Name])]) :- !, 
     var_style(VS), atomics_to_string(Words," ",Name),
     TheWords = [the|Words].

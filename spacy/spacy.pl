@@ -373,6 +373,7 @@ spaCyURL(U) :- getenv('SPACY_HOST',Host), format(string(U),"http://~a/sents_dep"
 spaCyParse(Text,CollapseNouns,CollapsePuncts,Dict) :-
     spaCyParse(Text,CollapseNouns,CollapsePuncts,en,Dict).
 
+% spaCyParse(TextOrList,CollapseNouns,CollapsePuncts,Model,_) :- mylog(spaCyParse(TextOrList,CollapseNouns,CollapsePuncts,Model,_)), fail.
 spaCyParse(TextOrList,CollapseNouns,CollapsePuncts,Model,Dict) :-
     (is_list(TextOrList) -> atomic_list_concat(TextOrList," ",Text); TextOrList=Text),
     user_can_parse,

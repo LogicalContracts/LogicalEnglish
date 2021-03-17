@@ -26,7 +26,9 @@ html(Spec) :-
         print_html(current_output, Tokens)),
     format('~w', [HTML]).
 
-myhtml(Out) :- writeln(Out), writeln("---------"), html(Out).
+myhtml(Out) :- 
+    %writeln(Out), writeln("---------"), 
+    html(Out).
 
 
 :- multifile prolog_colour:term_colours/2.
