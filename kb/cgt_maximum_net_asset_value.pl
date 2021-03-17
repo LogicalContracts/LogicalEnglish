@@ -28,7 +28,7 @@ example("Andrew email Feb 5 2021",[
         is_earnout_cgt_asset(cgt_asset_1,4000000) at EARNOUT,
         % is_share_in_company(cgt_asset_1,entity) at myDB1 if false,
         % asset_to_exclude(andrew,_) if false, %http://localhost:3050/p/tests.pl#tabbed-tab-0 Andrew doesn't want any asset excluded!
-        affiliate(andrew,affiliate1),
+        has_affiliate(andrew,affiliate1),
         ++ owns(affiliate1,cgt_asset_2), ++ net_value(cgt_asset_2,1000000),
         connected_to(andrew,entity) at "https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/connected-entities/",
         owns(entity,asset3) at myDB1,
@@ -53,18 +53,18 @@ relevant_asset(You,Asset) if
 relevant_asset(You,Asset) if 
     connected_to(You,Connection) and owns(Connection,Asset).
 relevant_asset(You,Asset) if 
-    affiliate(You,Affiliate) and owns(Affiliate,Asset) and 
+    has_affiliate(You,Affiliate) and owns(Affiliate,Asset) and 
     (is_used_in_business_of(Asset,You) or connected_to(You,Connection) and is_used_in_business_of(Asset,Connection)).
 relevant_asset(You,Asset) if 
-    affiliate(You,Affiliate) and connected_to(Affiliate,AffiliateConnection) and owns(AffiliateConnection,Asset) and
+    has_affiliate(You,Affiliate) and connected_to(Affiliate,AffiliateConnection) and owns(AffiliateConnection,Asset) and
     (is_used_in_business_of(Asset,You) or connected_to(You,Connection) and is_used_in_business_of(Asset,Connection)).
 
 asset_to_exclude(You,Asset) if 
-    (connected_to(You,Connection) or affiliate(You,Affiliate) and connected_to(Affiliate,Connection))
+    (connected_to(You,Connection) or has_affiliate(You,Affiliate) and connected_to(Affiliate,Connection))
     and is_interest_in(Asset,Connection).
 asset_to_exclude(You,Asset) if
     is_individual(You) and (
-        solely_for_personal_use_by(Asset,You) or affiliate(You,Affiliate) and solely_for_personal_use_by(Asset,Affiliate)
+        solely_for_personal_use_by(Asset,You) or has_affiliate(You,Affiliate) and solely_for_personal_use_by(Asset,Affiliate)
         or own_home_used_for_private_purposes_only_or_incidental_income_producing
         %TODO: used part of your home to produce assessable income
         or rights_to_ammounts_or_assets_of_super_fund_or_approved_deposit_fund(Asset)
@@ -104,8 +104,8 @@ is_used_in_business_of(Asset,TFN) if
     is_used_in_business_of(Asset,TFN) 
         at "https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/".
 
-affiliate(EntityTFN,AffiliateTFN) on T if 
-    affiliate(EntityTFN,AffiliateTFN) on T
+has_affiliate(EntityTFN,AffiliateTFN) on T if 
+    has_affiliate(EntityTFN,AffiliateTFN) on T
         at "https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/affiliates/".
 
 is_interest_in(Asset,Connection) if 
@@ -130,5 +130,6 @@ is_earnout_cgt_asset(Asset,Value) if
 
 /** <examples>
 ?- query_with_facts(satisfies_maximum_net_asset_value_test(TaxPayer),"Andrew email Feb 5 2021",Unknowns,Explanation,Result).
+?- le(LogicalEnglish).
 */
     

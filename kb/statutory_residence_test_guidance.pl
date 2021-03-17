@@ -6,7 +6,7 @@
 % Web page from which the present knowledge page was encoded
 :-module('https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11040',[]).
 
-mainGoal(srt(_Individual), "Determine if a person is a UK resident for tax purposes").
+mainGoal(complies_to_statutory_residence_test(_Individual), "Determine if a person is a UK resident for tax purposes").
 
 example("Chris Feb 12 - 2A",[
 /*
@@ -24,15 +24,15 @@ NOTE: out of scope of original example, added a stub at 'https://www.gov.uk/hmrc
 */
     scenario([
         % a plus sign indicates this hypothetical extends, not redefines, existing rules and facts:
-        ++ (srt(alex) on Date if before(Date,'20180406') ), % not quite what was stated, but close
+        ++ (complies_to_statutory_residence_test(alex) on Date if before(Date,'20180406') ), % not quite what was stated, but close
         works_sufficient_hours_overseas(alex) at RDRM11150,
         no_significant_breaks_from_overseas_work(alex) at THIRD_OT,
         days_working_in_uk_more_than(alex,_,0) at THIRD_OT,
-        days_in_uk(alex,Start,End,DaysInUK) at myDb123,
+        days_spent_in_uk(alex,Start,End,DaysInUK) at myDb123,
         second_automatic_uk_test(_) at RDRM11130 if false,
         third_automatic_uk_test(_) at RDRM11370 if false,
         ties_test(_) at RDRM11510 if false
-        ], not srt(alex) on A_DATE)
+        ], not complies_to_statutory_residence_test(alex) on A_DATE)
     ]) :- 
     A_DATE='20180406', uk_tax_year(A_DATE,_,Start,End),
     RDRM11150="https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11150",
@@ -57,7 +57,7 @@ Expected result: resident, does not qualify for 3rd automatic (UK) test due to h
 */
     scenario([
     % NOTE: out of scope of original example; requires 'https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11370'
-        ], srt(beatrice) on '20190406')
+        ], complies_to_statutory_residence_test(beatrice) on '20190406')
     ]).
 
 example("Chris Feb 12 - 2C1",[
@@ -79,7 +79,7 @@ Expected result: non-resident due to 2nd automatic test; see https://www.gov.uk/
 */
     scenario([
     % NOTE: out of scope of original example, requires 'https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11330'
-        ],not srt(chris) on '20190406')
+        ],not complies_to_statutory_residence_test(chris) on '20190406')
     ]).
     
 example("Chris Feb 12 - 2C2",[
@@ -88,11 +88,11 @@ Determination should be made for the tax year from 6 Apr 2020 – 5 Apr 2021.
 Facts as per Example 2C1; assume that Chris remains in the UK for the remainder of 2021.
 Expected result: resident
     */
-    scenario(Facts, srt(chris) on '20200406')
+    scenario(Facts, complies_to_statutory_residence_test(chris) on '20200406')
     % NOTE: out of scope of original example, as previous one
     ]) :- 
         example("Chris Feb 12 - 2C1",[scenario(Facts2C1,_)]), 
-        Facts=[ + (days_in_uk(chris,'20210406','20220405',Days) if subtract_days('20210406','20220405',Days) ) |Facts2C1]. 
+        Facts=[ + (days_spent_in_uk(chris,'20210406','20220405',Days) if subtract_days('20210406','20220405',Days) ) |Facts2C1]. 
         
 % Assumptions: 
 %   all predicates hold on NOW unlesss indicated otherwise with 'on'; 
@@ -100,16 +100,16 @@ Expected result: resident
 %   external predicates MUST be aware of the local main event time, "now"
 
 
-srt(Individual) on Date if % this could actually go into the if-then-else below; just following the text
-    first_automatic_uk_test(Individual) on Date.
+complies_to_statutory_residence_test(Individual) on Date if % this could actually go into the if-then-else below; just following the text
+    satisfies_first_automatic_uk_test(Individual) on Date.
 
-srt(I) on D if 
-    if ( first_automatic_overseas_test(I) on D or second_automatic_overseas_test(I) on D or third_automatic_overseas_test(I) on D)
+complies_to_statutory_residence_test(I) on Date if 
+    if ( first_automatic_overseas_test(I) on Date or second_automatic_overseas_test(I) on Date or third_automatic_overseas_test(I) on Date)
         then false
-        else (second_automatic_uk_test(I) on D or third_automatic_uk_test(I) on D or ties_test(I) on D).
+        else (second_automatic_uk_test(I) on Date or third_automatic_uk_test(I) on Date or ties_test(I) on Date).
 
-first_automatic_uk_test(I) on Date if
-    uk_tax_year(Date,_,Start,End) and days_in_uk(I,Start,End,Duration) and Duration >= 183.
+satisfies_first_automatic_uk_test(I) on Date if
+    uk_tax_year(Date,_,Start,End) and days_spent_in_uk(I,Start,End,Duration) and Duration >= 183.
 
 second_automatic_uk_test(I) on Date if
     second_automatic_uk_test(I) on Date at "https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11330".
@@ -123,23 +123,24 @@ ties_test(I) on Date if
 first_automatic_overseas_test(I) on Date if % cf. https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11120
     uk_tax_year(Date,ThisYear,_,_) and between(ThisYear-3,ThisYear-1,PreviousYear) 
     and uk_tax_year(PreviousDate,PreviousYear,PreviousStart,PreviousEnd) 
-    and days_in_uk(I,PreviousStart,PreviousEnd,Duration) and Duration <16
-    and srt(I) on PreviousDate. % HACK: this needs to be after the previous condition, to avoid going back in time ad eternum
+    and days_spent_in_uk(I,PreviousStart,PreviousEnd,Duration) and Duration <16
+    and complies_to_statutory_residence_test(I) on PreviousDate. % HACK: this needs to be after the previous condition, to avoid going back in time ad eternum
 
 second_automatic_overseas_test(I) on Date if
     uk_tax_year(Date,ThisYear,Start,End)  
-    and days_in_uk(I,Start,End,Duration) and Duration <46
+    and days_spent_in_uk(I,Start,End,Duration) and Duration <46
     % HACK: this needs to be after the previous condition, to avoid going back in time ad eternum
     and forall( (between(ThisYear-3,ThisYear-1,PreviousYear) and uk_tax_year(PreviousDate,PreviousYear,_PreviousStart,_PreviousEnd)), 
-        not srt(I) on PreviousDate). 
+        not complies_to_statutory_residence_test(I) on PreviousDate). 
 
 third_automatic_overseas_test(Individual) on Date if
     third_automatic_overseas_test(Individual) on Date at "https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11140".
 
-days_in_uk(Individual,Start,End,TotalDays) if
-    days_in_uk(Individual,Start,End,TotalDays) at myDb123.
+days_spent_in_uk(Individual,Start,End,TotalDays) if
+    days_spent_in_uk(Individual,Start,End,TotalDays) at myDb123.
 
 /** <examples>
-?- query_with_facts(srt(Individual) on '20180406' at 'https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11040',"Chris Feb 12 - 2A",Unknowns,Explanation,Result).
+?- query_with_facts(complies_to_statutory_residence_test(Individual) on '20180406' at 'https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11040',"Chris Feb 12 - 2A",Unknowns,Explanation,Result).
+?- le(LogicalEnglish).
 */
     

@@ -126,4 +126,5 @@ trading_in_market(SecurityID,MarketID) if
 /** <examples>
 ?- query_with_facts(exempt_transfer,"Chris Feb 12 - 1A",Unknowns,Explanation,Result), render_questions(Unknowns,Questions).
 ?- (Unknowns=[];Unknowns=_), query_with_facts(exempt_transfer,"Chris Feb 12 - 1B1",Unknowns,Explanation,Result).
+?- le(LogicalEnglish).
 */

@@ -123,7 +123,7 @@ eligible_party(P) if
     is_a_small_business_entity(P) at
         "https://www.ato.gov.au/General/Capital-gains-tax/Small-business-CGT-concessions/Basic-conditions-for-the-small-business-CGT-concessions/Small-business-entity/".
 eligible_party(P) if 
-    affiliate(P,AffiliateTFN) at
+    has_affiliate(P,AffiliateTFN) at
         "https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/affiliates/"
     and is_a_small_business_entity(AffiliateTFN) at
         "https://www.ato.gov.au/General/Capital-gains-tax/Small-business-CGT-concessions/Basic-conditions-for-the-small-business-CGT-concessions/Small-business-entity/".
@@ -166,4 +166,5 @@ rollover_cost(Cost) if
 
 /** <examples>
 ?- query_with_facts(rollover_applies(Event),"Andrew email Feb 4 2021",Unknowns,Explanation,Result).
+?- le(LogicalEnglish).
 */

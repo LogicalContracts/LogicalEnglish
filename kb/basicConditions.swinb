@@ -64,7 +64,7 @@ satisfies_maximum_net_asset_value_test(TFN) if satisfies_maximum_net_asset_value
     "https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/maximum-net-asset-value-test/".
 is_a_small_business_entity(TFN) if is_a_small_business_entity(TFN) at
     "https://www.ato.gov.au/General/Capital-gains-tax/Small-business-CGT-concessions/Basic-conditions-for-the-small-business-CGT-concessions/Small-business-entity/".
-affiliate(EntityTFN,AffiliateTFN) if affiliate(EntityTFN,AffiliateTFN) at
+has_affiliate(EntityTFN,AffiliateTFN) if has_affiliate(EntityTFN,AffiliateTFN) at
     "https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/affiliates/".
 connected_to(EntityTFN,ConnectedTFN) if connected_to(EntityTFN,ConnectedTFN) at
     "https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/connected-entities/".
@@ -96,7 +96,7 @@ step1 if    % first, ilustrate a rule style where KB URLs are inline:
 step1 if    % now rules referring to the glue predicates above:
     you(Y) and does_not_carry_on_business_except_as_a_partner(Y) and 
     theAsset(A) and is_used_in_business_of(A,E) and is_a_small_business_entity(E) and
-    (affiliate(Y,E) or connected_to(E,Y)). 
+    (has_affiliate(Y,E) or connected_to(E,Y)). 
     % see https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/passively-held-assets/
 step1 if
     you(Y) and partner_in_partnership(Y,P) and 
@@ -165,7 +165,7 @@ additional_conditions(asset1) at _.
 active_asset_test(asset1) at _.
 satisfies_maximum_net_asset_value_test(tfn1) at _.
 %is_a_small_business_entity(tfn1) at _.
-affiliate(tfn1,affiliateTFN2) at _.
+has_affiliate(tfn1,affiliateTFN2) at _.
 connected_to(tfn1,connectionTFN3) at _.
 is_an_interest_in_partnership_asset(asset1,partnershipTFN4) at _.
 

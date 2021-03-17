@@ -93,4 +93,5 @@ question( overcame_uncertainty(P,How), "Explain the work done in ~w to overcome 
 ?- query_with_facts(qualify_for_r_d(Project) at 'https://www.gov.uk/guidance/corporation-tax-research-and-development-rd-relief',"email Chris Feb 17 - 3A",Unknowns,Explanation,Result).
 ?- query_with_facts(qualify_for_r_d(Project) at 'https://www.gov.uk/guidance/corporation-tax-research-and-development-rd-relief',"email Chris Feb 17 - 3B",Unknowns,Explanation,Result).
 ?- query_with_facts(qualify_for_r_d(Project) at 'https://www.gov.uk/guidance/corporation-tax-research-and-development-rd-relief',"email Chris Feb 17 - 3C",Unknowns,Explanation,Result), render_questions(Unknowns,Q).
+?- le(LogicalEnglish).
 */

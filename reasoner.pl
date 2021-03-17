@@ -1,6 +1,6 @@
 :- module(_ThisFileName,[query/4, query_with_facts/5, query_once_with_facts/5, explanation_node_type/2, render_questions/2,
     run_examples/0, run_examples/1, myClause2/8, myClause/4, taxlogWrapper/9, niceModule/2, refToOrigin/2,
-    after/2, not_before/2, before/2, immediately_before/2, same_date/2, subtract_days/3, this_year/1, uk_tax_year/4, in/2,
+    after/2, is_not_before/2, before/2, immediately_before/2, same_date/2, subtract_days/3, this_year/1, uk_tax_year/4, in/2,
     isExpressionFunctor/1
     ]).
 
@@ -576,7 +576,7 @@ nodeAttributes(at(G,K), [color=green,label=S]) :- format(string(S),"~w",G).
 %   Arguments must be dates in iso_8601 format, e.g. '20210206' or '2021-02-06T08:25:34'
 after(Later,Earlier) :- 
     parse_time(Later,L), parse_time(Earlier,E), L>E.
-not_before(Later,Earlier) :-
+is_not_before(Later,Earlier) :-
     parse_time(Later,L), parse_time(Earlier,E), L>=E.
 before(Earlier,Later) :-
     parse_time(Later,L), parse_time(Earlier,E), E<L.
@@ -604,6 +604,7 @@ subtract_days(LaterDate,EarlierDate,Days) :-
 this_year(Y) :- get_time(Now), stamp_date_time(Now,date(Y,_M,_D,_,_,_,_,_,_),local).
 
 %! uk_tax_year(?DateInTaxYear,?FirstYear,-StartDate,-EndDate)
+%  "the range of uk tax year Y is from Start to End"
 %  Given either a Date or a number for the first year, returns a tax year date range
 uk_tax_year(D,FirstYear,Start,End) :- nonvar(D), !, FirstYear=StartYear,
     parse_time(D,Time), stamp_date_time(Time,DT,local), DT=..[date,Year,Month,Day|_],
