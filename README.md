@@ -1,8 +1,8 @@
 # TaxKB
 Prolog based generic knowledge base for tax regulations, including reasoner, editor and other tools
 
-TOC, number sections
-<!-- TOC -->autoauto- [TaxKB](#taxkb)auto    - [Initial sample of examples](#initial-sample-of-examples)auto        - [LodgeIT](#lodgeit)auto        - [AORA](#aora)auto    - [TaxLog, the Tax-KB language](#taxlog-the-tax-kb-language)auto        - [Other constructs](#other-constructs)auto        - [Interfacing to external systems](#interfacing-to-external-systems)auto    - [Towards Logical English](#towards-logical-english)auto        - [Direct access to Logical English rendering](#direct-access-to-logical-english-rendering)auto        - [To improve the Logical English representation](#to-improve-the-logical-english-representation)auto        - [Logical English style checking](#logical-english-style-checking)auto        - [Technical details](#technical-details)auto    - [Predicate and URL reference](#predicate-and-url-reference)auto        - [Language processing](#language-processing)auto        - [Perspective on existing (encoded) Knowledge Pages](#perspective-on-existing-encoded-knowledge-pages)auto        - [Querying](#querying)auto    - [Installation and deployment](#installation-and-deployment)auto        - [Architecture](#architecture)auto        - [Where is the knowledge](#where-is-the-knowledge)autoauto<!-- /TOC -->
+TBD: TOC, number sections
+
 
 ## Initial sample of examples
 
@@ -180,25 +180,24 @@ Standard Prolog clause introspection is used, plus some SWI-Prolog extensions fo
 ## Predicate and URL reference
 
 ### Language processing
-- parseAndSee(Text,SentenceIndex,Tokens,HierplaneTree).
-- test_draft(Text,DraftedCode)
-- TBD: list relevant verbs and nouns from original text
+- ```parseAndSee(Text,SentenceIndex,Tokens,HierplaneTree)``` Useful to explore syntactic and lexical aspects of text
+- ```test_draft(Text,DraftedCode)``` given a string with English, try to generate simple Prolog predicate templates for verb phrases
 
 ### Perspective on existing (encoded) Knowledge Pages
 *Note: in the following predicates, leaving KP unbound will show not one, but all knowledge pages*
-- knowledgePagesGraph(KP,Graph)
+- ```knowledgePagesGraph(KP,Graph)```
 	- TIP: hover the top left corner, Download GraphViz Graph, Save/Print to PDF
-- print_kp_predicates(KP)
-- printAllPredicateWords(KP)
-- predicateWords(KP,Pred,PredWords), uniquePredicateSentences(KP,S), uniqueArgSentences(KP,S)
+- ```print_kp_predicates(KP)```
+- ```printAllPredicateWords(KP)```
+- ```predicateWords(KP,Pred,PredWords)```, ```uniquePredicateSentences(KP,S)```, ```uniqueArgSentences(KP,S)```
 - REST???
-- le(Link): generate Logical English web page and bind Link to a navigation button
-	- le([no_indefinites],Link): same but omitting a/an articles
+- ```le(Link)``` generate Logical English web page and bind Link to a navigation button
+	- ```le([no_indefinites],Link)``` same but omitting a/an articles
 - REST API GET for preliminary Logical Engish
 	- http://demo.logicalcontracts.com:8082/logicalEnglish?kp=**KP**"
 
 ### Querying
-- query_with_facts(Goal,FactsSource,Unknowns,Explanation,Result).
+- ```query_with_facts(Goal,FactsSource,Unknowns,Explanation,Result)```
 	- Goal is of the form ```G at KP```
 	- If simply G: KP is assumed to be the module in the current editor
 	- If time is relevant use ```G’ on Datetime```
@@ -206,23 +205,50 @@ Standard Prolog clause introspection is used, plus some SWI-Prolog extensions fo
 	- Unknowns are predicate calls assumed true and supporting the answer (we want it to be [])
 	- Explanation is a justification of the answer, a tree represented in a large Prolog term which the Tax-KB SWISH renderer displays as an indented list, including navigation links etc.
 	- Result is either of true/unknown/false
-- render_questions(Unknown,Questions): uses question(…) fact annotations to obtain more readable "questions"
+- REST API GET
+	xxxxx
+- ```render_questions(Unknown,Questions)``` uses question(…) fact annotations to obtain more readable "questions"
 
 ## Installation and deployment
 
 ### Architecture
-A Tax-KB comprises two Docker containers and the git repository:
+A Tax-KB instance comprises two Docker containers and a copy of this git repository:
 - SpacY standalone container, built from this [Dockerfile](https://github.com/mcalejo/TaxKB/blob/main/spacy/docker/Dockerfile) and accessible on port 8080
-- SWI-Prolog with (*slightly tweaked, but independent from Tax-KB*) SWISH container, built from another [Dockerfile](https://github.com/mcalejo/TaxKB/blob/main/swish/dockerfile)
+- SWI-Prolog with (*slightly tweaked, but independent from Tax-KB*) SWISH container, web server included, built from another [Dockerfile](https://github.com/mcalejo/TaxKB/blob/main/swish/dockerfile)
 	- This Docker container is launched (*cf. comments at the top of the Dockerfile*) with two host volumes mounted: a SWISH work data directory, and a copy of [this](https://github.com/mcalejo/TaxKB) repository; in addition, several environment variables are passed, referred next
 
-The SWI-Prolog+SWISH container does not contain any Tax-KB specific code. It is "customised" for Tax-KB via parameters passed on startup as environment variables:
-* -e LOAD='/TaxKB/swish/user_module_for_swish.pl' : indicates the startup Prolog file
+The SWI-Prolog+SWISH Docker container does not contain any Tax-KB specific code. It is "customised" for Tax-KB via parameters passed on startup, as environment variables:
+* -e LOAD='/TaxKB/swish/user_module_for_swish.pl' : indicates the startup Prolog file, which loads everything
 * -e SPACY_HOST=demo.logicalcontracts.com:8080 : the address of the SpaCy REST service for parsing
 * -e SUDO=false: if true (only for development!), this provides a sudo(AnyGoal) Prolog "backdoor meta predicate", shortcircuiting SWISH's safe sandbox restrictions
-* -e LOAD_KB=true: whether the SWISH internal storage is loaded with all knowledge pages in kb/
+* -e LOAD_KB=true: whether the SWISH internal storage is loaded at startup with all knowledge pages in the kb/ directory, overwriting any existing ones
 
-The last...
 
-### Where is the knowledge
-Git repo vs SWISH storage
+### Where is the knowledge: SWISH storage vs. file system
+A word about **SWISH storage**, to understand the need for the last parameter above (LOAD_KB). 
+
+When a user saves a Prolog file with the SWISH web editor, it does not go straightly into the server file system; instead, it is stored in a SWISH internal storage area (persisting in the /data volume mounted in the Docker container); this provides limited versioning, tagging and related services, nicknamed internally as "[gitty storage](https://github.com/SWI-Prolog/swish/blob/master/lib/storage.pl#L83)". Such files can be opened in the SWISH syntax-aware web editor via the URL SERVER/p/filename.pl, and are listed in SWISH's 
+
+But for the sake of easier versioning, integration with the Tax-KB code base etc. the knowledge pages (for the initial 6 samples) are maintained in [kb/](https://github.com/mcalejo/TaxKB/tree/main/kb), not on SWISH storage. So during development, it's convenient that on startup the knowledge pages are copied into SWISH storage, so they appear in SWISH's "file" browser and can be opened easily. Hence the LOAD_KB parameter.
+
+For a deployed system, it may be better to use LOAD_KB=false, so that on restart the Tax-KB preserves the latest user changes to knowldege pages. 
+
+There are two Prolog predicates for copying all knowledge pages between SWISH storage and the kb/ directory:
+- load_gitty_files: copies from kb/ into SWISH storage
+- save_gitty_files: copies from SWISH storage into the kb/ directory
+
+The latter allows git tracking of server changes, a posteriori. 
+
+When deploying a real system this needs to be tuned, possibly using a specific git branch (e.g. "deployed-version") for the server kb/, so that user changes can later be merged safely into master, after some quality control/review process TBD.
+
+## Implementational aspects
+
+### Rendering
+SWISH includes a powerful Prolog term renderer mechanism, allowing the generation of arbitrary HTML (including possibly the reeling in of Javascript components). Tax-KB includes several specific renderers, for:
+- [Parse trees](https://github.com/mcalejo/TaxKB/blob/main/spacy/hierplane_renderer.pl); this embeds AllenAI's powerful [hierplane](https://allenai.github.io/hierplane)
+	- Token lists are rendered with SWISH's standard [table renderer](http://demo.logicalcontracts.com:8082/example/render_table.swinb)
+- Logical English [navigation links](https://github.com/mcalejo/TaxKB/blob/main/swish/le_link_renderer.pl), effectively embedding a hidden form containing the generated HTML with the LE representation
+	- this is articulated with the le(..) predicate; for direct URL access to LE this renderer is not used
+- [Explanation trees](https://github.com/mcalejo/TaxKB/blob/main/swish/explanation_renderer.pl)
+- [Unknowns lists](https://github.com/mcalejo/TaxKB/blob/main/swish/unknowns_renderer.pl)
+### Editor
