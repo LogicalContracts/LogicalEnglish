@@ -3,10 +3,9 @@ Prolog based generic knowledge base for tax regulations, including reasoner, edi
 
 TBD: TOC, number sections
 
-
 ## Initial sample of examples
 
-The following tax regulation fragments were indicated; original links and Tax-KB editor links below.
+The following tax regulation fragments were indicated by each project sponsor; original links and Tax-KB editor links below.
 
 ### LodgeIT
 
@@ -177,11 +176,21 @@ The latter includes the (*potentially more expensive*) step of calling the Spacy
 
 Standard Prolog clause introspection is used, plus some SWI-Prolog extensions for variable names, combined with CamelCase and under_score [detection](https://github.com/mcalejo/TaxKB/blob/main/drafter.pl#L79)
 
-## Predicate and URL reference
+## Predicate and web API reference
 
 ### Language processing
 - ```parseAndSee(Text,SentenceIndex,Tokens,HierplaneTree)``` Useful to explore syntactic and lexical aspects of text
 - ```test_draft(Text,DraftedCode)``` given a string with English, try to generate simple Prolog predicate templates for verb phrases
+- Web API (POST) for drafting
+	- Path: /taxkbapi
+	- JSON payload object fields:
+		- operation: "draft"
+		- pageURL:URLofContent
+		- content: ArrayOfItems, each a {url: ChunkURL, text:Text}
+	- The result will be a:
+		- {pageURL: MyPageURL, draft: StringWithNewPrologModuleSourceCode}
+	- Example
+		- curl --header "Content-Type: application/json" --request POST --data '{"operation":"draft", "pageURL":"http://mysite/page1#section2",  "content":[{"url":"http://mysite/page1#section2!chunk1", "text":"john flies by instruments"}, {"url":"http://mysite/page1#section2!chunk2", "text":"miguel drives with gusto"}]}' http://demo.logicalcontracts.com:8082/taxkbapi
 
 ### Perspective on existing (encoded) Knowledge Pages
 *Note: in the following predicates, leaving KP unbound will show not one, but all knowledge pages*
@@ -190,10 +199,9 @@ Standard Prolog clause introspection is used, plus some SWI-Prolog extensions fo
 - ```print_kp_predicates(KP)```
 - ```printAllPredicateWords(KP)```
 - ```predicateWords(KP,Pred,PredWords)```, ```uniquePredicateSentences(KP,S)```, ```uniqueArgSentences(KP,S)```
-- REST???
 - ```le(Link)``` generate Logical English web page and bind Link to a navigation button
 	- ```le([no_indefinites],Link)``` same but omitting a/an articles
-- REST API GET for preliminary Logical Engish
+- Web API (GET) for preliminary Logical English
 	- http://demo.logicalcontracts.com:8082/logicalEnglish?kp=**KP**"
 
 ### Querying
@@ -205,13 +213,29 @@ Standard Prolog clause introspection is used, plus some SWI-Prolog extensions fo
 	- Unknowns are predicate calls assumed true and supporting the answer (we want it to be [])
 	- Explanation is a justification of the answer, a tree represented in a large Prolog term which the Tax-KB SWISH renderer displays as an indented list, including navigation links etc.
 	- Result is either of true/unknown/false
-- REST API GET
-	xxxxx
+- Web API (POST) for querying
+	- Path: /taxkbapi
+	- JSON payload object fields:
+		- operation: "query"
+		- theQuery:PrologGoalString
+		- module: knowledge page name
+		- facts: ArrayOfPrologFactStrings (possibly empty list)
+	- The result will be an array of (for each solution):
+		- {result:true/false/unknown, bindings:VarsValues, unknowns:Array, why: Tree}
+	- Example
+		- curl --header "Content-Type: application/json" --request POST --data '{"operation":"query", "theQuery":"a(13,Y)", "facts":["d(13)"], "module":"http://tests.com"}' http://demo.logicalcontracts.com:8082/taxkbapi
 - ```render_questions(Unknown,Questions)``` uses question(…) fact annotations to obtain more readable "questions"
 
 ## Installation and deployment
 
-### Architecture
+### Quick recipe for a development server
+- cd ~ ; git clone https://github.com/mcalejo/TaxKB.git
+- docker run -p "127.0.0.1:8080:80" logicalcontracts/spacyapiplus:en_v2
+- docker run -it -p 3050:3050 -v ~/TaxKB/swish/data:/data -v /~/TaxKB:/app -e LOAD='/app/swish/user_module_for_swish.pl' -e SPACY_HOST=localhost:8080 -e LOAD_KB=true logicalcontracts/patchedprivateswish 
+
+With your browser go to http://localpost:3050 
+
+### More details
 A Tax-KB instance comprises two Docker containers and a copy of this git repository:
 - SpacY standalone container, built from this [Dockerfile](https://github.com/mcalejo/TaxKB/blob/main/spacy/docker/Dockerfile) and accessible on port 8080
 - SWI-Prolog with (*slightly tweaked, but independent from Tax-KB*) SWISH container, web server included, built from another [Dockerfile](https://github.com/mcalejo/TaxKB/blob/main/swish/dockerfile)
@@ -252,3 +276,6 @@ SWISH includes a powerful Prolog term renderer mechanism, allowing the generatio
 - [Explanation trees](https://github.com/mcalejo/TaxKB/blob/main/swish/explanation_renderer.pl)
 - [Unknowns lists](https://github.com/mcalejo/TaxKB/blob/main/swish/unknowns_renderer.pl)
 ### Editor
+The SWISH editor was slightly customised:
+- A SWISH internal file was patched to provide more flexibility handling "long clicks" (the mouse event for navigation to the selected predicate)
+- Taxlog-specific syntax colouring, namely the [taxlog2prolog](https://github.com/mcalejo/TaxKB/blob/main/syntax.pl) predicate.

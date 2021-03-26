@@ -34,7 +34,7 @@ start_api_server(Port) :- http_server(http_dispatch, [port(Port)]).
 :- http_handler('/taxkbapi', handle_api, []).  % this defines a web server endpoint
 handle_api(Request) :-
     http_read_json_dict(Request, Payload, [value_string_as(atom)]),
-    % asserta(my_request(Query)), % for debugging
+    %asserta(my_request(Request)), % for debugging
     (entry_point(Payload,Result)->true;Result=_{error:"Goal failed"}),
     reply_json_dict(Result).
 
@@ -55,7 +55,7 @@ entry_point(R, _{results:Results}) :- get_dict(operation,R,query), !,
     term_string(Query,R.theQuery,[variable_names(VarPairs_)]),
     (get_dict(facts,R,Facts_) -> maplist(term_string,Facts,Facts_) ; Facts=[]),
     findall( _{bindings:VarPairs, unknowns:U, result:Result, why:E}, (
-        query_with_facts(at(Query,R.module),Facts,U_,taxlogExplanation(E_),Result),
+        query_with_facts(at(Query,R.module),Facts,unknowns(U_),taxlogExplanation(E_),Result),
         makeBindingsDict(VarPairs_,VarPairs),
         makeUnknownsArray(U_,U),
         makeExplanationTree(E_,E)
