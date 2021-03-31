@@ -1,14 +1,41 @@
-<a id="markdown-1-taxkb" name="1-taxkb"></a>
-# 1. TaxKB
+# TaxKB
 Prolog based generic knowledge base for tax regulations, including reasoner, editor and other tools
 
-<a id="markdown-11-initial-sample-of-examples" name="11-initial-sample-of-examples"></a>
-## 1.1. Initial sample of examples
+<!-- vscode-markdown-toc -->
+* 1. [Initial sample of examples](#Initialsampleofexamples)
+	* 1.1. [LodgeIT](#LodgeIT)
+	* 1.2. [AORA](#AORA)
+* 2. [TaxLog, the Tax-KB language](#TaxLogtheTax-KBlanguage)
+	* 2.1. [Other constructs](#Otherconstructs)
+	* 2.2. [Interfacing to external systems](#Interfacingtoexternalsystems)
+* 3. [Towards Logical English](#TowardsLogicalEnglish)
+	* 3.1. [Direct access to Logical English rendering](#DirectaccesstoLogicalEnglishrendering)
+	* 3.2. [To improve the Logical English representation](#ToimprovetheLogicalEnglishrepresentation)
+	* 3.3. [Logical English style checking](#LogicalEnglishstylechecking)
+	* 3.4. [Technical details](#Technicaldetails)
+* 4. [Predicate and web API reference](#PredicateandwebAPIreference)
+	* 4.1. [Language processing](#Languageprocessing)
+	* 4.2. [Perspective on existing (encoded) Knowledge Pages](#PerspectiveonexistingencodedKnowledgePages)
+	* 4.3. [Querying](#Querying)
+* 5. [Installation and deployment](#Installationanddeployment)
+	* 5.1. [Quick recipe for a development server](#Quickrecipeforadevelopmentserver)
+	* 5.2. [More details](#Moredetails)
+	* 5.3. [Where is the knowledge: SWISH storage vs. file system](#Whereistheknowledge:SWISHstoragevs.filesystem)
+* 6. [Implementational aspects](#Implementationalaspects)
+	* 6.1. [Rendering](#Rendering)
+	* 6.2. [Editor](#Editor)
+
+<!-- vscode-markdown-toc-config
+	numbering=true
+	autoSave=true
+	/vscode-markdown-toc-config -->
+<!-- /vscode-markdown-toc -->
+
+##  1. <a name='Initialsampleofexamples'></a>Initial sample of examples
 
 The following tax regulation fragments were indicated by each project sponsor; original links and Tax-KB editor links below.
 
-<a id="markdown-111-lodgeit" name="111-lodgeit"></a>
-### 1.1.1. LodgeIT
+###  1.1. <a name='LodgeIT'></a>LodgeIT
 
 Provided via Andrew Noble email Nov 28, 2020, and earlier:
 -  <https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/>
@@ -27,8 +54,7 @@ Provided via Andrew Noble email Nov 28, 2020, and earlier:
 This was indicated (Dec 10 AN email) for later analysis: <https://www.taxtalks.com.au/small-business-participation-percentage/>
 
 
-<a id="markdown-112-aora" name="112-aora"></a>
-### 1.1.2. AORA
+###  1.2. <a name='AORA'></a>AORA
 _Some suggestions for simplification and more info in first and second Chris emails, Dec 2, 2020_
 
 - <https://www.gov.uk/guidance/stamp-duty-reserve-tax-reliefs-and-exemptions>
@@ -39,8 +65,7 @@ _Some suggestions for simplification and more info in first and second Chris ema
 - <https://www.gov.uk/guidance/corporation-tax-research-and-development-rd-relief>
 	- Tax-KB [editor](http://demo.logicalcontracts.com:8082/p/research_and_development_tax_reliefs.pl)
 
-<a id="markdown-12-taxlog-the-tax-kb-language" name="12-taxlog-the-tax-kb-language"></a>
-## 1.2. TaxLog, the Tax-KB language
+##  2. <a name='TaxLogtheTax-KBlanguage'></a>TaxLog, the Tax-KB language
 
 "**TaxLog**" is the "sugared Prolog" language used to encode the knowledge gleaned from regulatory textual sources into *knowledge pages*, forming a logical knowledge graph.
 
@@ -85,8 +110,7 @@ Unknown values can potentially fuel a user dialog. For example, if ``has_aggrega
 
 Fully bound literals originate yes/no questions. These questions, generated in reaction to a query to the knowledge base, can provide the base for a chatbot. 
 
-<a id="markdown-121-other-constructs" name="121-other-constructs"></a>
-### 1.2.1. Other constructs
+###  2.1. <a name='Otherconstructs'></a>Other constructs
 
 In addition to the above features supporting knowledge representation, there are a few more:
 
@@ -122,8 +146,7 @@ Unknown predicate literals are in fact the "juice" for questions to a human, whi
 
 QuestionTerm can be a string, or a ```FormatString-ArgumentsList``` term, to allow for binding the question string with values, using the [format/2](https://www.swi-prolog.org/pldoc/doc_for?object=format/2) syntax.
 
-<a id="markdown-122-interfacing-to-external-systems" name="122-interfacing-to-external-systems"></a>
-### 1.2.2. Interfacing to external systems
+###  2.2. <a name='Interfacingtoexternalsystems'></a>Interfacing to external systems
 
 Access to data in external DBs or other services is done via (*unrestricted, possibly with cuts and all*) Prolog code. To have a predicate called directly (instead of it being interpreted like the rest by the Taxlog interpreter), it needs to be declared with a single ```Predicate on Time because Explanation``` clause "stub", allowing the external code both to consider time and to contribute its own bit of explanations; for example:
 
@@ -136,16 +159,14 @@ The ```is_sme``` Taxlog predicate (which is interpreted) calls the ```call_my_DB
 
 (TODO: fix this hack) SomeExplanation MUST be textually different from '[]'.
 
-<a id="markdown-13-towards-logical-english" name="13-towards-logical-english"></a>
-## 1.3. Towards Logical English
+##  3. <a name='TowardsLogicalEnglish'></a>Towards Logical English
 **"Logical English"** (LE) is an attempt at a design "sweet spot" in the continuum from natural to constrained to formal languages - closer to the latter, but retaining most of the legibility of clear, natural English. For more about it see references at the top of Bob Kowalski's [home page](https://www.doc.ic.ac.uk/~rak/).
 
 Tax-KB includes a preliminary **Logical English generator**, based on introspection of the Taxlog/Prolog clauses and its variable names, dispensing, for the moment, any additional linguistic information. This is intended as a first step towards a future full blown LE module, to include LE parsing; by exposing prospect users to the present LE representantions these can be validated, commented upon, and a precise specification can be established for the future parser. 
 
 From a practical perspective, the LE generator gives an incentive to Taxlog coders to write more readable code, and provides material to share via Word documents etc. with "lawyer-like" people.
 
-<a id="markdown-131-direct-access-to-logical-english-rendering" name="131-direct-access-to-logical-english-rendering"></a>
-### 1.3.1. Direct access to Logical English rendering
+###  3.1. <a name='DirectaccesstoLogicalEnglishrendering'></a>Direct access to Logical English rendering
 
 To see it at work, take the module name **KP** of any knowledge page (*the argument in the :-module(KP) directive at its top*), and open the URL "http://demo.logicalcontracts.com:8082/logicalEnglish?kp=**KP**". 
 
@@ -157,8 +178,7 @@ Predicates remote to that page have *other legislation* links, which lead to eit
 
 The resulting web page can be copied and pasted into Microsoft Word or similar tools.
 
-<a id="markdown-132-to-improve-the-logical-english-representation" name="132-to-improve-the-logical-english-representation"></a>
-### 1.3.2. To improve the Logical English representation
+###  3.2. <a name='ToimprovetheLogicalEnglishrepresentation'></a>To improve the Logical English representation
 LE is rendered dynamically from a current knowledge page:
 
 - Open a knowledge page, for example <http://demo.logicalcontracts.com:8082/p/cgt_affiliates.pl>
@@ -169,14 +189,12 @@ If you change your Taxlog rules *and* **save** them, using the File/Save...  men
 
 The LE generator has an option to omit indefinite articles, which may arguably lead to more natural sentences: ```le([no_indefinites], Link)```.
 
-<a id="markdown-133-logical-english-style-checking" name="133-logical-english-style-checking"></a>
-### 1.3.3. Logical English style checking
+###  3.3. <a name='LogicalEnglishstylechecking'></a>Logical English style checking
 You may have noticed red curly lines under some sentences, with a tip appearing on hovering the mouse. As "atomic sentences" are generated for each predicate and its arguments, Tax-KB checks (using the SpaCy parser) that they are rooted in a verb. 
 
 Notice that SpaCy, being a neural parser embedding a model trained from many real English sentences, uses the whole sentence to tag words as verbs, nouns etc. Arguably, making SpaCy "happier" (*e.g. making the curly red lines disappear by renaming predicate and argument names*) should reflect into more natural sentences.
 
-<a id="markdown-134-technical-details" name="134-technical-details"></a>
-### 1.3.4. Technical details
+###  3.4. <a name='Technicaldetails'></a>Technical details
 The Logical English generator is based on cascading two main predicates:
 
 - [le_clause(Head,Module,Ref,LogicalEnglish)](https://github.com/mcalejo/TaxKB/blob/main/logical_english.pl#L264), which introspects a single Prolog clause and returns an intermediate LE representation
@@ -186,11 +204,9 @@ The latter includes the (*potentially more expensive*) step of calling the Spacy
 
 Standard Prolog clause introspection is used, plus some SWI-Prolog extensions for variable names, combined with CamelCase and under_score [detection](https://github.com/mcalejo/TaxKB/blob/main/drafter.pl#L79)
 
-<a id="markdown-14-predicate-and-web-api-reference" name="14-predicate-and-web-api-reference"></a>
-## 1.4. Predicate and web API reference
+##  4. <a name='PredicateandwebAPIreference'></a>Predicate and web API reference
 
-<a id="markdown-141-language-processing" name="141-language-processing"></a>
-### 1.4.1. Language processing
+###  4.1. <a name='Languageprocessing'></a>Language processing
 - ```parseAndSee(Text,SentenceIndex,Tokens,HierplaneTree)``` Useful to explore syntactic and lexical aspects of text
 - ```test_draft(Text,DraftedCode)``` given a string with English, try to generate simple Prolog predicate templates for verb phrases
 - Web API (POST) for drafting
@@ -204,8 +220,7 @@ Standard Prolog clause introspection is used, plus some SWI-Prolog extensions fo
 	- Example
 		- curl --header "Content-Type: application/json" --request POST --data '{"operation":"draft", "pageURL":"http://mysite/page1#section2",  "content":[{"url":"http://mysite/page1#section2!chunk1", "text":"john flies by instruments"}, {"url":"http://mysite/page1#section2!chunk2", "text":"miguel drives with gusto"}]}' http://demo.logicalcontracts.com:8082/taxkbapi
 
-<a id="markdown-142-perspective-on-existing-encoded-knowledge-pages" name="142-perspective-on-existing-encoded-knowledge-pages"></a>
-### 1.4.2. Perspective on existing (encoded) Knowledge Pages
+###  4.2. <a name='PerspectiveonexistingencodedKnowledgePages'></a>Perspective on existing (encoded) Knowledge Pages
 *Note: in the following predicates, leaving KP unbound will show not one, but all knowledge pages*
 - ```knowledgePagesGraph(KP,Graph)```
 	- TIP: hover the top left corner, Download GraphViz Graph, Save/Print to PDF
@@ -217,8 +232,7 @@ Standard Prolog clause introspection is used, plus some SWI-Prolog extensions fo
 - Web API (GET) for preliminary Logical English
 	- http://demo.logicalcontracts.com:8082/logicalEnglish?kp=**KP**"
 
-<a id="markdown-143-querying" name="143-querying"></a>
-### 1.4.3. Querying
+###  4.3. <a name='Querying'></a>Querying
 - ```query_with_facts(Goal,FactsSource,Unknowns,Explanation,Result)```
 	- Goal is of the form ```G at KP```
 	- If simply G: KP is assumed to be the module in the current editor
@@ -240,19 +254,16 @@ Standard Prolog clause introspection is used, plus some SWI-Prolog extensions fo
 		- curl --header "Content-Type: application/json" --request POST --data '{"operation":"query", "theQuery":"a(13,Y)", "facts":["d(13)"], "module":"http://tests.com"}' http://demo.logicalcontracts.com:8082/taxkbapi
 - ```render_questions(Unknown,Questions)``` uses question(…) fact annotations to obtain more readable "questions"
 
-<a id="markdown-15-installation-and-deployment" name="15-installation-and-deployment"></a>
-## 1.5. Installation and deployment
+##  5. <a name='Installationanddeployment'></a>Installation and deployment
 
-<a id="markdown-151-quick-recipe-for-a-development-server" name="151-quick-recipe-for-a-development-server"></a>
-### 1.5.1. Quick recipe for a development server
+###  5.1. <a name='Quickrecipeforadevelopmentserver'></a>Quick recipe for a development server
 - cd ~ ; git clone https://github.com/mcalejo/TaxKB.git
 - docker run -p "127.0.0.1:8080:80" logicalcontracts/spacyapiplus:en_v2
 - docker run -it -p 3050:3050 -v ~/TaxKB/swish/data:/data -v /~/TaxKB:/app -e LOAD='/app/swish/user_module_for_swish.pl' -e SPACY_HOST=localhost:8080 -e LOAD_KB=true logicalcontracts/patchedprivateswish 
 
 With your browser go to http://localpost:3050 
 
-<a id="markdown-152-more-details" name="152-more-details"></a>
-### 1.5.2. More details
+###  5.2. <a name='Moredetails'></a>More details
 A Tax-KB instance comprises two Docker containers and a copy of this git repository:
 - SpacY standalone container, built from this [Dockerfile](https://github.com/mcalejo/TaxKB/blob/main/spacy/docker/Dockerfile) and accessible on port 8080
 - SWI-Prolog with (*slightly tweaked, but independent from Tax-KB*) SWISH container, web server included, built from another [Dockerfile](https://github.com/mcalejo/TaxKB/blob/main/swish/dockerfile)
@@ -265,8 +276,7 @@ The SWI-Prolog+SWISH Docker container does not contain any Tax-KB specific code.
 * -e LOAD_KB=true: whether the SWISH internal storage is loaded at startup with all knowledge pages in the kb/ directory, overwriting any existing ones
 
 
-<a id="markdown-153-where-is-the-knowledge-swish-storage-vs-file-system" name="153-where-is-the-knowledge-swish-storage-vs-file-system"></a>
-### 1.5.3. Where is the knowledge: SWISH storage vs. file system
+###  5.3. <a name='Whereistheknowledge:SWISHstoragevs.filesystem'></a>Where is the knowledge: SWISH storage vs. file system
 A word about **SWISH storage**, to understand the need for the last parameter above (LOAD_KB). 
 
 When a user saves a Prolog file with the SWISH web editor, it does not go straightly into the server file system; instead, it is stored in a SWISH internal storage area (persisting in the /data volume mounted in the Docker container); this provides limited versioning, tagging and related services, nicknamed internally as "[gitty storage](https://github.com/SWI-Prolog/swish/blob/master/lib/storage.pl#L83)". Such files can be opened in the SWISH syntax-aware web editor via the URL SERVER/p/filename.pl, and are listed in SWISH's 
@@ -283,11 +293,9 @@ The latter allows git tracking of server changes, a posteriori.
 
 When deploying a real system this needs to be tuned, possibly using a specific git branch (e.g. "deployed-version") for the server kb/, so that user changes can later be merged safely into master, after some quality control/review process TBD.
 
-<a id="markdown-16-implementational-aspects" name="16-implementational-aspects"></a>
-## 1.6. Implementational aspects
+##  6. <a name='Implementationalaspects'></a>Implementational aspects
 
-<a id="markdown-161-rendering" name="161-rendering"></a>
-### 1.6.1. Rendering
+###  6.1. <a name='Rendering'></a>Rendering
 SWISH includes a powerful Prolog term renderer mechanism, allowing the generation of arbitrary HTML (including possibly the reeling in of Javascript components). Tax-KB includes several specific renderers, for:
 - [Parse trees](https://github.com/mcalejo/TaxKB/blob/main/spacy/hierplane_renderer.pl); this embeds AllenAI's powerful [hierplane](https://allenai.github.io/hierplane)
 	- Token lists are rendered with SWISH's standard [table renderer](http://demo.logicalcontracts.com:8082/example/render_table.swinb)
@@ -295,8 +303,7 @@ SWISH includes a powerful Prolog term renderer mechanism, allowing the generatio
 	- this is articulated with the le(..) predicate; for direct URL access to LE this renderer is not used
 - [Explanation trees](https://github.com/mcalejo/TaxKB/blob/main/swish/explanation_renderer.pl)
 - [Unknowns lists](https://github.com/mcalejo/TaxKB/blob/main/swish/unknowns_renderer.pl)
-<a id="markdown-162-editor" name="162-editor"></a>
-### 1.6.2. Editor
+###  6.2. <a name='Editor'></a>Editor
 The SWISH editor was slightly customised:
 - A SWISH internal file was patched to provide more flexibility handling "long clicks" (the mouse event for navigation to the selected predicate)
 - Taxlog-specific syntax colouring, namely the [taxlog2prolog](https://github.com/mcalejo/TaxKB/blob/main/syntax.pl) predicate.
