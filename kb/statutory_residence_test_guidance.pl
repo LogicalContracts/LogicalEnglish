@@ -8,7 +8,7 @@
 
 mainGoal(complies_to_statutory_residence_test(_Individual), "Determine if a person is a UK resident for tax purposes").
 
-example("Chris Feb 12 - 2A",[
+example('Chris Feb 12 - 2A',[
 /*
 Determine if Alex was a UK residence for tax purposes for the tax year 6 Apr 2018 – 5 Apr 2019
 -	Alex is a UK citizen who lived in the UK until March 2018.
@@ -42,7 +42,7 @@ NOTE: out of scope of original example, added a stub at 'https://www.gov.uk/hmrc
     THIRD_OT='https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11140',
     subtract_days(End,'20190326',Days), DaysInUK is 15 /*leave*/ +Days.
 
-example("Chris Feb 12 - 2B",[
+example('Chris Feb 12 - 2B',[
 /*
 Determine if Beatrice was a UK resident the tax year 6 Apr 2019 – 5 Apr 2020
 -	Beatrice is a UK citizen with her home in the UK.
@@ -60,7 +60,7 @@ Expected result: resident, does not qualify for 3rd automatic (UK) test due to h
         ], complies_to_statutory_residence_test(beatrice) on '20190406')
     ]).
 
-example("Chris Feb 12 - 2C1",[
+example('Chris Feb 12 - 2C1',[
     /*
 Determine if Chris was a statutory resident for the UK tax year from 6 Apr 2019 – 5 Apr 2020.
 Chris is an Australian citizen, and lived there for most of his adult life. Since July 2017, Chris has spent most of his time in Europe. 
@@ -82,7 +82,7 @@ Expected result: non-resident due to 2nd automatic test; see https://www.gov.uk/
         ],not complies_to_statutory_residence_test(chris) on '20190406')
     ]).
     
-example("Chris Feb 12 - 2C2",[
+example('Chris Feb 12 - 2C2',[
     /*
 Determination should be made for the tax year from 6 Apr 2020 – 5 Apr 2021.
 Facts as per Example 2C1; assume that Chris remains in the UK for the remainder of 2021.
@@ -91,7 +91,7 @@ Expected result: resident
     scenario(Facts, complies_to_statutory_residence_test(chris) on '20200406')
     % NOTE: out of scope of original example, as previous one
     ]) :- 
-        example("Chris Feb 12 - 2C1",[scenario(Facts2C1,_)]), 
+        example('Chris Feb 12 - 2C1',[scenario(Facts2C1,_)]), 
         Facts=[ + (days_spent_in_uk(chris,'20210406','20220405',Days) if subtract_days('20210406','20220405',Days) ) |Facts2C1]. 
         
 % Assumptions: 
@@ -140,7 +140,7 @@ days_spent_in_uk(Individual,Start,End,TotalDays) if
     days_spent_in_uk(Individual,Start,End,TotalDays) at myDb123.
 
 /** <examples>
-?- query_with_facts(complies_to_statutory_residence_test(Individual) on '20180406' at 'https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11040',"Chris Feb 12 - 2A",Unknowns,Explanation,Result).
+?- query_with_facts(complies_to_statutory_residence_test(Individual) on '20180406' at 'https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11040','Chris Feb 12 - 2A',Unknowns,Explanation,Result).
 ?- le(LogicalEnglish).
 */
     

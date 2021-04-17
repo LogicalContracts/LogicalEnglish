@@ -25,13 +25,13 @@ rollover_applies(ID,Asset,When,TransferorTFN,TransfereesTFNList) :-
 % example(Title,Sequence).  Sequence is a list of scenario(FactChanges,TrueConclusion)
 % An example ilustrates and tests:
 %TODO: replace pseudo code text by predicates
-example( "Ultimate ownership unchanged", [
+example( 'Ultimate ownership unchanged', [
     % initial facts and condition:
     scenario(['penny runs a business B','B has assets A'], ultimate_owner(A,'Penny',1)),
     % new facts and condition:
     scenario(['penny has trust T', transfer_event(ID,A,When,B,[T])], ultimate_owner(A,'Penny'))
     ]).
-example( "Changed share of ownership", [
+example( 'Changed share of ownership', [
     % initial facts and condition:
     scenario(['Amy, Joanna and Remy run a delivery business B as equal partners','B has assets A'], 
         true),
@@ -42,7 +42,7 @@ example( "Changed share of ownership", [
     scenario(['Amy, Joanna and Remy establish company C, different shares', 'Amy, Joanna and Remy establish company C, equal shares'], 
         rollover_applies)
     ]).
-example( "Andrew email Feb 4 2021", [
+example( 'Andrew email Feb 4 2021', [
     /* Company transfers its assets to partners in a partnership on 1 July 2020. Company has turnover of 5,300,000. 
     Company is a Small Business Entity i.e. the transferor & the partners in a partnership i.e. transferee is also a small business entity.)
     Assets are - Goodwill, Trading stock, Plant & equipment, revenue assets
@@ -165,6 +165,6 @@ rollover_cost(Cost) if
 % integrity rule?
 
 /** <examples>
-?- query_with_facts(rollover_applies(Event),"Andrew email Feb 4 2021",Unknowns,Explanation,Result).
+?- query_with_facts(rollover_applies(Event),'Andrew email Feb 4 2021',Unknowns,Explanation,Result).
 ?- le(LogicalEnglish).
 */

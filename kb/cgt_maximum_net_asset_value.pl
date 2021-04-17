@@ -1,4 +1,4 @@
-% Written by Miguel Calejo for LodgeIT, Australia, and AORALaw, UK; copyright LodgeIT+AORALaw (50% each) 2020
+% Written by Miguel Calejo for LodgeIT, Australia, and AORA, UK; copyright LodgeIT+AORA (50% each) 2020
 % PRELIMINARY DRAFT
 
 % For now, residing in the 'user' module
@@ -16,11 +16,11 @@ mainGoal(satisfies_maximum_net_asset_value_test(_TFN), "Determine if a given ent
 %   external predicates MUST be aware of the local main event time, "now"
 
 %TODO: flesh out the examples
-example("Colin",[scenario([facts], (relevant_asset(xxx), whatever))]).
-example("Ben",[scenario([facts], cgt_assets_net_value(123,5000))]).
-example("Cool",[scenario([facts],p)]).
-example("Lana",[scenario([facts],q)]).
-example("Andrew email Feb 5 2021",[
+example('Colin',[scenario([facts], (relevant_asset(xxx), whatever))]).
+example('Ben',[scenario([facts], has_cgt_assets_net_value(123,5000))]).
+example('Cool',[scenario([facts],p)]).
+example('Lana',[scenario([facts],q)]).
+example('Andrew email Feb 5 2021',[
     /* Andrew has net CGT assets 4,000,000, has affiliate with net assets 1,000,000, has connected entity with net CGT assets of 2,000,000 */
     scenario([
         owns(andrew,cgt_asset_1) at myDB1,
@@ -39,10 +39,10 @@ example("Andrew email Feb 5 2021",[
     ]) :- EARNOUT="https://www.ato.gov.au/General/Capital-gains-tax/In-detail/Business-assets/Earnout-arrangements-and-CGT/".
 
 % note: referred from cgt_concessions_basic_conditions_sb.pl
-satisfies_maximum_net_asset_value_test(TFN) on Date if 
-    cgt_assets_net_value(TFN,Value) on Date and Value =< 6000000.
+satisfies_maximum_net_asset_value_test(TaxPayer) on Date if 
+    has_cgt_assets_net_value(TaxPayer,Value) on Date and Value =< 6000000.
 
-cgt_assets_net_value(You,Value) on Date if 
+has_cgt_assets_net_value(You,Value) on Date if 
     %aggregate/3 fails for empty list, so this is what we need to sum:
     aggregate_all(sum(AssetNet), (
         relevant_asset(You,Asset) and is_cgt_asset(Asset) and not asset_to_exclude(You,Asset) and net_value(Asset,AssetNet) on Date
@@ -129,7 +129,8 @@ is_earnout_cgt_asset(Asset,Value) if
         at "https://www.ato.gov.au/General/Capital-gains-tax/In-detail/Business-assets/Earnout-arrangements-and-CGT/".
 
 /** <examples>
-?- query_with_facts(satisfies_maximum_net_asset_value_test(TaxPayer),"Andrew email Feb 5 2021",Unknowns,Explanation,Result).
+?- query_with_facts(satisfies_maximum_net_asset_value_test(TaxPayer),'Andrew email Feb 5 2021',Unknowns,Explanation,Result).
+?- query_with_facts(satisfies_maximum_net_asset_value_test(andrew),'Andrew email Feb 5 2021',Unknowns,Explanation,Result).
 ?- le(LogicalEnglish).
 */
     

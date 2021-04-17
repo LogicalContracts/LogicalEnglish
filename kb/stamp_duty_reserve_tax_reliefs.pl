@@ -6,7 +6,7 @@
 
 mainGoal(exempt_transfer(_FromTaxPayer,_ToTaxPayer,_SecurityIdentifier,_When),"Determine if an electronic transaction is exempt from SDRT").
 
-example("Chris Feb 12 - 1A",[
+example('Chris Feb 12 - 1A',[
     /* 
     Alice is the daughter of John.
     Alice has been married to Adam since 1 Jan 2011.
@@ -23,7 +23,7 @@ example("Chris Feb 12 - 1A",[
         shares_in_trust_that__ if false
         ], exempt_transfer)
     ]).
-example("Chris Feb 12 - 1B1",[
+example('Chris Feb 12 - 1B1',[
         /*
         Ben is the step-brother of Adam.
         Ben received some shares from Adam that in a paid transfer (i.e. not a gift) on 10 Dec 2020.
@@ -39,7 +39,7 @@ example("Chris Feb 12 - 1B1",[
             shares_trading_on_growth_market_but_unlisted_on_recognized % quick and dirty
              ], exempt_transfer)
     ]).
-example("Chris Feb 12 - 1B2",[
+example('Chris Feb 12 - 1B2',[
     /*
     Ben is the step-brother of Adam.
     Ben received some shares from Adam that in a paid transfer (i.e. not a gift) on 10 Dec 2017.
@@ -60,7 +60,7 @@ example("Chris Feb 12 - 1B2",[
         growth_market(merkurMarket) on When at "https://www.gov.uk/hmrc-internal-manuals/stamp-taxes-shares-manual/stsm041330" if When@>='20180401' % dummy date
          ], not exempt_transfer)
 ]).
-example("Chris Feb 12 - 1C",[
+example('Chris Feb 12 - 1C',[
     /*
     Cathy bought some shares from a broker, which were transferred to her on 1 Jan 2021.
     The shares were for stock of The International Bank for Reconstruction and Development
@@ -124,7 +124,7 @@ trading_in_market(SecurityID,MarketID) if
 %TODO: later (cf. Chris email Dec 2, 2020): Transfers that qualify for Stamp Duty Reserve Tax RELIEF 
 
 /** <examples>
-?- query_with_facts(exempt_transfer,"Chris Feb 12 - 1A",Unknowns,Explanation,Result), render_questions(Unknowns,Questions).
-?- (Unknowns=[];Unknowns=_), query_with_facts(exempt_transfer,"Chris Feb 12 - 1B1",Unknowns,Explanation,Result).
+?- query_with_facts(exempt_transfer,'Chris Feb 12 - 1A',Unknowns,Explanation,Result), render_questions(Unknowns,Questions).
+?- (Unknowns=[];Unknowns=_), query_with_facts(exempt_transfer,'Chris Feb 12 - 1B1',Unknowns,Explanation,Result).
 ?- le(LogicalEnglish).
 */
