@@ -247,7 +247,7 @@ Standard Prolog clause introspection is used, plus some SWI-Prolog extensions fo
 		- operation: "query"
 		- theQuery:PrologGoalString
 		- module: knowledge page name
-		- facts: ArrayOfPrologFactStrings (possibly empty list)
+		- facts: ArrayOfPrologFactStrings (possibly empty list) or name of example in the knowledge page
 	- The result will be an array of (for each solution):
 		- {result:true/false/unknown, bindings:VarsValues, unknowns:Array, why: Tree}
 	- Example
@@ -259,7 +259,7 @@ Standard Prolog clause introspection is used, plus some SWI-Prolog extensions fo
 ###  5.1. <a name='Quickrecipeforadevelopmentserver'></a>Quick recipe for a development server
 - cd ~ ; git clone https://github.com/mcalejo/TaxKB.git
 - docker run -p "127.0.0.1:8080:80" logicalcontracts/spacyapiplus:en_v2
-- docker run -it -p 3050:3050 -v ~/TaxKB/swish/data:/data -v /~/TaxKB:/app -e LOAD='/app/swish/user_module_for_swish.pl' -e SPACY_HOST=localhost:8080 -e LOAD_KB=true logicalcontracts/patchedprivateswish 
+- docker run -it -p 3050:3050 -v \~/TaxKB/swish/data:/data -v \~/TaxKB:/app -e LOAD='/app/swish/user_module_for_swish.pl' -e SPACY_HOST=localhost:8080 -e LOAD_KB=true logicalcontracts/patchedprivateswish 
 
 With your browser go to http://localpost:3050 
 

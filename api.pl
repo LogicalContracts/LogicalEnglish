@@ -53,7 +53,7 @@ handle_api(Request) :-
 %   each result is a {result: true/false/unknown, bindings:VarsValuesArray, unknowns: ArrayOfTerm, why: ExplanationTerm}
 entry_point(R, _{results:Results}) :- get_dict(operation,R,query), !, 
     term_string(Query,R.theQuery,[variable_names(VarPairs_)]),
-    (get_dict(facts,R,Facts_) -> maplist(term_string,Facts,Facts_) ; Facts=[]),
+    (get_dict(facts,R,Facts_) -> (is_list(Facts_) -> maplist(term_string,Facts,Facts_) ; Facts=Facts_) ; Facts=[]),
     findall( _{bindings:VarPairs, unknowns:U, result:Result, why:E}, (
         query_with_facts(at(Query,R.module),Facts,unknowns(U_),taxlogExplanation(E_),Result),
         makeBindingsDict(VarPairs_,VarPairs),
@@ -78,7 +78,7 @@ makeBindingsDict_([Name=T|Pairs],[Name=J|NewPairs]) :- !,
     term_to_json(T,J), makeBindingsDict_(Pairs,NewPairs).
 makeBindingsDict_([],[]).
 
-makeUnknownsArray([at(X,M)|U],[_{goal:J, module:M}|NewU]) :- !,
+makeUnknownsArray([at(X,M)/_Clause|U],[_{goal:J, module:M}|NewU]) :- !,
     term_to_json(X,J), makeUnknownsArray(U,NewU).
 makeUnknownsArray([],[]).
 
