@@ -132,6 +132,11 @@ le_html(aggregate_all(Op,Each_,SuchThat,Result),Words,HTML) :- !,
     (Each=a(EWords) -> (EachH = ["each "|EWords], EachW=[each|EWords]) ; le_html(Each,EachW,EachH)),
     append([RH, [" is the ~w of "-[Op]],EachH,[" such that {"],STH,[" }"]],HTML),
     append([RW, [is, the, Op, of],EachW,[such, that],STW],Words).
+% forall e.g. for every a Party in the Event, the Party has aggregated a Turnover and the Turnover < 10000000 and the Part is eligible
+le_html(forall(Cond, Goal), Words, HTML) :- !, 
+    le_html(Cond, CW, CH), le_html(Goal, GW, GH),
+    append([["for every ~w "-[CH]],", ", GH],HTML),
+    append([["for every ~w "-[CW]],", ", GW],,Words).
 % propositional predicate
 le_html(le_predicate(Functor,[]), Words, [span([title=Tip,style=S],HTML)]) :- !, 
     predicate_html(Functor,HTML), Words=Functor,
