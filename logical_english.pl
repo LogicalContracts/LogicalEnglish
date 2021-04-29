@@ -134,10 +134,10 @@ le_html(aggregate_all(Op,Each_,SuchThat,Result),Words,HTML) :- !,
     append([RH, [" is the ~w of "-[Op]],EachH,[" such that { "],STH,[" }"]],HTML),
     append([RW, [is, the, Op, of],EachW,[such, that],STW],Words).
 % forall e.g. for every a Party in the Event, the Party has aggregated a Turnover and the Turnover < 10000000 and the Part is eligible
-%le_html(forall(Cond, Goal), Words, HTML) :- !, 
-%    le_html(Cond, CW, CH), le_html(Goal, GW, GH), 
-%    append([["for every ~w "-[CH]],", ", GH],HTML),
-%    append([["for every ~w "-[CW]],", ", GW],Words).
+le_html(for_all(Cond, Goal), Words, HTML) :- !,
+    le_html(Cond, _CW, CH), le_html(Goal, _GW, GH),
+    append([[for, every],CH, [it, is, the, case, that],GH],Words), 
+    append([[" for every "],CH, [", it is the case that {"],GH,["}"]],HTML).
 % propositional predicate
 le_html(le_predicate(Functor,[]), Words, [span([title=Tip,style=S],HTML)]) :- !, 
     predicate_html(Functor,HTML), Words=Functor,
@@ -234,6 +234,7 @@ bad_style('background: url(taxkb/underline.gif) bottom repeat-x;').
 atomicSentenceStyle(le_predicate([F],Args),_Words,S,Tip) :- length(Args,Arity), functor(Pred,F,Arity), system_predicate(Pred), !,
     %TODO: this misses system predicates with multiple words
     S='', Tip="system predicate".
+atomicSentenceStyle(le_predicate(_F,_Args),_Words,'',"Simplest style") :- !. % Testing without spacy
 atomicSentenceStyle(le_predicate(Functor,[_,_,_|_]),_Words,S,Tip) :- !, % arity>=3, no point in parsing it all
     bad_style(BS),
     once(( spaCyParseTokens(Functor,_,Tokens), member_with([dep=root,pos=POS,lemma=Lemma],Tokens))),
@@ -345,6 +346,9 @@ conditions(';'(C->T,E),VarNames,V1,Vn,LE) :- !, conditions(then(if(C),else(T,E))
 conditions((A;B),VarNames,V1,Vn,Condition) :- !, conditions(or(A,B),VarNames,V1,Vn,Condition).
 conditions(\+ A,VarNames,V1,Vn,Condition) :- !, conditions(not(A),VarNames,V1,Vn,Condition).
 conditions(call(G),VarNames,V1,Vn,Condition) :- !, conditions(G,VarNames,V1,Vn,Condition).
+conditions(forall(Cond,Goal),VarNames,V1,Vn,for_all(Conditions, Goals)) :-  !, 
+    conditions(Cond, VarNames, V1, V2, Conditions),
+    conditions(Goal, VarNames, V2, Vn, Goals).
 conditions(aggregate_all(Expr,Cond,Aggregate),VarNames,V1,Vn,aggregate_all(Op,Each,SuchThat,Result)) :- Expr=..[Op,Arg], !,
     arguments([Arg],VarNames,V1,V2,[Each]),
     conditions(Cond,VarNames,V2,V3,SuchThat),
