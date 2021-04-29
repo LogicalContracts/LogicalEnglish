@@ -97,10 +97,11 @@ shouldReportError(E) :- assert(reported_predicate_error(E)).
 
 %le_html(+TermerisedLE,-PlainWordsList,-TermerisedHTMLlist)
 %le_html(LE,_,_) :- mylog(LE),fail.
-le_html(if(Conclusion,Conditions), RuleWords, [div(Top), div(style='padding-left:30px;',ConditionsHTML)]) :- !,
+le_html(if(Conclusion,Conditions), RuleWords, [div(Top), div(style='padding-left:30px;',ConditionsHTML_)]) :- !,
     le_html(Conclusion,ConclusionWords,ConclusionHTML), le_html(Conditions,ConditionsWords,ConditionsHTML),
+    append([ConditionsHTML, ["."]], ConditionsHTML_), % adding a dot at the end of each clause 
     append(ConclusionHTML,[span(b(' if'))], Top),
-    append([ConclusionWords,[if],ConditionsWords],RuleWords).
+    append([ConclusionWords,[if],ConditionsWords],RuleWords). % no dot added!
 %TOOO: to avoid this verbose form, generate negated predicates with Spacy help, or simply declare the negated forms
 le_html(not(A),[it, is, not, the, case, that|AW],HTML) :- !, le_html(A,AW,Ahtml), HTML=["it is not the case that "|Ahtml]. 
 le_html(if_then_else(Condition,true,Else),Words,HTML) :- !,
@@ -130,13 +131,13 @@ le_html(aggregate_all(Op,Each_,SuchThat,Result),Words,HTML) :- !,
     must_succeed(Each_=le_argument(Each)),
     le_html(Result,RW,RH), le_html(SuchThat,STW,STH), 
     (Each=a(EWords) -> (EachH = ["each "|EWords], EachW=[each|EWords]) ; le_html(Each,EachW,EachH)),
-    append([RH, [" is the ~w of "-[Op]],EachH,[" such that {"],STH,[" }"]],HTML),
+    append([RH, [" is the ~w of "-[Op]],EachH,[" such that { "],STH,[" }"]],HTML),
     append([RW, [is, the, Op, of],EachW,[such, that],STW],Words).
 % forall e.g. for every a Party in the Event, the Party has aggregated a Turnover and the Turnover < 10000000 and the Part is eligible
-le_html(forall(Cond, Goal), Words, HTML) :- !, 
-    le_html(Cond, CW, CH), le_html(Goal, GW, GH),
-    append([["for every ~w "-[CH]],", ", GH],HTML),
-    append([["for every ~w "-[CW]],", ", GW],,Words).
+%le_html(forall(Cond, Goal), Words, HTML) :- !, 
+%    le_html(Cond, CW, CH), le_html(Goal, GW, GH), 
+%    append([["for every ~w "-[CH]],", ", GH],HTML),
+%    append([["for every ~w "-[CW]],", ", GW],Words).
 % propositional predicate
 le_html(le_predicate(Functor,[]), Words, [span([title=Tip,style=S],HTML)]) :- !, 
     predicate_html(Functor,HTML), Words=Functor,
@@ -256,7 +257,7 @@ atomicSentenceStyle(le_predicate(Functor,_),Words,S,Tip) :-
 
 
 %le_clause(?H,+Module,-Ref,-LEterm)
-% H is a predicate head, with or without time; if the ruel has explicit time in head, time will be explicit in the LE too
+% H is a predicate head, with or without time; if the rule has explicit time in head, time will be explicit in the LE too
 % LEterms:
 %  if(Conclusion,Conditions), or/and/not/must(Condition,Obligation), if_then_else(Condition,Then,Else)
 %   le_predicate(FunctorWords,Args); each Arg is a le_argument(Term), where term is a/the(Words) or le_some_thing (anonymous var) or Term
