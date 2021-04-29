@@ -135,9 +135,14 @@ le_html(aggregate_all(Op,Each_,SuchThat,Result),Words,HTML) :- !,
     append([RW, [is, the, Op, of],EachW,[such, that],STW],Words).
 % forall e.g. for every a Party in the Event, the Party has aggregated a Turnover and the Turnover < 10000000 and the Part is eligible
 le_html(for_all(Cond, Goal), Words, HTML) :- !,
-    le_html(Cond, _CW, CH), le_html(Goal, _GW, GH),
-    append([[for, every],CH, [it, is, the, case, that],GH],Words), 
+    le_html(Cond, CW, CH), le_html(Goal, GW, GH),
+    append([[for, every],CW, [it, is, the, case, that],GW],Words), 
     append([[" for every "],CH, [", it is the case that {"],GH,["}"]],HTML).
+% setof e.g. a Previous Owners is a collection of an Owner/ a Share where the Owner and the Share represent the ultimate owner of the Asset at the Before
+le_html(set_of(Index, Cond, Set), Words, HTML) :- !,
+    le_html(Index, IW, IH), le_html(Cond, CW, CH), le_html(Set, SW, SH), 
+    append([SW, [is, a, set, of], IW, [where],CW],Words), 
+    append([SH, [" is a collection of "],IH, [" where {"],CH,["}"]],HTML).
 % propositional predicate
 le_html(le_predicate(Functor,[]), Words, [span([title=Tip,style=S],HTML)]) :- !, 
     predicate_html(Functor,HTML), Words=Functor,
@@ -349,6 +354,10 @@ conditions(call(G),VarNames,V1,Vn,Condition) :- !, conditions(G,VarNames,V1,Vn,C
 conditions(forall(Cond,Goal),VarNames,V1,Vn,for_all(Conditions, Goals)) :-  !, 
     conditions(Cond, VarNames, V1, V2, Conditions),
     conditions(Goal, VarNames, V2, Vn, Goals).
+conditions(setof(X,Cond,Set),VarNames,V1,Vn,set_of(Index, Conditions, Collection)) :-  !, 
+    arguments([X], VarNames, V1, V2, [Index]),
+    conditions(Cond, VarNames, V2, V3, Conditions), 
+    arguments([Set], VarNames, V3, Vn, [Collection]).
 conditions(aggregate_all(Expr,Cond,Aggregate),VarNames,V1,Vn,aggregate_all(Op,Each,SuchThat,Result)) :- Expr=..[Op,Arg], !,
     arguments([Arg],VarNames,V1,V2,[Each]),
     conditions(Cond,VarNames,V2,V3,SuchThat),
