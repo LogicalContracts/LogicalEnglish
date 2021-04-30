@@ -76,14 +76,14 @@ has_to_exclude_asset(Person,Asset) if
 s_net_value_is(Asset,Value) on Date if
     if is_earnout_cgt_asset_with_value(Asset,Value) then true 
     else (
-        s_market_value_is(Asset,Market) on Date and 
+        s_market_value_is(Asset,MarketValue) on Date and 
         aggregate_all( sum(Liability), (
             s_type_and_liability_are(Asset,Type,Liability) and 
             % From "Meaning of 'net value'"; contradicts exclusions in "Liabilities to include" !!!
             % from "Liabilities to include"; also refers https://www.ato.gov.au/law/view/document?DocID=TXD/TD200714/NAT/ATO/00001
             Type in [annual_leave,long_service_leave,unearned_income,tax_liabilities, legally_enforceable_debts, legal_or_equitable_obligations] 
             ), Liabilities) on Date 
-        and Value is Market-Liabilities
+        and Value is MarketValue-Liabilities
     ).
 
 % "Partner in a partnership": seems just an example
