@@ -34,7 +34,7 @@ NOTE: out of scope of original example, added a stub at 'https://www.gov.uk/hmrc
         ties_test(_) at RDRM11510 if false
         ], not complies_to_statutory_residence_test(alex) on A_DATE)
     ]) :- 
-    A_DATE='20180406', uk_tax_year(A_DATE,_,Start,End),
+    A_DATE='20180406', uk_tax_year_for_date(A_DATE,_,Start,End),
     RDRM11150="https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11150",
     RDRM11130="https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11330",
     RDRM11370="https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11370",
@@ -101,40 +101,57 @@ Expected result: resident
 
 
 complies_to_statutory_residence_test(Individual) on Date if % this could actually go into the if-then-else below; just following the text
-    satisfies_first_automatic_uk_test(Individual) on Date.
+    satisfies_first_automatic_uk_test_STEP1(Individual) on Date.
 
-complies_to_statutory_residence_test(I) on Date if 
-    if ( first_automatic_overseas_test(I) on Date or second_automatic_overseas_test(I) on Date or third_automatic_overseas_test(I) on Date)
-        then false
-        else (second_automatic_uk_test(I) on Date or third_automatic_uk_test(I) on Date or ties_test(I) on Date).
+complies_to_statutory_residence_test(Individual) on Date if 
+    not does_not_meet_any_of_three_overseas_tests_STEP2(Individual) on Date. 
 
-satisfies_first_automatic_uk_test(I) on Date if
-    uk_tax_year(Date,_,Start,End) and days_spent_in_uk(I,Start,End,Duration) and Duration >= 183.
+complies_to_statutory_residence_test(Individual) on Date if 
+    does_not_meet_any_of_three_overseas_tests_STEP2(Individual) on Date 
+    and meets_either_the_second_or_the_third_uk_test_STEP3(Individual) on Date. 
 
-second_automatic_uk_test(I) on Date if
-    second_automatic_uk_test(I) on Date at "https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11330".
+complies_to_statutory_residence_test(Individual) on Date if
+    does_not_meet_any_of_three_overseas_tests_STEP2(Individual) on Date 
+    and meets_ties_test_STEP4(Individual) on Date. 
 
-third_automatic_uk_test(I) on Date if
-    third_automatic_uk_test(I) on Date at "https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11370".
+does_not_meet_any_of_three_overseas_tests_STEP2(Individual) on Date if
+    not meets_first_automatic_overseas_test(Individual) on Date 
+    and not meets_second_automatic_overseas_test(Individual) on Date 
+    and not meets_third_automatic_overseas_test(Individual) on Date.
 
-ties_test(I) on Date if
-    ties_test(I) on Date at "https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11510".
+meets_either_the_second_or_the_third_uk_test_STEP3(Individual) on Date if
+    (second_automatic_uk_test(I) on Date or third_automatic_uk_test(Individual) on Date). 
 
-first_automatic_overseas_test(I) on Date if % cf. https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11120
-    uk_tax_year(Date,ThisYear,_,_) and between(ThisYear-3,ThisYear-1,PreviousYear) 
-    and uk_tax_year(PreviousDate,PreviousYear,PreviousStart,PreviousEnd) 
-    and days_spent_in_uk(I,PreviousStart,PreviousEnd,Duration) and Duration <16
-    and complies_to_statutory_residence_test(I) on PreviousDate. % HACK: this needs to be after the previous condition, to avoid going back in time ad eternum
+meets_ties_test_STEP4(Individual) on Date if 
+    ties_test(Individual) on Date.
 
-second_automatic_overseas_test(I) on Date if
-    uk_tax_year(Date,ThisYear,Start,End)  
-    and days_spent_in_uk(I,Start,End,Duration) and Duration <46
+satisfies_first_automatic_uk_test(Individual) on Date if
+    uk_tax_year_for_date(Date,_,Start,End) and days_spent_in_uk(Individual,Start,End,Duration) and Duration >= 183.
+
+second_automatic_uk_test(Individual) on Date if
+    second_automatic_uk_test(Individual) on Date at "https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11330".
+
+third_automatic_uk_test(Individual) on Date if
+    third_automatic_uk_test(Individual) on Date at "https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11370".
+
+ties_test(Individual) on Date if
+    ties_test(Individual) on Date at "https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11510".
+
+meets_first_automatic_overseas_test(Individual) on Date if % cf. https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11120
+    uk_tax_year_for_date(Date,ThisYear,_,_) and between(ThisYear-3,ThisYear-1,PreviousYear) 
+    and uk_tax_year_for_date(PreviousDate,PreviousYear,PreviousStart,PreviousEnd) 
+    and days_spent_in_uk(Individual,PreviousStart,PreviousEnd,Duration) and Duration <16
+    and complies_to_statutory_residence_test(Individual) on PreviousDate. % HACK: this needs to be after the previous condition, to avoid going back in time ad eternum
+
+meets_second_automatic_overseas_test(Individual) on Date if
+    uk_tax_year_for_date(Date,ThisYear,Start,End)  
+    and days_spent_in_uk(Individual,Start,End,Duration) and Duration <46
     % HACK: this needs to be after the previous condition, to avoid going back in time ad eternum
-    and forall( (between(ThisYear-3,ThisYear-1,PreviousYear) and uk_tax_year(PreviousDate,PreviousYear,_PreviousStart,_PreviousEnd)), 
-        not complies_to_statutory_residence_test(I) on PreviousDate). 
+    and forall( (between(ThisYear-3,ThisYear-1,PreviousYear) and uk_tax_year_for_date(PreviousDate,PreviousYear,_PreviousStart,_PreviousEnd)), 
+        not complies_to_statutory_residence_test(Individual) on PreviousDate). 
 
-third_automatic_overseas_test(Individual) on Date if
-    third_automatic_overseas_test(Individual) on Date at "https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11140".
+meets_third_automatic_overseas_test(Individual) on Date if
+    meets_third_automatic_overseas_test(Individual) on Date at "https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11140".
 
 days_spent_in_uk(Individual,Start,End,TotalDays) if
     days_spent_in_uk(Individual,Start,End,TotalDays) at myDb123.
