@@ -98,7 +98,7 @@ is_a_party_in(TaxPayer,EventID) if
     transfer_event(EventID,_Asset,_When,_Tor,Transferees) and TaxPayer in Transferees.
 
 rollover_applies(Event) if
-    transfer_event(Event,Asset,When,_Tor,_Tes) and after(When,'20160701') 
+    transfer_event(Event,Asset,When,_Tor,_Tes) and is_after(When,'20160701') 
     % we could simply use [Tor|Tes] below, but perhaps this reads more nicely:
     and forall( is_a_party_in(Party,Event), has_an_aggregated_turnover_of(Party,Turnover) and Turnover < 10000000 and is_an_eligible_party(Party) )
     and part_of_genuine_restructure(Event)
