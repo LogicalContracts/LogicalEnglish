@@ -8,6 +8,9 @@
 
 mainGoal(complies_to_statutory_residence_test(_Individual), "Determine if a person is a UK resident for tax purposes").
 
+uk_tax_year_for_date(Date,Year,Start,End) :-
+    uk_tax_year(Date,Year,Start,End). 
+
 example('Chris Feb 12 - 2A',[
 /*
 Determine if Alex was a UK residence for tax purposes for the tax year 6 Apr 2018 – 5 Apr 2019
@@ -120,7 +123,7 @@ does_not_meet_any_of_three_overseas_tests_STEP2(Individual) on Date if
     and not meets_third_automatic_overseas_test(Individual) on Date.
 
 meets_either_the_second_or_the_third_uk_test_STEP3(Individual) on Date if
-    (second_automatic_uk_test(I) on Date or third_automatic_uk_test(Individual) on Date). 
+    (second_automatic_uk_test(Individual) on Date or third_automatic_uk_test(Individual) on Date). 
 
 meets_ties_test_STEP4(Individual) on Date if 
     ties_test(Individual) on Date.

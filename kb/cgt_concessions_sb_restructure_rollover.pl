@@ -12,6 +12,9 @@ mainGoal(rollover_applies(_ID,_Asset,_When,_Transferor,_TransfereesList), "Deter
 is_asserted(Information) :-
     assert(Information). 
 
+is_immediately_before(Before, After) :-
+    immediately_before(Before, After). 
+
 :- thread_local transfer_event/5.
 rollover_applies(ID,Asset,When,Transferor,TransfereesList) :-
     is_asserted(transfer_event(ID,Asset,When,Transferor,TransfereesList)),
