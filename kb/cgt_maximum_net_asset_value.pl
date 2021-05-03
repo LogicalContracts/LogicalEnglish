@@ -16,7 +16,7 @@ mainGoal(satisfies_maximum_net_asset_value_test(_TFN), "Determine if a given ent
 %   external predicates MUST be aware of the local main event time, "now"
 
 %TODO: flesh out the examples
-example('Colin',[scenario([facts], (has_revelant_asset(xxx), whatever))]).
+example('Colin',[scenario([facts], (has_relevant_asset(xxx), whatever))]).
 example('Ben',[scenario([facts], has_cgt_assets_net_value_of(123,5000))]).
 example('Cool',[scenario([facts],p)]).
 example('Lana',[scenario([facts],q)]).
@@ -29,7 +29,7 @@ example('Andrew email Feb 5 2021',[
         % is_share_in_company(cgt_asset_1,entity) at myDB1 if false,
         % has_to_exclude_asset(andrew,_) if false, %http://localhost:3050/p/tests.pl#tabbed-tab-0 Andrew doesn't want any asset excluded!
         has_affiliated_with(andrew,affiliate1),
-        ++ owns(affiliate1,cgt_asset_2), ++ s_net_value_is(cgt_asset_2,1000000),
+        ++ owns(affiliate1,cgt_asset_2), ++ '\'s_net_value_is'(cgt_asset_2,1000000),
         is_connected_to(andrew,entity) at "https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/connected-entities/",
         owns(entity,asset3) at myDB1,
         is_cgt_asset(asset3) at "https://www.ato.gov.au/General/Capital-gains-tax/CGT-assets-and-exemptions/",
@@ -45,17 +45,17 @@ satisfies_maximum_net_asset_value_test(TaxPayer) on Date if
 has_cgt_assets_net_value_of(Person,Value) on Date if 
     %aggregate/3 fails for empty list, so this is what we need to sum:
     aggregate_all(sum(AssetNet), (
-        has_revelant_asset(Person,Asset) and is_cgt_asset(Asset) and not has_to_exclude_asset(Person,Asset) and s_net_value_is(Asset,AssetNet) on Date
+        has_relevant_asset(Person,Asset) and is_cgt_asset(Asset) and not has_to_exclude_asset(Person,Asset) and '\'s_net_value_is'(Asset,AssetNet) on Date
         ), Value).
     
-has_revelant_asset(Person,Asset) if 
+has_relevant_asset(Person,Asset) if 
     owns(Person,Asset).
-has_revelant_asset(Person,Asset) if 
+has_relevant_asset(Person,Asset) if 
     is_connected_to(Person,Connection) and owns(Connection,Asset).
-has_revelant_asset(Person,Asset) if 
+has_relevant_asset(Person,Asset) if 
     has_affiliated_with(Person,Affiliate) and owns(Affiliate,Asset) and 
     (is_used_in_business_of(Asset,Person) or is_connected_to(Person,Connection) and is_used_in_business_of(Asset,Connection)).
-has_revelant_asset(Person,Asset) if 
+has_relevant_asset(Person,Asset) if 
     has_affiliated_with(Person,Affiliate) and is_connected_to(Affiliate,AffiliateConnection) and owns(AffiliateConnection,Asset) and
     (is_used_in_business_of(Asset,Person) or is_connected_to(Person,Connection) and is_used_in_business_of(Asset,Connection)).
 
@@ -73,10 +73,10 @@ has_to_exclude_asset(Person,Asset) if
 
 %TODO: Effect of look-through earnout rights
 
-s_net_value_is(Asset,Value) on Date if
+'\'s_net_value_is'(Asset,Value) on Date if
     if is_earnout_cgt_asset_with_value(Asset,Value) then true 
     else (
-        s_market_value_is(Asset,MarketValue) on Date and 
+        '\'s_market_value_is'(Asset,MarketValue) on Date and 
         aggregate_all( sum(Liability), (
             s_type_and_liability_are(Asset,Type,Liability) and 
             % From "Meaning of 'net value'"; contradicts exclusions in "Liabilities to include" !!!

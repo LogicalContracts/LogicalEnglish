@@ -73,7 +73,7 @@ example( 'Andrew email Feb 4 2021', [
         part_of_genuine_restructure(EVENT) at "https://www.ato.gov.au/law/view/document?DocID=COG/LCG20163/NAT/ATO/00001&PiT=99991231235958",
         is_used_in_business_of(company1_goodwill,company1) at BASICS,
         is_of_asset_type(company1_goodwill,trading_stock) at myDb17,
-        s_family_trust_is_in(_,_) if false
+       '\'s_family_trust_is_in'(_,_) if false
         | MoreFacts
         ], rollover_applies(EVENT))
     ]) :- 
@@ -110,7 +110,7 @@ rollover_applies(Event) if
         NewOwners = PreviousOwners 
         or 
         % there is a family trust to which all owners belong:
-        s_family_trust_is_in(FT,GroupMembers) and s_family_trust_election_ocurred(FT)
+       '\'s_family_trust_is_in'(FT,GroupMembers) and s_family_trust_election_ocurred(FT)
         and forall(Owner/_ in PreviousOwners, Owner in GroupMembers) 
         and forall(Owner/_ in NewOwners, Owner in GroupMembers)
     )
