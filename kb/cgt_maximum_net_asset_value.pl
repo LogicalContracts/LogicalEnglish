@@ -6,7 +6,7 @@
 % Web page from which the present knowledge page was encoded
 :-module('https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/maximum-net-asset-value-test/',[]).
 
-mainGoal(satisfies_maximum_net_asset_value_test(_TFN), "Determine if a given entity satisfies the maximum net value test for CGT assets").
+mainGoal(satisfies_maximum_net_asset_value_test(_Taxpayer), "Determine if a given entity satisfies the maximum net value test for CGT assets").
 
 
 % Assumptions: 
@@ -92,20 +92,20 @@ has_to_exclude_asset(Person,Asset) if
 
 % proxy predicates to other knowledge pages:
 
-owns(TFN,Asset) if
-    owns(TFN,Asset) 
+owns(Taxpayer,Asset) if
+    owns(Taxpayer,Asset) 
         at "https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/".
 
-is_connected_to(EntityTFN,ConnectedTFN) if
-    is_connected_to(EntityTFN,ConnectedTFN) 
+is_connected_to(Taxpayer,Connection) if
+    is_connected_to(Taxpayer,Connection) 
         at "https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/".
 
-is_used_in_business_of(Asset,TFN) if
-    is_used_in_business_of(Asset,TFN) 
+is_used_in_business_of(Asset,Taxpayer) if
+    is_used_in_business_of(Asset,Taxpayer) 
         at "https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/".
 
-has_affiliated_with(EntityTFN,AffiliateTFN) on T if 
-    has_affiliated_with(EntityTFN,AffiliateTFN) on T
+has_affiliated_with(Taxpayer,Affiliate) on T if 
+    has_affiliated_with(Taxpayer,Affiliate) on T
         at "https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/affiliates/".
 
 is_of_interest_in(Asset,Connection) if 

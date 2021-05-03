@@ -7,14 +7,14 @@
 :- module('https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/small-business-restructure-rollover',[]).
 
 
-mainGoal(rollover_applies(_ID,_Asset,_When,_TransferorTFN,_TransfereesTFNList), "Determine if a asset transfer event can be treated as a restructure rollover").
+mainGoal(rollover_applies(_ID,_Asset,_When,_Transferor,_TransfereesList), "Determine if a asset transfer event can be treated as a restructure rollover").
 
 is_asserted(Information) :-
     assert(Information). 
 
 :- thread_local transfer_event/5.
-rollover_applies(ID,Asset,When,TransferorTFN,TransfereesTFNList) :-
-    is_asserted(transfer_event(ID,Asset,When,TransferorTFN,TransfereesTFNList)),
+rollover_applies(ID,Asset,When,Transferor,TransfereesList) :-
+    is_asserted(transfer_event(ID,Asset,When,Transferor,TransfereesList)),
     rollover_applies.
 
 
@@ -126,14 +126,14 @@ is_an_eligible_party(P) if
     is_a_small_business_entity(P) at
         "https://www.ato.gov.au/General/Capital-gains-tax/Small-business-CGT-concessions/Basic-conditions-for-the-small-business-CGT-concessions/Small-business-entity/".
 is_an_eligible_party(P) if 
-    has_affiliated_with(P,AffiliateTFN) at
+    has_affiliated_with(P,Affiliate) at
         "https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/affiliates/"
-    and is_a_small_business_entity(AffiliateTFN) at
+    and is_a_small_business_entity(Affiliate) at
         "https://www.ato.gov.au/General/Capital-gains-tax/Small-business-CGT-concessions/Basic-conditions-for-the-small-business-CGT-concessions/Small-business-entity/".
 is_an_eligible_party(P) if 
-    is_connected_to(P,ConnectedTFN) at
+    is_connected_to(P,Taxpayer) at
         "https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/connected-entities/" 
-    and is_a_small_business_entity(ConnectedTFN) at
+    and is_a_small_business_entity(Taxpayer) at
         "https://www.ato.gov.au/General/Capital-gains-tax/Small-business-CGT-concessions/Basic-conditions-for-the-small-business-CGT-concessions/Small-business-entity/".
 is_an_eligible_party(P) if
     is_a_partner_in_partnership_with(P,Partnership) at % our first knowledge page:
@@ -147,7 +147,7 @@ is_an_eligible_asset(A) if
     Type in [cgt_event,depreciating_asset,trading_stock,revenue_asset].
 
 is_an_active_asset(Asset) if 
-    is_used_in_business_of(Asset,_SomeTFN) % our first knowledge page:
+    is_used_in_business_of(Asset,_SomeTaxpayer) % our first knowledge page:
         at "https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/".
 
 is_of_asset_type(Asset,Type) if 
