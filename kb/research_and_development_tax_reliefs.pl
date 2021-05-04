@@ -55,40 +55,40 @@ function(project(), Result) if
 %   all predicates hold on FOREVER unlesss indicated otherwise with 'on'; 
 %   datetimes in iso_8601 format
 
-'can_request_R&D_relief_such_as'(ProjectID,ExtraDeduction,TaxCredit) if
-    qualify_for_research_and_development_relief(project(ProjectID)) and ( % specific qualifying conditions are to be encoded in these:
-        '\'s_sme_R&D_relief_is'(ProjectID,ExtraDeduction,TaxCredit) at "https://www.gov.uk/guidance/corporation-tax-research-and-development-tax-relief-for-small-and-medium-sized-enterprises" 
+'can_request_R&D_relief_such_as'(Project,ExtraDeduction,TaxCredit) if
+    qualify_for_research_and_development_relief(Project) and ( % specific qualifying conditions are to be encoded in these:
+        '\'s_sme_R&D_relief_is'(Project,ExtraDeduction,TaxCredit) at "https://www.gov.uk/guidance/corporation-tax-research-and-development-tax-relief-for-small-and-medium-sized-enterprises" 
         or 
-        '\'s_R&D_expense_credit_is'(ProjectID,ExtraDeduction,TaxCredit) at "https://www.gov.uk/guidance/corporation-tax-research-and-development-tax-relief-for-large-companies"
-    ).
+        '\'s_R&D_expense_credit_is'(Project,ExtraDeduction,TaxCredit) at "https://www.gov.uk/guidance/corporation-tax-research-and-development-tax-relief-for-large-companies"
+    ). 
 
-qualify_for_research_and_development_relief(P) if
-    looked_for_an_advance_in_the_field(P) and
-    could_not_be_worked_out_by_a_professional_in_the_field(P) and
-    had_to_overcome_uncertainty(P) and
-    tried_to_overcome_uncertainty_by(P,_How).
+qualify_for_research_and_development_relief(Project) if
+    looked_for_an_advance_in_the_field(Project) and
+    could_not_be_worked_out_by_a_professional_in_the_field(Project) and
+    had_to_overcome_uncertainty(Project) and
+    tried_to_overcome_uncertainty_by(Project,_How).
 
-could_not_be_worked_out_by_a_professional_in_the_field(P) if
-    '\'s_previous_attempts_have_failed'(P).
+could_not_be_worked_out_by_a_professional_in_the_field(Project) if
+    '\'s_previous_attempts_have_failed'(Project).
 
-could_not_be_worked_out_by_a_professional_in_the_field(P) if
-    '\'s_list_of_members_is'(P,Members) and is_in(Member, Members) 
-    and explained_uncertainties_as(Member,_What).
+could_not_be_worked_out_by_a_professional_in_the_field(Project) if
+    '\'s_list_of_members_is'(Project,MembersList) and is_in(Member, MembersList) 
+    and explained_uncertainties_as(Member,_Reason).
 
-had_to_overcome_uncertainty(P) if
-    project_subject_experts_list_is(P,Experts) and is_in(Expert, Experts)
-    and could_not_be_explained_or_anticipated_by(P,Expert).
+had_to_overcome_uncertainty(Project) if
+    project_subject_experts_list_is(Project,Experts) and is_in(Expert, Experts)
+    and could_not_be_explained_or_anticipated_by(Project,Expert).
 
 % the actual questions are really about... rendering the unknowns, so we'll put it all together instead:
 % question(UnknownLiteral, QuestionTemplate) or question(UnknownLiteral, QuestionTemplate, AnswerPlaceholder)
 question( looked_for_an_advance_in_the_field(ID), "Does the project ~w aim to create an advance in the overall field, not just for your business?
  This means an advance cannot just be an existing technology that has been used for the first time in your sector.
  The process, product or service can still be an advance if it’s been developed by another company but is not publicly known or available" - ID ).
-question( '\'s_previous_attempts_have_failed'(P,How),"Show how other attempts to find a solution for ~w had failed"-P,How).
+question( '\'s_previous_attempts_have_failed'(Project,How),"Show how other attempts to find a solution for ~w had failed"-Project,How).
 question( explained_uncertainties_as(Member,Explanation), "~w, explaing the uncertainty involved"-Member,Explanation).
-question( could_not_be_explained_or_anticipated_by(P,Expert) , "~w, is it true that you could not know about the project ~w advances or how they were going to be accomplished ?"-[Expert,P]).
-question( tried_to_overcome_uncertainty_by(P,How), "Explain the work done in ~w to overcome the uncertainty. This can be a simple description of the successes and failures you had during the project.
-        Show that the R&D needed research, testing and analysis"-P, How).
+question( could_not_be_explained_or_anticipated_by(Project,Expert) , "~w, is it true that you could not know about the project ~w advances or how they were going to be accomplished ?"-[Expert,Project]).
+question( tried_to_overcome_uncertainty_by(Project,How), "Explain the work done in ~w to overcome the uncertainty. This can be a simple description of the successes and failures you had during the project.
+        Show that the R&D needed research, testing and analysis"-Project, How).
 
 /** <examples>
 ?- query_with_facts(qualify_for_research_and_development_relief(Project) at 'https://www.gov.uk/guidance/corporation-tax-research-and-development-rd-relief','email Chris Feb 17 - 3A',Unknowns,Explanation,Result).
