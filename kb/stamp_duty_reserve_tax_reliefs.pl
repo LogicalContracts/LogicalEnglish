@@ -4,7 +4,7 @@
 % Web page from which the present knowledge page was encoded
 :-module('https://www.gov.uk/guidance/stamp-duty-reserve-tax-reliefs-and-exemptions',[]).
 
-mainGoal(exempt_transfer(_FromTaxPayer,_ToTaxPayer,_SecurityIdentifier,_Time),"Determine if an electronic transaction is exempt from SDRT").
+mainGoal(exempt_transfer(FromTaxPayer,ToTaxPayer,SecurityIdentifier,Time),"Determine if an electronic transaction is exempt from SDRT").
 
 example('Chris Feb 12 - 1A',[
     /* 
@@ -19,9 +19,9 @@ example('Chris Feb 12 - 1A',[
     scenario([
         married_or_in_civil_partnership_at(alice,adam,Time) at myDB_456 if Time@>= '20110101',
         shares_transfer(john,alice,sharesID,'20210201'),
-        shares_inherited_in_will,
-        shares_in_trust_that__ if false
-        ], exempt_transfer)
+        corresponds_to_shares_inherited_in_a_will([john, alice, sharesID, '20210201']),
+        it_is_about_shares_in_a_trust if false
+        ], is_a_transfer_exempt([john, alice, sharesID, '20210201']))
     ]).
 example('Chris Feb 12 - 1B1',[
         /*
@@ -34,10 +34,10 @@ example('Chris Feb 12 - 1B1',[
         scenario([
             married_or_in_civil_partnership_at(ben,adam,Time) at myDB_456 if false,
             shares_transfer(adam,ben,sharesID,'20201010'),
-            shares_received_as_gift if false,
-            shares_in_trust_that__ if false,
-            shares_trading_on_growth_market_but_unlisted_on_recognized % quick and dirty
-             ], exempt_transfer)
+            corresponds_to_shares_received_as_gift(it) if false,
+            it_is_about_shares_in_a_trust if false,
+            it_is_about_shares_trading_on_growth_market_but_unlisted_or_recognized % quick and dirty
+             ], is_a_transfer_exempt([adam, ben, sharesID, '20201010']))
     ]).
 example('Chris Feb 12 - 1B2',[
     /*
@@ -52,13 +52,13 @@ example('Chris Feb 12 - 1B2',[
         married_or_in_civil_partnership_at(ben,adam,Time) at myDB_456 if false,
         shares_transfer(adam,ben,sharesID,'20171210'),
         shares_received_as_gift if false,
-        shares_inherited_in_will if false,
-        shares_transferred_on_divorce_or_dissolution if false,
-        settlement_to_shareholders_on_business_wound_up if false,
-        shares_in_trust_that__ on T if T@>='20180101',
+        corresponds_to_shares_inherited_in_a_will([adam, ben, sharesID, '20171210']) if false,
+        corresponds_to_shares_transferred_on_divorce_or_dissolution([adam, ben, sharesID, '20171210']) if false,
+        it_corresponds_to_a_settlement_to_shareholders_on_a_business_wound_up if false,
+        it_is_about_shares_in_a_trust on T if T@>='20180101',
         trading_in_market(sharesID,merkurMarket,_Anytime) at myDB_789,
-        growth_market(merkurMarket) on Time at "https://www.gov.uk/hmrc-internal-manuals/stamp-taxes-shares-manual/stsm041330" if Time@>='20180401' % dummy date
-         ], not exempt_transfer)
+        is_the_grown_market(merkurMarket) on Time at "https://www.gov.uk/hmrc-internal-manuals/stamp-taxes-shares-manual/stsm041330" if Time@>='20180401' % dummy date
+         ], not is_a_transfer_exempt([adam, ben, sharesID, '20171210']))
 ]).
 example('Chris Feb 12 - 1C',[
     /*
@@ -68,7 +68,7 @@ example('Chris Feb 12 - 1C',[
     */
     scenario([
         shares_transfer(broker,cathy,'International Bank for Reconstruction and Development','20210101')
-         ], exempt_transfer)
+         ], is_a_transfer_exempt([broker, cathy, 'International Bank for Reconstruction and Development', '20210101']))
 ]).
 
 is_asserted(Information) :- assert(Information).
@@ -76,7 +76,7 @@ is_asserted(Information) :- assert(Information).
 :- thread_local shares_transfer/4.
 exempt_transfer(FromTaxPayer,ToTaxPayer,SecurityIdentifier,Time) :-
     is_asserted(shares_transfer(FromTaxPayer,ToTaxPayer,SecurityIdentifier,Time)), % should retractall, but assuming this is a new, transient thread
-    exempt_transfer.
+    is_a_transfer_exempt([FromTaxPayer, ToTaxPayer, SecurityIdentifier, Time]).
 
 
 % Assumptions: 
@@ -85,43 +85,46 @@ exempt_transfer(FromTaxPayer,ToTaxPayer,SecurityIdentifier,Time) :-
 %   external predicates MUST be aware of the local main event time, "now"
 
 % shares_transfer(FromTaxPayer,ToTaxPayer,Identifier,Time)
-transfers_shares_to(From,To) if  % for mere convenience below
-    shares_transfer(From,To,_ID,_Time).
+transfers_shares_to(Sender,Recipient) if  % for mere convenience below
+    shares_transfer(Sender,Recipient,ID,Time).
 
-is_you(TaxPayer) if 
-    transfers_shares_to(_,TaxPayer).
+%is_you(TaxPayer) if 
+%    transfers_shares_to(_,TaxPayer).
 
-function(you(), Y) if 
-    is_you(Y). % functional notation for convenience
+%function(you(), Y) if 
+%    is_you(Y). % functional notation for convenience
 
-is_now(Time) if shares_transfer(_,_,_,Time).
+is_the_recipient_of(Recipient, Transfer) if
+    Transfer = [Sender, Recipient, SecurityID, Time].
 
-exempt_transfer if
-    shares_received_as_gift
-    or shares_inherited_in_will % should use perhaps (??): beneficiary_in_will_of(you(),Dead) at myDB666 and transfers_shares_to(Dead,you())
-    or married_or_in_civil_partnership_with(you(),P) and transfers_shares_to(P,you()) % assumes transfer can occur anytime during marriage
-    or shares_transferred_on_divorce_or_dissolution % it would be nice to know that stepbrothers cannot be married, ergo not divorced...
-    or shares_in_trust_that__ on T % is this the case for a change of trustee, or transfer from one trust to another??
-    or shares_trading_on_growth_market_but_unlisted_on_recognized 
-    or settlement_to_shareholders_on_business_wound_up
-    or shares_transfer(_From,_To,SecurityID,_Time) and exemption(SecurityID) at 'https://www.gov.uk/hmrc-internal-manuals/stamp-taxes-shares-manual/stsm041040'.
+is_now(Time) if shares_transfer(Sender,Recipient,SecurityID,Time).
+
+is_a_transfer_exempt(Transfer) if
+    corresponds_to_shares_received_as_gift(Transfer)
+    or corresponds_to_shares_inherited_in_a_will(Transfer) % should use perhaps (??): beneficiary_in_will_of(you(),Dead) at myDB666 and transfers_shares_to(Dead,you())
+    or is_the_recipient_of(FirstPerson, Transfer) and is_married_or_in_civil_partnership_with(FirstPerson, SecondPerson) and transfers_shares_to(SecondPerson,FirstPerson) % assumes transfer can occur anytime during marriage
+    or corresponds_to_shares_transferred_on_divorce_or_dissolution(Transfer) % it would be nice to know that stepbrothers cannot be married, ergo not divorced...
+    or it_is_about_shares_in_a_trust on Time % is this the case for a change of trustee, or transfer from one trust to another??
+    or it_is_about_shares_trading_on_growth_market_but_unlisted_or_recognized 
+    or it_corresponds_to_a_settlement_to_shareholders_on_a_business_wound_up
+    or shares_transfer(From,To,SecurityID,Time) and has_an_exemption(SecurityID) at 'https://www.gov.uk/hmrc-internal-manuals/stamp-taxes-shares-manual/stsm041040'.
 
 % Unlike suggested by Chris on Dec 2, this is NOT quite reflecting the full STSM041260... just the market lists:
-shares_trading_on_growth_market_but_unlisted_on_recognized if
-    shares_transfer(_From,_To,ID,Time) and trading_in_market(ID,Market)
-    and growth_market(merkurMarket) on Time at "https://www.gov.uk/hmrc-internal-manuals/stamp-taxes-shares-manual/stsm041330"
+it_is_about_shares_trading_on_growth_market_but_unlisted_or_recognized if
+    shares_transfer(From,To,ID,Time) and is_trading_in_market(ID,Market)
+    and is_the_grown_market(merkurMarket) on Time at "https://www.gov.uk/hmrc-internal-manuals/stamp-taxes-shares-manual/stsm041330"
     and forall( 
-        recognized_stock_exchange(Exchange) on Time
+        is_a_recognized_stock_exchange(Exchange) on Time
             at "https://www.gov.uk/government/publications/recognised-stock-exchanges-definition-legislation-and-tables/recognised-stock-exchanges-definition-legislation-and-tables-of-recognised-exchanges", 
-        not trading_in_market(ID,Exchange) on Time).
+        not is_trading_in_market(ID,Exchange) on Time).
 
-question( shares_received_as_gift, "Did you receive the shares as a gift, without paying anything (either money or some other consideration)").
+question( corresponds_to_shares_received_as_gift(it), "Did you receive the shares as a gift, without paying anything (either money or some other consideration)").
 
-married_or_in_civil_partnership_with(P1,P2) if
+is_married_or_in_civil_partnership_with(FirstPerson,SecondPerson) if
     % assumes myDB_456 checks also the symmetrical relationship
-    is_now(Time) and married_or_in_civil_partnership_at(P1,P2,Time) at myDB_456.
+    is_now(Time) and married_or_in_civil_partnership_at(FirstPerson,SecondPerson,Time) at myDB_456.
 
-trading_in_market(SecurityID,MarketID) if
+is_trading_in_market(SecurityID,MarketID) if
     is_now(Time) and trading_in_market(SecurityID,MarketID,Time) at myDB_789.
 
 %TODO: later (cf. Chris email Dec 2, 2020): Transfers that qualify for Stamp Duty Reserve Tax RELIEF 

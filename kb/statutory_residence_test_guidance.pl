@@ -8,6 +8,11 @@
 
 mainGoal(complies_to_statutory_residence_test(_Individual), "Determine if a person is a UK resident for tax purposes").
 
+
+uk_tax_year_for_date(Date,Year,Start,End) :-
+    reasoner:uk_tax_year(Date,Year,Start,End). % explicit module qualifier needed
+
+
 example('Chris Feb 12 - 2A',[
 /*
 Determine if Alex was a UK residence for tax purposes for the tax year 6 Apr 2018 – 5 Apr 2019
