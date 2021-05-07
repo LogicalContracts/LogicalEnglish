@@ -174,6 +174,10 @@ le_html(le_predicate(Functor,[A1|Args]), Words, [span([title=Tip,style=S],HTML)]
     append([PH,[" ( "],A1H,ArgsH,[")"]],HTML),
     append([Functor,["("],A1W,ArgsW,[")"]],Words),
     atomicSentenceStyle(le_predicate(Functor,[A1|Args]),Words,S,Tip).
+le_html(le_template(Template, Args), Words, [span([title=Tip,style=S],HTML)]) :- !, 
+    dict([_|OriginalArgs], _, Template), 
+    le_fill_template(Template, Template, OriginalArgs, Args, Words, HTML),
+    atomicSentenceStyle(le_predicate(Template, Args), Words, S, Tip).
 le_html(le_argument(X),Words,HTML) :- !,
     le_html(X,Words,HTML).
 le_html(a(Words), TheWords, HTML) :- !, 
@@ -222,6 +226,22 @@ le_html(Term,Words,HTML) :- compound(Term), !,
     append([[F],["("],ArgsH,[")"]],HTML),
     append([[F],["("],ArgsW,[")"]],Words).
 le_html(LE,[Word],["?~w?"-[LE]]) :- format(string(Word),"~w",[LE]). 
+
+le_fill_template(Words, HTML, [], _, Words, HTML)  :- !.
+le_fill_template(TemplateW, TemplateH, [V1|RV], [A1|Args], Words, HTML) :- 
+    le_html(A1,A1W,A1H),
+    le_replace(TemplateW, V1, A1W, NewTemplateW),
+    le_replace(TemplateH, V1, A1H, NewTemplateH), 
+    le_fill_template(NewTemplateW, NewTemplateH, RV, Args, Words, HTML). 
+
+le_replace([], _, _, []) :- !.
+le_replace([T1|RestTemp], V, Arg, [T1,' '|NewTemp]) :-
+    T1 \== V,
+    le_replace(RestTemp, V, Arg, NewTemp).
+le_replace([T1|RestTemp], V, Arg, NewTemp) :-
+    T1 == V,
+    le_replace(RestTemp, V, Arg, Temp),
+    append(Arg, Temp, NewTemp). 
 
 infixOperator(Op) :- current_op(_,Type,Op), member(Type,[xfx,xfy,yfx]), !.
 prefixOperator(Op) :- current_op(_,Type,Op), member(Type,[xf,yf]), !.
@@ -310,8 +330,17 @@ atomicSentence(on(Cond,Time),VarNames,V1,Vn,on(Conditions,Moment)) :- !,
     arguments([Time],VarNames,V2,Vn,[Moment]).
 atomicSentence(true,_,V,V,true) :- !.
 atomicSentence(false,_,V,V,false) :- !.
+atomicSentence(Literal,VarNames,V1,Vn,le_template(Template,Arguments)) :-  Literal=..[F|Args], 
+    dict([F|Args],_,Template), !, 
+    arguments(Args,VarNames,V1,Vn,Arguments).
 atomicSentence(Literal,VarNames,V1,Vn,le_predicate(Functor,Arguments)) :- Literal=..[F|Args],
     nameToWords(F,Functor), arguments(Args,VarNames,V1,Vn,Arguments).
+
+% dict(LiteralElements, NamesAndTypes, Template)
+% 
+dict(['\'s_R&D_expense_credit_is', Project, ExtraDeduction, TaxCredit], 
+                                  [project-projectid, extra-amount, credit-amount],
+    [project, Project, '\'s', 'R&D', expense, credit, is, TaxCredit, plus, ExtraDeduction]).
 
 arguments([],_,V,V,[]) :- !.
 arguments([A1|An],VarNames,V1,Vn,[le_argument(Argument)|Arguments]) :- 
