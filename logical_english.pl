@@ -84,7 +84,7 @@ le_kp_html(KP, Options, div(style='font-family: "Century Schoolbook", Times, ser
     findall([\["&nbsp;"],div(style='border-style: inset',PredHTML)], (
         kp_predicate_mention(KP,Pred,defined), 
         \+ \+ le_clause(Pred,KP_,_,_), % we have more than, say, a thread_local declaration...
-        findall(div(style='padding:5px;',ClauseHTML), (le_clause(Pred,KP_,_Ref,LE), le_html(LE,_,ClauseHTML)), PredHTML)
+        findall(div(style='padding:5px;',ClauseHTML), (le_clause(Pred,KP_,_Ref,LE), le_html(LE,0,_,ClauseHTML)), PredHTML)
         ),PredsHTML_),
     append(PredsHTML_,PredsHTML).
 
@@ -95,24 +95,25 @@ le_kp_html(KP,HTML) :-
 shouldReportError(E) :- reported_predicate_error(E), !, fail.
 shouldReportError(E) :- assert(reported_predicate_error(E)).
 
-%le_html(+TermerisedLE,-PlainWordsList,-TermerisedHTMLlist)
+%le_html(+TermerisedLE, +Tab,-PlainWordsList,-TermerisedHTMLlist)
 %le_html(LE,_,_) :- mylog(LE),fail.
-le_html(if(Conclusion,Conditions), RuleWords, [div(Top), div(style='padding-left:30px;',ConditionsHTML_)]) :- !,
-    le_html(Conclusion,ConclusionWords,ConclusionHTML), le_html(Conditions,ConditionsWords,ConditionsHTML),
+%Tab: indentation depth
+le_html(if(Conclusion,Conditions),Tab,RuleWords, [div(Top), div(style='padding-left:30px;',ConditionsHTML_)]) :- !,
+    le_html(Conclusion,Tab,ConclusionWords,ConclusionHTML), le_html(Conditions,Tab,ConditionsWords,ConditionsHTML),
     append([ConditionsHTML, ["."]], ConditionsHTML_), % adding a dot at the end of each clause 
     append(ConclusionHTML,[span(b(' if'))], Top),
     append([ConclusionWords,[if],ConditionsWords],RuleWords). % no dot added!
 %TOOO: to avoid this verbose form, generate negated predicates with Spacy help, or simply declare the negated forms
-le_html(not(A),[it, is, not, the, case, that|AW],HTML) :- !, le_html(A,AW,Ahtml), HTML=["it is not the case that "|Ahtml]. 
-le_html(if_then_else(Condition,true,Else),Words,HTML) :- !,
-    le_html(Condition,CW,CH), le_html(Else,EW,EH), append([["{ "],CH,[" or otherwise "],EH, ["}"]],HTML),
+le_html(not(A),Tab, [it, is, not, the, case, that|AW],HTML) :- !, le_html(A,Tab, AW,Ahtml), HTML=["it is not the case that "|Ahtml]. 
+le_html(if_then_else(Condition,true,Else),Tab, Words,HTML) :- !,
+    le_html(Condition,Tab,CW,CH), le_html(Else,Tab,EW,EH), append([["{ "],CH,[" or otherwise "],EH, ["}"]],HTML),
     append([["{"],CW,[or,otherwise],EW, ["}"]],Words).
-le_html(if_then_else(Condition,Then,Else),Words,HTML) :- !,
-    le_html(Condition,CW,CH), le_html(Then,TW,TH), le_html(Else,EW,EH), 
+le_html(if_then_else(Condition,Then,Else),Tab,Words,HTML) :- !,
+    le_html(Condition,Tab,CW,CH), le_html(Then,Tab,TW,TH), le_html(Else,Tab,EW,EH), 
     append([["{ ",b("if ")],CH,[b(" then")," it must be the case that "],TH,[b(" or otherwise ")],EH,[" }"]],HTML),
     append([["{", if],CW,[then, it, must, be, the, case, that],TW,[or, otherwise],EW,["}"]],Words).
-le_html(at(Conditions,KP),Words,HTML) :- !,
-    le_html(Conditions,CW,CH), le_html(KP,KPW,KPH), 
+le_html(at(Conditions,KP),Tab,Words,HTML) :- !,
+    le_html(Conditions,Tab,CW,CH), le_html(KP,Tab,KPW,KPH), 
     (KPH=[HREF_]->true;HREF_='??'),
     % if we have a page, navigate to it:
     ((KP=le_argument(Word), kp(Word)) -> format(string(HREF),"/logicalEnglish?kp=~a",[Word]); HREF=HREF_),
@@ -121,76 +122,76 @@ le_html(at(Conditions,KP),Words,HTML) :- !,
     %(sub_atom(HREF,0,_,_,'http') -> Label="other legislation" ; Label="existing data"),
     append([CH, [span(style='font-style:italic;',[" according to ",a([href=HREF,target('_blank')],Label)])] ],HTML),
     append([CW,[according,to|KPW]],Words).
-le_html(on(Conditions,Time),Words,HTML) :- !,
+le_html(on(Conditions,Time),Tab,Words,HTML) :- !,
     (Time=a(T) -> (TimeQualifier = [" at a time "|T], TQW = [at,a,time|T]); 
-        (le_html(Time,TW,TH), TimeQualifier = [" at "|TH], TQW=[at|TW]) ),
+        (le_html(Time,Tab,TW,TH), TimeQualifier = [" at "|TH], TQW=[at|TW]) ),
     le_html(Conditions,CW,CH), %TODO: should we swap the time qualifier for big conditions, e.g. ..., at Time, blabla
     append([CH,TimeQualifier],HTML),
     append([CW,TQW],Words).
-le_html(aggregate_all(Op,Each_,SuchThat,Result),Words,HTML) :- !,
+le_html(aggregate_all(Op,Each_,SuchThat,Result),Tab,Words,HTML) :- !,
     must_succeed(Each_=le_argument(Each)),
-    le_html(Result,RW,RH), le_html(SuchThat,STW,STH), 
+    le_html(Result,Tab,RW,RH), le_html(SuchThat,Tab,STW,STH), 
     (Each=a(EWords) -> (EachH = ["each "|EWords], EachW=[each|EWords]) ; le_html(Each,EachW,EachH)),
     append([RH, [" is the ~w of "-[Op]],EachH,[" such that { "],STH,[" }"]],HTML),
     append([RW, [is, the, Op, of],EachW,[such, that],STW],Words).
 % forall e.g. for every a Party in the Event, the Party has aggregated a Turnover and the Turnover < 10000000 and the Part is eligible
-le_html(for_all(Cond, Goal), Words, HTML) :- !,
-    le_html(Cond, CW, CH), le_html(Goal, GW, GH),
+le_html(for_all(Cond,Goal),Tab,Words,HTML) :- !,
+    le_html(Cond,Tab,CW,CH), le_html(Goal,Tab,GW,GH),
     append([[for, every],CW, [it, is, the, case, that],GW],Words), 
     append([[" for every "],CH, [", it is the case that {"],GH,["}"]],HTML).
-% setof e.g. a Previous Owners is a collection of an Owner/ a Share where the Owner and the Share represent the ultimate owner of the Asset at the Before
-le_html(set_of(Index, Cond, Set), Words, HTML) :- !,
-    le_html(Index, IW, IH), le_html(Cond, CW, CH), le_html(Set, SW, SH), 
+% setof e.g. a Previous Owners is a collection of an Owner/ a Share where ...
+le_html(set_of(Index,Cond,Set),Tab,Words,HTML) :- !,
+    le_html(Index,Tab,IW,IH), le_html(Cond,Tab,CW,CH), le_html(Set,Tab,SW,SH), 
     append([SW, [is, a, set, of], IW, [where],CW],Words), 
     append([SH, [" is a collection of "],IH, [" where {"],CH,["}"]],HTML).
 % propositional predicate
-le_html(le_predicate(Functor,[]), Words, [span([title=Tip,style=S],HTML)]) :- !, 
+le_html(le_predicate(Functor,[]),_Tab, Words, [span([title=Tip,style=S],HTML)]) :- !, 
     predicate_html(Functor,HTML), Words=Functor,
     atomicSentenceStyle(le_predicate(Functor,[]),Words,S,Tip).
 % unary predicate
-le_html(le_predicate(Functor,[Arg]), Words, [span([title=Tip,style=S],HTML)]) :- !, 
-    predicate_html(Functor,PH), le_html(Arg,AW,AH), 
+le_html(le_predicate(Functor,[Arg]),Tab,Words, [span([title=Tip,style=S],HTML)]) :- !, 
+    predicate_html(Functor,PH), le_html(Arg,Tab,AW,AH), 
     append([AH,[" "],PH],HTML),
     append([AW,Functor],Words),
     atomicSentenceStyle(le_predicate(Functor,[Arg]),Words,S,Tip).
 % binary 
-le_html(le_predicate(Functor,[A,B]), Words, [span([title=Tip,style=S],HTML)]) :- !, 
-    predicate_html(Functor,PH), le_html(A,AW,AH), le_html(B,BW,BH), 
+le_html(le_predicate(Functor,[A,B]),Tab,Words, [span([title=Tip,style=S],HTML)]) :- !, 
+    predicate_html(Functor,PH), le_html(A,Tab,AW,AH), le_html(B,Tab,BW,BH), 
     append([AH,[" "],PH,[" "],BH],HTML),
     append([AW,Functor,BW],Words),
     atomicSentenceStyle(le_predicate(Functor,[A,B]),Words,S,Tip).
 % ternary: assume the first and third arguments are more important (subject/object)
-le_html(le_predicate(Functor,[A,B,C]), Words, [span([title=Tip,style=S],HTML)]) :- !, 
-    predicate_html(Functor,PH), le_html(A,AW,AH), le_html(B,BW,BH), le_html(C,CW,CH), 
+le_html(le_predicate(Functor,[A,B,C]),Tab,Words, [span([title=Tip,style=S],HTML)]) :- !, 
+    predicate_html(Functor,PH), le_html(A,Tab,AW,AH), le_html(B,Tab,BW,BH), le_html(C,Tab,CW,CH), 
     append([AH,[" "],PH,[" "],CH,[" with "],BH],HTML),
     append([AW,Functor,CW,[with|BW]],Words),
     atomicSentenceStyle(le_predicate(Functor,[A,C]),Words,S,Tip). % fake a sentence with the predicate as binary
-le_html(le_predicate(Functor,[A1|Args]), Words, [span([title=Tip,style=S],HTML)]) :- !, 
-    predicate_html(Functor,PH), le_html(A1,A1W,A1H),
-    findall([", "|AH]/AW, (member(A,Args),le_html(A,AW,AH)), Pairs),
+le_html(le_predicate(Functor,[A1|Args]), Tab, Words, [span([title=Tip,style=S],HTML)]) :- !, 
+    predicate_html(Functor,PH), le_html(A1,Tab,A1W,A1H),
+    findall([", "|AH]/AW, (member(A,Args),le_html(A,Tab,AW,AH)), Pairs),
     findall(AH,member(AH/_,Pairs),ArgsH_),
     findall(AW,member(_/AW,Pairs),ArgsW_),
     append(ArgsH_,ArgsH), append(ArgsW_,ArgsW),
     append([PH,[" ( "],A1H,ArgsH,[")"]],HTML),
     append([Functor,["("],A1W,ArgsW,[")"]],Words),
     atomicSentenceStyle(le_predicate(Functor,[A1|Args]),Words,S,Tip).
-le_html(le_template(Template, Args), Words, [span([title=Tip,style=S],HTML)]) :- !, 
+le_html(le_template(Template, Args), Tab, Words, [span([title=Tip,style=S],HTML)]) :- ! , 
     dict([_|OriginalArgs], _, Template), 
-    le_fill_template(Template, Template, OriginalArgs, Args, Words, HTML),
+    le_fill_template(Template, Template, OriginalArgs, Args, Tab, Words, HTML),
     atomicSentenceStyle(le_predicate(Template, Args), Words, S, Tip).
-le_html(le_argument(X),Words,HTML) :- !,
-    le_html(X,Words,HTML).
-le_html(a(Words), TheWords, HTML) :- !, 
+le_html(le_argument(X),Tab,Words,HTML) :- !,
+    le_html(X,Tab,Words,HTML).
+le_html(a(Words),_Tab, TheWords, HTML) :- !, 
     var_style(VS), atomics_to_string(Words," ",Name), atom_chars(Name,[First|_]),
     (member(First,[a,e,i,o,u,'A','E','I','O','U']) -> Det=an ; Det=a),
     (option(no_indefinites) -> (HTML=[span(VS,[Name])], TheWords=Words) ; 
         (HTML = [span(VS,[Det," ",Name])], TheWords=[Det|Words])
         ).
-le_html(the(Words), TheWords, [span(VS,["the ",Name])]) :- !, 
+le_html(the(Words),_Tab,TheWords, [span(VS,["the ",Name])]) :- !, 
     var_style(VS), atomics_to_string(Words," ",Name),
     TheWords = [the|Words].
-le_html(L,Words,["[",span(LH),"]"]) :- is_list(L), !, 
-    findall([","|XH]/XW, (member(X,L), le_html(X,XW,XH)), Pairs), 
+le_html(L,Tab,Words,["[",span(LH),"]"]) :- is_list(L), !, 
+    findall([","|XH]/XW, (member(X,L), le_html(X,Tab,XW,XH)), Pairs), 
     findall(XH,member(XH/_,Pairs),LHS),
     append(LHS,LH_), 
     findall(XW,member(_/XW,Pairs),Xwords_),
@@ -198,49 +199,70 @@ le_html(L,Words,["[",span(LH),"]"]) :- is_list(L), !,
     (LH_=[] -> (LH=[""], Words=["[]"]); 
         ( LH_=[_Comma|LH], append(['['|Xwords],[']'],Words))
     ).
-le_html(LE,Words,["~w"-[LE]]) :- atomic(LE), !, Words=[LE].
-le_html(LE,[Word],["~w"-[LE]]) :- compound(LE), compound_name_arity(LE,F,0), !, format(string(Word),"~w()",[F]).
-le_html(Binary, Words, HTML) :- compound(Binary), compound_name_arguments(Binary,Op,[A,B]), member(Op,[and,or]), !, 
-    le_html(A,AW,Ahtml), le_html(B,BW,Bhtml), 
+le_html(LE,_,Words,["~w"-[LE]]) :- atomic(LE), !, Words=[LE].
+le_html(LE,_,[Word],["~w"-[LE]]) :- compound(LE), compound_name_arity(LE,F,0), !, format(string(Word),"~w()",[F]).
+% and or included in binaries
+le_html(Binary,Tab,Words,HTML) :- compound(Binary), compound_name_arguments(Binary,Op,[A,B]), member(Op,[and,or]), !, 
+    Tab2 is Tab + 1, 
+    le_html(A,Tab2,AW,Ahtml), le_html(B,Tab2,BW,Bhtml), 
+    Pad is Tab2, % Pad for Or
+    atom_concat('padding-left:', Pad, Padding0),
+    atom_concat(Padding0, '%', Padding), 
     %length(AW,LA), length(BW,LB),
-    (Op==or -> HTML = [div(Ahtml),b(" ~w "-[Op]),div(Bhtml)] ; 
-        append([Ahtml,[b(" ~w "-[Op])],Bhtml],HTML) 
+    %(Op==and -> HTML = [div(Ahtml),b(" ~w "-[Op]),div(Bhtml)] ;  
+    %append([Ahtml,[b(" ~w "-[Op])],Bhtml],HTML) 
+    %),
+    (Op==or -> HTML = [div(style=Padding, [div(Ahtml),b(" ~w "-[Op]),div(Bhtml)])] ; 
+        HTML = [div(Ahtml),div([span(b(" ~w "-[Op]))|Bhtml])]
+        %append([Ahtml,[b(" ~w "-[Op])],Bhtml],HTML) 
     ),
     append([AW,[Op],BW],Words).
-le_html(Term,Words,HTML) :- compound(Term), compound_name_arguments(Term,F,[A,B]), infixOperator(F), !, 
-    le_html(A,AW,AH), le_html(B,BW,BH),
+le_html(Term,Tab,Words,HTML) :- compound(Term), compound_name_arguments(Term,F,[A,B]), infixOperator(F), !, 
+    le_html(A,Tab,AW,AH), le_html(B,Tab,BW,BH),
     append([AH,[" ~a "-[F]],BH],HTML),
     append([AW,[F],BW],Words).
-le_html(Term,Words,HTML) :- compound(Term), compound_name_arguments(Term,F,[A]), prefixOperator(F), !, 
-    le_html(A,AW,AH), 
+le_html(Term,Tab,Words,HTML) :- compound(Term), compound_name_arguments(Term,F,[A]), prefixOperator(F), !, 
+    le_html(A,Tab,AW,AH), 
     append([[" ~a "-[F]],AH],HTML),
     append([[F],AW],Words).
-le_html(Term,Words,HTML) :- compound(Term), !, 
+le_html(Term,Tab,Words,HTML) :- compound(Term), !, 
     compound_name_arguments(Term,F,Args), 
     %TODO: represent functions explicitly?
-    findall([","|AH]/AW,(member(A,Args), le_html(le_argument(A),AW,AH)),Pairs),
+    findall([","|AH]/AW,(member(A,Args), le_html(le_argument(A),Tab,AW,AH)),Pairs),
     findall(AH,member(AH/_,Pairs),ArgsH_),
     findall(AW,member(_/AW,Pairs),ArgsW_),
     append(ArgsH_,[_Hack|ArgsH]), % remove the first comma
     append(ArgsW_,ArgsW),
     append([[F],["("],ArgsH,[")"]],HTML),
     append([[F],["("],ArgsW,[")"]],Words).
-le_html(LE,[Word],["?~w?"-[LE]]) :- format(string(Word),"~w",[LE]). 
+le_html(LE,_,[Word],["?~w?"-[LE]]) :- format(string(Word),"~w",[LE]). 
 
-le_fill_template(Words, HTML, [], _, Words, HTML)  :- !.
-le_fill_template(TemplateW, TemplateH, [V1|RV], [A1|Args], Words, HTML) :- 
-    le_html(A1,A1W,A1H),
+le_fill_template(Words, HTML, [], _, _, Words, HTML)  :- !.
+le_fill_template(TemplateW, TemplateH, [V1|RV], [A1|Args], Tab, Words, HTML) :- 
+    le_html(A1,Tab,A1W,A1H),
     le_replace(TemplateW, V1, A1W, NewTemplateW),
-    le_replace(TemplateH, V1, A1H, NewTemplateH), 
-    le_fill_template(NewTemplateW, NewTemplateH, RV, Args, Words, HTML). 
+    le_replace_html(TemplateH, V1, A1H, NewTemplateH), 
+    le_fill_template(NewTemplateW, NewTemplateH, RV, Args, Tab, Words, HTML). 
 
 le_replace([], _, _, []) :- !.
 le_replace([T1|RestTemp], V, Arg, [T1,' '|NewTemp]) :-
-    T1 \== V,
-    le_replace(RestTemp, V, Arg, NewTemp).
+    T1 \== V, !,
+    le_replace(RestTemp, V, Arg, NewTemp). 
 le_replace([T1|RestTemp], V, Arg, NewTemp) :-
     T1 == V,
     le_replace(RestTemp, V, Arg, Temp),
+    append(Arg, Temp, NewTemp). 
+
+le_replace_html([], _, _, []) :- !.
+le_replace_html([T1|RestTemp], V, Arg, [NewTerm,' '|NewTemp]) :-
+    T1 \== V, !,
+    (atom(T1) -> 
+       NewTerm = b(T1) 
+    ;  NewTerm = T1), 
+    le_replace_html(RestTemp, V, Arg, NewTemp). 
+le_replace_html([T1|RestTemp], V, Arg, NewTemp) :-
+    T1 == V,
+    le_replace_html(RestTemp, V, Arg, Temp),
     append(Arg, Temp, NewTemp). 
 
 infixOperator(Op) :- current_op(_,Type,Op), member(Type,[xfx,xfy,yfx]), !.
@@ -336,12 +358,6 @@ atomicSentence(Literal,VarNames,V1,Vn,le_template(Template,Arguments)) :-  Liter
 atomicSentence(Literal,VarNames,V1,Vn,le_predicate(Functor,Arguments)) :- Literal=..[F|Args],
     nameToWords(F,Functor), arguments(Args,VarNames,V1,Vn,Arguments).
 
-% dict(LiteralElements, NamesAndTypes, Template)
-% 
-dict(['\'s_R&D_expense_credit_is', Project, ExtraDeduction, TaxCredit], 
-                                  [project-projectid, extra-amount, credit-amount],
-    [project, Project, '\'s', 'R&D', expense, credit, is, TaxCredit, plus, ExtraDeduction]).
-
 arguments([],_,V,V,[]) :- !.
 arguments([A1|An],VarNames,V1,Vn,[le_argument(Argument)|Arguments]) :- 
     argument(A1,VarNames,V1,V2,Argument), arguments(An,VarNames,V2,Vn,Arguments).
@@ -423,6 +439,21 @@ handle_le(Request) :-
         \["-->"]
         |TheHTML
     ]).
+
+% dict(LiteralElements, NamesAndTypes, Template)
+% 
+dict([in, Member, List], [member-object, list-list], [Member, is, in, List]).
+dict(['\'s_R&D_expense_credit_is', Project, ExtraDeduction, TaxCredit], 
+                                  [project-projectid, extra-amount, credit-amount],
+    [Project, '\'s', 'R&D', expense, credit, is, TaxCredit, plus, ExtraDeduction]).
+dict(['can_request_R&D_relief_such_as', Project, ExtraDeduction, TaxCredit], 
+                                  [project-projectid, extra-amount, credit-amount],
+    [Project, can, request,'R&D', relief, for, a, credit, of, TaxCredit, and, a, deduction, of, ExtraDeduction]).
+dict(['\'s_sme_R&D_relief_is', Project, ExtraDeduction, TaxCredit], 
+                                  [project-projectid, extra-amount, credit-amount],
+    [the, 'SME', 'R&D', relief, for, Project, is, estimated, at, TaxCredit, with, and, extra, of, ExtraDeduction]).
+dict([project_subject_experts_list_is,Project,Experts], [project-object, experts_list-list],
+    [Project, has, an, Experts, list]).
 
 
 :- if(current_module(swish)). %%%%% On SWISH:
