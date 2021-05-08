@@ -125,25 +125,33 @@ le_html(at(Conditions,KP),Tab,Words,HTML) :- !,
 le_html(on(Conditions,Time),Tab,Words,HTML) :- !,
     (Time=a(T) -> (TimeQualifier = [" at a time "|T], TQW = [at,a,time|T]); 
         (le_html(Time,Tab,TW,TH), TimeQualifier = [" at "|TH], TQW=[at|TW]) ),
-    le_html(Conditions,CW,CH), %TODO: should we swap the time qualifier for big conditions, e.g. ..., at Time, blabla
+    le_html(Conditions,Tab,CW,CH), %TODO: should we swap the time qualifier for big conditions, e.g. ..., at Time, blabla
     append([CH,TimeQualifier],HTML),
     append([CW,TQW],Words).
 le_html(aggregate_all(Op,Each_,SuchThat,Result),Tab,Words,HTML) :- !,
     must_succeed(Each_=le_argument(Each)),
-    le_html(Result,Tab,RW,RH), le_html(SuchThat,Tab,STW,STH), 
-    (Each=a(EWords) -> (EachH = ["each "|EWords], EachW=[each|EWords]) ; le_html(Each,EachW,EachH)),
-    append([RH, [" is the ~w of "-[Op]],EachH,[" such that { "],STH,[" }"]],HTML),
+    Tab2 is Tab + 1, 
+    tab_to_left_padding(Tab2, Padding),
+    le_html(Result,Tab,RW,RH), le_html(SuchThat,Tab2,STW,STH), 
+    (Each=a(EWords) -> (EachH = ["each "|EWords], EachW=[each|EWords]) ; le_html(Each,Tab,EachW,EachH)),
+    append([RH, [" is the ~w of "-[Op]],EachH,[" such that { "],[div(style=Padding, STH)],[" }"]],HTML),
     append([RW, [is, the, Op, of],EachW,[such, that],STW],Words).
 % forall e.g. for every a Party in the Event, the Party has aggregated a Turnover and the Turnover < 10000000 and the Part is eligible
 le_html(for_all(Cond,Goal),Tab,Words,HTML) :- !,
-    le_html(Cond,Tab,CW,CH), le_html(Goal,Tab,GW,GH),
+    Tab2 is Tab + 2, 
+    tab_to_left_padding(Tab2, Padding),
+    le_html(Cond,Tab,CW,CH), le_html(Goal,Tab2,GW,GH),
     append([[for, every],CW, [it, is, the, case, that],GW],Words), 
-    append([[" for every "],CH, [", it is the case that {"],GH,["}"]],HTML).
+    %append([[" for every "],CH, [", it is the case that {"],[div(style=Padding, GH)],["}"]],HTML).
+    append([[" for every "],CH, [", it is the case that: "],[div(style=Padding, GH)]],HTML).
 % setof e.g. a Previous Owners is a collection of an Owner/ a Share where ...
 le_html(set_of(Index,Cond,Set),Tab,Words,HTML) :- !,
-    le_html(Index,Tab,IW,IH), le_html(Cond,Tab,CW,CH), le_html(Set,Tab,SW,SH), 
+    Tab2 is Tab + 2, 
+    tab_to_left_padding(Tab2, Padding),
+    le_html(Index,Tab,IW,IH), le_html(Cond,Tab,CW,CH), le_html(Set,Tab2,SW,SH), 
     append([SW, [is, a, set, of], IW, [where],CW],Words), 
-    append([SH, [" is a collection of "],IH, [" where {"],CH,["}"]],HTML).
+    %append([SH, [" is a collection of "],IH, [" where {"],CH,["}"]],HTML).
+    append([SH, [" is a collection of "],IH, [" where"],[div(style=Padding, CH)]],HTML).
 % propositional predicate
 le_html(le_predicate(Functor,[]),_Tab, Words, [span([title=Tip,style=S],HTML)]) :- !, 
     predicate_html(Functor,HTML), Words=Functor,
@@ -204,16 +212,16 @@ le_html(LE,_,[Word],["~w"-[LE]]) :- compound(LE), compound_name_arity(LE,F,0), !
 % and or included in binaries
 le_html(Binary,Tab,Words,HTML) :- compound(Binary), compound_name_arguments(Binary,Op,[A,B]), member(Op,[and,or]), !, 
     Tab2 is Tab + 1, 
-    le_html(A,Tab2,AW,Ahtml), le_html(B,Tab2,BW,Bhtml), 
-    Pad is Tab2, % Pad for Or
-    atom_concat('padding-left:', Pad, Padding0),
-    atom_concat(Padding0, '%', Padding), 
+    le_html(A,Tab2,AW,Ahtml), le_html(B,Tab,BW,Bhtml), 
+    tab_to_left_padding(Tab2, PaddingOr),
+    tab_to_left_padding(Tab, PaddingAnd), 
     %length(AW,LA), length(BW,LB),
     %(Op==and -> HTML = [div(Ahtml),b(" ~w "-[Op]),div(Bhtml)] ;  
     %append([Ahtml,[b(" ~w "-[Op])],Bhtml],HTML) 
     %),
-    (Op==or -> HTML = [div(style=Padding, [div(Ahtml),b(" ~w "-[Op]),div(Bhtml)])] ; 
-        HTML = [div(Ahtml),div([span(b(" ~w "-[Op]))|Bhtml])]
+    (Op==or -> HTML = [div(style=PaddingOr, [div(Ahtml),b(" ~w "-[Op]),div(Bhtml)])] ; 
+        %HTML = [div(Ahtml),div([span(b(" ~w "-[Op]))|Bhtml])]
+        HTML = [div(style=PaddingAnd, Ahtml),span(b(" ~w "-[Op]))|Bhtml]
         %append([Ahtml,[b(" ~w "-[Op])],Bhtml],HTML) 
     ),
     append([AW,[Op],BW],Words).
@@ -264,6 +272,10 @@ le_replace_html([T1|RestTemp], V, Arg, NewTemp) :-
     T1 == V,
     le_replace_html(RestTemp, V, Arg, Temp),
     append(Arg, Temp, NewTemp). 
+
+tab_to_left_padding(Tab, Padding) :-
+    atom_concat('padding-left:', Tab, Padding0),
+    atom_concat(Padding0, '%', Padding). 
 
 infixOperator(Op) :- current_op(_,Type,Op), member(Type,[xfx,xfy,yfx]), !.
 prefixOperator(Op) :- current_op(_,Type,Op), member(Type,[xf,yf]), !.
@@ -443,6 +455,8 @@ handle_le(Request) :-
 % dict(LiteralElements, NamesAndTypes, Template)
 % 
 dict([in, Member, List], [member-object, list-list], [Member, is, in, List]).
+dict([assert,Information], [info-clause], [this, information, Information, ' has', been, recorded]).
+dict([is_a, Object, Type], [object-object, type-type], [Object, is, of, type, Type]).
 dict(['\'s_R&D_expense_credit_is', Project, ExtraDeduction, TaxCredit], 
                                   [project-projectid, extra-amount, credit-amount],
     [Project, '\'s', 'R&D', expense, credit, is, TaxCredit, plus, ExtraDeduction]).
@@ -454,6 +468,10 @@ dict(['\'s_sme_R&D_relief_is', Project, ExtraDeduction, TaxCredit],
     [the, 'SME', 'R&D', relief, for, Project, is, estimated, at, TaxCredit, with, and, extra, of, ExtraDeduction]).
 dict([project_subject_experts_list_is,Project,Experts], [project-object, experts_list-list],
     [Project, has, an, Experts, list]).
+dict([rollover_applies,EventID,Asset,Time,Transferor,TransfereesList], [id-event,asset-asset,when-time,from-person,to-list], 
+    [EventID, rollover, of, the, transfer, of, Asset, from, Transferor, to, TransfereesList, at, Time, applies]).
+dict([transfer_event,ID,Asset,Time,Transferor,TransfereesList],[id-id,asset-asset,time-time,from-person,to-list],
+    [event, ID, of, transfering, Asset, from, Transferor, to, TransfereesList, at, Time, occurs]).
 
 
 :- if(current_module(swish)). %%%%% On SWISH:
