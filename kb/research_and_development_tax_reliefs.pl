@@ -8,8 +8,6 @@
 
 mainGoal('can_request_R&D_relief_such_as'(_ProjectID,_ExtraDeduction,_TaxCredit), "Determine if a project qualifies for the EIS").
 
-is_in(Object, List) :- Object in List. 
-
 example('email Chris Feb 17 - 3A',[
     scenario([
         '\'s_list_of_members_is'(ID,[adam,brad,claire]),
@@ -72,11 +70,11 @@ could_not_be_worked_out_by_a_professional_in_the_field(Project) if
     '\'s_previous_attempts_have_failed'(Project).
 
 could_not_be_worked_out_by_a_professional_in_the_field(Project) if
-    '\'s_list_of_members_is'(Project,MembersList) and is_in(Member, MembersList) 
+    '\'s_list_of_members_is'(Project,MembersList) and in(Member, MembersList) 
     and explained_uncertainties_as(Member,_Reason).
 
 had_to_overcome_uncertainty(Project) if
-    project_subject_experts_list_is(Project,Experts) and is_in(Expert, Experts)
+    project_subject_experts_list_is(Project,Experts) and in(Expert, Experts)
     and could_not_be_explained_or_anticipated_by(Project,Expert).
 
 % the actual questions are really about... rendering the unknowns, so we'll put it all together instead:

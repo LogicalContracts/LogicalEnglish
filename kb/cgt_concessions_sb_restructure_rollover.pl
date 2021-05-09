@@ -9,14 +9,10 @@
 
 mainGoal(rollover_applies(_ID,_Asset,_When,_Transferor,_TransfereesList), "Determine if a asset transfer event can be treated as a restructure rollover").
 
-is_asserted(Information) :-
-    assert(Information). 
-
 :- thread_local transfer_event/5.
-rollover_applies(ID,Asset,When,Transferor,TransfereesList) :-
-    is_asserted(transfer_event(ID,Asset,When,Transferor,TransfereesList)),
-    rollover_applies.
-
+rollover_applies(EventID,Asset,Time,Transferor,TransfereesList) :-
+    assert(transfer_event(EventID,Asset,Time,Transferor,TransfereesList)),
+    rollover_applies(EventID).
 
 % Assumptions: 
 %   all values are in AUD
@@ -32,18 +28,18 @@ example( 'Ultimate ownership unchanged', [
     % initial facts and condition:
     scenario(['penny runs a business B','B has assets A'], is_ultimately_owned_by(A,'Penny',1)),
     % new facts and condition:
-    scenario(['penny has trust T', transfer_event(ID,A,When,B,[T])], is_ultimately_owned_by(A,'Penny'))
+    scenario(['penny has trust T', transfer_event(_ID,_A,_When,_B,[_T])], is_ultimately_owned_by(A,'Penny'))
     ]).
 example( 'Changed share of ownership', [
     % initial facts and condition:
     scenario(['Amy, Joanna and Remy run a delivery business B as equal partners','B has assets A'], 
         true),
     % new facts and condition:
-    scenario(['Amy, Joanna and Remy establish company C, different shares', transfer_event(ID,A,When,B,[C])], 
-        not rollover_applies),
+    scenario(['Amy, Joanna and Remy establish company C, different shares', transfer_event(ID,_A,_When,_B,[_C])], 
+        not rollover_applies(ID)),
     % alternative facts and another condition:
     scenario(['Amy, Joanna and Remy establish company C, different shares', 'Amy, Joanna and Remy establish company C, equal shares'], 
-        rollover_applies)
+        rollover_applies(ID))
     ]).
 example( 'Andrew email Feb 4 2021', [
     /* Company transfers its assets to partners in a partnership on 1 July 2020. Company has turnover of 5,300,000. 
@@ -93,19 +89,19 @@ is_a(depreciating_asset,asset).
 is_a(loan_to_shareholder,asset). % from later in the text
 
 is_a_party_in(TaxPayer,EventID) if 
-    transfer_event(EventID,_Asset,_When,TaxPayer,_Tes).
+    transfer_event(EventID,_Asset,_Time,TaxPayer,_Recipients).
 is_a_party_in(TaxPayer,EventID) if 
-    transfer_event(EventID,_Asset,_When,_Tor,Transferees) and TaxPayer in Transferees.
+    transfer_event(EventID,_Asset,_Time,_Somebody,Transferees) and TaxPayer in Transferees.
 
 rollover_applies(Event) if
-    transfer_event(Event,Asset,When,_Tor,_Tes) and is_after(When,'20160701') 
+    transfer_event(Event,Asset,Time,_Sender,_Recipients) and is_after(Time,'20160701') 
     % we could simply use [Tor|Tes] below, but perhaps this reads more nicely:
     and forall( is_a_party_in(Party,Event), has_an_aggregated_turnover_of(Party,Turnover) and Turnover < 10000000 and is_an_eligible_party(Party) )
     and part_of_genuine_restructure(Event)
         at "https://www.ato.gov.au/law/view/document?DocID=COG/LCG20163/NAT/ATO/00001&PiT=99991231235958"
-    and is_immediately_before(Before,When) 
+    and is_immediately_before(Before,Time) 
     and setof(Owner/Share, is_ultimately_owned_by(Asset,Owner,Share) on Before, PreviousOwners)
-    and setof(Owner/Share, is_ultimately_owned_by(Asset,Owner,Share) on When, NewOwners) % assuming that When is the first moment after the transfer
+    and setof(Owner/Share, is_ultimately_owned_by(Asset,Owner,Share) on Time, NewOwners) % assuming that Time is the first moment after the transfer
     and ( 
         NewOwners = PreviousOwners 
         or 
@@ -117,32 +113,32 @@ rollover_applies(Event) if
     and is_an_eligible_asset(Asset).
 
 
-is_ultimately_owned_by(Asset,Owner,1) on T if % full ownership
-    owns(Owner,Asset) on T
+is_ultimately_owned_by(Asset,Owner,1) on Time if % full ownership
+    owns(Owner,Asset) on Time
         at "https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/".
 %TODO: extend predicates for partial ownership, and indirection ( using is_connected_to ?)
 
-is_an_eligible_party(P) if 
-    is_a_small_business_entity(P) at
+is_an_eligible_party(Party) if 
+    is_a_small_business_entity(Party) at
         "https://www.ato.gov.au/General/Capital-gains-tax/Small-business-CGT-concessions/Basic-conditions-for-the-small-business-CGT-concessions/Small-business-entity/".
-is_an_eligible_party(P) if 
-    has_affiliated_with(P,Affiliate) at
+is_an_eligible_party(Party) if 
+    has_affiliated_with(Party,Affiliate) at
         "https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/affiliates/"
     and is_a_small_business_entity(Affiliate) at
         "https://www.ato.gov.au/General/Capital-gains-tax/Small-business-CGT-concessions/Basic-conditions-for-the-small-business-CGT-concessions/Small-business-entity/".
-is_an_eligible_party(P) if 
-    is_connected_to(P,Taxpayer) at
+is_an_eligible_party(Party) if 
+    is_connected_to(Party,Taxpayer) at
         "https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/connected-entities/" 
     and is_a_small_business_entity(Taxpayer) at
         "https://www.ato.gov.au/General/Capital-gains-tax/Small-business-CGT-concessions/Basic-conditions-for-the-small-business-CGT-concessions/Small-business-entity/".
-is_an_eligible_party(P) if
-    is_a_partner_in_partnership_with(P,Partnership) at % our first knowledge page:
+is_an_eligible_party(Party) if
+    is_a_partner_in_partnership_with(Party,Partnership) at % our first knowledge page:
         "https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/"
     and is_a_small_business_entity(Partnership) at
         "https://www.ato.gov.au/General/Capital-gains-tax/Small-business-CGT-concessions/Basic-conditions-for-the-small-business-CGT-concessions/Small-business-entity/".
 
-is_an_eligible_asset(A) if
-    is_an_active_asset(A) and is_of_asset_type(A,Type) and
+is_an_eligible_asset(Asset) if
+    is_an_active_asset(Asset) and is_of_asset_type(Asset,Type) and
     % not A=loan_to_shareholder and irrelevant?
     Type in [cgt_event,depreciating_asset,trading_stock,revenue_asset].
 
@@ -158,8 +154,8 @@ has_an_aggregated_turnover_of(Party,Turnover) if
 
 % "Tax implications" seem to boil down to:
 is_a_rollover_cost(Cost) if
-    transfer_event(_ID,Asset,When,_TaxPayer,_Transferees) and is_immediately_before(Before,When) 
-    and costs(Asset,Cost) on Before.
+    transfer_event(_ID,Asset,Time,_TaxPayer,_Transferees) and is_immediately_before(PreviousTime,Time) 
+    and costs(Asset,Cost) on PreviousTime.
 
 %TODO; discuss with Andrew
 % "Other implications" seem inocuous, addressable elsewhere, or ignorable (e.g. no market balue consideration), except:
