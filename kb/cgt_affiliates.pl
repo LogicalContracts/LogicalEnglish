@@ -11,8 +11,6 @@ mainGoal(has_affiliated_with(_Entity,_Affiliate),"Determine if a given entity is
 must_not_be_a_variable(Term) :-
     must_be(nonvar, Term).
 
-is_before(T1, T2) :- T1 before T2. 
-
 example(test,[scenario([
     acts_in_accordance_with_directions_from(company,andrew), 
     is_a_trust(_) if false, 
@@ -30,11 +28,11 @@ has_affiliated_with(Entity,Affiliate) on Date if
 	and not is_a_trust(Affiliate) and not is_a_partnership(Affiliate) and not is_a_superannuation_fund(Affiliate)
     and (acts_in_accordance_with_directions_from(Affiliate,Entity) or acts_in_concert_with(Affiliate,Entity)). % seems human-bound!
 has_affiliated_with(Entity,Affiliate) on Date if
-    is_before(Date, '20090101') % date when affiliate definition changed
+    Date before '20090101' % date when affiliate definition changed
     and must_not_be_a_variable(Entity) and must_not_be_a_variable(Affiliate)
-    and are_affiliated_per_older_legislation(Affiliate,Entity).
+    and is_affiliated_per_older_legislation(Affiliate,Entity).
 
-question( are_affiliated_per_older_legislation(Affiliate,Entity), "Is '~w' an affiliate of '~w' as per the older legislation" - [Affiliate,Entity]).
+question( is_affiliated_per_older_legislation(Affiliate,Entity), "Is '~w' an affiliate of '~w' as per the older legislation" - [Affiliate,Entity]).
 
 % stub for an "external" Prolog call
 is_an_individual_or_a_company(Affiliate) on Date because 'according to myDB_entities' :- 

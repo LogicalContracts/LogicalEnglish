@@ -125,10 +125,10 @@ does_not_meet_any_of_three_overseas_tests_STEP2(Individual) on Date if
     and not meets_third_automatic_overseas_test(Individual) on Date.
 
 meets_either_the_second_or_the_third_uk_test_STEP3(Individual) on Date if
-    (second_automatic_uk_test(I) on Date or third_automatic_uk_test(Individual) on Date). 
+    (second_automatic_uk_test(Individual) on Date or third_automatic_uk_test(Individual) on Date). 
 
 meets_ties_test_STEP4(Individual) on Date if 
-    ties_test(Individual) on Date.
+    meets_ties_test(Individual) on Date.
 
 satisfies_first_automatic_uk_test(Individual) on Date if
     uk_tax_year_for_date(Date,_,Start,End) and days_spent_in_uk(Individual,Start,End,Duration) and Duration >= 183.
@@ -139,7 +139,7 @@ second_automatic_uk_test(Individual) on Date if
 third_automatic_uk_test(Individual) on Date if
     third_automatic_uk_test(Individual) on Date at "https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11370".
 
-ties_test(Individual) on Date if
+meets_ties_test(Individual) on Date if
     ties_test(Individual) on Date at "https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11510".
 
 meets_first_automatic_overseas_test(Individual) on Date if % cf. https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11120

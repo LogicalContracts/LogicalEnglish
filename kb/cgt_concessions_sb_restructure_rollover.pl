@@ -69,7 +69,7 @@ example( 'Andrew email Feb 4 2021', [
         part_of_genuine_restructure(EVENT) at "https://www.ato.gov.au/law/view/document?DocID=COG/LCG20163/NAT/ATO/00001&PiT=99991231235958",
         is_used_in_business_of(company1_goodwill,company1) at BASICS,
         is_of_asset_type(company1_goodwill,trading_stock) at myDb17,
-       '\'s_family_trust_is_in'(_,_) if false
+        is_the_trust_of(_,_) if false
         | MoreFacts
         ], rollover_applies(EVENT))
     ]) :- 
@@ -88,10 +88,10 @@ is_a(revenue_asset,asset).
 is_a(depreciating_asset,asset).
 is_a(loan_to_shareholder,asset). % from later in the text
 
-is_a_party_in(TaxPayer,EventID) if 
-    transfer_event(EventID,_Asset,_Time,TaxPayer,_Recipients).
-is_a_party_in(TaxPayer,EventID) if 
-    transfer_event(EventID,_Asset,_Time,_Somebody,Transferees) and TaxPayer in Transferees.
+is_a_party_in(TaxPayer,Event) if 
+    transfer_event(Event,_Asset,_Time,TaxPayer,_Recipients).
+is_a_party_in(TaxPayer,Event) if 
+    transfer_event(Event,_Asset,_Time,_Somebody,Transferees) and TaxPayer in Transferees.
 
 rollover_applies(Event) if
     transfer_event(Event,Asset,Time,_Sender,_Recipients) and is_after(Time,'20160701') 
@@ -100,15 +100,15 @@ rollover_applies(Event) if
     and part_of_genuine_restructure(Event)
         at "https://www.ato.gov.au/law/view/document?DocID=COG/LCG20163/NAT/ATO/00001&PiT=99991231235958"
     and is_immediately_before(Before,Time) 
-    and setof(Owner/Share, is_ultimately_owned_by(Asset,Owner,Share) on Before, PreviousOwners)
-    and setof(Owner/Share, is_ultimately_owned_by(Asset,Owner,Share) on Time, NewOwners) % assuming that Time is the first moment after the transfer
+    and setof(Owner/Share, is_ultimately_owned_by(Asset,Owner,Share) on Before, SetOfPreviousOwners)
+    and setof(Owner/Share, is_ultimately_owned_by(Asset,Owner,Share) on Time, SetOfNewOwners) % assuming that Time is the first moment after the transfer
     and ( 
-        NewOwners = PreviousOwners 
+        SetOfNewOwners = SetOfPreviousOwners 
         or 
         % there is a family trust to which all owners belong:
-       '\'s_family_trust_is_in'(FT,GroupMembers) and s_family_trust_election_ocurred(FT)
-        and forall(Owner/_ in PreviousOwners, Owner in GroupMembers) 
-        and forall(Owner/_ in NewOwners, Owner in GroupMembers)
+       is_the_trust_of(FamilyTrust,GroupMembers) and '\'s_election_ocurred'(FamilyTrust)
+        and forall(Owner/_ in SetOfPreviousOwners, Owner in GroupMembers) 
+        and forall(Owner/_ in SetOfNewOwners, Owner in GroupMembers)
     )
     and is_an_eligible_asset(Asset).
 

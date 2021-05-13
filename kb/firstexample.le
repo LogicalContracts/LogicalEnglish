@@ -1,0 +1,8 @@
+the predicates are:
+    a taxpayer is a party in an event,
+    an event of transferring an asset from a taxpayer to a recipient at a time occurs. 
+
+the rules are:
+    a Taxpayer is a party in an Event if
+    the Event of transferring an Asset from the Taxpayer to a Recipients at a Time occurs.
+
