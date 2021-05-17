@@ -16,7 +16,7 @@ example('email Chris Feb 17 - 3A',[
         '\'s_previous_attempts_have_failed'(ID),
         explained_uncertainties_as(_AnyExpert,"unlikely that it could be done"),
         tried_to_overcome_uncertainty_by(ID,_) if false
-        ], not qualify_for_research_and_development_relief(ID))
+        ], not qualifies_for_a_research_and_development_relief(ID))
     ]) :- ID = wirelessFridge.
 
 example('email Chris Feb 17 - 3B',[
@@ -27,7 +27,7 @@ example('email Chris Feb 17 - 3B',[
         explained_uncertainties_as(_AnyExpert,"it might not levitate"),
         had_to_overcome_uncertainty(ID), % override rule below, as we don't know the specific experts
         tried_to_overcome_uncertainty_by(ID,"it worked well!")
-        ], qualify_for_research_and_development_relief(ID))
+        ], qualifies_for_a_research_and_development_relief(ID))
     ]) :- ID = hoverboard.
 
 example('email Chris Feb 17 - 3C',[
@@ -36,7 +36,7 @@ example('email Chris Feb 17 - 3C',[
         '\'s_previous_attempts_have_failed'(ID),
         had_to_overcome_uncertainty(ID), % override rule below, as we don't know the specific experts
         tried_to_overcome_uncertainty_by(ID,"it bound properly!")
-        ], not qualify_for_research_and_development_relief(ID))
+        ], not qualifies_for_a_research_and_development_relief(ID))
     ]) :- ID = candyfloss.
 
 
@@ -54,17 +54,17 @@ function(project(), Result) if
 %   datetimes in iso_8601 format
 
 'can_request_R&D_relief_such_as'(Project,ExtraDeduction,TaxCredit) if
-    qualify_for_research_and_development_relief(Project) and ( % specific qualifying conditions are to be encoded in these:
+    qualifies_for_a_research_and_development_relief(Project) and ( % specific qualifying conditions are to be encoded in these:
         '\'s_sme_R&D_relief_is'(Project,ExtraDeduction,TaxCredit) at "https://www.gov.uk/guidance/corporation-tax-research-and-development-tax-relief-for-small-and-medium-sized-enterprises" 
         or 
         '\'s_R&D_expense_credit_is'(Project,ExtraDeduction,TaxCredit) at "https://www.gov.uk/guidance/corporation-tax-research-and-development-tax-relief-for-large-companies"
     ). 
 
-qualify_for_research_and_development_relief(Project) if
+qualifies_for_a_research_and_development_relief(Project) if
     looked_for_an_advance_in_the_field(Project) and
     could_not_be_worked_out_by_a_professional_in_the_field(Project) and
     had_to_overcome_uncertainty(Project) and
-    tried_to_overcome_uncertainty_by(Project,_How).
+    tried_to_overcome_uncertainty_by(Project,_Solution).
 
 could_not_be_worked_out_by_a_professional_in_the_field(Project) if
     '\'s_previous_attempts_have_failed'(Project).
@@ -89,8 +89,8 @@ question( tried_to_overcome_uncertainty_by(Project,How), "Explain the work done 
         Show that the R&D needed research, testing and analysis"-Project, How).
 
 /** <examples>
-?- query_with_facts(qualify_for_research_and_development_relief(Project) at 'https://www.gov.uk/guidance/corporation-tax-research-and-development-rd-relief','email Chris Feb 17 - 3A',Unknowns,Explanation,Result).
-?- query_with_facts(qualify_for_research_and_development_relief(Project) at 'https://www.gov.uk/guidance/corporation-tax-research-and-development-rd-relief','email Chris Feb 17 - 3B',Unknowns,Explanation,Result).
-?- query_with_facts(qualify_for_research_and_development_relief(Project) at 'https://www.gov.uk/guidance/corporation-tax-research-and-development-rd-relief','email Chris Feb 17 - 3C',Unknowns,Explanation,Result), render_questions(Unknowns,Q).
+?- query_with_facts(qualifies_for_a_research_and_development_relief(Project) at 'https://www.gov.uk/guidance/corporation-tax-research-and-development-rd-relief','email Chris Feb 17 - 3A',Unknowns,Explanation,Result).
+?- query_with_facts(qualifies_for_a_research_and_development_relief(Project) at 'https://www.gov.uk/guidance/corporation-tax-research-and-development-rd-relief','email Chris Feb 17 - 3B',Unknowns,Explanation,Result).
+?- query_with_facts(qualifies_for_a_research_and_development_relief(Project) at 'https://www.gov.uk/guidance/corporation-tax-research-and-development-rd-relief','email Chris Feb 17 - 3C',Unknowns,Explanation,Result), render_questions(Unknowns,Q).
 ?- le(LogicalEnglish).
 */

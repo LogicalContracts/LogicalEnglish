@@ -24,16 +24,16 @@ example('Andrew email Feb 5 2021',[
     /* Andrew has net CGT assets 4,000,000, has affiliate with net assets 1,000,000, has connected entity with net CGT assets of 2,000,000 */
     scenario([
         owns(andrew,cgt_asset_1) at myDB1,
-        is_cgt_asset(cgt_asset_1) at "https://www.ato.gov.au/General/Capital-gains-tax/CGT-assets-and-exemptions/",
-        is_earnout_cgt_asset_with_value(cgt_asset_1,4000000) at EARNOUT,
+        is_a_cgt_asset(cgt_asset_1) at "https://www.ato.gov.au/General/Capital-gains-tax/CGT-assets-and-exemptions/",
+        is_an_earnout_cgt_asset_valued_at(cgt_asset_1,4000000) at EARNOUT,
         % is_share_in_company(cgt_asset_1,entity) at myDB1 if false,
         % has_to_exclude_asset(andrew,_) if false, %http://localhost:3050/p/tests.pl#tabbed-tab-0 Andrew doesn't want any asset excluded!
-        has_affiliated_with(andrew,affiliate1),
+        is_affiliated_with(andrew,affiliate1),
         ++ owns(affiliate1,cgt_asset_2), ++ '\'s_net_value_is'(cgt_asset_2,1000000),
         is_connected_to(andrew,entity) at "https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/connected-entities/",
         owns(entity,asset3) at myDB1,
-        is_cgt_asset(asset3) at "https://www.ato.gov.au/General/Capital-gains-tax/CGT-assets-and-exemptions/",
-        is_earnout_cgt_asset_with_value(asset3,2000000) at EARNOUT,
+        is_a_cgt_asset(asset3) at "https://www.ato.gov.au/General/Capital-gains-tax/CGT-assets-and-exemptions/",
+        is_an_earnout_cgt_asset_valued_at(asset3,2000000) at EARNOUT,
         is_used_in_business_of(_,_) at myDB2 if false
         ], not satisfies_maximum_net_asset_value_test(andrew))
     ]) :- EARNOUT="https://www.ato.gov.au/General/Capital-gains-tax/In-detail/Business-assets/Earnout-arrangements-and-CGT/".
@@ -45,7 +45,7 @@ satisfies_maximum_net_asset_value_test(TaxPayer) on Date if
 has_cgt_assets_net_value_of(Person,Value) on Date if 
     %aggregate/3 fails for empty list, so this is what we need to sum:
     aggregate_all(sum(AssetNet), (
-        has_relevant_asset(Person,Asset) and is_cgt_asset(Asset) and not has_to_exclude_asset(Person,Asset) and '\'s_net_value_is'(Asset,AssetNet) on Date
+        has_relevant_asset(Person,Asset) and is_a_cgt_asset(Asset) and not has_to_exclude_asset(Person,Asset) and '\'s_net_value_is'(Asset,AssetNet) on Date
         ), Value).
     
 has_relevant_asset(Person,Asset) if 
@@ -53,19 +53,19 @@ has_relevant_asset(Person,Asset) if
 has_relevant_asset(Person,Asset) if 
     is_connected_to(Person,Connection) and owns(Connection,Asset).
 has_relevant_asset(Person,Asset) if 
-    has_affiliated_with(Person,Affiliate) and owns(Affiliate,Asset) and 
+    is_affiliated_with(Person,Affiliate) and owns(Affiliate,Asset) and 
     (is_used_in_business_of(Asset,Person) or is_connected_to(Person,Connection) and is_used_in_business_of(Asset,Connection)).
 has_relevant_asset(Person,Asset) if 
-    has_affiliated_with(Person,Affiliate) and is_connected_to(Affiliate,AffiliateConnection) and owns(AffiliateConnection,Asset) and
+    is_affiliated_with(Person,Affiliate) and is_connected_to(Affiliate,AffiliateConnection) and owns(AffiliateConnection,Asset) and
     (is_used_in_business_of(Asset,Person) or is_connected_to(Person,Connection) and is_used_in_business_of(Asset,Connection)).
 
 has_to_exclude_asset(Person,Asset) if 
-    (is_connected_to(Person,Connection) or has_affiliated_with(Person,Affiliate) and is_connected_to(Affiliate,Connection))
-    and is_of_interest_in(Asset,Connection).
+    (is_connected_to(Person,Connection) or is_affiliated_with(Person,Affiliate) and is_connected_to(Affiliate,Connection))
+    and belongs_to(Asset,Connection).
 has_to_exclude_asset(Person,Asset) if
     is_an_individual(Person) and (
-        is_solely_for_personal_use_by(Asset,Person) or has_affiliated_with(Person,Affiliate) and is_solely_for_personal_use_by(Asset,Affiliate)
-        or own_home_used_for_private_purposes_only_or_incidental_income_producing
+        is_solely_for_personal_use_by(Asset,Person) or is_affiliated_with(Person,Affiliate) and is_solely_for_personal_use_by(Asset,Affiliate)
+        or it_is_for_home_use_for_private_purposes_only_including_incidental_income_producing
         %TODO: used part of your home to produce assessable income
         or is_part_of_rights_to_amounts_or_assets_of_super_fund_or_approved_deposit_fund(Asset)
         or is_life_insurance_for(Asset,Person)
@@ -74,14 +74,14 @@ has_to_exclude_asset(Person,Asset) if
 %TODO: Effect of look-through earnout rights
 
 '\'s_net_value_is'(Asset,Value) on Date if
-    if is_earnout_cgt_asset_with_value(Asset,Value) then true 
+    if is_an_earnout_cgt_asset_valued_at(Asset,Value) then true 
     else (
         '\'s_market_value_is'(Asset,MarketValue) on Date and 
         aggregate_all( sum(Liability), (
             s_type_and_liability_are(Asset,Type,Liability) and 
             % From "Meaning of 'net value'"; contradicts exclusions in "Liabilities to include" !!!
             % from "Liabilities to include"; also refers https://www.ato.gov.au/law/view/document?DocID=TXD/TD200714/NAT/ATO/00001
-            Type in [annual_leave,long_service_leave,unearned_income,tax_liabilities, legally_enforceable_debts, legal_or_equitable_obligations] 
+            Type in [annual_leave, long_service_leave, unearned_income, tax_liabilities, legally_enforceable_debts, legal_or_equitable_obligations] 
             ), Liabilities) on Date 
         and Value is MarketValue-Liabilities
     ).
@@ -104,28 +104,28 @@ is_used_in_business_of(Asset,Taxpayer) if
     is_used_in_business_of(Asset,Taxpayer) 
         at "https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/".
 
-has_affiliated_with(Taxpayer,Affiliate) on T if 
-    has_affiliated_with(Taxpayer,Affiliate) on T
+is_affiliated_with(Taxpayer,Affiliate) on T if 
+    is_affiliated_with(Taxpayer,Affiliate) on T
         at "https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/affiliates/".
 
-is_of_interest_in(Asset,Connection) if 
+belongs_to(Asset,Connection) if 
     is_share_in_company(Asset,Connection)
         at "https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/".
-is_of_interest_in(Asset,Connection) if 
+belongs_to(Asset,Connection) if 
     is_of_interest_in_trust(Asset,Connection)
         at "https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/".
 % Any other cases?  is_of_interest_in(Asset,Connection) if ...
 
-is_cgt_asset(Asset) if
-    is_cgt_asset(Asset) at "https://www.ato.gov.au/General/Capital-gains-tax/CGT-assets-and-exemptions/".
+is_a_cgt_asset(Asset) if
+    is_a_cgt_asset(Asset) at "https://www.ato.gov.au/General/Capital-gains-tax/CGT-assets-and-exemptions/".
 
 % example of a stub to an external Prolog predicate on module myDB_entities
 % could insetad have use_module(myDB_entities) and avoid the qualified call to is_an_individual_on/2
 is_an_individual(TPN) on Date because 'according to myDB_entities' :- 
     myDB_entities:is_an_individual_on(TPN,Date).
 
-is_earnout_cgt_asset_with_value(Asset,Value) if 
-    is_earnout_cgt_asset_with_value(Asset,Value) 
+is_an_earnout_cgt_asset_valued_at(Asset,Value) if 
+    is_an_earnout_cgt_asset_valued_at(Asset,Value) 
         at "https://www.ato.gov.au/General/Capital-gains-tax/In-detail/Business-assets/Earnout-arrangements-and-CGT/".
 
 /** <examples>

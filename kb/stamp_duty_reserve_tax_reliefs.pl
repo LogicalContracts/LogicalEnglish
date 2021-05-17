@@ -71,12 +71,10 @@ example('Chris Feb 12 - 1C',[
          ], is_a_transfer_exempt([broker, cathy, 'International Bank for Reconstruction and Development', '20210101']))
 ]).
 
-is_asserted(Information) :- assert(Information).
-
 :- thread_local shares_transfer/4.
-exempt_transfer(FromTaxPayer,ToTaxPayer,SecurityIdentifier,Time) :-
-    is_asserted(shares_transfer(FromTaxPayer,ToTaxPayer,SecurityIdentifier,Time)), % should retractall, but assuming this is a new, transient thread
-    is_a_transfer_exempt([FromTaxPayer, ToTaxPayer, SecurityIdentifier, Time]).
+exempt_transfer(TaxPayerOne,TaxPayerTwo,SecurityIdentifier,Time) :-
+    assert(shares_transfer(TaxPayerOne,TaxPayerTwo,SecurityIdentifier,Time)), % should retractall, but assuming this is a new, transient thread
+    is_a_transfer_exempt([TaxPayerOne, TaxPayerTwo, SecurityIdentifier, Time]).
 
 
 % Assumptions: 
