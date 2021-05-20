@@ -52,19 +52,25 @@ build_template(RawTemplate, Predicate, Arguments, TypesAndNames, Template) :-
     name_predicate(OtherWords, Predicate).
 
 template_elements([], [], [], [], []).     
-template_elements([Word|RestofWords], [Var|RestVars], [Name-Type|RestTypes], Others, [Var|RestTemplate]) :-
-    ind_det(Word), 
-    extract_variable(RestofWords, Var, NameWords, Type, NextWords),
+template_elements([Word|RestOfWords], [Var|RestVars], [Name-Type|RestTypes], Others, [Var|RestTemplate]) :-
+    ind_det_C(Word), 
+    extract_variable(RestOfWords, Var, NameWords, TypeWords, NextWords),
     name_predicate(NameWords, Name), 
+    name_predicate(TypeWords, Type), 
     template_elements(NextWords, RestVars, RestTypes, Others, RestTemplate).
-template_elements([Word|RestofWords], RestVars, RestTypes,  [Word|Others], [Word|RestTemplate]) :-
-    template_elements(RestofWords, RestVars, RestTypes, Others, RestTemplate).
+template_elements([Word|RestOfWords], RestVars, RestTypes,  [Word|Others], [Word|RestTemplate]) :-
+    template_elements(RestOfWords, RestVars, RestTypes, Others, RestTemplate).
 
-extract_variable([Word|RestofWords], Var, [Word|RestName], Type, NextWords) :-
-    ordinal(_, Word),
-    extract_variable(RestofWords, Var, RestName, Type, NextWords).
-extract_variable([Word|RestofWords], _, [Word], Word, RestofWords) :-
-    is_a_type(Word).
+% extract_variable(+ListOfWords, Var, Name, Type, NextWordsInText)
+extract_variable([], _, [], [], []) :- !.                                % stop at when words run out
+extract_variable([Word|RestOfWords], _, [], [], [Word|RestOfWords]) :-   % stop at reserved words, verbs or prepositions. 
+    (reserved_word(Word); verb(Word); preposition(Word)), !.
+extract_variable([Word|RestOfWords], Var, [Word|RestName], Type, NextWords) :- % ordinals are not part of the name
+    ordinal(_, Word), !,
+    extract_variable(RestOfWords, Var, RestName, Type, NextWords).
+extract_variable([Word|RestOfWords], Var, [Word|RestName], [Word|RestType], NextWords) :-
+    is_a_type(Word),
+    extract_variable(RestOfWords, Var, RestName, RestType, NextWords).
 
 name_predicate(Words, Predicate) :-
     concat_atom(Words, '_', Predicate). 
@@ -102,12 +108,12 @@ rebuild_template(RawTemplate, Template) :-
     template_elements(RawTemplate, Template).
 
 template_elements([], []).     
-template_elements([Word|RestofWords], [Var|RestTemplate]) :-
-    (ind_det(Word); def_det(Word)), 
-    extract_variable(RestofWords, Var, _, _, NextWords),
+template_elements([Word|RestOfWords], [Var|RestTemplate]) :-
+    (ind_det_C(Word); def_det_C(Word)), 
+    extract_variable(RestOfWords, Var, _, _, NextWords),
     template_elements(NextWords, RestTemplate).
-template_elements([Word|RestofWords],[Word|RestTemplate]) :-
-    template_elements(RestofWords, RestTemplate).
+template_elements([Word|RestOfWords],[Word|RestTemplate]) :-
+    template_elements(RestOfWords, RestTemplate).
 
 % a voter votes for a first candidate in a ballot
 % the voter votes for a second candidate in the ballot at..
@@ -197,7 +203,15 @@ type(_, In, In, Pos, _) :- asserterror('No type at ', Pos), fail.
 is_a_type(T) :- % pending integration with wei2nlen:is_a_type/1
    atom(T),
    not(number(T)), not(punctuation(T)),
-   not(reserved_word(T)).
+   not(reserved_word(T)),
+   not(verb(T)),
+   not(preposition(T)). 
+
+ind_det_C('A').
+ind_det_C('An').
+ind_det_C('Some').
+
+def_det_C('The').
 
 ind_det(a).
 ind_det(an).
@@ -206,14 +220,21 @@ ind_det(some).
 def_det(the).
 
 reserved_word(W) :- % more reserved words pending
-  punctuation(W);
-  W = 'is'; W ='not'; W='When'; W='when'; W='if'; W='If'; W='then';
-  W = 'at'; W= 'from'; W='to'; W='and'; W='half'.
+  punctuation(W); W= 'A', W='An', W = 'is'; W ='not'; W='When'; W='when'; W='if'; W='If'; W='then';
+  W = 'at'; W= 'from'; W='to'; W='and'; W='half'; W='or'.
 
 punctuation('.').
 punctuation(',').
 punctuation(';').
 punctuation(':').
+
+verb(is).
+preposition(of).
+preposition(on).
+preposition(from).
+preposition(to).
+preposition(at).
+preposition(in).
 
 assertall([]).
 assertall([F|R]) :-

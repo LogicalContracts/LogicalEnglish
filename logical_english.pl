@@ -454,7 +454,7 @@ handle_le(Request) :-
 
 :- discontiguous logical_english:dict/3.
 % dict(LiteralElements, NamesAndTypes, Template)
-% 
+% general purpose entries:
 dict([in, Member, List], [member-object, list-list], [Member, is, in, List]).
 dict([assert,Information], [info-clause], [this, information, Information, ' has', been, recorded]).
 dict([is_a, Object, Type], [object-object, type-type], [Object, is, of, type, Type]).
@@ -462,6 +462,8 @@ dict([before, T1, T2], [time1-time, time2-time], [T1, is, before, T2]).
 dict([between,Minimum,Maximum,Middle], [min-date, max-date, middle-date], 
     [Middle, is, between, Minimum, '&', Maximum]).
 dict([must_be, Type, Term], [type-type, term-term], [Term, must, be, Type]).
+
+% domain-specific entries: to be relocated or automatically generated from declarations. 
 dict(['\'s_R&D_expense_credit_is', Project, ExtraDeduction, TaxCredit], 
                                   [project-projectid, extra-amount, credit-amount],
     [Project, '\'s', 'R&D', expense, credit, is, TaxCredit, plus, ExtraDeduction]).

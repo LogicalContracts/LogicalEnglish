@@ -152,7 +152,7 @@ meets_second_automatic_overseas_test(Individual) on Date if
     uk_tax_year_for_date(Date,ThisYear,Start,End)  
     and days_spent_in_uk(Individual,Start,End,Duration) and Duration <46
     % HACK: this needs to be after the previous condition, to avoid going back in time ad eternum
-    and forall( (between(ThisYear-3,ThisYear-1,PreviousYear) and uk_tax_year_for_date(PreviousDate,PreviousYear,_PreviousStart,_PreviousEnd)), 
+    and forall( ( between(ThisYear-3,ThisYear-1,PreviousYear) and uk_tax_year_for_date(PreviousDate,PreviousYear,_PreviousStart,_PreviousEnd)), 
         not complies_to_statutory_residence_test(Individual) on PreviousDate). 
 
 meets_third_automatic_overseas_test(Individual) on Date if
