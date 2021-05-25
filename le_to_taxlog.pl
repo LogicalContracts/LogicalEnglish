@@ -1,17 +1,31 @@
-:- module(le2taxlog, [contract/3]).
-:- thread_local predicate/3, action/3, error_at/2, dict/3.
+:- module(le2taxlog, [document/3]).
+:- use_module(library(tokenize)).
+:- thread_local literal/5, text_size/1, notice/3, dict/3.
 :- discontiguous statement/3, declaration/4, predicate/3, action/3.
 
-contract(FullText, In, Out) :-
-    settings(Rules, Settings, In, Next),
+% 	text_to_logic(+String,-Errors,-Clauses) is det
+text_to_logic(String, Error, Translation) :-
+    tokenize(String, Tokens, [cased(true), spaces(true)]),
+    ( phrase(document(Output), Tokens) -> 
+        Translation=Output, Error=[]
+    ;   Error=Output, Translation=[]). 
+    
+% document(-Translation, In, Rest)
+% a DCG predicate to translate a LE document into Taxlog prolog terms
+document(Translation, In, Rest) :-
+    length(In, TextSize), 
+    ( settings(Rules, Settings, In, Next) -> true
+    ; (Rule = [], Settings = [])),
     RulesforErrors =
-      [(predicate(_, Pos, _R1)
-         :- asserterror('Found no predicate at', Pos), fail)],
+      [ (text_size(TextSize)),
+        (literal(M, M, _, Rest, _R1)
+         :- text_size(Size), length(Rest, Rsize), Pos is Size - Rsize, 
+            asserterror('Syntax error found at position ', Pos), fail)],
     append(Rules, RulesforErrors, MRules),
     assertall(MRules), % asserting parsing rules for predicates and actions
     rules_previous(Next, NextNext), 
-    content(Content, NextNext, Out), append(Settings, Content, FullText).
-  %contract(_,_,_) :- showerror, fail.
+    content(Content, NextNext, Rest), append(Settings, Content, Translation).
+  document(Error,_,_) :- showerror(Error), fail.
   
   settings(AllR, AllS) --> declaration(Rules,Setting), settings(RRules, RS),
       {append(Setting, RS, AllS),
@@ -25,48 +39,48 @@ contract(FullText, In, Out) :-
 declaration(Rules, [predicates(Fluents)]) -->
     predicate_previous, list_of_predicates_decl(Rules, Fluents).
 
-predicate_previous --> [the, predicates, are, ':'].
+predicate_previous --> [word(the),space(' '),word(predicates),space(' '),word(are),punct(':'),cntrl('\n')].
 
-rules_previous --> [the, rules, are, ':']. 
+rules_previous --> [word(the),space(' '),word(rules),space(' '),word(are),punct(':'),cntrl('\n')]. 
 
 list_of_predicates_decl([Ru|R1], [F|R2]) --> predicate_decl(Ru,F), list_of_predicates_decl(R1,R2).
 list_of_predicates_decl([],[]) --> [].
 
-% a first person has a balance, 
-% action(lambda([S,O],create(S,O))) --> [creates].
-% fluent(lambda([Arg1,Arg2],voteCount(Arg1,Arg2))) --> [has].
-
 predicate_decl(dict([Predicate|Arguments],TypesAndNames, Template), Relation) -->
-    template_decl(RawTemplate), comma_or_period, 
+    spaces(_), template_decl(RawTemplate), comma_or_period, 
     {build_template(RawTemplate, Predicate, Arguments, TypesAndNames, Template),
      Relation =.. [Predicate|Arguments]}.
 
+template_decl([space(_)|RestW], RestIn, Out) :- % skip spaces in template
+    template_decl(RestW, RestIn, Out).
+template_decl([cntrl(_)|RestW], RestIn, Out) :- % skip cntrl in template
+    template_decl(RestW, RestIn, Out).
 template_decl([Word|RestW], [Word|RestIn], Out) :-
-    not(lists:member(Word,[the, '.', ','])),
+    not(lists:member(Word,[word(the), punct('.'), punct(',')])), !, 
     template_decl(RestW, RestIn, Out).
 template_decl([], [Word|Rest], [Word|Rest]) :-
-    lists:member(Word,[the, '.', ',']). 
+    lists:member(Word,[word(the), punct('.'), punct(',')]). 
 
 build_template(RawTemplate, Predicate, Arguments, TypesAndNames, Template) :-
-    template_elements(RawTemplate, Arguments, TypesAndNames, OtherWords, Template),
+    build_template_elements(RawTemplate, Arguments, TypesAndNames, OtherWords, Template),
     name_predicate(OtherWords, Predicate).
 
-template_elements([], [], [], [], []).     
-template_elements([Word|RestOfWords], [Var|RestVars], [Name-Type|RestTypes], Others, [Var|RestTemplate]) :-
+build_template_elements([], [], [], [], []).     
+build_template_elements([Word|RestOfWords], [Var|RestVars], [Name-Type|RestTypes], Others, [Var|RestTemplate]) :-
     ind_det_C(Word), 
     extract_variable(RestOfWords, Var, NameWords, TypeWords, NextWords),
     name_predicate(NameWords, Name), 
     name_predicate(TypeWords, Type), 
-    template_elements(NextWords, RestVars, RestTypes, Others, RestTemplate).
-template_elements([Word|RestOfWords], RestVars, RestTypes,  [Word|Others], [Word|RestTemplate]) :-
-    template_elements(RestOfWords, RestVars, RestTypes, Others, RestTemplate).
+    build_template_elements(NextWords, RestVars, RestTypes, Others, RestTemplate).
+build_template_elements([Word|RestOfWords], RestVars, RestTypes,  [Word|Others], [Word|RestTemplate]) :-
+    build_template_elements(RestOfWords, RestVars, RestTypes, Others, RestTemplate).
 
-% extract_variable(+ListOfWords, Var, Name, Type, NextWordsInText)
+% extract_variable(+ListOfWords, Var, ListOfNameWords, ListOfTypeWords, NextWordsInText)
 extract_variable([], _, [], [], []) :- !.                                % stop at when words run out
 extract_variable([Word|RestOfWords], _, [], [], [Word|RestOfWords]) :-   % stop at reserved words, verbs or prepositions. 
     (reserved_word(Word); verb(Word); preposition(Word)), !.
 extract_variable([Word|RestOfWords], Var, [Word|RestName], Type, NextWords) :- % ordinals are not part of the name
-    ordinal(_, Word), !,
+    Word=word(Ord), ordinal(_, Ord), !,
     extract_variable(RestOfWords, Var, RestName, Type, NextWords).
 extract_variable([Word|RestOfWords], Var, [Word|RestName], [Word|RestType], NextWords) :-
     is_a_type(Word),
@@ -89,31 +103,42 @@ conjunction(Map1, Map2, [C|CC]) --> literal(Map1, Map3, C),
    and_, conjunction(Map3, Map2, CC).
 conjunction(Map1, Map2, [C]) --> literal(Map1, Map2, C).
 
-literal(Map1, Map1, Literal) --> 
+literal(Map1, MapN, Literal) --> 
     predicate_statement(PossibleTemplate),
-    {match_template(PossibleTemplate, Literal)}.
+    {match_template(PossibleTemplate, Map1, MapN, Literal)}.
 
+predicate_statement([space(_)|RestW], RestIn, Out) :-  % skip spaces in template
+    predicate_statement(RestW, RestIn, Out).
+predicate_statement([cntrl(_)|RestW], RestIn, Out) :- % skip cntrl in template
+    predicate_statement(RestW, RestIn, Out).
 predicate_statement([Word|RestW], [Word|RestIn], Out) :-
-    not(lists:member(Word,[if, and, or, '.'])),
+    not(lists:member(Word,[word(if), word(and), word(or), puntc('.')])),
     predicate_statement(RestW, RestIn, Out).
 predicate_statement([], [Word|Rest], [Word|Rest]) :-
-    lists:member(Word,[if, and, or, '.']). 
+    lists:member(Word,[word(if), word(and), word(or), puntc('.')]). 
 
-match_template(PossibleTemplate, Literal) :-
-    rebuild_template(PossibleTemplate, Template),
+match_template(PossibleTemplate, Map1, MapN, Literal) :-
+    rebuild_template(PossibleTemplate, Map1, MapN, Template),
     dict(Predicate, _, Template),
     Literal =.. Predicate. 
 
-rebuild_template(RawTemplate, Template) :-
-    template_elements(RawTemplate, Template).
+rebuild_template(RawTemplate, Map1, MapN, Template) :-
+    template_elements(RawTemplate, Map1, MapN, Template).
 
-template_elements([], []).     
-template_elements([Word|RestOfWords], [Var|RestTemplate]) :-
+template_elements([], Map1, Map1, []).     
+template_elements([Word|RestOfWords], Map1, MapN, [Var|RestTemplate]) :-
     (ind_det_C(Word); def_det_C(Word)), 
-    extract_variable(RestOfWords, Var, _, _, NextWords),
-    template_elements(NextWords, RestTemplate).
-template_elements([Word|RestOfWords],[Word|RestTemplate]) :-
-    template_elements(RestOfWords, RestTemplate).
+    extract_variable(RestOfWords, Var, NameWords, _, NextWords),
+    name_predicate(NameWords, Name), 
+    update_map(Var, Name, Map1, Map2), 
+    template_elements(NextWords, Map2, MapN, RestTemplate).
+template_elements([Word|RestOfWords], Map1, MapN, [Word|RestTemplate]) :-
+    template_elements(RestOfWords, Map1, MapN, RestTemplate).
+
+update_map(V, Name, InMap, InMap) :- % unify V with same named variable in current map
+    member(map(V,Name),InMap), !.
+update_map(V, Name, InMap, OutMap) :- % updates the map by adding a new variable into it. 
+    OutMap = [map(V,Name)|InMap]. 
 
 % a voter votes for a first candidate in a ballot
 % the voter votes for a second candidate in the ballot at..
@@ -122,14 +147,21 @@ template_elements([Word|RestOfWords],[Word|RestTemplate]) :-
 %    t_or_w(Y, M2, M3), in, t_or_w(B, M3, M4),
 %    mapped_time_expression([T1,T2], M4, M_Out).
 
-if_ --> [if].
+spaces(N) --> [space(' ')], !, spaces(M), {N is M + 1}.
+spaces(N) --> [cntrl('\t')], !, spaces(M), {N is M + 1}. % counting tab as one space
+spaces(0) --> []. 
 
-period --> ['.'].
-comma --> [','].
+if_ --> [word(if)].
+
+period --> [punct('.')].
+comma --> [punct(',')].
+
+comma_or_period --> period, !, [cntrl('\n')].
 comma_or_period --> period, !.
+comma_or_period --> comma, !, [cntrl('\n')]. 
 comma_or_period --> comma. 
 
-and_ --> [and].
+and_ --> [word(and)].
 
 %mapped_time_expression([T1,T2], Mi, Mo) -->
 %    from_, t_or_w(T1, Mi, M2), to_, t_or_w(T2, M2, Mo).
@@ -202,39 +234,48 @@ type(_, In, In, Pos, _) :- asserterror('No type at ', Pos), fail.
 
 is_a_type(T) :- % pending integration with wei2nlen:is_a_type/1
    atom(T),
-   not(number(T)), not(punctuation(T)),
+   not(T=number(_)), not(punctuation(T)),
    not(reserved_word(T)),
    not(verb(T)),
    not(preposition(T)). 
 
-ind_det_C('A').
-ind_det_C('An').
-ind_det_C('Some').
+ind_det_C(word('A')).
+ind_det_C(word('An')).
+ind_det_C(word('Some')).
 
-def_det_C('The').
+def_det_C(word('The')).
 
-ind_det(a).
-ind_det(an).
-ind_det(some).
+ind_det(word(a)).
+ind_det(word(an)).
+ind_det(word(some)).
 
-def_det(the).
+def_det(word(the)).
 
-reserved_word(W) :- % more reserved words pending
-  punctuation(W); W= 'A', W='An', W = 'is'; W ='not'; W='When'; W='when'; W='if'; W='If'; W='then';
+reserved_word(word(W)) :- % more reserved words pending
+  W= 'A', W='An', W = 'is'; W ='not'; W='When'; W='when'; W='if'; W='If'; W='then';
   W = 'at'; W= 'from'; W='to'; W='and'; W='half'; W='or'.
+reserved_word(P) :- punctuation(P).
 
-punctuation('.').
-punctuation(',').
-punctuation(';').
-punctuation(':').
+punctuation(punct(P)).
 
-verb(is).
-preposition(of).
-preposition(on).
-preposition(from).
-preposition(to).
-preposition(at).
-preposition(in).
+%punctuation('.').
+%punctuation(',').
+%punctuation(';').
+%punctuation(':').
+
+verb(word(Verb)) :- present_tense_verb(Verb).
+
+present_tense_verb(is).
+present_tense_verb(occurs).
+
+preposition(word(Prep)) :- preposition_(Prep). 
+
+preposition_(of).
+preposition_(on).
+preposition_(from).
+preposition_(to).
+preposition_(at).
+preposition_(in).
 
 assertall([]).
 assertall([F|R]) :-
@@ -250,18 +291,17 @@ asserted(F :- B) :- clause(F, B). % as a rule with a body
 asserted(F) :- clause(F,true). % as a fact
 
 asserterror(Me, Pos) :-
-   % (clause(error_at(_,_), _) -> retractall(error_at(_,_));true),
-   asserta(error_at(Me, Pos)).
+   (clause(notice(_,_,_), _) -> retractall(notice(_,_,_));true),
+   asserta(notice(error, Me, Pos)).
 
-showerror.
+showerror(Me-Pos) :-
+   (clause(notice(error, Me,Pos), _) ->
+        ( nl, nl, write('Error: '), writeq(Me), writeq(Pos), nl, nl)
+    ; nl, nl, writeln('No error reported')).
 
 first_words([W1,W2,W3], [W1,W2,W3|R],R).
 %first_words([W1,W2], [W1,W2|R],R).
 %first_words([W1], [W1|R],R).
 
-%   (clause(error_at(Me,Pos), _) ->
-%        ( nl, nl, write('Error: '), writeq(Me), writeq(Pos), nl, nl)
-%    ; nl, nl, writeln('No error reported')).
-
-spypoint(A,A). % for debugging more easily
+spypoint(A,A). % for debugging
 
