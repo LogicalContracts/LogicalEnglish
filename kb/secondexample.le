@@ -1,0 +1,13 @@
+the predicates are:
+    A project can request R&D relief for a credit of An first amount with a deduction of A second amount,
+    The project qualifies for a research and development relief,
+    the SME R&D relief for The Project is estimated at The first amount with an extra of The second amount according to other legislation,
+    the Project 's R&D expense credit is The first amount plus The second amount according to other legislation.
+
+the rules are:
+A Project can request R&D relief for a credit of An Amount with a deduction of An Extra Amount
+    if the Project qualifies for a research and development relief
+    and the SME R&D relief for The Project is estimated at the Amount with an extra of The Extra Amount according to other legislation
+        or
+        the Project 's R&D expense credit is The Amount plus The Extra Amount according to other legislation
+.

@@ -7,15 +7,15 @@
 text_to_logic(String, Error, Translation) :-
     tokenize(String, Tokens, [cased(true), spaces(true)]),
     ( phrase(document(Output), Tokens) -> 
-        Translation=Output, Error=[]
-    ;   Error=Output, Translation=[]). 
+        (Translation=Output, Error=[])
+    ;   (Error=Output, Translation=[])). 
     
 % document(-Translation, In, Rest)
 % a DCG predicate to translate a LE document into Taxlog prolog terms
 document(Translation, In, Rest) :-
     length(In, TextSize), 
     ( settings(Rules, Settings, In, Next) -> true
-    ; (Rule = [], Settings = [])),
+    ; (Rules = [], Settings = [])),
     RulesforErrors =
       [ (text_size(TextSize)),
         (literal(M, M, _, Rest, _R1)
@@ -51,9 +51,9 @@ predicate_decl(dict([Predicate|Arguments],TypesAndNames, Template), Relation) --
     {build_template(RawTemplate, Predicate, Arguments, TypesAndNames, Template),
      Relation =.. [Predicate|Arguments]}.
 
-template_decl([space(_)|RestW], RestIn, Out) :- % skip spaces in template
+template_decl(RestW, [space(_)|RestIn], Out) :- % skip spaces in template
     template_decl(RestW, RestIn, Out).
-template_decl([cntrl(_)|RestW], RestIn, Out) :- % skip cntrl in template
+template_decl(RestW, [cntrl(_)|RestIn], Out) :- % skip cntrl in template
     template_decl(RestW, RestIn, Out).
 template_decl([Word|RestW], [Word|RestIn], Out) :-
     not(lists:member(Word,[word(the), punct('.'), punct(',')])), !, 
@@ -80,7 +80,7 @@ extract_variable([], _, [], [], []) :- !.                                % stop 
 extract_variable([Word|RestOfWords], _, [], [], [Word|RestOfWords]) :-   % stop at reserved words, verbs or prepositions. 
     (reserved_word(Word); verb(Word); preposition(Word)), !.
 extract_variable([Word|RestOfWords], Var, [Word|RestName], Type, NextWords) :- % ordinals are not part of the name
-    Word=word(Ord), ordinal(_, Ord), !,
+    ordinal(Word), !,
     extract_variable(RestOfWords, Var, RestName, Type, NextWords).
 extract_variable([Word|RestOfWords], Var, [Word|RestName], [Word|RestType], NextWords) :-
     is_a_type(Word),
@@ -95,27 +95,42 @@ prolog_fact(Prolog) -->  % binary predicate
     t_or_w(X, [], M2), word(Predicate), t_or_w(Y, M2, _M_Out), period,
     {Prolog =.. [Predicate, X, Y]}.
 
-statement([if(Head,Conditions)]) -->
-    literal([], Map1, Head), if_, conjunction(Map1, _, Conditions), period.
+statement([if(Head,and(Conditions))]) -->
+    literal([], Map1, Head), [cntrl('\n')],
+    spaces(_), if_, conjunction(_, Map1, _, Conditions), period.
+
+statement([if(Head,and(Conditions))]) -->
+    literal([], Map1, Head), [cntrl('\n')],
+    spaces(_), if_, disjunction(_, Map1, _, Conditions), period.
 
 %
-conjunction(Map1, Map2, [C|CC]) --> literal(Map1, Map3, C),
-   and_, conjunction(Map3, Map2, CC).
-conjunction(Map1, Map2, [C]) --> literal(Map1, Map2, C).
+conjunction(Ind, Map1, Map2, [C|CC]) --> conjunct(Ind, Map1, Map3, C),
+    spaces(Ind), and_, conjunction(Ind, Map3, Map2, CC).
+conjunction(_, Map1, Map2, [C]) --> literal(Map1, Map2, C).
+
+conjunt(AndInd, Map1, MapN, or(D)) --> disjunction(OrInd, Map1, MapN, D), {AndInd < OrInd}.
+conjunct(_, Map1, MapN, C) --> literal(Map1, MapN, C).
+
+disjunction(Ind, Map1, MapN, [D|DD]) --> disjunct(Ind, Map1, Map3, D),
+    spaces(Ind), or_, disjunction(Ind, Map3, MapN, DD).
+disjunction(Ind, Map1, MapN, [D]) --> disjunct(Ind, Map1, MapN, D).
+
+disjunct(OrInd, Map1, MapN, and(D)) --> conjunction(AndInd, Map1, MapN, D),  {OrInd < AndInd}.
+disjunct(_, Map1, MapN, C) --> literal(Map1, MapN, C).
 
 literal(Map1, MapN, Literal) --> 
     predicate_statement(PossibleTemplate),
     {match_template(PossibleTemplate, Map1, MapN, Literal)}.
 
-predicate_statement([space(_)|RestW], RestIn, Out) :-  % skip spaces in template
+predicate_statement(RestW, [space(_)|RestIn], Out) :-  % skip spaces in template
     predicate_statement(RestW, RestIn, Out).
-predicate_statement([cntrl(_)|RestW], RestIn, Out) :- % skip cntrl in template
+predicate_statement(RestW, [cntrl('\t')|RestIn], Out) :- % skip tabs in template
     predicate_statement(RestW, RestIn, Out).
 predicate_statement([Word|RestW], [Word|RestIn], Out) :-
-    not(lists:member(Word,[word(if), word(and), word(or), puntc('.')])),
+    not(lists:member(Word,[cntrl('\n'), word(if), word(and), word(or), puntc('.')])),
     predicate_statement(RestW, RestIn, Out).
 predicate_statement([], [Word|Rest], [Word|Rest]) :-
-    lists:member(Word,[word(if), word(and), word(or), puntc('.')]). 
+    lists:member(Word,[cntrl('\n'), word(if), word(and), word(or), puntc('.')]). 
 
 match_template(PossibleTemplate, Map1, MapN, Literal) :-
     rebuild_template(PossibleTemplate, Map1, MapN, Template),
@@ -163,6 +178,8 @@ comma_or_period --> comma.
 
 and_ --> [word(and)].
 
+or_ --> [word(or)].
+
 %mapped_time_expression([T1,T2], Mi, Mo) -->
 %    from_, t_or_w(T1, Mi, M2), to_, t_or_w(T2, M2, Mo).
 % mapped_time_expression([_T0,T], Mi, Mo) -->
@@ -170,6 +187,10 @@ and_ --> [word(and)].
 
 
 /* --------------------------------------------------------- Utils in Prolog */
+
+ordinal(word(Ord)) :-
+    ordinal(_, Ord). 
+
 ordinal(1,  'first').
 ordinal(2,  'second').
 ordinal(3,  'third').
@@ -233,7 +254,7 @@ type(V, InMap,OutMap, [the,Type|Out], Out) :-  OutMap = [map(V,Type)|InMap]. % c
 type(_, In, In, Pos, _) :- asserterror('No type at ', Pos), fail.
 
 is_a_type(T) :- % pending integration with wei2nlen:is_a_type/1
-   atom(T),
+   ground(T),
    not(T=number(_)), not(punctuation(T)),
    not(reserved_word(T)),
    not(verb(T)),
@@ -256,7 +277,7 @@ reserved_word(word(W)) :- % more reserved words pending
   W = 'at'; W= 'from'; W='to'; W='and'; W='half'; W='or'.
 reserved_word(P) :- punctuation(P).
 
-punctuation(punct(P)).
+punctuation(punct(_P)).
 
 %punctuation('.').
 %punctuation(',').
@@ -267,6 +288,8 @@ verb(word(Verb)) :- present_tense_verb(Verb).
 
 present_tense_verb(is).
 present_tense_verb(occurs).
+present_tense_verb(can).
+present_tense_verb(qualifies).
 
 preposition(word(Prep)) :- preposition_(Prep). 
 
@@ -276,6 +299,7 @@ preposition_(from).
 preposition_(to).
 preposition_(at).
 preposition_(in).
+preposition_(with).
 
 assertall([]).
 assertall([F|R]) :-
