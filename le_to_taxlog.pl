@@ -6,7 +6,8 @@
 % 	text_to_logic(+String,-Errors,-Clauses) is det
 text_to_logic(String, Error, Translation) :-
     tokenize(String, Tokens, [cased(true), spaces(true)]),
-    ( phrase(document(Output), Tokens) -> 
+    unpack_tokens(Tokens, UTokens), 
+    ( phrase(document(Output), UTokens) -> 
         (Translation=Output, Error=[])
     ;   (Error=Output, Translation=[])). 
     
@@ -39,9 +40,9 @@ document(Translation, In, Rest) :-
 declaration(Rules, [predicates(Fluents)]) -->
     predicate_previous, list_of_predicates_decl(Rules, Fluents).
 
-predicate_previous --> [word(the),space(' '),word(predicates),space(' '),word(are),punct(':'),cntrl('\n')].
+predicate_previous --> [the,' ',predicates,' ',are,':','\n'].
 
-rules_previous --> [word(the),space(' '),word(rules),space(' '),word(are),punct(':'),cntrl('\n')]. 
+rules_previous --> [the,' ',rules,' ',are,':','\n']. 
 
 list_of_predicates_decl([Ru|R1], [F|R2]) --> predicate_decl(Ru,F), list_of_predicates_decl(R1,R2).
 list_of_predicates_decl([],[]) --> [].
@@ -51,15 +52,19 @@ predicate_decl(dict([Predicate|Arguments],TypesAndNames, Template), Relation) --
     {build_template(RawTemplate, Predicate, Arguments, TypesAndNames, Template),
      Relation =.. [Predicate|Arguments]}.
 
-template_decl(RestW, [space(_)|RestIn], Out) :- % skip spaces in template
+template_decl(RestW, [' '|RestIn], Out) :- % skip spaces in template
     template_decl(RestW, RestIn, Out).
-template_decl(RestW, [cntrl(_)|RestIn], Out) :- % skip cntrl in template
+template_decl(RestW, ['\t'|RestIn], Out) :- % skip cntrl \t in template
+    template_decl(RestW, RestIn, Out).
+template_decl(RestW, ['\n'|RestIn], Out) :- % skip cntrl \n in template
+    template_decl(RestW, RestIn, Out).
+template_decl(RestW, ['\r'|RestIn], Out) :- % skip cntrl \r in template
     template_decl(RestW, RestIn, Out).
 template_decl([Word|RestW], [Word|RestIn], Out) :-
-    not(lists:member(Word,[word(the), punct('.'), punct(',')])), !, 
+    not(lists:member(Word,[the, '.', ','])), !,  % lowercase the is boundary
     template_decl(RestW, RestIn, Out).
 template_decl([], [Word|Rest], [Word|Rest]) :-
-    lists:member(Word,[word(the), punct('.'), punct(',')]). 
+    lists:member(Word,[the, '.', ',']). 
 
 build_template(RawTemplate, Predicate, Arguments, TypesAndNames, Template) :-
     build_template_elements(RawTemplate, Arguments, TypesAndNames, OtherWords, Template),
@@ -122,15 +127,15 @@ literal(Map1, MapN, Literal) -->
     predicate_statement(PossibleTemplate),
     {match_template(PossibleTemplate, Map1, MapN, Literal)}.
 
-predicate_statement(RestW, [space(_)|RestIn], Out) :-  % skip spaces in template
+predicate_statement(RestW, [' '|RestIn], Out) :-  % skip spaces in template
     predicate_statement(RestW, RestIn, Out).
-predicate_statement(RestW, [cntrl('\t')|RestIn], Out) :- % skip tabs in template
+predicate_statement(RestW, ['\t'|RestIn], Out) :- % skip tabs in template
     predicate_statement(RestW, RestIn, Out).
 predicate_statement([Word|RestW], [Word|RestIn], Out) :-
-    not(lists:member(Word,[cntrl('\n'), word(if), word(and), word(or), puntc('.')])),
+    not(lists:member(Word,['\n', if, and, or, '.'])),
     predicate_statement(RestW, RestIn, Out).
 predicate_statement([], [Word|Rest], [Word|Rest]) :-
-    lists:member(Word,[cntrl('\n'), word(if), word(and), word(or), puntc('.')]). 
+    lists:member(Word,['\n', if, and, or, '.']). 
 
 match_template(PossibleTemplate, Map1, MapN, Literal) :-
     rebuild_template(PossibleTemplate, Map1, MapN, Template),
@@ -162,23 +167,23 @@ update_map(V, Name, InMap, OutMap) :- % updates the map by adding a new variable
 %    t_or_w(Y, M2, M3), in, t_or_w(B, M3, M4),
 %    mapped_time_expression([T1,T2], M4, M_Out).
 
-spaces(N) --> [space(' ')], !, spaces(M), {N is M + 1}.
-spaces(N) --> [cntrl('\t')], !, spaces(M), {N is M + 1}. % counting tab as one space
+spaces(N) --> [' '], !, spaces(M), {N is M + 1}.
+spaces(N) --> ['\t'], !, spaces(M), {N is M + 1}. % counting tab as one space
 spaces(0) --> []. 
 
-if_ --> [word(if)].
+if_ --> [if].
 
-period --> [punct('.')].
-comma --> [punct(',')].
+period --> ['.'].
+comma --> [','].
 
-comma_or_period --> period, !, [cntrl('\n')].
+comma_or_period --> period, !, ['\n'].
 comma_or_period --> period, !.
-comma_or_period --> comma, !, [cntrl('\n')]. 
+comma_or_period --> comma, !, ['\n']. 
 comma_or_period --> comma. 
 
-and_ --> [word(and)].
+and_ --> [and].
 
-or_ --> [word(or)].
+or_ --> [or].
 
 %mapped_time_expression([T1,T2], Mi, Mo) -->
 %    from_, t_or_w(T1, Mi, M2), to_, t_or_w(T2, M2, Mo).
@@ -187,8 +192,13 @@ or_ --> [word(or)].
 
 
 /* --------------------------------------------------------- Utils in Prolog */
+unpack_tokens([], []).
+unpack_tokens([First|Rest], [New|NewRest]) :-
+    (First = word(New); First=cntrl(New); First=punct(New); 
+     First=space(New); First=number(New); First=string(New)), !,
+    unpack_tokens(Rest, NewRest).  
 
-ordinal(word(Ord)) :-
+ordinal(Ord) :-
     ordinal(_, Ord). 
 
 ordinal(1,  'first').
@@ -255,43 +265,43 @@ type(_, In, In, Pos, _) :- asserterror('No type at ', Pos), fail.
 
 is_a_type(T) :- % pending integration with wei2nlen:is_a_type/1
    ground(T),
-   not(T=number(_)), not(punctuation(T)),
+   not(number(T)), not(punctuation(T)),
    not(reserved_word(T)),
    not(verb(T)),
    not(preposition(T)). 
 
-ind_det_C(word('A')).
-ind_det_C(word('An')).
-ind_det_C(word('Some')).
+ind_det_C('A').
+ind_det_C('An').
+ind_det_C('Some').
 
-def_det_C(word('The')).
+def_det_C('The').
 
-ind_det(word(a)).
-ind_det(word(an)).
-ind_det(word(some)).
+ind_det(a).
+ind_det(an).
+ind_det(some).
 
-def_det(word(the)).
+def_det(the).
 
-reserved_word(word(W)) :- % more reserved words pending
+reserved_word(W) :- % more reserved words pending
   W= 'A', W='An', W = 'is'; W ='not'; W='When'; W='when'; W='if'; W='If'; W='then';
   W = 'at'; W= 'from'; W='to'; W='and'; W='half'; W='or'.
 reserved_word(P) :- punctuation(P).
 
-punctuation(punct(_P)).
+%punctuation(punct(_P)).
 
-%punctuation('.').
-%punctuation(',').
-%punctuation(';').
-%punctuation(':').
+punctuation('.').
+punctuation(',').
+punctuation(';').
+punctuation(':').
 
-verb(word(Verb)) :- present_tense_verb(Verb).
+verb(Verb) :- present_tense_verb(Verb).
 
 present_tense_verb(is).
 present_tense_verb(occurs).
 present_tense_verb(can).
 present_tense_verb(qualifies).
 
-preposition(word(Prep)) :- preposition_(Prep). 
+preposition(Prep) :- preposition_(Prep). 
 
 preposition_(of).
 preposition_(on).
