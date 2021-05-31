@@ -453,7 +453,11 @@ handle_le(Request) :-
     ]).
 
 :- discontiguous logical_english:dict/3.
-% dict(LiteralElements, NamesAndTypes, Template)
+% dict(?LiteralElements, ?NamesAndTypes, ?Template)
+% this is a multimodal predicate used to associate a Template with its particular other of the words for LE
+% with the Prolog expression of that relation in LiteralElements (not yet a predicate =.. is done outside).
+% NamesAndTypes contains the external name and type (name-type) of each variable just in the other in 
+% which the variables appear in LiteralElement. 
 % general purpose entries:
 dict([in, Member, List], [member-object, list-list], [Member, is, in, List]).
 dict([assert,Information], [info-clause], [this, information, Information, ' has', been, recorded]).

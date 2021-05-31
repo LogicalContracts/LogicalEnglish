@@ -118,7 +118,50 @@ more_conds(_, _, Ind, Map2, MapN, Type, RestC, I1, Rest) :-
     spaces(Ind, I2, I3), 
     operator(Type, I3, I4), 
     conditions(Ind, Type, Map2, MapN, RestC, I4, Rest). 
-more_conds(Ind, Type0, Ind, Map, Map, Type0, [], In, In). 
+more_conds(Ind, Type0, Ind, Map, Map, last, [], In, In). 
+
+% by_inden segregates conditions according with their level of indentation, but
+% preserving order. 
+by_inden([], Final, Final).
+by_inden([Type-Ind-C|RestC], Previous, Final) :-
+    last_in(Previous, Before, Last),
+    (same_ind(Last, Type, Ind) -> 
+      (lists:append(Last, [Type-Ind-C], NewLast), append(Before, [NewLast], NewPrevious))
+    ; (lists:append(Previous, [[Type-Ind-C]], NewPrevious))),
+    by_inden(RestC, NewPrevious, Final).
+by_inden([F|RestC], Previous, Final) :-
+    lists:append(Previous, [[F]], NewPrevious),
+    by_inden(RestC, NewPrevious, Final).
+
+last_in(Previous, Before, Last) :- 
+    lists:append(Before, [Last], Previous). 
+
+same_ind([Type-Ind-_|_], Type, Ind).
+
+map_to_conds([last-_-C1], C1).
+% from and to and
+map_to_conds([and-Ind-C1, and-Ind-C2|RestC], (C1, C2, RestMapped) ) :-
+    map_to_conds(RestC, RestMapped).
+% from or to ord
+map_to_conds([or-Ind-C1, or-Ind-C2|RestC], (C1; C2; RestMapped) ) :-
+    map_to_conds(RestC, RestMapped).
+% from and to deeper or
+map_to_conds([and-Ind1-C1, or-Ind2-C2|RestC], (C1, (C2; RestMapped)) ) :-
+    Ind1 < Ind2, 
+    map_to_conds(RestC, RestMapped).
+% from deeper or to and
+map_to_conds([or-Ind1-C1, and-Ind2-C2|RestC], ((C1; C2), RestMapped) ) :-
+    Ind1 > Ind2, 
+    map_to_conds([and-Ind2-C2|RestC], RestMapped).
+% from or to deeper and
+map_to_conds([or-Ind1-C1, and-Ind2-C2|RestC], (C1; (C2, RestMapped)) ) :-
+    Ind1 < Ind2, 
+    map_to_conds(RestC, RestMapped).
+% from deeper and to or
+map_to_conds([and-Ind1-C1, or-Ind2-C2|RestC], ((C1, C2);RestMapped ) ) :-
+    Ind1 > Ind2, 
+    map_to_conds(RestC, RestMapped).
+
 
 operator(and, In, Out) :- and_(In, Out).
 operator(or, In, Out) :- or_(In, Out).
