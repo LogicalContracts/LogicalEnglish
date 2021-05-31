@@ -24,31 +24,35 @@ document(Translation, In, Rest) :-
             asserterror('Syntax error found at position ', Pos), fail)],
     append(Rules, RulesforErrors, MRules),
     assertall(MRules), % asserting parsing rules for predicates and actions
-    rules_previous(Next, NextNext), 
+    spaces_or_newlines(_, Next, Intermediate),
+    rules_previous(Intermediate, NextNext), 
     content(Content, NextNext, Rest), append(Settings, Content, Translation).
-  document(Error,_,_) :- showerror(Error), fail.
+document(Error,_,_) :- showerror(Error), fail.
   
-  settings(AllR, AllS) --> declaration(Rules,Setting), settings(RRules, RS),
+settings(AllR, AllS) --> declaration(Rules,Setting), settings(RRules, RS),
       {append(Setting, RS, AllS),
      append(Rules, RRules, AllR)}.
-  settings([],[]) --> [].
+settings([],[]) --> [].
   
-  content(C) --> statement(S), content(R), {append(S,R,C)}.
-  content([]) --> [].
-
+content(C) --> statement(S), spaces_or_newlines(_), content(R), {append(S,R,C)}.
+content([]) --> [].
 
 declaration(Rules, [predicates(Fluents)]) -->
     predicate_previous, list_of_predicates_decl(Rules, Fluents).
 
-predicate_previous --> [the,' ',predicates,' ',are,':','\n'].
+predicate_previous --> 
+    spaces(_), [the], spaces(_), [predicates], spaces(_), [are], spaces(_), [':'], spaces(_), ['\n'].
 
-rules_previous --> [the,' ',rules,' ',are,':','\n']. 
+rules_previous --> 
+    spaces(_), [the], spaces(_), [rules], spaces(_), [are], spaces(_), [':'], spaces(_), ['\n'].
 
-list_of_predicates_decl([Ru|R1], [F|R2]) --> predicate_decl(Ru,F), list_of_predicates_decl(R1,R2).
-list_of_predicates_decl([],[]) --> [].
+list_of_predicates_decl([Ru|R1], [F|R2]) --> predicate_decl(Ru,F), rest_list_of_predicates_decl(R1,R2).
+
+rest_list_of_predicates_decl(L1, L2) --> comma, list_of_predicates_decl(L1, L2).
+rest_list_of_predicates_decl([],[]) --> period.
 
 predicate_decl(dict([Predicate|Arguments],TypesAndNames, Template), Relation) -->
-    spaces(_), template_decl(RawTemplate), comma_or_period, 
+    spaces(_), template_decl(RawTemplate), 
     {build_template(RawTemplate, Predicate, Arguments, TypesAndNames, Template),
      Relation =.. [Predicate|Arguments]}.
 
@@ -61,29 +65,30 @@ template_decl(RestW, ['\n'|RestIn], Out) :- % skip cntrl \n in template
 template_decl(RestW, ['\r'|RestIn], Out) :- % skip cntrl \r in template
     template_decl(RestW, RestIn, Out).
 template_decl([Word|RestW], [Word|RestIn], Out) :-
-    not(lists:member(Word,[the, '.', ','])), !,  % lowercase the is boundary
+    not(lists:member(Word,['.', ','])), !,  % only . and , as boundaries. Beware!
     template_decl(RestW, RestIn, Out).
 template_decl([], [Word|Rest], [Word|Rest]) :-
-    lists:member(Word,[the, '.', ',']). 
+    lists:member(Word,['.', ',']). 
 
 build_template(RawTemplate, Predicate, Arguments, TypesAndNames, Template) :-
-    build_template_elements(RawTemplate, Arguments, TypesAndNames, OtherWords, Template),
+    build_template_elements(RawTemplate, [], Arguments, TypesAndNames, OtherWords, Template),
     name_predicate(OtherWords, Predicate).
 
-build_template_elements([], [], [], [], []).     
-build_template_elements([Word|RestOfWords], [Var|RestVars], [Name-Type|RestTypes], Others, [Var|RestTemplate]) :-
-    ind_det_C(Word), 
+% build_template_elements(+Input, +Previous, -Args, -TypesNames, -OtherWords, -Template)
+build_template_elements([], _, [], [], [], []).     
+build_template_elements([Word|RestOfWords], Previous, [Var|RestVars], [Name-Type|RestTypes], Others, [Var|RestTemplate]) :-
+    (ind_det(Word); ind_det_C(Word)), Previous \= [is|_], 
     extract_variable(RestOfWords, Var, NameWords, TypeWords, NextWords),
     name_predicate(NameWords, Name), 
     name_predicate(TypeWords, Type), 
-    build_template_elements(NextWords, RestVars, RestTypes, Others, RestTemplate).
-build_template_elements([Word|RestOfWords], RestVars, RestTypes,  [Word|Others], [Word|RestTemplate]) :-
-    build_template_elements(RestOfWords, RestVars, RestTypes, Others, RestTemplate).
+    build_template_elements(NextWords, [], RestVars, RestTypes, Others, RestTemplate).
+build_template_elements([Word|RestOfWords], Previous, RestVars, RestTypes,  [Word|Others], [Word|RestTemplate]) :-
+    build_template_elements(RestOfWords, [Word|Previous], RestVars, RestTypes, Others, RestTemplate).
 
 % extract_variable(+ListOfWords, Var, ListOfNameWords, ListOfTypeWords, NextWordsInText)
 extract_variable([], _, [], [], []) :- !.                                % stop at when words run out
 extract_variable([Word|RestOfWords], _, [], [], [Word|RestOfWords]) :-   % stop at reserved words, verbs or prepositions. 
-    (reserved_word(Word); verb(Word); preposition(Word)), !.
+    (reserved_word(Word); verb(Word); preposition(Word); punctuation(Word)), !.  % or punctuation
 extract_variable([Word|RestOfWords], Var, [Word|RestName], Type, NextWords) :- % ordinals are not part of the name
     ordinal(Word), !,
     extract_variable(RestOfWords, Var, RestName, Type, NextWords).
@@ -100,28 +105,23 @@ prolog_fact(Prolog) -->  % binary predicate
     t_or_w(X, [], M2), word(Predicate), t_or_w(Y, M2, _M_Out), period,
     {Prolog =.. [Predicate, X, Y]}.
 
-statement([if(Head,and(Conditions))]) -->
-    literal([], Map1, Head), [cntrl('\n')],
-    spaces(_), if_, conjunction(_, Map1, _, Conditions), period.
+statement([if(Head,Conditions)]) -->
+    literal([], Map1, Head), newline,
+    spaces(Ind), if_, conditions(Ind, and, Map1, _MapN, Conditions), spaces_or_newlines(_), period.
 
-statement([if(Head,and(Conditions))]) -->
-    literal([], Map1, Head), [cntrl('\n')],
-    spaces(_), if_, disjunction(_, Map1, _, Conditions), period.
+conditions(Ind0, Type0, Map1, MapN, [Type-Ind-Cond|RestC], Input, Rest) :-
+    literal(Map1, Map2, Cond, Input, I1), 
+    more_conds(Ind0, Type0, Ind, Map2, MapN, Type, RestC, I1, Rest).
 
-%
-conjunction(Ind, Map1, Map2, [C|CC]) --> conjunct(Ind, Map1, Map3, C),
-    spaces(Ind), and_, conjunction(Ind, Map3, Map2, CC).
-conjunction(_, Map1, Map2, [C]) --> literal(Map1, Map2, C).
+more_conds(_, _, Ind, Map2, MapN, Type, RestC, I1, Rest) :-
+    newline(I1, I2),
+    spaces(Ind, I2, I3), 
+    operator(Type, I3, I4), 
+    conditions(Ind, Type, Map2, MapN, RestC, I4, Rest). 
+more_conds(Ind, Type0, Ind, Map, Map, Type0, [], In, In). 
 
-conjunt(AndInd, Map1, MapN, or(D)) --> disjunction(OrInd, Map1, MapN, D), {AndInd < OrInd}.
-conjunct(_, Map1, MapN, C) --> literal(Map1, MapN, C).
-
-disjunction(Ind, Map1, MapN, [D|DD]) --> disjunct(Ind, Map1, Map3, D),
-    spaces(Ind), or_, disjunction(Ind, Map3, MapN, DD).
-disjunction(Ind, Map1, MapN, [D]) --> disjunct(Ind, Map1, MapN, D).
-
-disjunct(OrInd, Map1, MapN, and(D)) --> conjunction(AndInd, Map1, MapN, D),  {OrInd < AndInd}.
-disjunct(_, Map1, MapN, C) --> literal(Map1, MapN, C).
+operator(and, In, Out) :- and_(In, Out).
+operator(or, In, Out) :- or_(In, Out).
 
 literal(Map1, MapN, Literal) --> 
     predicate_statement(PossibleTemplate),
@@ -143,17 +143,24 @@ match_template(PossibleTemplate, Map1, MapN, Literal) :-
     Literal =.. Predicate. 
 
 rebuild_template(RawTemplate, Map1, MapN, Template) :-
-    template_elements(RawTemplate, Map1, MapN, Template).
+    template_elements(RawTemplate, Map1, MapN, [], Template).
 
-template_elements([], Map1, Map1, []).     
-template_elements([Word|RestOfWords], Map1, MapN, [Var|RestTemplate]) :-
-    (ind_det_C(Word); def_det_C(Word)), 
+% template_elements(+Input,+InMap, -OutMap, +Previous, -Template)
+template_elements([], Map1, Map1, _, []).     
+template_elements([Word|RestOfWords], Map1, MapN, Previous, [Var|RestTemplate]) :-
+    (ind_det(Word); ind_det_C(Word)), Previous \= [is|_], 
     extract_variable(RestOfWords, Var, NameWords, _, NextWords),
     name_predicate(NameWords, Name), 
     update_map(Var, Name, Map1, Map2), 
-    template_elements(NextWords, Map2, MapN, RestTemplate).
-template_elements([Word|RestOfWords], Map1, MapN, [Word|RestTemplate]) :-
-    template_elements(RestOfWords, Map1, MapN, RestTemplate).
+    template_elements(NextWords, Map2, MapN, [], RestTemplate).
+template_elements([Word|RestOfWords], Map1, MapN, Previous, [Var|RestTemplate]) :-
+    (def_det_C(Word); def_det(Word)), Previous \= [is|_], 
+    extract_variable(RestOfWords, Var, NameWords, _, NextWords),
+    name_predicate(NameWords, Name), 
+    member(map(Var,Name), Map1),  % confirming it is an existing variable and unifying
+    template_elements(NextWords, Map1, MapN, [], RestTemplate).
+template_elements([Word|RestOfWords], Map1, MapN, Previous, [Word|RestTemplate]) :-
+    template_elements(RestOfWords, Map1, MapN, [Word|Previous], RestTemplate).
 
 update_map(V, Name, InMap, InMap) :- % unify V with same named variable in current map
     member(map(V,Name),InMap), !.
@@ -170,6 +177,15 @@ update_map(V, Name, InMap, OutMap) :- % updates the map by adding a new variable
 spaces(N) --> [' '], !, spaces(M), {N is M + 1}.
 spaces(N) --> ['\t'], !, spaces(M), {N is M + 1}. % counting tab as one space
 spaces(0) --> []. 
+
+spaces_or_newlines(N) --> [' '], !, spaces_or_newlines(M), {N is M + 1}.
+spaces_or_newlines(N) --> ['\t'], !, spaces_or_newlines(M), {N is M + 1}. % counting tab as one space
+spaces_or_newlines(N) --> ['\r'], !, spaces_or_newlines(M), {N is M + 1}. % counting \r as one space
+spaces_or_newlines(N) --> ['\n'], !, spaces_or_newlines(M), {N is M + 1}. % counting \n as one space
+spaces_or_newlines(0) --> [].
+
+newline --> ['\n'].
+newline --> ['\r'].
 
 if_ --> [if].
 
@@ -293,23 +309,26 @@ punctuation('.').
 punctuation(',').
 punctuation(';').
 punctuation(':').
+punctuation('\'').
 
-verb(Verb) :- present_tense_verb(Verb).
+verb(Verb) :- present_tense_verb(Verb); continuous_tense_verb(Verb). 
 
 present_tense_verb(is).
 present_tense_verb(occurs).
 present_tense_verb(can).
 present_tense_verb(qualifies).
 
-preposition(Prep) :- preposition_(Prep). 
-
-preposition_(of).
-preposition_(on).
-preposition_(from).
-preposition_(to).
-preposition_(at).
-preposition_(in).
-preposition_(with).
+continuous_tense_verb(according).
+ 
+preposition(of).
+preposition(on).
+preposition(from).
+preposition(to).
+preposition(at).
+preposition(in).
+preposition(with).
+preposition(plus).
+preposition(as).
 
 assertall([]).
 assertall([F|R]) :-
