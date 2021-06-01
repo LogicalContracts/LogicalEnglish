@@ -107,61 +107,47 @@ prolog_fact(Prolog) -->  % binary predicate
 
 statement([if(Head,Conditions)]) -->
     literal([], Map1, Head), newline,
-    spaces(Ind), if_, conditions(Ind, and, Map1, _MapN, Conditions), spaces_or_newlines(_), period.
+    spaces(Ind), if_, conditions(Ind, Map1, _MapN, ListOfConds), 
+    {map_to_conds(ListOfConds, Conditions)},  spaces_or_newlines(_), period.
 
-conditions(Ind0, Type0, Map1, MapN, [Type-Ind-Cond|RestC], Input, Rest) :-
+conditions(Ind0, Map1, MapN, [Type-Ind-Cond|RestC], Input, Rest) :-
     literal(Map1, Map2, Cond, Input, I1), 
-    more_conds(Ind0, Type0, Ind, Map2, MapN, Type, RestC, I1, Rest).
+    more_conds(Ind0, Ind, Map2, MapN, Type, RestC, I1, Rest).
 
-more_conds(_, _, Ind, Map2, MapN, Type, RestC, I1, Rest) :-
+more_conds(_, Ind, Map2, MapN, Type, RestC, I1, Rest) :-
     newline(I1, I2),
     spaces(Ind, I2, I3), 
     operator(Type, I3, I4), 
-    conditions(Ind, Type, Map2, MapN, RestC, I4, Rest). 
-more_conds(Ind, Type0, Ind, Map, Map, last, [], In, In). 
+    conditions(Ind,Map2, MapN, RestC, I4, Rest). 
+more_conds(Ind, Ind, Map, Map, last, [], In, In). 
 
-% by_inden segregates conditions according with their level of indentation, but
-% preserving order. 
-by_inden([], Final, Final).
-by_inden([Type-Ind-C|RestC], Previous, Final) :-
-    last_in(Previous, Before, Last),
-    (same_ind(Last, Type, Ind) -> 
-      (lists:append(Last, [Type-Ind-C], NewLast), append(Before, [NewLast], NewPrevious))
-    ; (lists:append(Previous, [[Type-Ind-C]], NewPrevious))),
-    by_inden(RestC, NewPrevious, Final).
-by_inden([F|RestC], Previous, Final) :-
-    lists:append(Previous, [[F]], NewPrevious),
-    by_inden(RestC, NewPrevious, Final).
-
-last_in(Previous, Before, Last) :- 
-    lists:append(Before, [Last], Previous). 
-
-same_ind([Type-Ind-_|_], Type, Ind).
-
-map_to_conds([last-_-C1], C1).
+% map_to_conds(+ListOfConds, -LogicallyOrderedConditions)
+% fist the last condition always fits in
+map_to_conds([last-_-C1], C1) :- !. 
+map_to_conds([and-_-C1, last-_-C2], (C1,C2)) :- !. 
+map_to_conds([or-_-C1, last-_-C2], (C1;C2)) :- !.
 % from and to and
-map_to_conds([and-Ind-C1, and-Ind-C2|RestC], (C1, C2, RestMapped) ) :-
+map_to_conds([and-Ind-C1, and-Ind-C2|RestC], (C1, C2, RestMapped) ) :- !, 
     map_to_conds(RestC, RestMapped).
 % from or to ord
-map_to_conds([or-Ind-C1, or-Ind-C2|RestC], (C1; C2; RestMapped) ) :-
+map_to_conds([or-Ind-C1, or-Ind-C2|RestC], (C1; C2; RestMapped) ) :- !, 
     map_to_conds(RestC, RestMapped).
 % from and to deeper or
-map_to_conds([and-Ind1-C1, or-Ind2-C2|RestC], (C1, (C2; RestMapped)) ) :-
-    Ind1 < Ind2, 
+map_to_conds([and-Ind1-C1, or-Ind2-C2|RestC], (C1, (C2; RestMapped)) ) :-  
+    Ind1 < Ind2, !, 
     map_to_conds(RestC, RestMapped).
 % from deeper or to and
 map_to_conds([or-Ind1-C1, and-Ind2-C2|RestC], ((C1; C2), RestMapped) ) :-
-    Ind1 > Ind2, 
+    Ind1 > Ind2, !, 
     map_to_conds([and-Ind2-C2|RestC], RestMapped).
 % from or to deeper and
 map_to_conds([or-Ind1-C1, and-Ind2-C2|RestC], (C1; (C2, RestMapped)) ) :-
-    Ind1 < Ind2, 
+    Ind1 < Ind2, !, 
     map_to_conds(RestC, RestMapped).
 % from deeper and to or
 map_to_conds([and-Ind1-C1, or-Ind2-C2|RestC], ((C1, C2);RestMapped ) ) :-
     Ind1 > Ind2, 
     map_to_conds(RestC, RestMapped).
-
 
 operator(and, In, Out) :- and_(In, Out).
 operator(or, In, Out) :- or_(In, Out).
@@ -354,14 +340,21 @@ punctuation(';').
 punctuation(':').
 punctuation('\'').
 
-verb(Verb) :- present_tense_verb(Verb); continuous_tense_verb(Verb). 
+verb(Verb) :- present_tense_verb(Verb); continuous_tense_verb(Verb); past_tense_verb(Verb). 
 
 present_tense_verb(is).
 present_tense_verb(occurs).
 present_tense_verb(can).
 present_tense_verb(qualifies).
+present_tense_verb(has).
 
 continuous_tense_verb(according).
+
+past_tense_verb(looked).
+past_tense_verb(could).
+past_tense_verb(had).
+past_tense_verb(tried).
+past_tense_verb(explained).
  
 preposition(of).
 preposition(on).
