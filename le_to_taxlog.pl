@@ -166,10 +166,44 @@ predicate_statement([Word|RestW], [Word|RestIn], Out) :-
 predicate_statement([], [Word|Rest], [Word|Rest]) :-
     lists:member(Word,['\n', if, and, or, '.']). 
 
-match_template(PossibleTemplate, Map1, MapN, Literal) :-
-    rebuild_template(PossibleTemplate, Map1, MapN, Template),
+match_template(PossibleLiteral, Map1, MapN, Literal) :-
+    dict(Predicate, _, Candidate),
+    match(Candidate, PossibleLiteral, Map1, MapN, [], Template), 
     dict(Predicate, _, Template),
     Literal =.. Predicate. 
+
+% match(+CandidateTemplate, +PossibleLiteral, +MapIn, -MapOut, +Previous, -SelectedTemplate)
+match([], _, Map, Map, _, []). % success!
+match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, Previous, [Element|RestSelected]) :-
+    nonvar(Element), Word = Element, 
+    match(RestElements, PossibleLiteral, Map1, MapN, Previous, RestSelected). 
+match([Element|RestElements], [Det|PossibleLiteral], Map1, MapN, Previous, [Var|RestSelected]) :-
+    var(Element), 
+    determiner(Det), 
+    extract_variable(PossibleLiteral, Var, NameWords, _, NextWords),
+    name_predicate(NameWords, Name),
+    update_map(Var, Name, Map1, Map2),
+    match(RestElements, NextWords, Map2, MapN, Previous, RestSelected).  
+match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, Previous, [Element|RestSelected]) :-
+    var(Element), 
+    extract_constant([Word|PossibleLiteral], NameWords, NextWords),
+    name_predicate(NameWords, Constant),
+    update_map(Element, Constant, Map1, Map2),
+    match(RestElements, NextWords, Map2, MapN, Previous, RestSelected). 
+
+% extract_constant(+ListOfWords, ListOfNameWords, ListOfTypeWords, NextWordsInText)
+extract_constant([], _, []) :- !.                                % stop at when words run out
+extract_constant([Word|RestOfWords], [], [Word|RestOfWords]) :-   % stop at reserved words, verbs? or prepositions?. 
+    (reserved_word(Word); verb(Word); preposition(Word); punctuation(Word)), !.  % or punctuation
+%extract_constant([Word|RestOfWords], [Word|RestName], NextWords) :- % ordinals are not part of the name
+%    ordinal(Word), !,
+%    extract_constant(RestOfWords, RestName, NextWords).
+extract_constant([Word|RestOfWords], [Word|RestName], NextWords) :-
+    %is_a_type(Word),
+    extract_constant(RestOfWords, RestName, NextWords).
+
+determiner(Det) :-
+    (ind_det(Det); ind_det_C(Det); def_det(Det); def_det_C(Det)), !. 
 
 rebuild_template(RawTemplate, Map1, MapN, Template) :-
     template_elements(RawTemplate, Map1, MapN, [], Template).
@@ -394,3 +428,47 @@ first_words([W1,W2,W3], [W1,W2,W3|R],R).
 
 spypoint(A,A). % for debugging
 
+write_taxlog_code(Source, Readable) :-
+    Source = [predicates(_)|Clauses],
+    write_taxlog_clauses(Clauses, Readable).
+
+write_taxlog_clauses([], []).
+write_taxlog_clauses([If|RestClauses], [ReadableIf|RestReadable]) :-
+    write_taxlog_if(If, ReadableIf),
+    write_taxlog_clauses(RestClauses, RestReadable).
+
+write_taxlog_if(Rule, if(ReadableHead, ReadableBody)) :-
+    Rule = if(Head, Body),
+    write_taxlog_literal(Head, ReadableHead),
+    write_taxlog_body(Body, ReadableBody).
+
+write_taxlog_literal(Literal, ReadableLiteral) :-
+    Literal =.. [Pred|ArgVars],
+    dict([Pred|ArgVars], Names, _),
+    replace_varnames(ArgVars, Names, NewArgs),
+    ReadableLiteral =.. [Pred|NewArgs].
+
+replace_varnames([], [], []) :- !. 
+replace_varnames([Var|RestVar], [VarName-_|RestVarNames], [Name|NewRest]) :-
+    var(Var),
+    capitalize(VarName, Name), 
+    replace_varnames(RestVar, RestVarNames, NewRest). 
+replace_varnames([V|RestVar], [_|RestVarNames], [V|NewRest]) :-
+    nonvar(V),
+    replace_varnames(RestVar, RestVarNames, NewRest). 
+
+% from drafter.pl
+capitalize(X,NewX) :- 
+    name(X,[First|Codes]), to_upper(First,U), name(NewX,[U|Codes]).
+
+write_taxlog_body((A;B), or(NewA,NewB)) :-
+    write_taxlog_body(A, NewA ),
+    write_taxlog_body(B, NewB).
+
+write_taxlog_body((A,B), and(NewA, NewB)) :-
+    write_taxlog_body(A, NewA),
+    write_taxlog_body(B, NewB).
+
+write_taxlog_body(Lit, Readable) :-
+    write_taxlog_literal(Lit, Readable). 
+    
