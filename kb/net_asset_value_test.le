@@ -1,0 +1,117 @@
+the predicates are:
+    an Asset is an earnout cgt asset valued at a Value,
+    an Asset is a cgt asset, 
+    a tax payer satisfies maximum net asset value test at a date,
+    a tax payer has cgt assets net value of a value at a date,
+    a value =< a second value,
+    a Person has cgt assets net value of a Value at a Date,
+    a Person has relevant asset an Asset,
+    a Person owns an Asset,
+    a Person is connected to a Connection,
+    a Person owns an Asset,
+    a Person is affiliated with an Affiliate,
+    an Asset is used in business of a Person,
+    a Person has to exclude asset an Asset,
+    an Affiliate is connected to a Connection,
+    an Asset belongs to a Connection,
+    a Person is an individual,
+    an Asset is solely for personal use by a Person,
+    it is for home use for private purposes only including incidental income producing,
+    an Asset is part of rights to amounts oor assets of super fund oor approved deposit fund,
+    an Asset is life insurance for a Person,
+    a Person owns an Asset according to other legislation,
+    a Taxpayer is affiliated with an Affiliate at a time according to other legislation,
+    an Asset is share in company of a Connection according to other legislation,
+    an Asset is of interest in trust of a Connection according to other legislation,
+    an Asset is a cgt asset according to other legislation,
+    an Asset is an earnout cgt asset valued at a Value according to other legislation.
+
+
+the rules are:
+%a tax payer satisfies maximum net asset value test at a date 
+%    if the tax payer has cgt assets net value of a value at the date 
+%    and the value =< 6000000.
+ 
+%a Person has cgt assets net value of a Value at a Date 
+%    if  the Value is the sum of each AssetNet such that {
+%        the Person has relevant asset an Asset
+%        and the Asset is a cgt asset and it is not the case that 
+%            the Person has to exclude asset the Asset
+%            and the Asset 's net value is the Asset Net at the Date
+%    }.
+ 
+%a Person has relevant asset an Asset 
+%    if the Person owns the Asset.
+
+%a Person has relevant asset an Asset 
+%    if the Person is connected to a Connection
+%    and the Connection owns the Asset.
+
+%a Person has relevant asset an Asset 
+%    if the Person is affiliated with an Affiliate 
+%    and the Affiliate owns the Asset 
+%    and the Asset is used in business of the Person 
+%        or the Person is connected to a Connection
+%            and the Asset is used in business of the Connection
+%.
+
+%a Person has relevant asset an Asset 
+%    if the Person is affiliated with an Affiliate 
+%    and the Affiliate is connected to an Affiliate Connection
+%    and the Affiliate Connection owns the Asset
+%    and the Asset is used in business of the Person
+%        or the Person is connected to a Connection
+%            and the Asset is used in business of the Connection
+%.
+ 
+%a Person has to exclude asset an Asset 
+%    if the Person is connected to a Connection
+%    or the Person is affiliated with an Affiliate
+%        and the Affiliate is connected to the Connection
+%        and the Asset belongs to the Connection.
+
+%a Person has to exclude asset an Asset 
+%    if the Person is an individual
+%    and the Asset is solely for personal use by the Person
+%        or the Person is affiliated with an Affiliate
+%            and the Asset is solely for personal use by the Affiliate
+%                or it is for home use for private purposes only including incidental income producing
+%                or  the Asset is part of rights to amounts oor assets of super fund oor approved deposit fund
+%                or  the Asset is life insurance for the Person
+%.
+ 
+%an Asset 's net value is a Value at a Date 
+%    if  { the Asset is an earnout cgt asset valued at the Value or otherwise
+%        the Asset 's market value is a Market Value at the Date
+%            and a Liabilities is the sum of each Liability such that {
+%                the Asset s type and liability are the Liability with a Type
+%                and the Type is in [annual_leave,long_service_leave,unearned_income,tax_liabilities,legally_enforceable_debts,legal_or_equitable_obligations]
+%        } at the Date
+%    and the Value is the Market Value - the Liabilities}.
+ 
+%a Taxpayer owns an Asset 
+%    if the Taxpayer owns the Asset according to other legislation.
+ 
+%a Taxpayer is connected to a Connection 
+%    if the Taxpayer is connected to the Connection according to other legislation.
+ 
+%an Asset is used in business of a Taxpayer 
+%    if the Asset is used in business of the Taxpayer according to other legislation.
+ 
+%a Taxpayer is affiliated with an Affiliate at a T 
+%    if the Taxpayer is affiliated with the Affiliate at the T according to other legislation.
+ 
+%an Asset belongs to a Connection 
+%    if the Asset is share in company of the Connection according to other legislation.
+
+%an Asset belongs to a Connection 
+%    if  the Asset is of interest in trust of the Connection according to other legislation.
+ 
+an Asset is a cgt asset 
+    if the Asset is a cgt asset according to other legislation.
+ 
+%a TPN is an individual at a Date 
+%    if myDB_entities : is_an_individual_on(the TPN,the Date).
+ 
+an Asset is an earnout cgt asset valued at a Value 
+    if  the Asset is an earnout cgt asset valued at the Value according to other legislation.

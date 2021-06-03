@@ -7,13 +7,34 @@
 text_to_logic(String, Error, Translation) :-
     tokenize(String, Tokens, [cased(true), spaces(true)]),
     unpack_tokens(Tokens, UTokens), 
-    ( phrase(document(Output), UTokens) -> 
+    clean_comments(UTokens, CTokens), 
+    write(CTokens), 
+    ( phrase(document(Output), CTokens) -> 
         (Translation=Output, Error=[])
     ;   (Error=Output, Translation=[])). 
-    
+
+clean_comments([], []) :- !.
+clean_comments(['%'|Rest], New) :- % like in prolog comments start with %
+    jump_comment(Rest, Next), 
+    clean_comments(Next, New). 
+clean_comments([Code|Rest], [Code|New]) :-
+    clean_comments(Rest, New).
+
+jump_comment([], []).
+jump_comment(['\n'|Rest], ['\n'|Rest]). % leaving the end of line in place
+jump_comment([_|R1], R2) :-
+    jump_comment(R1, R2). 
+
 % document(-Translation, In, Rest)
 % a DCG predicate to translate a LE document into Taxlog prolog terms
 document(Translation, In, Rest) :-
+    header(Settings, In, Next), 
+    spaces_or_newlines(_, Next, Intermediate),
+    rules_previous(Intermediate, NextNext), 
+    content(Content, NextNext, Rest), append(Settings, Content, Translation).
+document(Error,_,_) :- showerror(Error), fail.
+
+header(Settings, In, Next) :-
     length(In, TextSize), 
     ( settings(Rules, Settings, In, Next) -> true
     ; (Rules = [], Settings = [])),
@@ -23,18 +44,19 @@ document(Translation, In, Rest) :-
          :- text_size(Size), length(Rest, Rsize), Pos is Size - Rsize, 
             asserterror('Syntax error found at position ', Pos), fail)],
     append(Rules, RulesforErrors, MRules),
-    assertall(MRules), % asserting parsing rules for predicates and actions
-    spaces_or_newlines(_, Next, Intermediate),
-    rules_previous(Intermediate, NextNext), 
-    content(Content, NextNext, Rest), append(Settings, Content, Translation).
-document(Error,_,_) :- showerror(Error), fail.
+    assertall(MRules). % asserting parsing rules for predicates and actions
   
 settings(AllR, AllS) --> declaration(Rules,Setting), settings(RRules, RS),
       {append(Setting, RS, AllS),
      append(Rules, RRules, AllR)}.
 settings([],[]) --> [].
   
-content(C) --> statement(S), spaces_or_newlines(_), content(R), {append(S,R,C)}.
+content(C) --> 
+    spaces_or_newlines(_), 
+    statement(S), 
+    spaces_or_newlines(_), 
+    content(R), 
+    spaces_or_newlines(_), {append(S,R,C)}.
 content([]) --> [].
 
 declaration(Rules, [predicates(Fluents)]) -->
@@ -88,7 +110,7 @@ build_template_elements([Word|RestOfWords], Previous, RestVars, RestTypes,  [Wor
 % extract_variable(+ListOfWords, Var, ListOfNameWords, ListOfTypeWords, NextWordsInText)
 extract_variable([], _, [], [], []) :- !.                                % stop at when words run out
 extract_variable([Word|RestOfWords], _, [], [], [Word|RestOfWords]) :-   % stop at reserved words, verbs or prepositions. 
-    (reserved_word(Word); verb(Word); preposition(Word); punctuation(Word)), !.  % or punctuation
+    (reserved_word(Word); verb(Word); preposition(Word); punctuation(Word)).  % or punctuation
 extract_variable([Word|RestOfWords], Var, [Word|RestName], Type, NextWords) :- % ordinals are not part of the name
     ordinal(Word), !,
     extract_variable(RestOfWords, Var, RestName, Type, NextWords).
@@ -168,31 +190,32 @@ predicate_statement([], [Word|Rest], [Word|Rest]) :-
 
 match_template(PossibleLiteral, Map1, MapN, Literal) :-
     dict(Predicate, _, Candidate),
-    match(Candidate, PossibleLiteral, Map1, MapN, [], Template), 
+    match(Candidate, PossibleLiteral, Map1, MapN, Template), 
     dict(Predicate, _, Template),
     Literal =.. Predicate. 
 
-% match(+CandidateTemplate, +PossibleLiteral, +MapIn, -MapOut, +Previous, -SelectedTemplate)
-match([], _, Map, Map, _, []). % success!
-match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, Previous, [Element|RestSelected]) :-
+% match(+CandidateTemplate, +PossibleLiteral, +MapIn, -MapOut, -SelectedTemplate)
+match([], [], Map, Map, []). % success! It succeds iff PossibleLiteral is totally consumed
+match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, [Element|RestSelected]) :-
     nonvar(Element), Word = Element, 
-    match(RestElements, PossibleLiteral, Map1, MapN, Previous, RestSelected). 
-match([Element|RestElements], [Det|PossibleLiteral], Map1, MapN, Previous, [Var|RestSelected]) :-
+    match(RestElements, PossibleLiteral, Map1, MapN, RestSelected). 
+match([Element|RestElements], [Det|PossibleLiteral], Map1, MapN, [Var|RestSelected]) :-
     var(Element), 
     determiner(Det), 
-    extract_variable(PossibleLiteral, Var, NameWords, _, NextWords),
+    % extract_variable(+ListOfWords, Var, ListOfNameWords, ListOfTypeWords, NextWordsInText)
+    extract_variable(PossibleLiteral, Var, NameWords, _, NextWords), % <- leave that _ unbound!
     name_predicate(NameWords, Name),
     update_map(Var, Name, Map1, Map2),
-    match(RestElements, NextWords, Map2, MapN, Previous, RestSelected).  
-match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, Previous, [Element|RestSelected]) :-
+    match(RestElements, NextWords, Map2, MapN, RestSelected).  
+match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, [Constant|RestSelected]) :-
     var(Element), 
     extract_constant([Word|PossibleLiteral], NameWords, NextWords),
     name_predicate(NameWords, Constant),
     update_map(Element, Constant, Map1, Map2),
-    match(RestElements, NextWords, Map2, MapN, Previous, RestSelected). 
+    match(RestElements, NextWords, Map2, MapN, RestSelected). 
 
-% extract_constant(+ListOfWords, ListOfNameWords, ListOfTypeWords, NextWordsInText)
-extract_constant([], _, []) :- !.                                % stop at when words run out
+% extract_constant(+ListOfWords, ListOfNameWords, NextWordsInText)
+extract_constant([], [], []) :- !.                                % stop at when words run out
 extract_constant([Word|RestOfWords], [], [Word|RestOfWords]) :-   % stop at reserved words, verbs? or prepositions?. 
     (reserved_word(Word); verb(Word); preposition(Word); punctuation(Word)), !.  % or punctuation
 %extract_constant([Word|RestOfWords], [Word|RestName], NextWords) :- % ordinals are not part of the name
@@ -362,8 +385,12 @@ ind_det(some).
 def_det(the).
 
 reserved_word(W) :- % more reserved words pending
-  W= 'A', W='An', W = 'is'; W ='not'; W='When'; W='when'; W='if'; W='If'; W='then';
-  W = 'at'; W= 'from'; W='to'; W='and'; W='half'; W='or'.
+    W = 'is'; W ='not'; W='When'; W='when'; W='if'; W='If'; W='then';
+    W = 'at'; W= 'from'; W='to'; W='and'; W='half'; W='or'; 
+    W = 'else'; W = 'otherwise'; 
+    W = '<'; W = '='; W = '>'; W = '+'; W = '-'; W = '/'; W = '*';
+    W = '{' ; W = '}' ; W = '(' ; W = ')' ; W = '[' ; W = ']';
+    W = ':', W = ','; W = ';'.
 reserved_word(P) :- punctuation(P).
 
 %punctuation(punct(_P)).
@@ -381,6 +408,9 @@ present_tense_verb(occurs).
 present_tense_verb(can).
 present_tense_verb(qualifies).
 present_tense_verb(has).
+present_tense_verb(satisfies).
+present_tense_verb(owns).
+present_tense_verb(belongs).
 
 continuous_tense_verb(according).
 
