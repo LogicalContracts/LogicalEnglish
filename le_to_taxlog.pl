@@ -100,52 +100,80 @@ build_template(RawTemplate, Predicate, Arguments, TypesAndNames, Template) :-
 build_template_elements([], _, [], [], [], []).     
 build_template_elements([Word|RestOfWords], Previous, [Var|RestVars], [Name-Type|RestTypes], Others, [Var|RestTemplate]) :-
     (ind_det(Word); ind_det_C(Word)), Previous \= [is|_], 
-    extract_variable(RestOfWords, Var, NameWords, TypeWords, NextWords),
+    extract_variable(Var, NameWords, TypeWords, RestOfWords, NextWords),
     name_predicate(NameWords, Name), 
     name_predicate(TypeWords, Type), 
     build_template_elements(NextWords, [], RestVars, RestTypes, Others, RestTemplate).
 build_template_elements([Word|RestOfWords], Previous, RestVars, RestTypes,  [Word|Others], [Word|RestTemplate]) :-
     build_template_elements(RestOfWords, [Word|Previous], RestVars, RestTypes, Others, RestTemplate).
 
-% extract_variable(+ListOfWords, Var, ListOfNameWords, ListOfTypeWords, NextWordsInText)
-extract_variable([], _, [], [], []) :- !.                                % stop at when words run out
-extract_variable([Word|RestOfWords], _, [], [], [Word|RestOfWords]) :-   % stop at reserved words, verbs or prepositions. 
-    (reserved_word(Word); verb(Word); preposition(Word); punctuation(Word)).  % or punctuation
-extract_variable([Word|RestOfWords], Var, [Word|RestName], Type, NextWords) :- % ordinals are not part of the name
-    ordinal(Word), !,
-    extract_variable(RestOfWords, Var, RestName, Type, NextWords).
-extract_variable([Word|RestOfWords], Var, [Word|RestName], [Word|RestType], NextWords) :-
+% extract_variable(-Var, -ListOfNameWords, -ListOfTypeWords, +ListOfWords, -NextWordsInText)
+% refactored as a dcg predicate
+extract_variable(_, [], [], [], []) :- !.                                % stop at when words run out
+extract_variable(_, [], [], [Word|RestOfWords], [Word|RestOfWords]) :-   % stop at reserved words, verbs or prepositions. 
+    (reserved_word(Word); verb(Word); preposition(Word); punctuation(Word)), !.  % or punctuation
+extract_variable(Var, RestName, RestType, [' '|RestOfWords], NextWords) :- !, % skipping spaces
+    extract_variable(Var, RestName, RestType, RestOfWords, NextWords).
+extract_variable(Var, RestName, RestType, ['\t'|RestOfWords], NextWords) :- !,  % skipping spaces
+    extract_variable(Var, RestName, RestType, RestOfWords, NextWords).  
+extract_variable(Var, [Word|RestName], Type, [Word|RestOfWords], NextWords) :- % ordinals are not part of the name
+    ordinal(Word), !, 
+    extract_variable(Var, RestName, Type, RestOfWords, NextWords).
+extract_variable(Var, [Word|RestName], [Word|RestType], [Word|RestOfWords], NextWords) :-
     is_a_type(Word),
-    extract_variable(RestOfWords, Var, RestName, RestType, NextWords).
+    extract_variable(Var, RestName, RestType, RestOfWords, NextWords).
 
 name_predicate(Words, Predicate) :-
     concat_atom(Words, '_', Predicate). 
 
+% statement: the different types of statements in a LE text
 statement([Prolog]) --> prolog_fact(Prolog).
+
+statement([if(Head,Conditions)]) -->
+    literal([], Map1, Head), newline,
+    spaces(Ind), if_, conditions(Ind, Map1, _MapN, ListOfConds), 
+    {map_to_conds(ListOfConds, Conditions)}, spaces_or_newlines(_), period.
 
 prolog_fact(Prolog) -->  % binary predicate
     t_or_w(X, [], M2), word(Predicate), t_or_w(Y, M2, _M_Out), period,
     {Prolog =.. [Predicate, X, Y]}.
 
-statement([if(Head,Conditions)]) -->
-    literal([], Map1, Head), newline,
-    spaces(Ind), if_, conditions(Ind, Map1, _MapN, ListOfConds), 
-    {map_to_conds(ListOfConds, Conditions)},  spaces_or_newlines(_), period.
+% the Value is the sum of each Asset Net such that
+condition(_, Map1, MapN, aggregate_all(sum(Each),Conds,Value)) --> 
+    variable(Map1, Map2, Value), is_the_sum_of_each_, extract_variable(Each, NameWords, _), such_that_, 
+    spaces(_), { name_predicate(NameWords, Name), update_map(Each, Name, Map2, Map3) }, newline, 
+    spaces(Ind), conditions(Ind, Map3, MapN, ListOfConds), {map_to_conds(ListOfConds, Conds)}.
+    
+% it is not the case that: 
+condition(_, Map1, MapN, not(Conds)) --> 
+    spaces(_), not_, newline, 
+    spaces(Ind), conditions(Ind, Map1, MapN, ListOfConds), {map_to_conds(ListOfConds, Conds)}.
 
-conditions(Ind0, Map1, MapN, [Type-Ind-Cond|RestC], Input, Rest) :-
-    literal(Map1, Map2, Cond, Input, I1), 
-    more_conds(Ind0, Ind, Map2, MapN, Type, RestC, I1, Rest).
+condition(_, Map1, MapN, Cond) -->
+    literal(Map1, MapN, Cond). 
 
-more_conds(_, Ind, Map2, MapN, Type, RestC, I1, Rest) :-
-    newline(I1, I2),
-    spaces(Ind, I2, I3), 
-    operator(Type, I3, I4), 
-    conditions(Ind,Map2, MapN, RestC, I4, Rest). 
-more_conds(Ind, Ind, Map, Map, last, [], In, In). 
+% regular and/or lists of conditions
+conditions(Ind0, Map1, MapN, [Op-Ind-Cond|RestC]) --> 
+    condition(Ind0, Map1, Map2, Cond), 
+    more_conds(Ind0, Ind, Map2, MapN, Op, RestC).
+
+more_conds(_, Ind, Map2, MapN, Op, RestC) --> 
+    newline, spaces(Ind), 
+    operator(Op), 
+    conditions(Ind,Map2, MapN, RestC). 
+more_conds(Ind, Ind, Map, Map, last, []) --> []. 
+
+variable(Map1, MapN, Var) --> 
+    spaces(_), [Det], {determiner(Det)}, extract_variable(Var, NameWords, _),
+    { name_predicate(NameWords, Name), update_map(Var, Name, Map1, MapN) }. 
+
+literal(Map1, MapN, Literal) --> 
+    predicate_statement(PossibleTemplate),
+    {match_template(PossibleTemplate, Map1, MapN, Literal)}.
 
 % map_to_conds(+ListOfConds, -LogicallyOrderedConditions)
-% fist the last condition always fits in
-map_to_conds([last-_-C1], C1) :- !. 
+% the last condition always fits in
+map_to_conds([last-_-C1], C1) :- !.   
 map_to_conds([and-_-C1, last-_-C2], (C1,C2)) :- !. 
 map_to_conds([or-_-C1, last-_-C2], (C1;C2)) :- !.
 % from and to and
@@ -174,10 +202,6 @@ map_to_conds([and-Ind1-C1, or-Ind2-C2|RestC], ((C1, C2);RestMapped ) ) :-
 operator(and, In, Out) :- and_(In, Out).
 operator(or, In, Out) :- or_(In, Out).
 
-literal(Map1, MapN, Literal) --> 
-    predicate_statement(PossibleTemplate),
-    {match_template(PossibleTemplate, Map1, MapN, Literal)}.
-
 predicate_statement(RestW, [' '|RestIn], Out) :-  % skip spaces in template
     predicate_statement(RestW, RestIn, Out).
 predicate_statement(RestW, ['\t'|RestIn], Out) :- % skip tabs in template
@@ -202,28 +226,32 @@ match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, [Element|RestS
 match([Element|RestElements], [Det|PossibleLiteral], Map1, MapN, [Var|RestSelected]) :-
     var(Element), 
     determiner(Det), 
-    % extract_variable(+ListOfWords, Var, ListOfNameWords, ListOfTypeWords, NextWordsInText)
-    extract_variable(PossibleLiteral, Var, NameWords, _, NextWords), % <- leave that _ unbound!
+    % extract_variable(-Var, -ListOfNameWords, -ListOfTypeWords, ?ListOfWords, ?NextWordsInText)
+    extract_variable(Var, NameWords, _, PossibleLiteral, NextWords), % <- leave that _ unbound!
     name_predicate(NameWords, Name),
     update_map(Var, Name, Map1, Map2),
     match(RestElements, NextWords, Map2, MapN, RestSelected).  
 match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, [Constant|RestSelected]) :-
     var(Element), 
-    extract_constant([Word|PossibleLiteral], NameWords, NextWords),
+    extract_constant(NameWords, [Word|PossibleLiteral], NextWords),
     name_predicate(NameWords, Constant),
     update_map(Element, Constant, Map1, Map2),
     match(RestElements, NextWords, Map2, MapN, RestSelected). 
 
-% extract_constant(+ListOfWords, ListOfNameWords, NextWordsInText)
+% extract_constant(ListOfNameWords, +ListOfWords, NextWordsInText)
 extract_constant([], [], []) :- !.                                % stop at when words run out
-extract_constant([Word|RestOfWords], [], [Word|RestOfWords]) :-   % stop at reserved words, verbs? or prepositions?. 
+extract_constant([], [Word|RestOfWords], [Word|RestOfWords]) :-   % stop at reserved words, verbs? or prepositions?. 
     (reserved_word(Word); verb(Word); preposition(Word); punctuation(Word)), !.  % or punctuation
-%extract_constant([Word|RestOfWords], [Word|RestName], NextWords) :- % ordinals are not part of the name
+%extract_constant([Word|RestName], [Word|RestOfWords], NextWords) :- % ordinals are not part of the name
 %    ordinal(Word), !,
-%    extract_constant(RestOfWords, RestName, NextWords).
-extract_constant([Word|RestOfWords], [Word|RestName], NextWords) :-
+%    extract_constant(RestName, RestOfWords, NextWords).
+extract_constant(RestName, [' '|RestOfWords],  NextWords) :- !, % skipping spaces
+    extract_constant(RestName, RestOfWords, NextWords).
+extract_constant(RestName, ['\t'|RestOfWords],  NextWords) :- !, 
+    extract_constant(RestName, RestOfWords, NextWords).
+extract_constant([Word|RestName], [Word|RestOfWords],  NextWords) :-
     %is_a_type(Word),
-    extract_constant(RestOfWords, RestName, NextWords).
+    extract_constant(RestName, RestOfWords, NextWords).
 
 determiner(Det) :-
     (ind_det(Det); ind_det_C(Det); def_det(Det); def_det_C(Det)), !. 
@@ -235,13 +263,13 @@ rebuild_template(RawTemplate, Map1, MapN, Template) :-
 template_elements([], Map1, Map1, _, []).     
 template_elements([Word|RestOfWords], Map1, MapN, Previous, [Var|RestTemplate]) :-
     (ind_det(Word); ind_det_C(Word)), Previous \= [is|_], 
-    extract_variable(RestOfWords, Var, NameWords, _, NextWords),
+    extract_variable(Var, NameWords, _, RestOfWords, NextWords),
     name_predicate(NameWords, Name), 
     update_map(Var, Name, Map1, Map2), 
     template_elements(NextWords, Map2, MapN, [], RestTemplate).
 template_elements([Word|RestOfWords], Map1, MapN, Previous, [Var|RestTemplate]) :-
     (def_det_C(Word); def_det(Word)), Previous \= [is|_], 
-    extract_variable(RestOfWords, Var, NameWords, _, NextWords),
+    extract_variable(Var, NameWords, _, RestOfWords, NextWords),
     name_predicate(NameWords, Name), 
     member(map(Var,Name), Map1),  % confirming it is an existing variable and unifying
     template_elements(NextWords, Map1, MapN, [], RestTemplate).
@@ -286,6 +314,12 @@ comma_or_period --> comma.
 and_ --> [and].
 
 or_ --> [or].
+
+not_ --> [it], spaces(_), [is], spaces(_), [not], spaces(_), [the], spaces(_), [case], spaces(_), [that], spaces(_). 
+
+is_the_sum_of_each_ --> [is], spaces(_), [the], spaces(_), [sum], spaces(_), [of], spaces(_), [each], spaces(_) .
+
+such_that_ --> [such], spaces(_), [that], spaces(_). 
 
 %mapped_time_expression([T1,T2], Mi, Mo) -->
 %    from_, t_or_w(T1, Mi, M2), to_, t_or_w(T2, M2, Mo).
@@ -388,6 +422,7 @@ reserved_word(W) :- % more reserved words pending
     W = 'is'; W ='not'; W='When'; W='when'; W='if'; W='If'; W='then';
     W = 'at'; W= 'from'; W='to'; W='and'; W='half'; W='or'; 
     W = 'else'; W = 'otherwise'; 
+    W = such ; 
     W = '<'; W = '='; W = '>'; W = '+'; W = '-'; W = '/'; W = '*';
     W = '{' ; W = '}' ; W = '(' ; W = ')' ; W = '[' ; W = ']';
     W = ':', W = ','; W = ';'.

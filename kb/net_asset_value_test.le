@@ -6,12 +6,13 @@ the predicates are:
     a value =< a second value,
     a Person has cgt assets net value of a Value at a Date,
     a Person has relevant asset an Asset,
+    an Asset is a cgt asset, 
     a Person owns an Asset,
     a Person is connected to a Connection,
-    a Person owns an Asset,
     a Person is affiliated with an Affiliate,
     an Asset is used in business of a Person,
     a Person has to exclude asset an Asset,
+    a value is the net value of an asset at a date,  
     an Affiliate is connected to a Connection,
     an Asset belongs to a Connection,
     a Person is an individual,
@@ -32,13 +33,14 @@ the rules are:
 %    if the tax payer has cgt assets net value of a value at the date 
 %    and the value =< 6000000.
  
-%a Person has cgt assets net value of a Value at a Date 
-%    if  the Value is the sum of each AssetNet such that {
-%        the Person has relevant asset an Asset
-%        and the Asset is a cgt asset and it is not the case that 
-%            the Person has to exclude asset the Asset
-%            and the Asset 's net value is the Asset Net at the Date
-%    }.
+a Person has cgt assets net value of a Value at a Date 
+    if  the Value is the sum of each Asset Net such that 
+        the Person has relevant asset an Asset
+        and the Asset is a cgt asset 
+        and it is not the case that 
+            the Person has to exclude asset the Asset
+            and the Asset net is the net value of the Asset at the Date
+    .
  
 %a Person has relevant asset an Asset 
 %    if the Person owns the Asset.

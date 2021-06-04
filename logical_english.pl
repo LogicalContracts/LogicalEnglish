@@ -401,7 +401,7 @@ conditions(then(if(C),else(T,E)),VarNames,V1,Vn,if_then_else(Condition,Then,Else
     conditions(C,VarNames,V1,V2,Condition), conditions(T,VarNames,V2,V3,Then), conditions(E,VarNames,V3,Vn,Else).
 conditions(then(if(C),T),VarNames,V1,Vn,must(Condition,Then)) :- !,
     conditions(C,VarNames,V1,V2,Condition), conditions(T,VarNames,V2,Vn,Then).
-%TODO: forall, setof, ->, other cases in i(...)
+%TODO: ->, other cases in i(...)
 conditions(not(Cond),VarNames,V1,Vn,not(Condition)) :- !, conditions(Cond,VarNames,V1,Vn,Condition).
 conditions((A,B),VarNames,V1,Vn,Condition) :- !, conditions(and(A,B),VarNames,V1,Vn,Condition).
 conditions(';'(C->T,E),VarNames,V1,Vn,LE) :- !, conditions(then(if(C),else(T,E)),VarNames,V1,Vn,LE). % not quite the same meaning!
