@@ -111,7 +111,7 @@ build_template_elements([Word|RestOfWords], Previous, RestVars, RestTypes,  [Wor
 % refactored as a dcg predicate
 extract_variable(_, [], [], [], []) :- !.                                % stop at when words run out
 extract_variable(_, [], [], [Word|RestOfWords], [Word|RestOfWords]) :-   % stop at reserved words, verbs or prepositions. 
-    (reserved_word(Word); verb(Word); preposition(Word); punctuation(Word)), !.  % or punctuation
+    (reserved_word(Word); verb(Word); preposition(Word); punctuation(Word); phrase(newline, [Word])), !.  % or punctuation
 extract_variable(Var, RestName, RestType, [' '|RestOfWords], NextWords) :- !, % skipping spaces
     extract_variable(Var, RestName, RestType, RestOfWords, NextWords).
 extract_variable(Var, RestName, RestType, ['\t'|RestOfWords], NextWords) :- !,  % skipping spaces
@@ -125,51 +125,6 @@ extract_variable(Var, [Word|RestName], [Word|RestType], [Word|RestOfWords], Next
 
 name_predicate(Words, Predicate) :-
     concat_atom(Words, '_', Predicate). 
-
-% statement: the different types of statements in a LE text
-statement([Prolog]) --> prolog_fact(Prolog).
-
-statement([if(Head,Conditions)]) -->
-    literal([], Map1, Head), newline,
-    spaces(Ind), if_, conditions(Ind, Map1, _MapN, ListOfConds), 
-    {map_to_conds(ListOfConds, Conditions)}, spaces_or_newlines(_), period.
-
-prolog_fact(Prolog) -->  % binary predicate
-    t_or_w(X, [], M2), word(Predicate), t_or_w(Y, M2, _M_Out), period,
-    {Prolog =.. [Predicate, X, Y]}.
-
-% the Value is the sum of each Asset Net such that
-condition(_, Map1, MapN, aggregate_all(sum(Each),Conds,Value)) --> 
-    variable(Map1, Map2, Value), is_the_sum_of_each_, extract_variable(Each, NameWords, _), such_that_, 
-    spaces(_), { name_predicate(NameWords, Name), update_map(Each, Name, Map2, Map3) }, newline, 
-    spaces(Ind), conditions(Ind, Map3, MapN, ListOfConds), {map_to_conds(ListOfConds, Conds)}.
-    
-% it is not the case that: 
-condition(_, Map1, MapN, not(Conds)) --> 
-    spaces(_), not_, newline, 
-    spaces(Ind), conditions(Ind, Map1, MapN, ListOfConds), {map_to_conds(ListOfConds, Conds)}.
-
-condition(_, Map1, MapN, Cond) -->
-    literal(Map1, MapN, Cond). 
-
-% regular and/or lists of conditions
-conditions(Ind0, Map1, MapN, [Op-Ind-Cond|RestC]) --> 
-    condition(Ind0, Map1, Map2, Cond), 
-    more_conds(Ind0, Ind, Map2, MapN, Op, RestC).
-
-more_conds(_, Ind, Map2, MapN, Op, RestC) --> 
-    newline, spaces(Ind), 
-    operator(Op), 
-    conditions(Ind,Map2, MapN, RestC). 
-more_conds(Ind, Ind, Map, Map, last, []) --> []. 
-
-variable(Map1, MapN, Var) --> 
-    spaces(_), [Det], {determiner(Det)}, extract_variable(Var, NameWords, _),
-    { name_predicate(NameWords, Name), update_map(Var, Name, Map1, MapN) }. 
-
-literal(Map1, MapN, Literal) --> 
-    predicate_statement(PossibleTemplate),
-    {match_template(PossibleTemplate, Map1, MapN, Literal)}.
 
 % map_to_conds(+ListOfConds, -LogicallyOrderedConditions)
 % the last condition always fits in
@@ -227,21 +182,25 @@ match([Element|RestElements], [Det|PossibleLiteral], Map1, MapN, [Var|RestSelect
     var(Element), 
     determiner(Det), 
     % extract_variable(-Var, -ListOfNameWords, -ListOfTypeWords, ?ListOfWords, ?NextWordsInText)
-    extract_variable(Var, NameWords, _, PossibleLiteral, NextWords), % <- leave that _ unbound!
-    name_predicate(NameWords, Name),
+    extract_variable(Var, NameWords, _, PossibleLiteral, NextWords),  NameWords \= [], % it is not empty % <- leave that _ unbound!
+    name_predicate(NameWords, Name), 
     update_map(Var, Name, Map1, Map2),
     match(RestElements, NextWords, Map2, MapN, RestSelected).  
 match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, [Constant|RestSelected]) :-
     var(Element), 
-    extract_constant(NameWords, [Word|PossibleLiteral], NextWords),
+    extract_constant(NameWords, [Word|PossibleLiteral], NextWords), NameWords \= [], % it is not empty
     name_predicate(NameWords, Constant),
     update_map(Element, Constant, Map1, Map2),
+    match(RestElements, NextWords, Map2, MapN, RestSelected). 
+match([Element|RestElements], ['['|PossibleLiteral], Map1, MapN, [List|RestSelected]) :-
+    var(Element), 
+    extract_list(List, Map1, Map2, PossibleLiteral, NextWords),
     match(RestElements, NextWords, Map2, MapN, RestSelected). 
 
 % extract_constant(ListOfNameWords, +ListOfWords, NextWordsInText)
 extract_constant([], [], []) :- !.                                % stop at when words run out
 extract_constant([], [Word|RestOfWords], [Word|RestOfWords]) :-   % stop at reserved words, verbs? or prepositions?. 
-    (reserved_word(Word); verb(Word); preposition(Word); punctuation(Word)), !.  % or punctuation
+    (reserved_word(Word); verb(Word); preposition(Word); punctuation(Word); phrase(newline, [Word])), !.  % or punctuation
 %extract_constant([Word|RestName], [Word|RestOfWords], NextWords) :- % ordinals are not part of the name
 %    ordinal(Word), !,
 %    extract_constant(RestName, RestOfWords, NextWords).
@@ -252,6 +211,25 @@ extract_constant(RestName, ['\t'|RestOfWords],  NextWords) :- !,
 extract_constant([Word|RestName], [Word|RestOfWords],  NextWords) :-
     %is_a_type(Word),
     extract_constant(RestName, RestOfWords, NextWords).
+
+% extract_list(-List, +Map1, -Map2, +[Word|PossibleLiteral], -NextWords),
+extract_list([], Map, Map, [']'|Rest], Rest) :- !. 
+extract_list(RestList, Map1, MapN, [' '|RestOfWords],  NextWords) :- !, % skipping spaces
+    extract_list(RestList, Map1, MapN, RestOfWords, NextWords).
+extract_list(RestList, Map1, MapN, ['\t'|RestOfWords],  NextWords) :- !, 
+    extract_list(RestList, Map1, MapN, RestOfWords, NextWords).
+extract_list(RestList, Map1, MapN, [','|RestOfWords],  NextWords) :- !, 
+    extract_list(RestList, Map1, MapN, RestOfWords, NextWords).
+extract_list([Var|RestList], Map1, MapN, [Det|InWords], LeftWords) :-
+    determiner(Det), 
+    extract_variable(Var, NameWords, _, InWords, NextWords), NameWords \= [], % <- leave that _ unbound!
+    name_predicate(NameWords, Name),  !,
+    update_map(Var, Name, Map1, Map2),
+    extract_list(RestList, Map2, MapN, NextWords, LeftWords).
+extract_list([Member|RestList], Map1, MapN, InWords, LeftWords) :-
+    extract_constant(NameWords, InWords, NextWords), NameWords \= [],
+    name_predicate(NameWords, Member),
+    extract_list(RestList, Map1, MapN, NextWords, LeftWords).
 
 determiner(Det) :-
     (ind_det(Det); ind_det_C(Det); def_det(Det); def_det_C(Det)), !. 
@@ -281,12 +259,77 @@ update_map(V, Name, InMap, InMap) :- % unify V with same named variable in curre
 update_map(V, Name, InMap, OutMap) :- % updates the map by adding a new variable into it. 
     OutMap = [map(V,Name)|InMap]. 
 
-% a voter votes for a first candidate in a ballot
-% the voter votes for a second candidate in the ballot at..
-%literal(M_In,M_Out, happens(Action, T1, T2)) -->
-%    t_or_w(X, M_In, M2), action(lambda([X,Y,B], Action)), for,
-%    t_or_w(Y, M2, M3), in, t_or_w(B, M3, M4),
-%    mapped_time_expression([T1,T2], M4, M_Out).
+builtin_(BuiltIn, [BuiltIn|RestWords], RestWords) :- 
+    Predicate =.. [BuiltIn, _, _],  % only binaries fttb
+    predicate_property(system:Predicate, built_in). 
+
+/* --------------------------------------------------------- LE DCGs */
+% statement: the different types of statements in a LE text
+statement([if(Head,Conditions)]) -->
+    literal([], Map1, Head), newline,
+    spaces(Ind), if_, conditions(Ind, Map1, _MapN, ListOfConds), 
+    {map_to_conds(ListOfConds, Conditions)}, spaces_or_newlines(_), period, !. % <- cut !!!!
+
+literal(Map1, MapN, Literal) --> 
+    predicate_statement(PossibleTemplate),
+    {match_template(PossibleTemplate, Map1, MapN, Literal)}.
+
+% regular and/or lists of conditions
+conditions(Ind0, Map1, MapN, [Op-Ind-Cond|RestC]) --> 
+    condition(Cond, Ind0, Map1, Map2), 
+    more_conds(Ind0, Ind, Map2, MapN, Op, RestC).
+
+more_conds(_, Ind, Map2, MapN, Op, RestC) --> 
+    newline, spaces(Ind), 
+    operator(Op), % Op are and, or. 
+    conditions(Ind,Map2, MapN, RestC). 
+more_conds(Ind, Ind, Map, Map, last, []) --> []. 
+ 
+term(Term, Map1, MapN) --> variable(Term, Map1, MapN); constant(Term, Map1, MapN); le_list(Term, Map1, MapN). 
+
+expression((X - Y), Map1, MapN) --> 
+    term(X, Map1, Map2), spaces(_), minus_, spaces(_), expression(Y, Map2, MapN), spaces(_). 
+expression((X + Y), Map1, MapN) --> 
+    term(X, Map1, Map2), spaces(_), plus_, spaces(_), expression(Y, Map2, MapN), spaces(_). 
+expression(Y, Map1, MapN) --> 
+    term(Y, Map1, MapN), spaces(_).
+
+% the Value is the sum of each Asset Net such that
+condition(FinalExpression, _, Map1, MapN) --> 
+    variable(Value, Map1, Map2), is_the_sum_of_each_, extract_variable(Each, NameWords, _), such_that_, 
+    spaces(_), { name_predicate(NameWords, Name), update_map(Each, Name, Map2, Map3) }, newline, 
+    spaces(Ind), conditions(Ind, Map3, Map4, ListOfConds), {map_to_conds(ListOfConds, Conds)},
+    modifiers(aggregate_all(sum(Each),Conds,Value), Map4, MapN, FinalExpression).
+    
+% it is not the case that: 
+condition(not(Conds), _, Map1, MapN) --> 
+    spaces(_), not_, newline, 
+    spaces(Ind), conditions(Ind, Map1, MapN, ListOfConds), {map_to_conds(ListOfConds, Conds)}.
+
+condition(Cond, _, Map1, MapN) -->
+    literal(Map1, MapN, Cond). 
+
+% condition(-Cond, ?Ind, +InMap, -OutMap)
+condition(InfixBuiltIn, _, Map1, MapN) --> 
+    term(Term, Map1, Map2), spaces(_), builtin_(BuiltIn), 
+    spaces(_), expression(Expression, Map2, MapN), {InfixBuiltIn =.. [BuiltIn, Term, Expression]}. 
+
+% modifiers add reifying predicates to an expression. 
+% modifiers(+MainExpression, +MapIn, -MapOut, -FinalExpression)
+modifiers(MainExpression, Map1, MapN, on(MainExpression, Var) ) -->
+    newline, spaces(_), at_, variable(Var, Map1, MapN). % newline before a reifying expression
+modifiers(MainExpression, Map, Map, MainExpression) --> [].  
+
+variable(Var, Map1, MapN) --> 
+    spaces(_), [Det], {determiner(Det)}, extract_variable(Var, NameWords, _),
+    { name_predicate(NameWords, Name), update_map(Var, Name, Map1, MapN) }. 
+
+constant(Constant, Map, Map) -->
+    extract_constant(NameWords), { name_predicate(NameWords, Constant) }.
+
+le_list(Constant, Map1, MapN) --> 
+    spaces(_), bracket_open_,   
+    extract_list(NameWords, Map1, MapN), { name_predicate(NameWords, Constant) }.
 
 spaces(N) --> [' '], !, spaces(M), {N is M + 1}.
 spaces(N) --> ['\t'], !, spaces(M), {N is M + 1}. % counting tab as one space
@@ -321,6 +364,18 @@ is_the_sum_of_each_ --> [is], spaces(_), [the], spaces(_), [sum], spaces(_), [of
 
 such_that_ --> [such], spaces(_), [that], spaces(_). 
 
+at_ --> [at], spaces(_). 
+
+minus_ --> ['-'], spaces(_).
+
+plus_ --> ['+'], spaces(_).
+
+divide_ --> ['/'], spaces(_).
+
+times_ --> ['*'], spaces(_).
+
+bracket_open_ --> ['['], spaces(_). 
+
 %mapped_time_expression([T1,T2], Mi, Mo) -->
 %    from_, t_or_w(T1, Mi, M2), to_, t_or_w(T2, M2, Mo).
 % mapped_time_expression([_T0,T], Mi, Mo) -->
@@ -348,57 +403,6 @@ ordinal(8,  'eighth').
 ordinal(9,  'ninth').
 ordinal(10, 'tenth').
 
-% if it is a type is not a word. Using cut
-t_or_w(S, InMap, OutMap, In, Out) :- type(S, InMap, OutMap, In, Out), !.
-t_or_w(W, Map, Map, In, Out) :- word(W, In, Out).
-
-% treating a list as one word for simplicity
-word(L, ['['|R], RR) :- rebuilt_list(R, [], L, RR).
-       % append(L, [']'|RR], R). % append(['['|W], [']'], L), !.
-word(W, [P1, '_', P2|R], R) :- atomic_list_concat([P1, '_', P2], '', W), !.
-word(W, [P1, '_', P2, '_', P3|R], R) :-
-  atomic_list_concat([P1, '_', P2, '_', P3], '', W), !.
-word(W, [W|R], R)  :- not(reserved_word(W)).
-word(_, Pos, _) :- asserterror('No word at ', Pos), fail.
-
-rebuilt_list([']'|RR], In, In, RR) :- !. % only the first ocurrence
-rebuilt_list([','|RR], In, Out, NRR) :- !,
-   rebuilt_list(RR, In, Out, NRR).
-rebuilt_list([A|RR], In, [A|Out], NRR) :-
-   rebuilt_list(RR, In, Out, NRR).
-
-% 0 votes
-type(N, Map, Map, [N, Type|Out], Out) :-
-   number(N), is_a_type(Type).
-% a number of votes
-type(V, InMap,OutMap, [D, number, of, Type|Out], Out) :-
-   ind_det(D),
-   atomic_concat(number, Type, VarName),
-   OutMap = [map(V,VarName)|InMap], !.
-% "the number of votes" is a special case of anaphora
-type(V, InMap,OutMap, [the, number, of, Type|Out], Out) :-
-   atomic_concat(number, Type, VarName),
-   ((member(map(V,VarName),InMap), OutMap = InMap);
-    OutMap = [map(V,VarName)|InMap]), !.
-type(V, InMap,OutMap, [D, Ordinal, Type|Out], Out) :-
-   ind_det(D),
-   ordinal(_, Ordinal),
-   atomic_concat(Ordinal, Type, VarName),
-   OutMap = [map(V,VarName)|InMap], !.
-type(V, InMap,InMap, [the, Ordinal, Type|Out], Out) :-
-   ordinal(_, Ordinal),
-   atomic_concat(Ordinal, Type, VarName),
-   member(map(V,VarName),InMap), !.
-type(V, InMap,OutMap, [the, Ordinal, Type|Out], Out) :-
-   ordinal(_, Ordinal),
-   atomic_concat(Ordinal, Type, VarName),
-   not(member(map(V, VarName), InMap)),
-   OutMap = [map(V,VarName)|InMap]. % creates the var if it does not exist
-type(V, InMap,OutMap, [D,Type|Out], Out) :- ind_det(D), OutMap = [map(V,Type)|InMap].
-type(V, InMap,InMap, [the,Type|Out], Out) :- member(map(V,Type),InMap).
-type(V, InMap,OutMap, [the,Type|Out], Out) :-  OutMap = [map(V,Type)|InMap]. % creates the var if it does not exist
-type(_, In, In, Pos, _) :- asserterror('No type at ', Pos), fail.
-
 is_a_type(T) :- % pending integration with wei2nlen:is_a_type/1
    ground(T),
    not(number(T)), not(punctuation(T)),
@@ -414,7 +418,7 @@ def_det_C('The').
 
 ind_det(a).
 ind_det(an).
-ind_det(some).
+% ind_det(some).
 
 def_det(the).
 
@@ -506,6 +510,12 @@ write_taxlog_if(Rule, if(ReadableHead, ReadableBody)) :-
     Rule = if(Head, Body),
     write_taxlog_literal(Head, ReadableHead),
     write_taxlog_body(Body, ReadableBody).
+
+write_taxlog_literal(not(Body), not(ReadableLiteral)) :- !, 
+    write_taxlog_body(Body, ReadableLiteral). 
+
+write_taxlog_literal(aggregate_all(sum(Each),Conds,Value), aggregate_all(sum(Each),NewConds,Value)) :-
+    write_taxlog_body(Conds, NewConds). 
 
 write_taxlog_literal(Literal, ReadableLiteral) :-
     Literal =.. [Pred|ArgVars],
