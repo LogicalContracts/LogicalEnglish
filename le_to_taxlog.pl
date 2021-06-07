@@ -582,7 +582,7 @@ write_taxlog_body(Lit, Readable, Map1, MapN) :-
     write_taxlog_literal(Lit, Readable, Map1, MapN). 
 
 
-%%% --------------------------------------------------- Interface to Formal english
+%%% ------------------------------------------------ Swish Interface to logical english
 %% based on logicalcontracts' lc_server.pl
 
 :- multifile prolog_colour:term_colours/2.
