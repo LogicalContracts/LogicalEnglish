@@ -10,6 +10,7 @@ prolog:message(S-Args) --> {atomic(S),is_list(Args)},[S-Args].
 :- use_module('api.pl').
 :- use_module('drafter.pl').
 :- use_module('logical_english.pl').
+:- use_module('le_to_taxlog.pl').
 
 :- initialization( (discover_kps_in_dir, setup_kp_modules, xref_all, writeln("Ready!"))).
 
