@@ -401,7 +401,7 @@ conditions(then(if(C),else(T,E)),VarNames,V1,Vn,if_then_else(Condition,Then,Else
     conditions(C,VarNames,V1,V2,Condition), conditions(T,VarNames,V2,V3,Then), conditions(E,VarNames,V3,Vn,Else).
 conditions(then(if(C),T),VarNames,V1,Vn,must(Condition,Then)) :- !,
     conditions(C,VarNames,V1,V2,Condition), conditions(T,VarNames,V2,Vn,Then).
-%TODO: forall, setof, ->, other cases in i(...)
+%TODO: ->, other cases in i(...)
 conditions(not(Cond),VarNames,V1,Vn,not(Condition)) :- !, conditions(Cond,VarNames,V1,Vn,Condition).
 conditions((A,B),VarNames,V1,Vn,Condition) :- !, conditions(and(A,B),VarNames,V1,Vn,Condition).
 conditions(';'(C->T,E),VarNames,V1,Vn,LE) :- !, conditions(then(if(C),else(T,E)),VarNames,V1,Vn,LE). % not quite the same meaning!
@@ -453,8 +453,12 @@ handle_le(Request) :-
     ]).
 
 :- discontiguous logical_english:dict/3.
-% dict(LiteralElements, NamesAndTypes, Template)
-% 
+% dict(?LiteralElements, ?NamesAndTypes, ?Template)
+% this is a multimodal predicate used to associate a Template with its particular other of the words for LE
+% with the Prolog expression of that relation in LiteralElements (not yet a predicate =.. is done outside).
+% NamesAndTypes contains the external name and type (name-type) of each variable just in the other in 
+% which the variables appear in LiteralElement. 
+% general purpose entries:
 dict([in, Member, List], [member-object, list-list], [Member, is, in, List]).
 dict([assert,Information], [info-clause], [this, information, Information, ' has', been, recorded]).
 dict([is_a, Object, Type], [object-object, type-type], [Object, is, of, type, Type]).
@@ -462,6 +466,8 @@ dict([before, T1, T2], [time1-time, time2-time], [T1, is, before, T2]).
 dict([between,Minimum,Maximum,Middle], [min-date, max-date, middle-date], 
     [Middle, is, between, Minimum, '&', Maximum]).
 dict([must_be, Type, Term], [type-type, term-term], [Term, must, be, Type]).
+
+% domain-specific entries: to be relocated or automatically generated from declarations. 
 dict(['\'s_R&D_expense_credit_is', Project, ExtraDeduction, TaxCredit], 
                                   [project-projectid, extra-amount, credit-amount],
     [Project, '\'s', 'R&D', expense, credit, is, TaxCredit, plus, ExtraDeduction]).

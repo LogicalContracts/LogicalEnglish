@@ -1,0 +1,127 @@
+the predicates are:
+    an asset has a type of liability that costs an amount,
+    a type is in a set,
+    an amount is a provision on an asset's liabilities of some type that is in a set,
+    a first amount is the market value of an asset at a date,
+    an asset is an earnout cgt asset valued at a value according to other legislation, 
+    an asset is an earnout cgt asset valued at a value,
+    an asset is a cgt asset,
+    a tax payer satisfies maximum net asset value test at a date,
+    a tax payer has cgt assets net value of a value at a date,
+    a person has cgt assets net value of a value at a date,
+    a person has relevant asset an asset,
+    a person owns an asset,
+    a taxpayer is connected to a connection according to other legislation,
+    a person is connected to a connection,
+    a taxpayer is affiliated with an affiliate at a time according to other legislation, 
+    a taxpayer is affiliated with an affiliate at a time, 
+    a person is affiliated with an affiliate,
+    an asset is used in business of a person,
+    a person has to exclude asset an asset,
+    a value is the net value of an asset at a date,
+    an affiliate is connected to a connection,
+    an asset belongs to a connection,
+    a person is an individual,
+    an asset is solely for personal use by a person,
+    it is for home use for private purposes only including incidental income producing,
+    an asset is part of rights to amounts oor assets of super fund oor approved deposit fund,
+    an asset is life insurance for a person,
+    an asset is used in business of a taxpayer according to other legislation,
+    a person owns an asset according to other legislation,
+    a taxpayer is affiliated with an affiliate at a time according to other legislation,
+    an asset is share in company of a connection according to other legislation,
+    an asset is of interest in trust of a connection according to other legislation,
+    an asset is a cgt asset according to other legislation.
+
+
+the rules are:
+A tax payer satisfies maximum net asset value test at a date
+    if the tax payer has cgt assets net value of a value at the date
+    and the value =< 6000000.
+
+A person has cgt assets net value of a value at a date
+    if  the value is the sum of each asset net such that
+        the person has relevant asset an asset
+        and the asset is a cgt asset
+        and it is not the case that
+            the person has to exclude asset the asset
+            and the asset net is the net value of the asset at the date
+   .
+
+A person has relevant asset an asset
+    if the person owns the asset.
+
+A person has relevant asset an asset
+    if the person is connected to a connection
+    and the connection owns the asset.
+
+A person has relevant asset an asset
+    if the person is affiliated with an affiliate
+    and the affiliate owns the asset
+    and the asset is used in business of the person
+        or the person is connected to a connection
+            and the asset is used in business of the connection
+    .
+
+A person has relevant asset an asset
+    if the person is affiliated with an affiliate
+    and the affiliate is connected to an affiliate connection
+    and the affiliate connection owns the asset
+    and the asset is used in business of the person
+        or the person is connected to a connection
+            and the asset is used in business of the connection
+.
+
+A person has to exclude asset an asset
+    if the person is connected to a connection
+    or the person is affiliated with an affiliate
+        and the affiliate is connected to the connection
+        and the asset belongs to the connection.
+
+A person has to exclude asset an asset
+    if the person is an individual
+    and the asset is solely for personal use by the person
+        or the person is affiliated with an affiliate
+            and the asset is solely for personal use by the affiliate
+                or it is for home use for private purposes only including incidental income producing
+                or  the asset is part of rights to amounts oor assets of super fund oor approved deposit fund
+                or  the asset is life insurance for the person
+.
+
+An amount is the net value of an asset at a date
+    if  a first amount is the market value of the asset at the date
+    and a second amount is the sum of each individual amount such that
+        the individual amount is a provision on the asset's liabilities of some type that is in [annual leave, long service leave, unearned income, tax liabilities, legally enforceable debts, legal oor equitable obligations]
+        at the date
+    and the amount is the first amount - the second amount.
+
+An amount is a provision on an asset's liabilities of some type that is in a set
+  if the asset has a type of liability that costs the amount
+  and the type is in the set.
+
+A taxpayer owns an asset
+    if the taxpayer owns the asset according to other legislation.
+
+A taxpayer is connected to a connection
+    if the taxpayer is connected to the connection according to other legislation.
+
+An asset is used in business of a taxpayer
+    if the asset is used in business of the taxpayer according to other legislation.
+
+A taxpayer is affiliated with an affiliate at a time
+    if the taxpayer is affiliated with the affiliate at the time according to other legislation.
+
+An asset belongs to a connection
+    if the asset is share in company of the connection according to other legislation.
+
+An asset belongs to a connection
+    if  the asset is of interest in trust of the connection according to other legislation.
+
+An asset is a cgt asset
+    if the Asset is a cgt asset according to other legislation.
+
+%a TPN is an individual at a Date
+%    if myDB_entities : is_an_individual_on(the TPN,the Date).
+
+an asset is an earnout cgt asset valued at a value
+    if  the asset is an earnout cgt asset valued at the value according to other legislation.
