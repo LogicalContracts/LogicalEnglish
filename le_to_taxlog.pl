@@ -8,18 +8,18 @@ text_to_logic(String, Error, Translation) :-
     tokenize(String, Tokens, [cased(true), spaces(true)]),
     unpack_tokens(Tokens, UTokens), 
     clean_comments(UTokens, CTokens), 
-    write(String), 
+    print_message(informational, String), 
     ( phrase(document(Translation), CTokens) -> 
-        ( Error=[] )
+        ( print_message(informational, Translation), Error=[] )
     ;   ( showerror(Error), Translation=[])). 
 
 % document(-Translation, In, Rest)
 % a DCG predicate to translate a LE document into Taxlog prolog terms
 document(Translation, In, Rest) :-
-    header(Settings, In, Next), 
+    header(Settings, In, Next), % print_message(informational, Settings), 
     spaces_or_newlines(_, Next, Intermediate),
-    rules_previous(Intermediate, NextNext), 
-    content(Content, NextNext, Rest), 
+    rules_previous(Intermediate, NextNext),  print_message(informational, 'the rules are:'), 
+    content(Content, NextNext, Rest), print_message(informational, 'got the content'),
     append(Settings, Content, Translation).
 
 header(Settings, In, Next) :-
@@ -41,7 +41,7 @@ settings([],[]) --> [].
 content(C) --> 
     spaces_or_newlines(_), 
     statement(S),
-    spaces_or_newlines(_), 
+    spaces_or_newlines(_), {print_message(informational, ' more content')}, 
     content(R), 
     spaces_or_newlines(_), {append(S,R,C)}.
 content([]) --> [].
@@ -70,35 +70,40 @@ predicate_decl(_, _, Rest, R1) :-
     asserterror('Syntax error found in a declaration ', Pos, R1), fail.
 
 % statement: the different types of statements in a LE text
-statement([if(Head,Conditions)], In, Rest) :-
-    predicate_template(Possible, In, Rest1),
-    match_template(Possible, [],Map1, Head), nl, write('Head '), write(Head), 
-    newline(Rest1, Rest2), nl, write('newline '),
-    spaces(Ind, Rest2, Rest3), nl, write('spaces '), write(Ind), 
-    if_(Rest3, Rest4), nl, write('if '), !, 
-    conditions(Ind, Map1,_MapN,ListOfConds, Rest4, Rest5), 
-    %nl, write('conditions '),  write(ListOfConds), 
-    map_to_conds(ListOfConds, Conditions), write(Conditions), 
-    spaces_or_newlines(S, Rest5, Rest6), nl, write(' spaces or newlines -> '), write(S), 
-    period(Rest6, Rest), nl, write('.'), write(' Statement completed'). 
+% rewritten for swish
+%statement([if(Head,Conditions)], In, Rest) :-
+%    predicate_template(Possible, In, Rest1),
+%    match_template(Possible, [],Map1, Head), print_message(informational, 'Head '), print_message(informational, Head), 
+%    newline(Rest1, Rest2), print_message(informational, 'newline '),
+%    spaces(Ind, Rest2, Rest3), print_message(informational, 'spaces '), print_message(informational, Ind), 
+%    if_(Rest3, Rest4), print_message(informational, 'if '), !, 
+%    conditions(Ind, Map1,_MapN,ListOfConds, Rest4, Rest5), 
+%    %print_message(informational, 'conditions '),  print_message(informational, ListOfConds), 
+%    map_to_conds(ListOfConds, Conditions), print_message(informational, Conditions), 
+%    spaces_or_newlines(S, Rest5, Rest6), print_message(informational, ' spaces or newlines -> '), print_message(informational, S), 
+%    period(Rest6, Rest), print_message(informational, '.'), print_message(informational, ' Statement completed'), !. 
 
-%statement([if(Head,Conditions)]) -->  {nl, write('  inside statement')}, 
-%    literal([], Map1, Head), newline, {nl, write('  a literal'), write(Head)}, 
-%    spaces(Ind), if_, conditions(Ind, Map1, _MapN, ListOfConds), 
-%    {map_to_conds(ListOfConds, Conditions)}, spaces_or_newlines(_), period, !. % <- cut !!!!
+statement([if(Head,Conditions)]) -->  {print_message(informational, '  inside a statement')}, 
+    literal_([], Map1, Head), spaces_or_newlines(Ind), {print_message(informational, '  a literal'), print_message(informational, Head)}, 
+    if_, conditions(Ind, Map1, _MapN, ListOfConds), 
+    {map_to_conds(ListOfConds, Conditions)}, spaces_or_newlines(_), period. 
 
-literal(Map1, MapN, Literal) --> 
+literal_(Map1, MapN, Literal) --> 
     predicate_template(PossibleTemplate),
     {match_template(PossibleTemplate, Map1, MapN, Literal)}.
+% rewrite to use in swish
+%literal_(Map1, MapN, Literal, In, Out) :-  print_message(informational, '  inside a literal'),
+%        predicate_template(PossibleTemplate, In, Out), print_message(informational, PossibleTemplate),
+%        match_template(PossibleTemplate, Map1, MapN, Literal).
 % error clause
-literal(M, M, _, Rest, R1) :- 
+literal_(M, M, _, Rest, R1) :- 
     text_size(Size), length(Rest, Rsize), Pos is Size - Rsize, 
     asserterror('Syntax error found in a literal ', Pos, R1), fail.
 
 % regular and/or lists of conditions
-%conditions(Ind, Map1, MapN, [last-Ind-Cond], In1, Out) :- nl, write(' checking conditions'), 
-%    predicate_template(Possible, In1, Out), nl, write('Posible '), write(Possible),
-%    match_template(Possible, Map1, MapN, Cond), nl, write('Literal '), write(Cond). 
+%conditions(Ind, Map1, MapN, [last-Ind-Cond], In1, Out) :- print_message(informational, ' checking conditions'), 
+%    predicate_template(Possible, In1, Out), print_message(informational, 'Posible '), print_message(informational, Possible),
+%    match_template(Possible, Map1, MapN, Cond), print_message(informational, 'Literal '), print_message(informational, Cond). 
 
 conditions(Ind0, Map1, MapN, [Op-Ind-Cond|RestC]) -->  
     condition(Cond, Ind0, Map1, Map2), 
@@ -131,13 +136,13 @@ condition(not(Conds), _, Map1, MapN) -->
     spaces(_), not_, newline,  
     spaces(Ind), conditions(Ind, Map1, MapN, ListOfConds), {map_to_conds(ListOfConds, Conds)}.
 
-condition(Cond, _, Map1, MapN, R1, RN) :-  
-    nl, write(' condition/literal '),  
-    predicate_template(Possible, R1, RN), nl, write('Posible '), write(Possible),
-    match_template(Possible, Map1, MapN, Cond), !, nl, write('Literal '), write(Cond). 
+%condition(Cond, _, Map1, MapN, R1, RN) :-  
+%    print_message(informational, ' condition/literal '),  
+%    predicate_template(Possible, R1, RN), print_message(informational, 'Posible '), print_message(informational, Possible),
+%    match_template(Possible, Map1, MapN, Cond), !, print_message(informational, 'Literal '), print_message(informational, Cond). 
 
-%condition(Cond, _, Map1, MapN) -->
-%    literal(Map1, MapN, Cond), !. 
+condition(Cond, _, Map1, MapN) -->
+    literal_(Map1, MapN, Cond), !. 
 
 % condition(-Cond, ?Ind, +InMap, -OutMap)
 condition(InfixBuiltIn, _, Map1, MapN) --> 
@@ -179,7 +184,7 @@ spaces_or_newlines(0) --> [].
 newline --> ['\n'].
 newline --> ['\r'].
 
-if_ --> [if].
+if_ --> [if], spaces_or_newlines(_).  % so that if can be written many lines away from the rest
 
 period --> ['.'].
 comma --> [','].
@@ -305,27 +310,27 @@ operator(and, In, Out) :- and_(In, Out).
 operator(or, In, Out) :- or_(In, Out).
 
 % cuts added to improve efficiency
-predicate_template(RestW, [' '|RestIn], Out) :- !, %write(' '), % skip spaces in template
+predicate_template(RestW, [' '|RestIn], Out) :- !, %print_message(informational, ' '), % skip spaces in template
     predicate_template(RestW, RestIn, Out).
-predicate_template(RestW, ['\t'|RestIn], Out) :- !, % write('\t'), % skip tabs in template
+predicate_template(RestW, ['\t'|RestIn], Out) :- !, % print_message(informational, '\t'), % skip tabs in template
     predicate_template(RestW, RestIn, Out).
 predicate_template([Word|RestW], [Word|RestIn], Out) :- 
-    not(lists:member(Word,['\n', if, and, or, '.'])),  !, %write(Word), 
+    not(lists:member(Word,['\n', if, and, or, '.'])),  !, %print_message(informational, Word), 
     predicate_template(RestW, RestIn, Out).
 predicate_template([], [], []). 
 predicate_template([], [Word|Rest], [Word|Rest]) :- 
     lists:member(Word,['\n', if, and, or, '.']). 
 
 match_template(PossibleLiteral, Map1, MapN, Literal) :- 
-    dict(Predicate, _, Candidate), % nl, write('Candidate '), write(Candidate), 
+    dict(Predicate, _, Candidate), % print_message(informational, 'Candidate '), print_message(informational, Candidate), 
     match(Candidate, PossibleLiteral, Map1, MapN, Template), 
-    dict(Predicate, _, Template), nl, write('Match! '), 
-    Literal =.. Predicate. 
+    dict(Predicate, _, Template), print_message(informational, 'Match! '), 
+    Literal =.. Predicate, print_message(informational, Literal). 
 
 % match(+CandidateTemplate, +PossibleLiteral, +MapIn, -MapOut, -SelectedTemplate)
 match([], [], Map, Map, []) :- !.  % success! It succeds iff PossibleLiteral is totally consumed
 match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, [Element|RestSelected]) :-
-    nonvar(Element), Word = Element, % nl, write(' '), write(Word),
+    nonvar(Element), Word = Element, % print_message(informational, ' '), print_message(informational, Word),
     match(RestElements, PossibleLiteral, Map1, MapN, RestSelected). 
 match([Element|RestElements], [Det|PossibleLiteral], Map1, MapN, [Var|RestSelected]) :-
     var(Element), 
@@ -333,13 +338,13 @@ match([Element|RestElements], [Det|PossibleLiteral], Map1, MapN, [Var|RestSelect
     % extract_variable(-Var, -ListOfNameWords, -ListOfTypeWords, ?ListOfWords, ?NextWordsInText)
     extract_variable(Var, NameWords, _, PossibleLiteral, NextWords),  NameWords \= [], % it is not empty % <- leave that _ unbound!
     name_predicate(NameWords, Name), 
-    update_map(Var, Name, Map1, Map2), %nl, write('found a variable '), write(Name),
+    update_map(Var, Name, Map1, Map2), %print_message(informational, 'found a variable '), print_message(informational, Name),
     match(RestElements, NextWords, Map2, MapN, RestSelected).  
 match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, [Constant|RestSelected]) :-
     var(Element), 
     extract_constant(NameWords, [Word|PossibleLiteral], NextWords), NameWords \= [], % it is not empty
     name_predicate(NameWords, Constant),
-    update_map(Element, Constant, Map1, Map2), % nl, write('found a constant '), write(Constant),
+    update_map(Element, Constant, Map1, Map2), % print_message(informational, 'found a constant '), print_message(informational, Constant),
     match(RestElements, NextWords, Map2, MapN, RestSelected). 
 match([Element|RestElements], ['['|PossibleLiteral], Map1, MapN, [List|RestSelected]) :-
     var(Element), 
@@ -514,10 +519,10 @@ assertall([]).
 assertall([F|R]) :-
     not(asserted(F)),
     assertz(F), !,
-    % write('Asserting .. '), write(F), nl, nl,
+    % print_message(informational, 'Asserting .. '), print_message(informational, F), nl,
     assertall(R).
 assertall([_F|R]) :-
-    % write(' Already there .. '), write(F), nl,
+    % print_message(informational, ' Already there .. '), print_message(informational, F), nl,
     assertall(R).
 
 asserted(F :- B) :- clause(F, B). % as a rule with a body
@@ -537,12 +542,11 @@ select_first_section([E|R], N, [E|NR]) :-
 
 showerror(Me-Pos-Context) :-
    (clause(notice(error, Me,Pos, Context), _) ->
-        ( nl, nl, write('Error: '), writeq(Me), writeq(Pos), 
-        write(' just before '), write_words(Context), nl, nl) 
-    ; nl, nl, writeln('No error reported')  ).
+      print_message(error, [Me,Pos,' just before ',Context]) 
+    ; print_message(error,'No error reported')  ).
 
-write_words([]) :- nl, !.
-write_words([Word|RestW]) :- write(Word), write_words(RestW). 
+write_words([]) :- !.
+write_words([Word|RestW]) :- print_message(informational, Word), write_words(RestW). 
 
 explain_error(String, Me-Pos, Message) :-
     Start is Pos - 20, % assuming a window of 40 characters. 
@@ -652,6 +656,8 @@ showtaxlog:-
 	writeln(Taxlog),
 	fail.
 showtaxlog.
+
+% print_message(_, String) :- write(String).
 
 sandbox:safe_primitive(le_to_taxlog:showtaxlog).
 sandbox:safe_primitive(le_to_taxlog:le_taxlog_translate( _EnText, _Terms)).
