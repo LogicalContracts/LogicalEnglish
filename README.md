@@ -293,6 +293,9 @@ The latter allows git tracking of server changes, a posteriori.
 
 When deploying a real system this needs to be tuned, possibly using a specific git branch (e.g. "deployed-version") for the server kb/, so that user changes can later be merged safely into master, after some quality control/review process TBD.
 
+###  5.4 Other details
+To update the tokenize/ package: ```submodule update --init --recursive```
+
 ##  6. <a name='Implementationalaspects'></a>Implementational aspects
 
 ###  6.1. <a name='Rendering'></a>Rendering
