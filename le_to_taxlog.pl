@@ -8,7 +8,7 @@ text_to_logic(String, Error, Translation) :-
     tokenize(String, Tokens, [cased(true), spaces(true)]),
     unpack_tokens(Tokens, UTokens), 
     clean_comments(UTokens, CTokens), 
-    print_message(informational, String), 
+    %print_message(informational, String), 
     ( phrase(document(Translation), CTokens) -> 
         ( print_message(informational, Translation), Error=[] )
     ;   ( showerror(Error), Translation=[])). 
@@ -16,10 +16,11 @@ text_to_logic(String, Error, Translation) :-
 % document(-Translation, In, Rest)
 % a DCG predicate to translate a LE document into Taxlog prolog terms
 document(Translation, In, Rest) :-
-    header(Settings, In, Next), % print_message(informational, Settings), 
-    spaces_or_newlines(_, Next, Intermediate),
-    rules_previous(Intermediate, NextNext),  print_message(informational, 'the rules are:'), 
-    content(Content, NextNext, Rest), print_message(informational, 'got the content'),
+    spaces_or_newlines(_, In, In1),
+    header(Settings, In1, In2), % print_message(informational, Settings), 
+    spaces_or_newlines(_, In2, In3),
+    rules_previous(In3, In4),  %print_message(informational, 'this is the knowledge base:'), 
+    content(Content, In4, Rest), %print_message(informational, 'got the content'),
     append(Settings, Content, Translation).
 
 header(Settings, In, Next) :-
@@ -37,25 +38,26 @@ settings(AllR, AllS) --> declaration(Rules,Setting), settings(RRules, RS),
       {append(Setting, RS, AllS),
      append(Rules, RRules, AllR)}.
 settings([],[]) --> [].
-  
+
+content([]) --> [].  
 content(C) --> 
     spaces_or_newlines(_), 
     statement(S),
-    spaces_or_newlines(_), {print_message(informational, ' more content')}, 
-    content(R), 
-    spaces_or_newlines(_), {append(S,R,C)}.
-content([]) --> [].
+    spaces_or_newlines(_), % {print_message(informational, ' more content')}, 
+    content(R), {append(S,R,C)}.
 
 declaration(Rules, [predicates(Fluents)]) -->
     predicate_previous, list_of_predicates_decl(Rules, Fluents).
 
 predicate_previous --> 
-    spaces(_), [the], spaces(_), [predicates], spaces(_), [are], spaces(_), [':'], spaces(_), ['\n'].
+    spaces(_), [the], spaces(_), [predicates], spaces(_), [are], spaces(_), [':'], spaces(_), newline.
 
 list_of_predicates_decl([Ru|R1], [F|R2]) --> predicate_decl(Ru,F), rest_list_of_predicates_decl(R1,R2).
 
 rules_previous --> 
-    spaces(_), [the], spaces(_), [rules], spaces(_), [are], spaces(_), [':'], spaces(_), ['\n'].
+    spaces(_), [the], spaces(_), [rules], spaces(_), [are], spaces(_), [':'], spaces(_), newline.
+rules_previous --> 
+    spaces(_), [this], spaces(_), [is], spaces(_), [the], spaces(_), ['knowledge'], spaces(_), [base], spaces(_), [':'], spaces(_), newline.
 
 rest_list_of_predicates_decl(L1, L2) --> comma, list_of_predicates_decl(L1, L2).
 rest_list_of_predicates_decl([],[]) --> period.
@@ -70,6 +72,13 @@ predicate_decl(_, _, Rest, R1) :-
     asserterror('Syntax error found in a declaration ', Pos, R1), fail.
 
 % statement: the different types of statements in a LE text
+
+statement([Fact]) --> 
+    literal_([], _, Fact), spaces_or_newlines(_), period. 
+
+statement([Fact]) --> 
+    spaces(_), prolog_literal_(Fact, [], _), spaces_or_newlines(_), period.
+
 % rewritten for swish
 %statement([if(Head,Conditions)], In, Rest) :-
 %    predicate_template(Possible, In, Rest1),
@@ -83,15 +92,15 @@ predicate_decl(_, _, Rest, R1) :-
 %    spaces_or_newlines(S, Rest5, Rest6), print_message(informational, ' spaces or newlines -> '), print_message(informational, S), 
 %    period(Rest6, Rest), print_message(informational, '.'), print_message(informational, ' Statement completed'), !. 
 
-statement([if(Head,Conditions)]) -->  {print_message(informational, '  inside a statement')}, 
-    literal_([], Map1, Head), spaces_or_newlines(Ind), {print_message(informational, '  a literal'), print_message(informational, Head)}, 
+statement([if(Head,Conditions)]) --> 
+    literal_([], Map1, Head), spaces_or_newlines(Ind),
     if_, conditions(Ind, Map1, _MapN, ListOfConds), 
     {map_to_conds(ListOfConds, Conditions)}, spaces_or_newlines(_), period. 
 
 literal_(Map1, MapN, Literal) --> 
     predicate_template(PossibleTemplate),
     {match_template(PossibleTemplate, Map1, MapN, Literal)}.
-% rewrite to use in swish
+% rewritten to use in swish. Fixed!
 %literal_(Map1, MapN, Literal, In, Out) :-  print_message(informational, '  inside a literal'),
 %        predicate_template(PossibleTemplate, In, Out), print_message(informational, PossibleTemplate),
 %        match_template(PossibleTemplate, Map1, MapN, Literal).
@@ -100,7 +109,7 @@ literal_(M, M, _, Rest, R1) :-
     text_size(Size), length(Rest, Rsize), Pos is Size - Rsize, 
     asserterror('Syntax error found in a literal ', Pos, R1), fail.
 
-% regular and/or lists of conditions
+% regular and/or lists of conditions. For testing. Fixed!
 %conditions(Ind, Map1, MapN, [last-Ind-Cond], In1, Out) :- print_message(informational, ' checking conditions'), 
 %    predicate_template(Possible, In1, Out), print_message(informational, 'Posible '), print_message(informational, Possible),
 %    match_template(Possible, Map1, MapN, Cond), print_message(informational, 'Literal '), print_message(informational, Cond). 
@@ -115,7 +124,11 @@ more_conds(_, Ind, Map2, MapN, Op, RestC) -->
     conditions(Ind,Map2, MapN, RestC). 
 more_conds(Ind, Ind, Map, Map, last, []) --> []. 
  
-term(Term, Map1, MapN) --> variable(Term, Map1, MapN); constant(Term, Map1, MapN); le_list(Term, Map1, MapN). 
+% flat terms so far
+term(Term, Map1, MapN) --> variable(Term, Map1, MapN); constant(Term, Map1, MapN); list_(Term, Map1, MapN). 
+
+list_(List, Map1, MapN) --> 
+    spaces(_), bracket_open_, extract_list(List, Map1, MapN), bracket_close.   
 
 expression((X - Y), Map1, MapN) --> 
     term(X, Map1, Map2), spaces(_), minus_, spaces(_), expression(Y, Map2, MapN), spaces(_). 
@@ -144,6 +157,9 @@ condition(not(Conds), _, Map1, MapN) -->
 condition(Cond, _, Map1, MapN) -->
     literal_(Map1, MapN, Cond), !. 
 
+condition(assert(Prolog), _, Map1, MapN) -->
+    this_information_, prolog_literal_(Prolog, Map1, MapN), has_been_recorded_. 
+
 % condition(-Cond, ?Ind, +InMap, -OutMap)
 condition(InfixBuiltIn, _, Map1, MapN) --> 
     term(Term, Map1, Map2), spaces(_), builtin_(BuiltIn), 
@@ -167,9 +183,13 @@ variable(Var, Map1, MapN) -->
 constant(Constant, Map, Map) -->
     extract_constant(NameWords), { name_predicate(NameWords, Constant) }.
 
-le_list(Constant, Map1, MapN) --> 
-    spaces(_), bracket_open_,   
-    extract_list(NameWords, Map1, MapN), { name_predicate(NameWords, Constant) }.
+prolog_literal_(Prolog, Map1, MapN) -->
+    predicate_name_(Predicate), parentesis_open_, extract_list(Arguments, Map1, MapN), parentesis_close_,
+    {Prolog =.. [Predicate|Arguments]}.
+
+predicate_name_(Module:Predicate) --> 
+    [Module], colon_, extract_constant(NameWords), { name_predicate(NameWords, Predicate) }, !.
+predicate_name_(Predicate) --> extract_constant(NameWords), { name_predicate(NameWords, Predicate) }.
 
 spaces(N) --> [' '], !, spaces(M), {N is M + 1}.
 spaces(N) --> ['\t'], !, spaces(M), {N is M + 1}. % counting tab as one space
@@ -188,6 +208,7 @@ if_ --> [if], spaces_or_newlines(_).  % so that if can be written many lines awa
 
 period --> ['.'].
 comma --> [','].
+colon_ --> [':'].
 
 comma_or_period --> period, !, ['\n'].
 comma_or_period --> period, !.
@@ -215,6 +236,15 @@ divide_ --> ['/'], spaces(_).
 times_ --> ['*'], spaces(_).
 
 bracket_open_ --> ['['], spaces(_). 
+bracket_close --> [']'], spaces(_). 
+
+parentesis_open_ --> ['('], spaces(_).
+parentesis_close_ --> [')'], spaces(_). 
+
+this_information_ --> [this], spaces(_), [information], spaces(_).
+
+has_been_recorded_ --> [has], spaces(_), [been], spaces(_), [recorded], spaces(_).
+
 
 /* --------------------------------------------------- Supporting code */
 clean_comments([], []) :- !.
@@ -324,7 +354,7 @@ predicate_template([], [Word|Rest], [Word|Rest]) :-
 match_template(PossibleLiteral, Map1, MapN, Literal) :- 
     dict(Predicate, _, Candidate), % print_message(informational, 'Candidate '), print_message(informational, Candidate), 
     match(Candidate, PossibleLiteral, Map1, MapN, Template), 
-    dict(Predicate, _, Template), print_message(informational, 'Match! '), 
+    dict(Predicate, _, Template), print_message(informational, 'Match!! with '), 
     Literal =.. Predicate, print_message(informational, Literal). 
 
 % match(+CandidateTemplate, +PossibleLiteral, +MapIn, -MapOut, -SelectedTemplate)
@@ -367,7 +397,8 @@ extract_constant([Word|RestName], [Word|RestOfWords],  NextWords) :-
     extract_constant(RestName, RestOfWords, NextWords).
 
 % extract_list(-List, +Map1, -Map2, +[Word|PossibleLiteral], -NextWords),
-extract_list([], Map, Map, [']'|Rest], Rest) :- !. 
+extract_list([], Map, Map, [']'|Rest], [']'|Rest]) :- !. % stop but leave the symbol for further verification
+extract_list([], Map, Map, [')'|Rest], [')'|Rest]) :- !. 
 extract_list(RestList, Map1, MapN, [' '|RestOfWords],  NextWords) :- !, % skipping spaces
     extract_list(RestList, Map1, MapN, RestOfWords, NextWords).
 extract_list(RestList, Map1, MapN, ['\t'|RestOfWords],  NextWords) :- !, 
@@ -408,10 +439,16 @@ template_elements([Word|RestOfWords], Map1, MapN, Previous, [Var|RestTemplate]) 
 template_elements([Word|RestOfWords], Map1, MapN, Previous, [Word|RestTemplate]) :-
     template_elements(RestOfWords, Map1, MapN, [Word|Previous], RestTemplate).
 
-update_map(V, Name, InMap, InMap) :- % unify V with same named variable in current map
+% update_map(?V, +Name, +InMap, -OutMap)
+update_map(V, Name, InMap, InMap) :- % unify V with the variable with the same name in the current map
     member(map(V,Name),InMap), !.
 update_map(V, Name, InMap, OutMap) :- % updates the map by adding a new variable into it. 
     OutMap = [map(V,Name)|InMap]. 
+
+% consult_map(+V, -Name, +Inmap, -OutMap)
+consult_map(V, Name, InMap, InMap) :-
+    member(map(Var, SomeName), InMap), Var == V, Name = SomeName, !.  
+consult_map(V, V, Map, Map). % leave the name unassigned
 
 builtin_(BuiltIn, [BuiltIn1, BuiltIn2|RestWords], RestWords) :- 
     atom_concat(BuiltIn1, BuiltIn2, BuiltIn), 
@@ -494,6 +531,7 @@ present_tense_verb(has).
 present_tense_verb(satisfies).
 present_tense_verb(owns).
 present_tense_verb(belongs).
+present_tense_verb(applies).
 
 continuous_tense_verb(according).
 
@@ -542,11 +580,12 @@ select_first_section([E|R], N, [E|NR]) :-
 
 showerror(Me-Pos-Context) :-
    (clause(notice(error, Me,Pos, Context), _) ->
-      print_message(error, [Me,Pos,' just before ',Context]) 
+      print_message(error, [Me, at, Pos,' just before \"',Context, '\"']) 
     ; print_message(error,'No error reported')  ).
 
 write_words([]) :- !.
-write_words([Word|RestW]) :- print_message(informational, Word), write_words(RestW). 
+write_words([Word|RestW]) :- print_message(informational, Word), 
+    write_words(RestW). 
 
 explain_error(String, Me-Pos, Message) :-
     Start is Pos - 20, % assuming a window of 40 characters. 
@@ -565,10 +604,13 @@ write_taxlog_code(Source, Readable) :-
     Source = [predicates(_)|Clauses],
     write_taxlog_clauses(Clauses, Readable).
 
-write_taxlog_clauses([], []).
+write_taxlog_clauses([], []) :- !. 
 write_taxlog_clauses([If|RestClauses], [ReadableIf|RestReadable]) :-
-    write_taxlog_if(If, ReadableIf),
+    write_taxlog_if(If, ReadableIf), !, 
     write_taxlog_clauses(RestClauses, RestReadable).
+write_taxlog_clauses([Fact|RestClauses], [ReadableFact|RestReadable]) :-
+    write_taxlog_literal(Fact, ReadableFact, [], _),
+    write_taxlog_clauses(RestClauses, RestReadable). 
 
 write_taxlog_if(Rule, if(ReadableHead, ReadableBody)) :-
     Rule = if(Head, Body),
@@ -578,21 +620,29 @@ write_taxlog_if(Rule, if(ReadableHead, ReadableBody)) :-
 write_taxlog_literal(not(Body), not(ReadableLiteral), Map1, MapN) :- !, 
     write_taxlog_body(Body, ReadableLiteral, Map1, MapN). 
 
-write_taxlog_literal(aggregate_all(sum(Each),Conds,Value), aggregate_all(sum(Each),NewConds,Value), Map1, MapN) :-
-    write_taxlog_body(Conds, NewConds, Map1, MapN). 
-
-write_taxlog_literal(InBuiltIn, OutBuiltIn, Map1, MapN) :-
-    predicate_property(system:InBuiltIn, built_in),
-    InBuiltIn =.. [Pred, Arg1, Arg2],
-    (var(Arg1) -> (update_map(Arg1, Name1, Map1, Map2), NArg1 = Name1); NArg1 = Arg1),
-    (var(Arg2) -> (update_map(Arg2, Name2, Map2, MapN), NArg2 = Name2); NArg2 = Arg2),
-    OutBuiltIn =.. [Pred, NArg1, NArg2]. 
+write_taxlog_literal(aggregate_all(sum(Each),Conds,Value), aggregate_all(sum(EachName),NewConds,ValueName), Map1, MapN) :-
+    consult_map(Value, ValueName, Map1, Map2), 
+    consult_map(Each, EachName, Map2, Map3), 
+    write_taxlog_body(Conds, NewConds, Map3, MapN). 
 
 write_taxlog_literal(Literal, ReadableLiteral, Map1, MapN) :-
     Literal =.. [Pred|ArgVars],
-    dict([Pred|ArgVars], Names, _),
+    dict([Pred|ArgVars], Names, _), % to use that information
     replace_varnames(ArgVars, Names, NewArgs, Map1, MapN),
     ReadableLiteral =.. [Pred|NewArgs].
+
+write_taxlog_literal(InLit, OutLit, Map1, MapN) :-
+    %predicate_property(system:InBuiltIn, built_in),
+    InLit =.. [Pred|Args],
+    write_taxlog_args(Map1, MapN, Args, NewArgs),
+    OutLit =.. [Pred|NewArgs]. 
+
+write_taxlog_args(Map, Map, [], []).
+write_taxlog_args(Map1, MapN, [Arg1|RestArg], [NArg1|RestNArg]) :-
+    (var(Arg1) -> (consult_map(Arg1, Name1, Map1, Map2), NArg1 = Name1) % does name appears in Map1?
+    ; (compound(Arg1) -> write_taxlog_literal(Arg1, NArg1, Map1, Map2)
+        ; (NArg1 = Arg1, Map2 = Map1) ) ),
+    write_taxlog_args(Map2, MapN, RestArg, RestNArg). 
 
 replace_varnames([], [], [], Map, Map) :- !. 
 replace_varnames([Var|RestVar], [VarName-_|RestVarNames], [Name|NewRest], Map1, MapN) :-
