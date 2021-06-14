@@ -9,6 +9,9 @@
 
 mainGoal(rollover_applies(_ID,_Asset,_When,_Transferor,_TransfereesList), "Determine if a asset transfer event can be treated as a restructure rollover").
 
+is_immediately_before(Before, After) :-
+    immediately_before(Before, After). 
+
 :- thread_local transfer_event/5.
 rollover_applies(EventID,Asset,Time,Transferor,TransfereesList) :-
     assert(transfer_event(EventID,Asset,Time,Transferor,TransfereesList)),
