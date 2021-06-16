@@ -73,16 +73,10 @@ settings([],[]) --> [].
  
 content([S|R]) --> 
     spaces_or_newlines(_), 
-    statement(S),
-    more_content(R).
+    statement(S), !, 
+    content(R).
 content([]) --> 
     spaces_or_newlines(_), []. 
-
-more_content([S|R]) --> 
-    spaces_or_newlines(_), % {print_message(informational, ' more content')}, 
-    statement(S),
-    content(R).
-more_content([]) --> spaces_or_newlines(_). 
 
 declaration(Rules, [predicates(Fluents)]) -->
     predicate_previous, list_of_predicates_decl(Rules, Fluents).
@@ -114,7 +108,7 @@ predicate_decl(_, _, Rest, _) :-
 
 % statement: the different types of statements in a LE text
 statement(Statement) --> 
-    literal_([], Map1, Head), body_(Body, Map1, _), period, 
+    literal_([], Map1, Head), body_(Body, Map1, _), period, !, % <-- CUT 
     {(Body = [] -> Statement = [Head]; Statement = [if(Head, Body)])}. 
 
 statement([Fact]) --> 
@@ -191,10 +185,12 @@ condition(FinalExpression, _, Map1, MapN) --> spypoint,
     modifiers(setof(Term,Goals,Set), Map4, MapN, FinalExpression).
 
 % for every a party is a party in the event, it is the case that:
-condition(FinalExpression, Ind, Map1, MapN) --> spypoint, 
-    for_every_, condition(Cond, Ind, Map1, Map2), comma, spaces(_), it_is_the_case_that_colon_, 
-    newline, spaces(Ind2), conditions(Ind2, Map2, Map3, Goals),
-    modifiers(forall(Cond,Goals), Map3, MapN, FinalExpression).
+condition(FinalExpression, _, Map1, MapN) --> spypoint, 
+    for_all_cases_in_which_, newline, 
+    spaces(Ind2), conditions(Ind2, Map1, Map2, Conds), spaces_or_newlines(_), 
+    it_is_the_case_that_colon_, newline, 
+    spaces(Ind3), conditions(Ind3, Map2, Map3, Goals),
+    modifiers(forall(Conds,Goals), Map3, MapN, FinalExpression).
 
 % the Value is the sum of each Asset Net such that
 %condition(FinalExpression, _, Map1, MapN) --> 
@@ -272,9 +268,7 @@ period --> ['.'].
 comma --> [','].
 colon_ --> [':'].
 
-comma_or_period --> period, !, ['\n'].
 comma_or_period --> period, !.
-comma_or_period --> comma, !, ['\n']. 
 comma_or_period --> comma. 
 
 and_ --> [and].
@@ -307,7 +301,7 @@ this_information_ --> [this], spaces(_), [information], spaces(_).
 
 has_been_recorded_ --> [has], spaces(_), [been], spaces(_), [recorded], spaces(_).
 
-for_every_ --> spaces_or_newlines(_), [for], spaces(_), [every], spaces_or_newlines(_).
+for_all_cases_in_which_ --> spaces_or_newlines(_), [for], spaces(_), [all], spaces(_), [cases], spaces(_), [in], spaces(_), [which], spaces(_).
 
 it_is_the_case_that_colon_ --> [it], spaces(_), [is], spaces(_), [the], spaces(_), [case], spaces(_), [that], spaces(_), [':'], spaces(_).
 
@@ -636,6 +630,8 @@ verb(Verb) :- present_tense_verb(Verb); continuous_tense_verb(Verb); past_tense_
 
 present_tense_verb(is).
 present_tense_verb(occurs).
+present_tense_verb(meets).
+present_tense_verb(relates).
 present_tense_verb(can).
 present_tense_verb(qualifies).
 present_tense_verb(has).
