@@ -1,3 +1,34 @@
+/* le_to_taxlog: a prolog module with predicates to translate from an 
+extended version of Logical English into the Taxlog programming language. 
+
+Main predicate: text_to_logic(String to be translated, Error, Translation)
+
+Main DCG nonterminal: document(Translation)
+
+See at the end the predicate le_taxlog_translate to be used from SWISH
+
+It assumes an entry with the following structure. The expression:
+
+the predicates are:
+
+followed by the declarations of all the predicates involved in the knowledge base.
+Each declarations define a template with the variables and other words required to
+describe a relevant relation. It is a comma separated list of templates which ends
+with a period. 
+
+After that period, the following statement introduces the knowledge base:
+
+the knowledge base includes: 
+
+And it is followed by the rules and facts written in Logical English or in 
+Taxlog/Prolog relational syntax. Each rule must end with a period. 
+
+Indentation is used to organize the and/or list of conditions by strict
+observance of one condition per line with a level of indentation that 
+correspond to each operator and corresponding conditions. 
+
+*/
+
 :- module(le_to_taxlog, [document/3]).
 :- use_module('./tokenize/prolog/tokenize.pl').
 :- thread_local literal/5, text_size/1, notice/3, dict/3.
@@ -23,6 +54,7 @@ document(Translation, In, Rest) :-
     content(Content, In4, Rest), %print_message(informational, 'got the content'),
     append(Settings, Content, Translation).
 
+% header parses all the declarations and assert them into memory to be invoked by the rules. 
 header(Settings, In, Next) :-
     length(In, TextSize), 
     ( settings(Rules, Settings, In, Next) -> true
@@ -38,13 +70,19 @@ settings(AllR, AllS) --> declaration(Rules,Setting), settings(RRules, RS),
       {append(Setting, RS, AllS),
      append(Rules, RRules, AllR)}.
 settings([],[]) --> [].
-
-content([]) --> [].  
-content(C) --> 
+ 
+content([S|R]) --> 
     spaces_or_newlines(_), 
     statement(S),
+    more_content(R).
+content([]) --> 
+    spaces_or_newlines(_), []. 
+
+more_content([S|R]) --> 
     spaces_or_newlines(_), % {print_message(informational, ' more content')}, 
-    content(R), {append(S,R,C)}.
+    statement(S),
+    content(R).
+more_content([]) --> spaces_or_newlines(_). 
 
 declaration(Rules, [predicates(Fluents)]) -->
     predicate_previous, list_of_predicates_decl(Rules, Fluents).
@@ -57,7 +95,7 @@ list_of_predicates_decl([Ru|R1], [F|R2]) --> predicate_decl(Ru,F), rest_list_of_
 rules_previous --> 
     spaces(_), [the], spaces(_), [rules], spaces(_), [are], spaces(_), [':'], spaces(_), newline.
 rules_previous --> 
-    spaces(_), [this], spaces(_), [is], spaces(_), [the], spaces(_), ['knowledge'], spaces(_), [base], spaces(_), [':'], spaces(_), newline.
+    spaces(_), [the], spaces(_), ['knowledge'], spaces(_), [base], spaces(_), [includes], spaces(_), [':'], spaces(_), newline.
 
 rest_list_of_predicates_decl(L1, L2) --> comma, list_of_predicates_decl(L1, L2).
 rest_list_of_predicates_decl([],[]) --> period.
@@ -66,109 +104,130 @@ predicate_decl(dict([Predicate|Arguments],TypesAndNames, Template), Relation) --
     spaces(_), template_decl(RawTemplate), 
     {build_template(RawTemplate, Predicate, Arguments, TypesAndNames, Template),
      Relation =.. [Predicate|Arguments]}.
+
+% we are using this resource of the last clause to record the error and its details
+% not very useful with loops, of course. 
 % error clause
-predicate_decl(_, _, Rest, R1) :- 
+predicate_decl(_, _, Rest, _) :- 
     text_size(Size), length(Rest, Rsize), Pos is Size - Rsize, 
-    asserterror('Syntax error found in a declaration ', Pos, R1), fail.
+    asserterror('Syntax error found in a declaration ', Pos, Rest), fail.
 
 % statement: the different types of statements in a LE text
-
-statement([Fact]) --> 
-    literal_([], _, Fact), spaces_or_newlines(_), period. 
+statement(Statement) --> 
+    literal_([], Map1, Head), body_(Body, Map1, _), period, 
+    {(Body = [] -> Statement = [Head]; Statement = [if(Head, Body)])}. 
 
 statement([Fact]) --> 
     spaces(_), prolog_literal_(Fact, [], _), spaces_or_newlines(_), period.
 
-% rewritten for swish
-%statement([if(Head,Conditions)], In, Rest) :-
-%    predicate_template(Possible, In, Rest1),
-%    match_template(Possible, [],Map1, Head), print_message(informational, 'Head '), print_message(informational, Head), 
-%    newline(Rest1, Rest2), print_message(informational, 'newline '),
-%    spaces(Ind, Rest2, Rest3), print_message(informational, 'spaces '), print_message(informational, Ind), 
-%    if_(Rest3, Rest4), print_message(informational, 'if '), !, 
-%    conditions(Ind, Map1,_MapN,ListOfConds, Rest4, Rest5), 
-%    %print_message(informational, 'conditions '),  print_message(informational, ListOfConds), 
-%    map_to_conds(ListOfConds, Conditions), print_message(informational, Conditions), 
-%    spaces_or_newlines(S, Rest5, Rest6), print_message(informational, ' spaces or newlines -> '), print_message(informational, S), 
-%    period(Rest6, Rest), print_message(informational, '.'), print_message(informational, ' Statement completed'), !. 
+body_([], _, _) --> spaces_or_newlines(_).
+body_(Conditions, Map1, MapN) --> 
+    newline, spaces(Ind), if_, conditions(Ind, Map1, MapN, Conditions), spaces_or_newlines(_).
+body_(Conditions, Map1, MapN) --> 
+    if_, newline, spaces(Ind), conditions(Ind, Map1, MapN, Conditions), spaces_or_newlines(_).
 
-statement([if(Head,Conditions)]) --> 
-    literal_([], Map1, Head), spaces_or_newlines(Ind),
-    if_, conditions(Ind, Map1, _MapN, ListOfConds), 
-    {map_to_conds(ListOfConds, Conditions)}, spaces_or_newlines(_), period. 
-
+% literal_ reads a list of words until it finds one of these: ['\n', if, and, or, '.', ',']
+% it then tries to match those words against a template in memory (see dict/3 predicate)
 literal_(Map1, MapN, Literal) --> 
     predicate_template(PossibleTemplate),
     {match_template(PossibleTemplate, Map1, MapN, Literal)}.
-% rewritten to use in swish. Fixed!
+% rewritten to use in swish. Fixed! It was a name clash. Apparently "literal" is used somewhere else
 %literal_(Map1, MapN, Literal, In, Out) :-  print_message(informational, '  inside a literal'),
 %        predicate_template(PossibleTemplate, In, Out), print_message(informational, PossibleTemplate),
 %        match_template(PossibleTemplate, Map1, MapN, Literal).
 % error clause
-literal_(M, M, _, Rest, R1) :- 
+literal_(M, M, _, Rest, _) :- 
     text_size(Size), length(Rest, Rsize), Pos is Size - Rsize, 
-    asserterror('Syntax error found in a literal ', Pos, R1), fail.
+    asserterror('Syntax error found in a literal ', Pos, Rest), fail.
 
-% regular and/or lists of conditions. For testing. Fixed!
-%conditions(Ind, Map1, MapN, [last-Ind-Cond], In1, Out) :- print_message(informational, ' checking conditions'), 
-%    predicate_template(Possible, In1, Out), print_message(informational, 'Posible '), print_message(informational, Possible),
-%    match_template(Possible, Map1, MapN, Cond), print_message(informational, 'Literal '), print_message(informational, Cond). 
-
-conditions(Ind0, Map1, MapN, [Op-Ind-Cond|RestC]) -->  
+conditions(Ind0, Map1, MapN, Conds) --> 
     condition(Cond, Ind0, Map1, Map2), 
-    more_conds(Ind0, Ind, Map2, MapN, Op, RestC).
+    more_conds(Ind0, Ind0, _IndF, Map2, MapN, Cond, Conds).
+    %{Ind0=<IndF}. % 
 
-more_conds(_, Ind, Map2, MapN, Op, RestC) --> 
-    newline, spaces(Ind), 
-    operator(Op), % Op are and, or. 
-    conditions(Ind,Map2, MapN, RestC). 
-more_conds(Ind, Ind, Map, Map, last, []) --> []. 
+% more_conds(PreviosInd, CurrentInd, MapIn, MapOut, InCond, OutConds)
+more_conds(Ind0, Ind1, Ind, Map1, MapN, Cond, Conditions) --> 
+    newline, spaces(Ind), {Ind0 =< Ind}, % if the new indentation is deeper, it goes on as before. 
+    operator(Op), condition(Cond2, Ind, Map1, MapN), 
+    {add_cond(Op, Ind1, Ind, Cond, Cond2, Conditions)}.
+% three conditions look ahead
+more_conds(Ind0, Ind1, Ind4, Map1, MapN, C1, RestMapped, In1, Out) :-
+    newline(In1, In2), spaces(Ind2, In2, In3), Ind0=<Ind2, operator(Op1, In3, In4), condition(C2, Ind1, Map1, Map2, In4, In5), 
+    newline(In5, In6), spaces(Ind3, In6, In7), Ind0=<Ind3, operator(Op2, In7, In8), condition(C3, Ind2, Map2, Map3, In8, In9), 
+    adjust_op(Ind2, Ind3, C1, Op1, C2, Op2, C3, Conditions), 
+    more_conds(Ind0, Ind3, Ind4, Map3, MapN, Conditions, RestMapped, In9, Out). 
+more_conds(_, Ind, Ind, Map, Map, Cond, Cond, Rest, Rest).  
  
-% flat terms so far
-term(Term, Map1, MapN) --> variable(Term, Map1, MapN); constant(Term, Map1, MapN); list_(Term, Map1, MapN). 
+% this naive definition of term is problematic
+term_(Term, Map1, MapN) --> 
+    (variable(Term, Map1, MapN), !); (constant(Term, Map1, MapN), !); (list_(Term, Map1, MapN), !). %; (compound_(Term, Map1, MapN), !).
 
 list_(List, Map1, MapN) --> 
-    spaces(_), bracket_open_, extract_list(List, Map1, MapN), bracket_close.   
+    spaces(_), bracket_open_, !, extract_list(List, Map1, MapN), bracket_close.   
+
+compound_(V1/V2, Map1, MapN) --> 
+    term_(V1, Map1, Map2), ['/'], term_(V2, Map2, MapN). 
 
 expression((X - Y), Map1, MapN) --> 
-    term(X, Map1, Map2), spaces(_), minus_, spaces(_), expression(Y, Map2, MapN), spaces(_). 
+    term_(X, Map1, Map2), spaces(_), minus_, spaces(_), expression(Y, Map2, MapN), spaces(_), !. 
 expression((X + Y), Map1, MapN) --> 
-    term(X, Map1, Map2), spaces(_), plus_, spaces(_), expression(Y, Map2, MapN), spaces(_). 
+    term_(X, Map1, Map2), spaces(_), plus_, spaces(_), expression(Y, Map2, MapN), spaces(_), !. 
 expression(Y, Map1, MapN) --> 
-    term(Y, Map1, MapN), spaces(_).
+    term_(Y, Map1, MapN), spaces(_).
+% error clause
+expression(_, _, _, Rest, _) :- 
+    text_size(Size), length(Rest, Rsize), Pos is Size - Rsize, 
+    asserterror('Syntax error found at an expression ', Pos, Rest), fail.
+
+% this produces a Taxlog condition with the form: 
+% setof(Owner/Share, is_ultimately_owned_by(Asset,Owner,Share) on Before, SetOfPreviousOwners)
+% from a set of word such as: 
+%     and a set of previous owners is a collection of an owner / a share 
+%           where the asset is ultimately owned by the share with the owner at the previous time
+condition(FinalExpression, _, Map1, MapN) --> spypoint, 
+    %variable(Set, Map1, Map2), is_a_collection_of_, term_(Term, Map2, Map3), where_,
+    variable(Set, Map1, Map2), is_a_collection_of_, literal_(Map2, Map3, Term), % moved where to the following line
+    newline, spaces(Ind2), where_, conditions(Ind2, Map3, Map4, Goals),
+    modifiers(setof(Term,Goals,Set), Map4, MapN, FinalExpression).
+
+% for every a party is a party in the event, it is the case that:
+condition(FinalExpression, Ind, Map1, MapN) --> spypoint, 
+    for_every_, condition(Cond, Ind, Map1, Map2), comma, spaces(_), it_is_the_case_that_colon_, 
+    newline, spaces(Ind2), conditions(Ind2, Map2, Map3, Goals),
+    modifiers(forall(Cond,Goals), Map3, MapN, FinalExpression).
 
 % the Value is the sum of each Asset Net such that
-condition(FinalExpression, _, Map1, MapN) --> 
-    variable(Value, Map1, Map2), is_the_sum_of_each_, extract_variable(Each, NameWords, _), such_that_,  
-    spaces(_), { name_predicate(NameWords, Name), update_map(Each, Name, Map2, Map3) }, newline, 
-    spaces(Ind), conditions(Ind, Map3, Map4, ListOfConds), {map_to_conds(ListOfConds, Conds)},
-    modifiers(aggregate_all(sum(Each),Conds,Value), Map4, MapN, FinalExpression).
+%condition(FinalExpression, _, Map1, MapN) --> 
+%    variable(Value, Map1, Map2), is_the_sum_of_each_, extract_variable(Each, NameWords, _), such_that_,  
+%    { name_predicate(NameWords, Name), update_map(Each, Name, Map2, Map3) }, newline, 
+%    spaces(Ind), conditions(Ind, Map3, Map4, Conds), 
+%    modifiers(aggregate_all(sum(Each),Conds,Value), Map4, MapN, FinalExpression).
     
 % it is not the case that: 
 condition(not(Conds), _, Map1, MapN) --> 
     spaces(_), not_, newline,  
-    spaces(Ind), conditions(Ind, Map1, MapN, ListOfConds), {map_to_conds(ListOfConds, Conds)}.
+    spaces(Ind), conditions(Ind, Map1, MapN, Conds).
 
 %condition(Cond, _, Map1, MapN, R1, RN) :-  
 %    print_message(informational, ' condition/literal '),  
 %    predicate_template(Possible, R1, RN), print_message(informational, 'Posible '), print_message(informational, Possible),
 %    match_template(Possible, Map1, MapN, Cond), !, print_message(informational, 'Literal '), print_message(informational, Cond). 
 
-condition(Cond, _, Map1, MapN) -->
-    literal_(Map1, MapN, Cond), !. 
+condition(Cond, _, Map1, MapN) --> spypoint, 
+    literal_(Map1, MapN, Cond). 
 
 condition(assert(Prolog), _, Map1, MapN) -->
     this_information_, prolog_literal_(Prolog, Map1, MapN), has_been_recorded_. 
 
 % condition(-Cond, ?Ind, +InMap, -OutMap)
-condition(InfixBuiltIn, _, Map1, MapN) --> 
-    term(Term, Map1, Map2), spaces(_), builtin_(BuiltIn), 
+condition(InfixBuiltIn, _, Map1, MapN) --> spypoint, 
+    term_(Term, Map1, Map2), spaces(_), builtin_(BuiltIn), !, 
     spaces(_), expression(Expression, Map2, MapN), {InfixBuiltIn =.. [BuiltIn, Term, Expression]}. 
 
 % error clause
-condition(_, _Ind, Map, Map, Rest, R1) :- 
+condition(_, _Ind, Map, Map, Rest, _) :- 
         text_size(Size), length(Rest, Rsize), Pos is Size - Rsize, 
-        asserterror('Syntax error found at a condition ', Pos, R1), fail.
+        asserterror('Syntax error found at a condition ', Pos, Rest), fail.
 
 % modifiers add reifying predicates to an expression. 
 % modifiers(+MainExpression, +MapIn, -MapOut, -FinalExpression)
@@ -177,11 +236,11 @@ modifiers(MainExpression, Map1, MapN, on(MainExpression, Var) ) -->
 modifiers(MainExpression, Map, Map, MainExpression) --> [].  
 
 variable(Var, Map1, MapN) --> 
-    spaces(_), [Det], {determiner(Det)}, extract_variable(Var, NameWords, _),
+    spaces(_), [Det], {determiner(Det)}, extract_variable(Var, NameWords, _), !, % <-- CUT!
     { name_predicate(NameWords, Name), update_map(Var, Name, Map1, MapN) }. 
 
 constant(Constant, Map, Map) -->
-    extract_constant(NameWords), { name_predicate(NameWords, Constant) }.
+    extract_constant(NameWords), !, { name_predicate(NameWords, Constant) }. % <-- CUT!
 
 prolog_literal_(Prolog, Map1, MapN) -->
     predicate_name_(Predicate), parentesis_open_, extract_list(Arguments, Map1, MapN), parentesis_close_,
@@ -203,6 +262,9 @@ spaces_or_newlines(0) --> [].
 
 newline --> ['\n'].
 newline --> ['\r'].
+
+one_or_many_newlines --> newline, spaces(_), one_or_many_newlines, !. 
+one_or_many_newlines --> [].
 
 if_ --> [if], spaces_or_newlines(_).  % so that if can be written many lines away from the rest
 
@@ -245,6 +307,14 @@ this_information_ --> [this], spaces(_), [information], spaces(_).
 
 has_been_recorded_ --> [has], spaces(_), [been], spaces(_), [recorded], spaces(_).
 
+for_every_ --> spaces_or_newlines(_), [for], spaces(_), [every], spaces_or_newlines(_).
+
+it_is_the_case_that_colon_ --> [it], spaces(_), [is], spaces(_), [the], spaces(_), [case], spaces(_), [that], spaces(_), [':'], spaces(_).
+
+is_a_collection_of_ --> [is], spaces(_), [a], spaces(_), [collection], spaces(_), [of], spaces(_). 
+
+where_ --> [where], spaces(_). 
+
 
 /* --------------------------------------------------- Supporting code */
 clean_comments([], []) :- !.
@@ -282,7 +352,7 @@ build_template(RawTemplate, Predicate, Arguments, TypesAndNames, Template) :-
 build_template_elements([], _, [], [], [], []).     
 build_template_elements([Word|RestOfWords], Previous, [Var|RestVars], [Name-Type|RestTypes], Others, [Var|RestTemplate]) :-
     (ind_det(Word); ind_det_C(Word)), Previous \= [is|_], 
-    extract_variable(Var, NameWords, TypeWords, RestOfWords, NextWords),
+    extract_variable(Var, NameWords, TypeWords, RestOfWords, NextWords), !, % <-- CUT!
     name_predicate(NameWords, Name), 
     name_predicate(TypeWords, Type), 
     build_template_elements(NextWords, [], RestVars, RestTypes, Others, RestTemplate).
@@ -314,10 +384,10 @@ map_to_conds([last-_-C1], C1) :- !.
 map_to_conds([and-_-C1, last-_-C2], (C1,C2)) :- !. 
 map_to_conds([or-_-C1, last-_-C2], (C1;C2)) :- !.
 % from and to and
-map_to_conds([and-Ind-C1, and-Ind-C2|RestC], (C1, C2, RestMapped) ) :- !, 
+map_to_conds([and-Ind-C1, and-Ind-C2|RestC], ((C1, C2), RestMapped) ) :- !, 
     map_to_conds(RestC, RestMapped).
 % from or to ord
-map_to_conds([or-Ind-C1, or-Ind-C2|RestC], (C1; C2; RestMapped) ) :- !, 
+map_to_conds([or-Ind-C1, or-Ind-C2|RestC], ((C1; C2); RestMapped) ) :- !, 
     map_to_conds(RestC, RestMapped).
 % from and to deeper or
 map_to_conds([and-Ind1-C1, or-Ind2-C2|RestC], (C1, (C2; RestMapped)) ) :-  
@@ -336,6 +406,43 @@ map_to_conds([and-Ind1-C1, or-Ind2-C2|RestC], ((C1, C2);RestMapped ) ) :-
     Ind1 > Ind2, 
     map_to_conds(RestC, RestMapped).
 
+add_cond(and, Ind1, Ind2,  (C; C3), C4, (C; (C3, C4))) :-
+    Ind1 =< Ind2, !. 
+add_cond(and, Ind1, Ind2,  (C; C3), C4, ((C; C3), C4)) :-
+    Ind1 > Ind2, !.     
+add_cond(and,_, _, (C, C3), C4, (C, (C3, C4))) :- !. 
+add_cond(and,_, _, Cond, RestC, (Cond, RestC)) :- !. 
+add_cond(or, Ind1, Ind2, (C, C3), C4, (C, (C3; C4))) :- 
+    Ind1 =< Ind2, !. 
+add_cond(or, Ind1, Ind2, (C, C3), C4, ((C, C3); C4)) :- 
+    Ind1 > Ind2, !. 
+add_cond(or, _, _, (C; C3), C4, (C; (C3; C4))) :- !. 
+add_cond(or, _,_, Cond, RestC, (Cond; RestC)).
+
+% adjust_op(Ind1, Ind2, PreviousCond, Op1, Cond2, Op2, Rest, RestMapped, Conditions)
+% from and to and
+adjust_op(Ind1, Ind2, C1, and, C2, and, C3, ((C1, C2), C3) ) :- 
+    Ind1 =< Ind2, !.
+adjust_op(Ind1, Ind2, C1, and, C2, and, C3, ((C1, C2), C3) ) :- 
+    Ind1 > Ind2, !.
+% from or to ord
+adjust_op(Ind1, Ind2, C1, or, C2, or, C3, ((C1; C2); C3) ) :- 
+    Ind1 =< Ind2, !.
+adjust_op(Ind1, Ind2, C1, or, C2, or, C3, ((C1; C2); C3) ) :- 
+    Ind1 > Ind2, !.
+% from and to deeper or
+adjust_op(Ind1, Ind2, C1, and, C2, or, C3, (C1, (C2; C3)) ) :- 
+    Ind1 < Ind2, !.
+% from deeper or to and
+adjust_op(Ind1, Ind2, C1, or, C2, and, C3, ((C1; C2), C3) ) :- 
+    Ind1 > Ind2, !.
+% from or to deeper and
+adjust_op(Ind1, Ind2, C1, or, C2, and, C3, (C1; (C2, C3)) ) :- 
+    Ind1 < Ind2, !.
+% from deeper and to or
+adjust_op(Ind1, Ind2, C1, and, C2, or, C3, ((C1, C2); C3) ) :- 
+    Ind1 > Ind2.
+
 operator(and, In, Out) :- and_(In, Out).
 operator(or, In, Out) :- or_(In, Out).
 
@@ -345,17 +452,17 @@ predicate_template(RestW, [' '|RestIn], Out) :- !, %print_message(informational,
 predicate_template(RestW, ['\t'|RestIn], Out) :- !, % print_message(informational, '\t'), % skip tabs in template
     predicate_template(RestW, RestIn, Out).
 predicate_template([Word|RestW], [Word|RestIn], Out) :- 
-    not(lists:member(Word,['\n', if, and, or, '.'])),  !, %print_message(informational, Word), 
+    not(lists:member(Word,['\n', if, and, or, '.', ','])),  !, %print_message(informational, Word), 
     predicate_template(RestW, RestIn, Out).
 predicate_template([], [], []). 
 predicate_template([], [Word|Rest], [Word|Rest]) :- 
-    lists:member(Word,['\n', if, and, or, '.']). 
+    lists:member(Word,['\n', if, and, or, '.', ',']). 
 
 match_template(PossibleLiteral, Map1, MapN, Literal) :- 
-    dict(Predicate, _, Candidate), % print_message(informational, 'Candidate '), print_message(informational, Candidate), 
+    dict(Predicate, _, Candidate),
     match(Candidate, PossibleLiteral, Map1, MapN, Template), 
-    dict(Predicate, _, Template), print_message(informational, 'Match!! with '), 
-    Literal =.. Predicate, print_message(informational, Literal). 
+    dict(Predicate, _, Template), 
+    Literal =.. Predicate, print_message(informational, 'Match!! with '-[Literal]). 
 
 % match(+CandidateTemplate, +PossibleLiteral, +MapIn, -MapOut, -SelectedTemplate)
 match([], [], Map, Map, []) :- !.  % success! It succeds iff PossibleLiteral is totally consumed
@@ -365,17 +472,16 @@ match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, [Element|RestS
 match([Element|RestElements], [Det|PossibleLiteral], Map1, MapN, [Var|RestSelected]) :-
     var(Element), 
     determiner(Det), 
-    % extract_variable(-Var, -ListOfNameWords, -ListOfTypeWords, ?ListOfWords, ?NextWordsInText)
-    extract_variable(Var, NameWords, _, PossibleLiteral, NextWords),  NameWords \= [], % it is not empty % <- leave that _ unbound!
+    extract_variable(Var, NameWords, _, PossibleLiteral, NextWords),  NameWords \= [], !, % <-- CUT! % it is not empty % <- leave that _ unbound!
     name_predicate(NameWords, Name), 
     update_map(Var, Name, Map1, Map2), %print_message(informational, 'found a variable '), print_message(informational, Name),
     match(RestElements, NextWords, Map2, MapN, RestSelected).  
 match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, [Constant|RestSelected]) :-
     var(Element), 
-    extract_constant(NameWords, [Word|PossibleLiteral], NextWords), NameWords \= [], % it is not empty
+    extract_constant(NameWords, [Word|PossibleLiteral], NextWords), NameWords \= [], % <-- CUT!  % it is not empty
     name_predicate(NameWords, Constant),
-    update_map(Element, Constant, Map1, Map2), % print_message(informational, 'found a constant '), print_message(informational, Constant),
-    match(RestElements, NextWords, Map2, MapN, RestSelected). 
+    %update_map(Element, Constant, Map1, Map2), % print_message(informational, 'found a constant '), print_message(informational, Constant),
+    match(RestElements, NextWords, Map1, MapN, RestSelected). 
 match([Element|RestElements], ['['|PossibleLiteral], Map1, MapN, [List|RestSelected]) :-
     var(Element), 
     extract_list(List, Map1, Map2, PossibleLiteral, NextWords),
@@ -394,6 +500,7 @@ extract_constant(RestName, ['\t'|RestOfWords],  NextWords) :- !,
     extract_constant(RestName, RestOfWords, NextWords).
 extract_constant([Word|RestName], [Word|RestOfWords],  NextWords) :-
     %is_a_type(Word),
+    not(determiner(Word)), % no determiners inside constants!
     extract_constant(RestName, RestOfWords, NextWords).
 
 % extract_list(-List, +Map1, -Map2, +[Word|PossibleLiteral], -NextWords),
@@ -407,7 +514,7 @@ extract_list(RestList, Map1, MapN, [','|RestOfWords],  NextWords) :- !,
     extract_list(RestList, Map1, MapN, RestOfWords, NextWords).
 extract_list([Var|RestList], Map1, MapN, [Det|InWords], LeftWords) :-
     determiner(Det), 
-    extract_variable(Var, NameWords, _, InWords, NextWords), NameWords \= [], % <- leave that _ unbound!
+    extract_variable(Var, NameWords, _, InWords, NextWords), NameWords \= [], % <-- CUT! % <- leave that _ unbound!
     name_predicate(NameWords, Name),  !,
     update_map(Var, Name, Map1, Map2),
     extract_list(RestList, Map2, MapN, NextWords, LeftWords).
@@ -426,13 +533,13 @@ rebuild_template(RawTemplate, Map1, MapN, Template) :-
 template_elements([], Map1, Map1, _, []).     
 template_elements([Word|RestOfWords], Map1, MapN, Previous, [Var|RestTemplate]) :-
     (ind_det(Word); ind_det_C(Word)), Previous \= [is|_], 
-    extract_variable(Var, NameWords, _, RestOfWords, NextWords),
+    extract_variable(Var, NameWords, _, RestOfWords, NextWords), !, % <-- CUT!
     name_predicate(NameWords, Name), 
     update_map(Var, Name, Map1, Map2), 
     template_elements(NextWords, Map2, MapN, [], RestTemplate).
 template_elements([Word|RestOfWords], Map1, MapN, Previous, [Var|RestTemplate]) :-
     (def_det_C(Word); def_det(Word)), Previous \= [is|_], 
-    extract_variable(Var, NameWords, _, RestOfWords, NextWords),
+    extract_variable(Var, NameWords, _, RestOfWords, NextWords), !, % <-- CUT!
     name_predicate(NameWords, Name), 
     member(map(Var,Name), Map1),  % confirming it is an existing variable and unifying
     template_elements(NextWords, Map1, MapN, [], RestTemplate).
@@ -441,9 +548,13 @@ template_elements([Word|RestOfWords], Map1, MapN, Previous, [Word|RestTemplate])
 
 % update_map(?V, +Name, +InMap, -OutMap)
 update_map(V, Name, InMap, InMap) :- % unify V with the variable with the same name in the current map
-    member(map(V,Name),InMap), !.
-update_map(V, Name, InMap, OutMap) :- % updates the map by adding a new variable into it. 
+    var(V), nonvar(Name), nonvar(InMap), 
+    member(map(V,Name),InMap).
+update_map(V, Name, InMap, OutMap) :-  % updates the map by adding a new variable into it. 
+    var(V), nonvar(Name), nonvar(InMap), 
     OutMap = [map(V,Name)|InMap]. 
+%update_map(V, _, Map, Map) :-
+%    nonvar(V). 
 
 % consult_map(+V, -Name, +Inmap, -OutMap)
 consult_map(V, Name, InMap, InMap) :-
@@ -502,7 +613,7 @@ def_det(the).
 
 /* ------------------------------------------------ reserved words */
 reserved_word(W) :- % more reserved words pending
-    W = 'is'; W ='not'; W='if'; W='If'; W='then';
+    W = 'is'; W ='not'; W='if'; W='If'; W='then'; W = 'where';  
     W = 'at'; W= 'from'; W='to'; W='and'; W='half'; W='or'; 
     W = 'else'; W = 'otherwise'; 
     W = such ; 
@@ -540,6 +651,7 @@ past_tense_verb(could).
 past_tense_verb(had).
 past_tense_verb(tried).
 past_tense_verb(explained).
+past_tense_verb(ocurred).
  
 /* ------------------------------------------------- prepositions */
 preposition(of).

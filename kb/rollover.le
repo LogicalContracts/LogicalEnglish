@@ -7,52 +7,100 @@
 the predicates are:
     an event ID rollover of the transfer of an asset from a transferor to a transferees list at a time applies,
     an event ID rollover applies, 
-    a thing is of type a type. % candidate for builtin
-    %a tax payer is a party in an event,
-    %event an event id of transfering an asset from the tax payer to a recipient at a time occurs,
-    %a time is after a date, % candidate for builtin
-    %a party is a party in an event, 
-    %a party has an aggregated turnover of a turnover,
+    a thing is of type a type, % candidate for builtin
+    a tax payer is a party in an event,
+    event an event id of transfering an asset from a tax payer to a recipient at a time occurs,
+    a tax payer is in a transferee,
+    a time is after a second time,
+    a party is a party in an event,
+    a party has an aggregated turnover of a turnover,
+    a party is an eligible party,
+    an event is part of genuine restructure according to other legislation,
+    a previous time is immediately before a second time,
+    an asset is ultimately owned by a share with an owner at a time, 
+    a family trust is the trust of a group,
+    a family trust 's election ocurred,
+    an owner / a thing is in a set, 
+    an asset is an eligible asset.
 
 this is the knowledge base:
-An Event ID rollover of the transfer of an Asset from a Transferor to a Transferees List at a Time applies 
-    if  this information transfer_event(the Event ID,the Asset,the Time,the Transferor,the Transferees List) has been recorded
-    and the Event ID rollover applies.
+%An Event ID rollover of the transfer of an Asset from a Transferor to a Transferees List at a Time applies 
+%    if  this information transfer_event(the Event ID,the Asset,the Time,the Transferor,the Transferees List) has been recorded
+%    and the Event ID rollover applies.
  
-cgt_asset is of type asset.  
-trading_stock is of type asset.
-revenue_asset is of type asset.
-depreciating_asset is of type asset.
-loan_to_shareholder is of type asset.
+%cgt_asset is of type asset.  
+%trading_stock is of type asset.
+%revenue_asset is of type asset.
+%depreciating_asset is of type asset.
+%loan_to_shareholder is of type asset.
  
 %A tax payer is a party in an event 
-%    if  event the event of transfering an asset from the tax payer to a recipient at a time occurs.
+%   if  event the event of transfering an asset from the tax payer to a recipient at a time occurs.
 
-%A tax Payer is a party in an event 
+%A tax payer is a party in an event 
 %    if  event the event of transfering an asset from a somebody to a transferee at a time occurs
 %    and the tax payer is in the transferee.
  
-%An event rollover applies 
-%    if event the event of transfering an asset from a sender to a recipient at a time occurs
-%    and the time is after 20160701
-%    and for every a party is a party in the event, it is the case that:
-%                the party has an aggregated turnover of a turnover
-%            and the turnover < 10000000  % builtin
-%            and the party is an eligible party
-%    and the event part of genuine restructure according to other legislation
-%    and a previous time is immediately before the time
-%    and a set of previous owners is a collection of an owner / a share where
-%            the asset is ultimately owned by the share with the owner at the previous time
-%    and a set of new owners is a collection of the owner / the share where
-%            the asset is ultimately owned by the share with the owner at the time
-%    and the set of new owners = the set of previous owners
-%        or a family trust is the trust of a group of members
-%            and the family trust 's election ocurred
-%            and for every the owner / le_some_thing is in the set of previous owners , it is the case that:
-%                    the owner is in the group of members
-%            and for every the owner / le_some_thing is in the set of new owners , it is the case that:
-%                    the owner is in the group of members
-%    and the asset is an eligible asset.
+An event rollover applies 
+    if event the event of transfering an asset from a sender to a recipient at a time occurs
+    and the time is after 20160701
+    and for every a party is a party in the event, it is the case that:
+            the party has an aggregated turnover of a turnover
+            and the turnover < 10000000  % builtin
+            and the party is an eligible party
+    and the event is part of genuine restructure according to other legislation
+    and a previous time is immediately before the time
+    and a set previous owners is a collection of an owner / a share 
+        where the asset is ultimately owned by the share with the owner at the previous time
+    and a set new owners is a collection of the owner / the share 
+        where the asset is ultimately owned by the share with the owner at the time
+    and the set new owners = the set previous owners
+        or a family trust is the trust of a group
+            and the family trust 's election ocurred
+            and for every the owner / le_some_thing is in the set previous owners , it is the case that:
+                    the owner is in the group
+            and for every the owner / le_some_thing is in the set new owners , it is the case that:
+                    the owner is in the group
+    and the asset is an eligible asset.
+
+the small business restructure rollover applies to an event
+        if the event occurs at a time
+        and the time is after 2016/07/01
+        and the event is a transfer of an asset by a transferor to a transferee
+        and the asset is an eligible asset
+        and the event is part of genuine restructuring according to other legislation
+        and the event meets the ultimate ownership test at the time
+        and     for every party of the event 
+                the party is an eligible party
+        and an amount is the aggregated turnover of the party
+        and the amount < 10000000.
+
+an event meets the ultimate ownership test at a time
+        if the event is a transfer of an asset by a transferor to a transferee
+        and another time is immediately before the time
+        and     for every entity
+        if the entity is an ultimate owner of the asset at the time
+        and the entity has a share in the asset at the time 
+        then the entity is an ultimate owner of the asset at the other time
+        and the entity has the share in the asset at the other time.
+        and     for every entity
+        if the entity is an ultimate owner of the asset at the other time
+        and the entity has a share in the asset at the other time 
+        then the entity is an ultimate owner of the asset at the time
+        and the entity has the share in the asset at the time.
+
+an event meets the ultimate ownership test at a time
+        if the event is a transfer of an asset by a transferor to a transferee
+        and the event is undertaken as part of a trust
+        and the trust is a family trust
+        and a group is the family of the trust
+        and another time is immediately before the time
+        and     for every individual
+        if the individual is an ultimate owner of the asset at the time
+        then the individual is a member of the group
+        and     for every individual
+        if the individual is an ultimate owner of the asset at the other time
+        then the individual is a member of the group at the other time.    
  
 %An asset is ultimately owned by 1 with an owner at a time 
 %    if  the owner owns the asset at the time according to other legislation.
