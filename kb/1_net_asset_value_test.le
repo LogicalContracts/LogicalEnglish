@@ -1,3 +1,8 @@
+% Logical English
+% http://demo.logicalcontracts.com:8082/p/cgt_maximum_net_asset_value.pl
+% Knowledge page carefully crafted in Taxlog/Prolog from the legislation at
+% https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/maximum-net-asset-value-test/
+
 the predicates are:
     an asset has a type of liability that costs an amount,
     a type is in a set,

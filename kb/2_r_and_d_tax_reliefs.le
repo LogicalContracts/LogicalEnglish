@@ -1,3 +1,8 @@
+% Logical English
+% http://demo.logicalcontracts.com:8082/p/research_and_development_tax_reliefs.pl
+% Knowledge page carefully crafted in Taxlog/Prolog from the legislation at
+% https://www.gov.uk/guidance/corporation-tax-research-and-development-rd-relief
+
 the predicates are:
     a project can request R&D relief for a credit with a deduction,
     a project qualifies for research & development relief,

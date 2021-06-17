@@ -1,6 +1,6 @@
 %
 % Logical English
-%
+% http://demo.logicalcontracts.com:8082/p/cgt_concessions_sb_restructure_rollover.pl
 % Knowledge page carefully crafted in Taxlog/Prolog from the legislation at
 % https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/small-business-restructure-rollover
 %
@@ -25,25 +25,38 @@ the predicates are:
     a previous time is immediately before a time,
     an asset is ultimately owned by a share with an owner at a time,
     an entity has a share in an asset at a time, 
+    an owner owns an asset at a time according to other legislation,
+    a party is a small business entity according to other legislation,
+    a party has affiliated with an affiliate according to other legislation,
+    a party is connected to a taxpayer according to other legislation,
+    a party is a partner in partnership with a partnership according to other legislation,
+    an asset is an active asset,
+    an asset is used in business of a taxpayer according to other legislation,
+    an asset is of asset type a type,
+    an asset is of asset type a type according to other legislation,
+    a party has an aggregated turnover of an amount,
+    a party has an aggregated turnover of an amount according to other legislation,
+    a cost is a rollover cost,
+    an asset costs a cost at a time,
     an owner / a thing is in a set.
 
 the knowledge base includes:
-%An Event ID rollover of the transfer of an Asset from a Transferor to a Transferees List at a Time applies 
-%    if  this information transfer_event(the Event ID,the Asset,the Time,the Transferor,the Transferees List) has been recorded
-%    and the Event ID rollover applies.
+An Event ID rollover of the transfer of an Asset from a Transferor to a Transferees List at a Time applies 
+    if  this information transfer_event(the Event ID,the Asset,the Time,the Transferor,the Transferees List) has been recorded
+    and the Event ID rollover applies.
  
-%cgt_asset is of type asset.  
-%trading_stock is of type asset.
-%revenue_asset is of type asset.
-%depreciating_asset is of type asset.
-%loan_to_shareholder is of type asset.
+cgt_asset is of type asset.  
+trading_stock is of type asset.
+revenue_asset is of type asset.
+depreciating_asset is of type asset.
+loan_to_shareholder is of type asset.
  
-%A tax payer is a party in an event 
-%   if  event the event of transfering an asset from the tax payer to a recipient at a time occurs.
+A tax payer is a party in an event 
+   if  event the event of transfering an asset from the tax payer to a recipient at a time occurs.
 
-%A tax payer is a party in an event 
-%    if  event the event of transfering an asset from a somebody to a transferee at a time occurs
-%    and the tax payer is in the transferee.
+A tax payer is a party in an event 
+    if  event the event of transfering an asset from a somebody to a transferee at a time occurs
+    and the tax payer is in the transferee.
  
 %An event rollover applies 
 %    if event the event of transfering an asset from a sender to a recipient at a time occurs
@@ -106,40 +119,41 @@ an event meets the ultimate ownership test at a time
             it is the case that:
                 the individual is a member of the family group.    
  
-%An asset is ultimately owned by 1 with an owner at a time 
-%    if  the owner owns the asset at the time according to other legislation.
+An asset is ultimately owned by 1 with an owner at a time 
+    if  the owner owns the asset at the time according to other legislation.
  
-%A party is an eligible party 
-%    if the party is a small business entity according to other legislation.
+A party is an eligible party 
+    if the party is a small business entity according to other legislation.
 
-%A party is an eligible party 
-%    if the party has affiliated with an affiliate according to other legislation
-%    and the affiliate is a small business entity according to other legislation.
+A party is an eligible party 
+    if the party has affiliated with an affiliate according to other legislation
+    and the affiliate is a small business entity according to other legislation.
 
-%A party is an eligible party 
-%    if the party is connected to a taxpayer according to other legislation
-%    and the taxpayer is a small business entity according to other legislation.
+A party is an eligible party 
+    if the party is connected to a taxpayer according to other legislation
+    and the taxpayer is a small business entity according to other legislation.
 
-%A party is an eligible party 
-%    if the party is a partner in partnership with a partnership according to other legislation
-%    and the partnership is a small business entity according to other legislation.
+A party is an eligible party 
+    if the party is a partner in partnership with a partnership according to other legislation
+    and the partnership is a small business entity according to other legislation.
  
-%An asset is an eligible asset 
-%    if  the Asset is an active asset
-%    and the Asset is of asset type a type
-%    and the type is in [cgt_event,depreciating_asset,trading_stock,revenue_asset] .
+An asset is an eligible asset 
+    if  the asset is an active asset
+    and the asset is of asset type a type
+    and the type is in [cgt_event,depreciating_asset,trading_stock,revenue_asset].
  
-%An asset is an active asset 
-%    if  the asset is used in business of a taxpayer according to other legislation.
+An asset is an active asset 
+    if  the asset is used in business of a taxpayer according to other legislation.
  
-%An asset is of asset type a type 
-%    if  the type is of type asset
-%    and the asset is of asset type the type according to other legislation.
+An asset is of asset type a type 
+    if  the type is of type asset
+    and the asset is of asset type the type according to other legislation.
  
-%A party has an aggregated turnover of a turnover 
-%    if the party has an aggregated turnover of the turnover according to other legislation.
+A party has an aggregated turnover of an amount 
+    if the party has an aggregated turnover of the amount according to other legislation.
  
-%A cost is a rollover cost 
-%    if  event an ID of transfering an asset from a tax payer to a transferee at a time occurs
-%    and a previous time is immediately before the time
-%    and the asset costs the cost at the previous Time.
+A cost is a rollover cost 
+    if  the event occurs at a time
+    and the event is a transfer of an asset by a transferor to a transferee
+    and a previous time is immediately before the time
+    and the asset costs the cost at the previous time.

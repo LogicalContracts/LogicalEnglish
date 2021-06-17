@@ -639,6 +639,9 @@ present_tense_verb(satisfies).
 present_tense_verb(owns).
 present_tense_verb(belongs).
 present_tense_verb(applies).
+present_tense_verb(must).
+present_tense_verb(acts).
+
 
 continuous_tense_verb(according).
 

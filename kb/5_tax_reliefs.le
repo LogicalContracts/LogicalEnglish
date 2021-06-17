@@ -1,0 +1,77 @@
+% Logical English
+% http://demo.logicalcontracts.com:8082/p/stamp_duty_reserve_tax_reliefs.pl
+% Knowledge page carefully crafted in Taxlog/Prolog from the legislation at
+% https://www.gov.uk/guidance/stamp-duty-reserve-tax-reliefs-and-exemptions
+
+the predicates are:
+    a transfer from a tax payer one to a tax payer two with a security identifier at a time is exempt,
+    a description is a transfer exempt, 
+    a sender transfers shares to a recipient,
+    a sender transfers shares to a recipient at a time with some id as a code,
+    a recipient is the recipient of a transfer,
+    a time is now, 
+    a transfer corresponds to shares received as gift,
+    a Transfer corresponds to shares inherited in a will,
+    a person is the recipient of a transfer,
+    a transfer corresponds to shares received as gift,
+    a transfer corresponds to shares inherited in a will,
+    a person is the recipient of a transfer,
+    a first person is married oor in civil partnership at a time with a second person according to other legislation
+    a first person is married oor in civil partnership with a second person,
+    a second person transfers shares to a first person,
+    a transfer corresponds to shares transferred on divorce oor dissolution,
+    it is about shares in a trust at a time,
+    a transfer is about shares trading on a growth market but unlisted oor recognized,
+    it corresponds to a settlement to shareholders on a business wound up,
+    a security ID has an exemption according to other legislation,
+    a transfer ID is trading in a market at a time,
+    a transfer ID is trading in a market,
+    a market name is the name of a market at a time according to other legislation,
+    an exchange is a recognized stock exchange at a time according to other legislation,
+    a person identified by an ID is trading in a market at a time according to other legislation.
+
+the knowledge base includes:
+
+%A transfer from a tax payer one to a tax payer two with a security identifier at a time is exempt 
+%    if this information shares_transfer(the tax payer one,the tax payer two,the security identifier,the time) has been recorded
+%    and [the tax payer one,the tax payer two,the security identifier,the time] is a transfer exempt.
+
+A sender transfers shares to a recipient 
+    if the sender transfers shares to the recipient at a time with some id as a code.
+ 
+%A recipient is the recipient of a transfer 
+%    if the transfer = [a sender,the recipient,a security ID,a time].
+ 
+A time is now 
+    if a sender transfers shares to a recipient at the time with some id as a security ID .
+ 
+%A transfer is a transfer exempt 
+%    if the transfer corresponds to shares received as gift
+%    or the transfer corresponds to shares inherited in a will
+%    or a first person is the recipient of the transfer
+%        and the first person is married oor in civil partnership with a second person
+%        and the second person transfers shares to the first person
+%    or the transfer corresponds to shares transferred on divorce oor dissolution
+%    or it is about shares in a trust at a time
+%    or the transfer is about shares trading on a growth market but unlisted oor recognized
+%    or it corresponds to a settlement to shareholders on a business wound up
+%    or the transfer = [a sender,a recipient,a security ID,a time]
+%        and the security ID has an exemption according to other legislation.
+ 
+%A transfer is about shares trading on growth market but unlisted or recognized 
+%    if the transfer = [a sender,a recipient,an ID,a time]
+%    and the ID is trading in a grown market
+%    and merkurMarket is the name of the grown market at the time according to other legislation
+%    and for all cases in which
+%            an exchange is a recognized stock exchange at the time according to other legislation 
+%        it is the case that:
+%            it is not the case that
+%                the ID is trading in market the exchange at the time.
+ 
+%A first person is married oor in civil partnership with a second person 
+%    if  a time is now
+%    and the first person is married oor in civil partnership at the time with the second person according to other legislation.
+ 
+A security ID is trading in a market 
+    if a time is now
+    and a person identified by the security ID is trading in the market at the time according to other legislation.
