@@ -16,19 +16,35 @@ the predicates are:
     a transfer corresponds to shares received as gift,
     a transfer corresponds to shares inherited in a will,
     a person is the recipient of a transfer,
-    a first person is married oor in civil partnership at a time with a second person according to other legislation
-    a first person is married oor in civil partnership with a second person,
+    a first person is married or in civil partnership at a time with a second person according to other legislation
+    a first person is married or in civil partnership with a second person,
     a second person transfers shares to a first person,
-    a transfer corresponds to shares transferred on divorce oor dissolution,
+    a transfer corresponds to shares transferred on divorce or dissolution,
     it is about shares in a trust at a time,
-    a transfer is about shares trading on a growth market but unlisted oor recognized,
+    a transfer is about shares trading on a growth market but unlisted or recognized,
     it corresponds to a settlement to shareholders on a business wound up,
     a security ID has an exemption according to other legislation,
     a transfer ID is trading in a market at a time,
     a transfer ID is trading in a market,
     a market name is the name of a market at a time according to other legislation,
     an exchange is a recognized stock exchange at a time according to other legislation,
-    a person identified by an ID is trading in a market at a time according to other legislation.
+    a person identified by an ID is trading in a market at a time according to other legislation, % new stuff
+    an event is exempt from SDRT,
+    an event occurs at a time,
+    an event is a paperless transfer of a security by a transferor to a transferee,
+    an event is a gift to a transferee,
+    an event corresponds to the transfer of a security in a will by a transferor to a transferee,
+    an event is associated with some event of marriage-civil partnership between a transferor and a transferee,
+    an event is associated with some event of divorce-dissolution of civil partnership between the transferor and the transferee,
+    an security is in a trust at a time,
+    a person is a trustee of a trust,
+    a security is trading in a market at a time,
+    a security is listed on a stock exchange at a time,
+    an event is associated with some event of liquidation settlement to a transferee,
+    a security is trading in some recognised growth market at a time,
+    a market is an RGM market at the time as defined at an URL,
+    a security is listed on some recognised stock exchange at a time,
+    a stock exchange is a recognised stock exchange at a time as defined at an URL.
 
 the knowledge base includes:
 
@@ -44,16 +60,40 @@ A sender transfers shares to a recipient
  
 A time is now 
     if a sender transfers shares to a recipient at the time with some id as a security ID .
- 
+
+an event is exempt from SDRT
+    if the event occurs at a time
+    and the event is a paperless transfer of a security by a transferor to a transferee
+    and the event is a gift to the transferee
+        or the event corresponds to the transfer of the security in a will by the transferor to the transferee
+        or the event is associated with some event of marriage-civil partnership between the transferor and the transferee
+        or the event is associated with some event of divorce-dissolution of civil partnership between the transferor and the transferee
+        or the security is in a trust at the time
+            and the transferor is a trustee of the trust
+            and the transferee is a trustee of the trust
+        or the security is trading in some recognised growth market at the time
+            and it is not the case that 
+                the security is listed on some recognised stock exchange at the time
+        or the event is associated with some event of liquidation settlement to the transferee.
+
+the security is trading in some recognised growth market at a time
+    if the security is trading in a market at the time
+    and the market is an RGM market at the time as defined at "https://www.gov.uk/hmrc-internal-manuals/stamp-taxes-shares-manual/stsm041330".
+
+the security is listed on some recognised stock exchange at a time
+    if the security is listed on a stock exchange at the time
+    and the stock exchange is a recognised stock exchange at the time as defined at "https://www.gov.uk/government/publications/recognised-stock-exchanges-definition-legislation-and-tables/recognised-stock-exchanges-definition-legislation-and-tables-of-recognised-exchanges".
+
+
 %A transfer is a transfer exempt 
 %    if the transfer corresponds to shares received as gift
 %    or the transfer corresponds to shares inherited in a will
 %    or a first person is the recipient of the transfer
-%        and the first person is married oor in civil partnership with a second person
+%        and the first person is married or in civil partnership with a second person
 %        and the second person transfers shares to the first person
-%    or the transfer corresponds to shares transferred on divorce oor dissolution
+%    or the transfer corresponds to shares transferred on divorce or dissolution
 %    or it is about shares in a trust at a time
-%    or the transfer is about shares trading on a growth market but unlisted oor recognized
+%    or the transfer is about shares trading on a growth market but unlisted or recognized
 %    or it corresponds to a settlement to shareholders on a business wound up
 %    or the transfer = [a sender,a recipient,a security ID,a time]
 %        and the security ID has an exemption according to other legislation.
@@ -68,9 +108,9 @@ A time is now
 %            it is not the case that
 %                the ID is trading in market the exchange at the time.
  
-%A first person is married oor in civil partnership with a second person 
+%A first person is married or in civil partnership with a second person 
 %    if  a time is now
-%    and the first person is married oor in civil partnership at the time with the second person according to other legislation.
+%    and the first person is married or in civil partnership at the time with the second person according to other legislation.
  
 A security ID is trading in a market 
     if a time is now

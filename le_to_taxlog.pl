@@ -446,17 +446,19 @@ predicate_template(RestW, [' '|RestIn], Out) :- !, %print_message(informational,
 predicate_template(RestW, ['\t'|RestIn], Out) :- !, % print_message(informational, '\t'), % skip tabs in template
     predicate_template(RestW, RestIn, Out).
 predicate_template([Word|RestW], [Word|RestIn], Out) :- 
-    not(lists:member(Word,['\n', if, and, or, '.', ','])),  !, %print_message(informational, Word), 
+    %not(lists:member(Word,['\n', if, and, or, '.', ','])),  !, %print_message(informational, Word), 
+    not(lists:member(Word,['\n', if, '.', ','])),  !, %print_message(informational, Word), 
     predicate_template(RestW, RestIn, Out).
 predicate_template([], [], []). 
 predicate_template([], [Word|Rest], [Word|Rest]) :- 
-    lists:member(Word,['\n', if, and, or, '.', ',']). 
+    %lists:member(Word,['\n', if, and, or, '.', ',']). 
+    lists:member(Word,['\n', if, '.', ',']). % leaving or/and out of this
 
 match_template(PossibleLiteral, Map1, MapN, Literal) :- 
-    dict(Predicate, _, Candidate),
+    dictionary(Predicate, _, Candidate),
     match(Candidate, PossibleLiteral, Map1, MapN, Template), 
-    dict(Predicate, _, Template), 
-    Literal =.. Predicate, print_message(informational, 'Match!! with '-[Literal]). 
+    dictionary(Predicate, _, Template), 
+    Literal =.. Predicate, print_message(informational,message('Match!! with ',Literal)). 
 
 % match(+CandidateTemplate, +PossibleLiteral, +MapIn, -MapOut, -SelectedTemplate)
 match([], [], Map, Map, []) :- !.  % success! It succeds iff PossibleLiteral is totally consumed
@@ -709,6 +711,39 @@ explain_error(String, Me-Pos, Message) :-
     Message = [Me, at , Pos, near, ':', Left, '<-HERE->', Right]. 
 
 spypoint(A,A). % for debugging
+
+% dictionary(?LiteralElements, ?NamesAndTypes, ?Template)
+% this is a multimodal predicate used to associate a Template with its particular other of the words for LE
+% with the Prolog expression of that relation in LiteralElements (not yet a predicate, =.. is done elsewhere).
+% NamesAndTypes contains the external name and type (name-type) of each variable just in the other in 
+% which the variables appear in LiteralElement. 
+dictionary(Predicate, VariablesNames, Template) :- 
+    predef_dict(Predicate, VariablesNames, Template); dict(Predicate, VariablesNames, Template).
+
+:- discontiguous predef_dict/3.
+% predefined entries:
+predef_dict([lists:member, Member, List], [member-object, list-list], [Member, is, in, List]).
+predef_dict([assert,Information], [info-clause], [this, information, Information, ' has', been, recorded]).
+predef_dict([is_a, Object, Type], [object-object, type-type], [Object, is, of, type, Type]).
+predef_dict([before, T1, T2], [time1-time, time2-time], [T1, is, before, T2]).
+predef_dict([between,Minimum,Maximum,Middle], [min-date, max-date, middle-date], 
+    [Middle, is, between, Minimum, and, Maximum]).
+predef_dict([must_be, Type, Term], [type-type, term-term], [Term, must, be, Type]).
+predef_dict([must_not_be, A, B], [term-term, variable-variable], [A, must, not, be, B]). 
+predef_dict([myDB_entities:is_individual_or_company_on, A, B],
+                  [affiliate-affiliate, date-date],
+                  [A, is, an, individual, or, is, a, company, at, B]).
+predef_dict([uk_tax_year_for_date,Date,Year,Start,End], [date-date,year-year,start-date,end-date], 
+                    [date, Date, falls, in, the, 'UK', tax, year, Year, that, starts, at, Start, ends, at, End]).
+predef_dict([days_spent_in_uk,Individual,Start,End,TotalDays], [who-person,start-date,end-date,total-number], 
+                    [Individual, spent, TotalDays, days, in, the, 'UK', starting, at, Start, and, ending, at, End]).
+
+
+% support predicates
+must_be(A, var) :- var(A).
+must_be(A, nonvar) :- nonvar(A).
+must_be_nonvar(A) :- nonvar(A).
+must_not_be(A,B) :- not(must_be(A,B)). 
 
 /* ------------------------------------------ producing readable taxlog code */
 write_taxlog_code(Source, Readable) :-
