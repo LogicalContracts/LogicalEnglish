@@ -17,6 +17,7 @@ Prolog based generic knowledge base for tax regulations, including reasoner, edi
 	* 4.1. [Language processing](#Languageprocessing)
 	* 4.2. [Perspective on existing (encoded) Knowledge Pages](#PerspectiveonexistingencodedKnowledgePages)
 	* 4.3. [Querying](#Querying)
+	* 4.4. [Parsing Logical English](#LEParsing)
 * 5. [Installation and deployment](#Installationanddeployment)
 	* 5.1. [Quick recipe for a development server](#Quickrecipeforadevelopmentserver)
 	* 5.2. [More details](#Moredetails)
@@ -253,6 +254,36 @@ Standard Prolog clause introspection is used, plus some SWI-Prolog extensions fo
 	- Example
 		- curl --header "Content-Type: application/json" --request POST --data '{"operation":"query", "theQuery":"a(13,Y)", "facts":["d(13)"], "module":"http://tests.com"}' http://demo.logicalcontracts.com:8082/taxkbapi
 - ```render_questions(Unknown,Questions)``` uses question(…) fact annotations to obtain more readable "questions"
+
+###  4.4. <a name='LEParsing'></a>Parsing Logical English
+- ```text_to_logic(LogicalEnglishString, Error, TaxlogTranslation)```
+	- LogicalEnglishString is a regular string with with the following structure. The expression:
+
+		the predicates are:
+
+		followed by the declarations of all the predicates involved in the knowledge base.
+		Each declarations define a template with the variables and other words required to
+		describe a relevant relation. It is a comma separated list of templates which ends
+		with a period. 
+
+		After that period, the following statement introduces the knowledge base:
+
+		the knowledge base includes: 
+
+		This is followed by the rules and facts written in Logical English syntax. Each rule must end with a period. 
+
+		Indentation is used to organize the and/or list of conditions by strict
+		observance of one condition per line with a level of indentation that 
+		correspond to each operator and corresponding conditions. 
+
+		Commentaries can be added with the usual % symbol like in Prolog. 
+	- Error contains a report of the last parsed positions inside the file (after removing commentaries) 
+		a fragment of the text that contains the error. This variable contains a [] if no error was a found. 
+	- TaxlogTranslation contains a list with the terms and predicates obtained from the Logical English text.
+
+- ```le_taxlog_translate(en(LogicalEnglishString), TaxlogTranslation)``` to be used inside the SWISH querying interface
+	- LogicalEnglishString as explained above. 
+	- TaxlogTranslation as explained above. 
 
 ##  5. <a name='Installationanddeployment'></a>Installation and deployment
 

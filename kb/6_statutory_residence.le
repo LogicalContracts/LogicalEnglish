@@ -16,6 +16,7 @@ the predicates are:
     an individual meets ties test STEP 4 at a date,
     an individual meets first automatic overseas test at a date,
     an individual meets second automatic overseas test at a date,
+    an individual meets third automatic overseas test at a date according to other legislation,
     an individual meets third automatic overseas test at a date,
     an individual meets ties test at a date,
     an individual satisfies first automatic uk test at a date,
@@ -35,12 +36,12 @@ An individual is resident in the UK for a tax year
     if the individual meets the automatic residence test for the year
     or the individual meets the sufficient ties test for the year.
 
-An individual meets the automatic residence test for a year
-    if the individual meets an alternative of the automatic UK tests for the year
-    and the alternative is in [first, second, third, fourth]
-    and it is not the case that
-            the individual meets a different alternative of the automatic overseas tests for the year
-            and the different alternative is in [first, second, third, fourth, fifth].
+%An individual meets the automatic residence test for a year
+%    if the individual meets an alternative of the automatic UK tests for the year
+%    and the alternative is in [first, second, third, fourth]
+%    and it is not the case that
+%            the individual meets a different alternative of the automatic overseas tests for the year
+%            and the different alternative is in [first, second, third, fourth, fifth].
 
 %a date falls in the UK tax year a year number that starts at a starting number and ends at a ending number
 %    if reasoner:uk_tax_year(the date,the year number,the starting number,the ending number).
@@ -108,7 +109,7 @@ an individual meets ties test at a date
 %            it is not the case that
 %                the individual complies to statutory residence test at the previous date.
  
-an individual meets third automatic overseas test at a Date
+an individual meets third automatic overseas test at a date
     if the individual meets third automatic overseas test at the date according to other legislation.
  
 % predefined

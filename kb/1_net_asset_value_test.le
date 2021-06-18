@@ -93,12 +93,12 @@ A person has to exclude asset an asset
                 or  the asset is life insurance for the person
 .
 
-An amount is the net value of an asset at a date
-    if  a first amount is the market value of the asset at the date
-    and a second amount is the sum of each individual amount such that
-        the individual amount is a provision on the asset's liabilities of some type that is in [annual leave, long service leave, unearned income, tax liabilities, legally enforceable debts, legal oor equitable obligations]
-        at the date
-    and the amount is the first amount - the second amount.
+%An amount is the net value of an asset at a date
+%    if  a first amount is the market value of the asset at the date
+%    and a second amount is the sum of each individual amount such that
+%        the individual amount is a provision on the asset's liabilities of some type that is in [annual leave, long service leave, unearned income, tax liabilities, legally enforceable debts, legal oor equitable obligations]
+%        at the date
+%    and the amount is the first amount - the second amount.
 
 An amount is a provision on an asset's liabilities of some type that is in a set
   if the asset has a type of liability that costs the amount

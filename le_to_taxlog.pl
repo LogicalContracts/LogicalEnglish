@@ -193,11 +193,11 @@ condition(FinalExpression, _, Map1, MapN) --> spypoint,
     modifiers(forall(Conds,Goals), Map3, MapN, FinalExpression).
 
 % the Value is the sum of each Asset Net such that
-%condition(FinalExpression, _, Map1, MapN) --> 
-%    variable(Value, Map1, Map2), is_the_sum_of_each_, extract_variable(Each, NameWords, _), such_that_,  
-%    { name_predicate(NameWords, Name), update_map(Each, Name, Map2, Map3) }, newline, 
-%    spaces(Ind), conditions(Ind, Map3, Map4, Conds), 
-%    modifiers(aggregate_all(sum(Each),Conds,Value), Map4, MapN, FinalExpression).
+condition(FinalExpression, _, Map1, MapN) --> 
+    variable(Value, Map1, Map2), is_the_sum_of_each_, extract_variable(Each, NameWords, _), such_that_,  
+    { name_predicate(NameWords, Name), update_map(Each, Name, Map2, Map3) }, newline, 
+    spaces(Ind), conditions(Ind, Map3, Map4, Conds), 
+    modifiers(aggregate_all(sum(Each),Conds,Value), Map4, MapN, FinalExpression).
     
 % it is not the case that: 
 condition(not(Conds), _, Map1, MapN) --> 
@@ -693,7 +693,7 @@ select_first_section([E|R], N, [E|NR]) :-
 
 showerror(Me-Pos-Context) :-
    (clause(notice(error, Me,Pos, Context), _) ->
-      print_message(error, [Me, at, Pos,' just before \"',Context, '\"']) 
+      print_message(error, [Me, at, Pos,' just in or inside \"',Context, '\"']) 
     ; print_message(error,'No error reported')  ).
 
 write_words([]) :- !.
@@ -722,7 +722,7 @@ dictionary(Predicate, VariablesNames, Template) :-
 
 :- discontiguous predef_dict/3.
 % predefined entries:
-predef_dict([lists:member, Member, List], [member-object, list-list], [Member, is, in, List]).
+predef_dict([member, Member, List], [member-object, list-list], [Member, is, in, List]).
 predef_dict([assert,Information], [info-clause], [this, information, Information, ' has', been, recorded]).
 predef_dict([is_a, Object, Type], [object-object, type-type], [Object, is, of, type, Type]).
 predef_dict([before, T1, T2], [time1-time, time2-time], [T1, is, before, T2]).

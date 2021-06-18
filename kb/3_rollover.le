@@ -41,9 +41,9 @@ the predicates are:
     an owner / a thing is in a set.
 
 the knowledge base includes:
-An Event ID rollover of the transfer of an Asset from a Transferor to a Transferees List at a Time applies 
-    if  this information transfer_event(the Event ID,the Asset,the Time,the Transferor,the Transferees List) has been recorded
-    and the Event ID rollover applies.
+%An Event ID rollover of the transfer of an Asset from a Transferor to a Transferees List at a Time applies 
+%    if  this information transfer_event(the Event ID,the Asset,the Time,the Transferor,the Transferees List) has been recorded
+%    and the Event ID rollover applies.
  
 cgt_asset is of type asset.  
 trading_stock is of type asset.
@@ -51,12 +51,12 @@ revenue_asset is of type asset.
 depreciating_asset is of type asset.
 loan_to_shareholder is of type asset.
  
-A tax payer is a party in an event 
-   if  event the event of transfering an asset from the tax payer to a recipient at a time occurs.
+%A tax payer is a party of an event 
+%   if  event the event of transfering an asset from the tax payer to a recipient at a time occurs.
 
-A tax payer is a party in an event 
-    if  event the event of transfering an asset from a somebody to a transferee at a time occurs
-    and the tax payer is in the transferee.
+%A tax payer is a party of an event 
+%    if  event the event of transfering an asset from a somebody to a transferee at a time occurs
+%    and the tax payer is in the transferee.
  
 %An event rollover applies 
 %    if event the event of transfering an asset from a sender to a recipient at a time occurs
@@ -137,10 +137,10 @@ A party is an eligible party
     if the party is a partner in partnership with a partnership according to other legislation
     and the partnership is a small business entity according to other legislation.
  
-An asset is an eligible asset 
-    if  the asset is an active asset
-    and the asset is of asset type a type
-    and the type is in [cgt_event,depreciating_asset,trading_stock,revenue_asset].
+%An asset is an eligible asset 
+%    if  the asset is an active asset
+%    and the asset is of asset type a type
+%    and the type is in [cgt_event,depreciating_asset,trading_stock,revenue_asset].
  
 An asset is an active asset 
     if  the asset is used in business of a taxpayer according to other legislation.
