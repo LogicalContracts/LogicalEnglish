@@ -39,19 +39,18 @@ text_to_logic(String, Error, Translation) :-
     tokenize(String, Tokens, [cased(true), spaces(true)]),
     unpack_tokens(Tokens, UTokens), 
     clean_comments(UTokens, CTokens), 
-    %print_message(informational, String), 
-    ( phrase(document(Translation), CTokens) -> 
-        ( print_message(informational, Translation), Error=[] )
+    ( phrase(document(Translation), CTokens) -> true
+        % ( print_message(informational, "Translation: ~w"-[Translation]), Error=[] )
     ;   ( showerror(Error), Translation=[])). 
 
 % document(-Translation, In, Rest)
 % a DCG predicate to translate a LE document into Taxlog prolog terms
 document(Translation, In, Rest) :-
     spaces_or_newlines(_, In, In1),
-    header(Settings, In1, In2), % print_message(informational, Settings), 
+    header(Settings, In1, In2),
     spaces_or_newlines(_, In2, In3),
-    rules_previous(In3, In4),  %print_message(informational, 'this is the knowledge base:'), 
-    content(Content, In4, Rest), %print_message(informational, 'got the content'),
+    rules_previous(In3, In4),  
+    content(Content, In4, Rest), 
     append(Settings, Content, Translation).
 
 % header parses all the declarations and assert them into memory to be invoked by the rules. 
@@ -441,13 +440,13 @@ operator(and, In, Out) :- and_(In, Out).
 operator(or, In, Out) :- or_(In, Out).
 
 % cuts added to improve efficiency
-predicate_template(RestW, [' '|RestIn], Out) :- !, %print_message(informational, ' '), % skip spaces in template
+predicate_template(RestW, [' '|RestIn], Out) :- !, % skip spaces in template
     predicate_template(RestW, RestIn, Out).
-predicate_template(RestW, ['\t'|RestIn], Out) :- !, % print_message(informational, '\t'), % skip tabs in template
+predicate_template(RestW, ['\t'|RestIn], Out) :- !, % skip tabs in template
     predicate_template(RestW, RestIn, Out).
 predicate_template([Word|RestW], [Word|RestIn], Out) :- 
-    %not(lists:member(Word,['\n', if, and, or, '.', ','])),  !, %print_message(informational, Word), 
-    not(lists:member(Word,['\n', if, '.', ','])),  !, %print_message(informational, Word), 
+    %not(lists:member(Word,['\n', if, and, or, '.', ','])),  !, 
+    not(lists:member(Word,['\n', if, '.', ','])),  !,
     predicate_template(RestW, RestIn, Out).
 predicate_template([], [], []). 
 predicate_template([], [Word|Rest], [Word|Rest]) :- 
@@ -458,19 +457,20 @@ match_template(PossibleLiteral, Map1, MapN, Literal) :-
     dictionary(Predicate, _, Candidate),
     match(Candidate, PossibleLiteral, Map1, MapN, Template), 
     dictionary(Predicate, _, Template), 
-    Literal =.. Predicate, print_message(informational,message('Match!! with ',Literal)). 
+    Literal =.. Predicate.
+    % print_message(informational,'Match!! with ~w'-[Literal]). 
 
 % match(+CandidateTemplate, +PossibleLiteral, +MapIn, -MapOut, -SelectedTemplate)
 match([], [], Map, Map, []) :- !.  % success! It succeds iff PossibleLiteral is totally consumed
 match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, [Element|RestSelected]) :-
-    nonvar(Element), Word = Element, % print_message(informational, ' '), print_message(informational, Word),
+    nonvar(Element), Word = Element, 
     match(RestElements, PossibleLiteral, Map1, MapN, RestSelected). 
 match([Element|RestElements], [Det|PossibleLiteral], Map1, MapN, [Var|RestSelected]) :-
     var(Element), 
     determiner(Det), 
     extract_variable(Var, NameWords, _, PossibleLiteral, NextWords),  NameWords \= [], !, % <-- CUT! % it is not empty % <- leave that _ unbound!
     name_predicate(NameWords, Name), 
-    update_map(Var, Name, Map1, Map2), %print_message(informational, 'found a variable '), print_message(informational, Name),
+    update_map(Var, Name, Map1, Map2), 
     match(RestElements, NextWords, Map2, MapN, RestSelected).  
 match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, [Constant|RestSelected]) :-
     var(Element), 
@@ -670,10 +670,8 @@ assertall([]).
 assertall([F|R]) :-
     not(asserted(F)),
     assertz(F), !,
-    % print_message(informational, 'Asserting .. '), print_message(informational, F), nl,
     assertall(R).
 assertall([_F|R]) :-
-    % print_message(informational, ' Already there .. '), print_message(informational, F), nl,
     assertall(R).
 
 asserted(F :- B) :- clause(F, B). % as a rule with a body
@@ -695,10 +693,6 @@ showerror(Me-Pos-Context) :-
    (clause(notice(error, Me,Pos, Context), _) ->
       print_message(error, [Me, at, Pos,' just in or inside \"',Context, '\"']) 
     ; print_message(error,'No error reported')  ).
-
-write_words([]) :- !.
-write_words([Word|RestW]) :- print_message(informational, Word), 
-    write_words(RestW). 
 
 explain_error(String, Me-Pos, Message) :-
     Start is Pos - 20, % assuming a window of 40 characters. 
@@ -852,8 +846,6 @@ showtaxlog:-
 	writeln(Taxlog),
 	fail.
 showtaxlog.
-
-% print_message(_, String) :- write(String).
 
 sandbox:safe_primitive(le_to_taxlog:showtaxlog).
 sandbox:safe_primitive(le_to_taxlog:le_taxlog_translate( _EnText, _Terms)).
