@@ -103,7 +103,7 @@ predicate_decl(dict([Predicate|Arguments],TypesAndNames, Template), Relation) --
 % error clause
 predicate_decl(_, _, Rest, _) :- 
     text_size(Size), length(Rest, Rsize), Pos is Size - Rsize, 
-    asserterror('Syntax error found in a declaration ', Pos, Rest), fail.
+    asserterror('LE error found in a declaration ', Pos, Rest), fail.
 
 % statement: the different types of statements in a LE text
 statement(Statement) --> 
@@ -131,7 +131,7 @@ literal_(Map1, MapN, Literal) -->
 % error clause
 literal_(M, M, _, Rest, _) :- 
     text_size(Size), length(Rest, Rsize), Pos is Size - Rsize, 
-    asserterror('Syntax error found in a literal ', Pos, Rest), fail.
+    asserterror('LE error found in a literal ', Pos, Rest), fail.
 
 conditions(Ind0, Map1, MapN, Conds) --> 
     condition(Cond, Ind0, Map1, Map2), 
@@ -170,7 +170,7 @@ expression(Y, Map1, MapN) -->
 % error clause
 expression(_, _, _, Rest, _) :- 
     text_size(Size), length(Rest, Rsize), Pos is Size - Rsize, 
-    asserterror('Syntax error found at an expression ', Pos, Rest), fail.
+    asserterror('LE error found at an expression ', Pos, Rest), fail.
 
 % this produces a Taxlog condition with the form: 
 % setof(Owner/Share, is_ultimately_owned_by(Asset,Owner,Share) on Before, SetOfPreviousOwners)
@@ -222,7 +222,7 @@ condition(InfixBuiltIn, _, Map1, MapN) --> spypoint,
 % error clause
 condition(_, _Ind, Map, Map, Rest, _) :- 
         text_size(Size), length(Rest, Rsize), Pos is Size - Rsize, 
-        asserterror('Syntax error found at a condition ', Pos, Rest), fail.
+        asserterror('LE error found at a condition ', Pos, Rest), fail.
 
 % modifiers add reifying predicates to an expression. 
 % modifiers(+MainExpression, +MapIn, -MapOut, -FinalExpression)
@@ -690,9 +690,10 @@ select_first_section([E|R], N, [E|NR]) :-
     select_first_section(R, NN, NR). 
 
 showerror(Me-Pos-Context) :-
-   (clause(notice(error, Me,Pos, Context), _) ->
-      print_message(error, [Me, at, Pos,' just in or inside \"',Context, '\"']) 
-    ; print_message(error,'No error reported')  ).
+   (clause(notice(error, Me,Pos, Context_), _) -> (
+        atomic_list_concat(Context_,Context),
+        print_message(error, "~w at ~w just in or inside \"~w\"" - [Me, Pos,Context]) 
+        ); print_message(error,'No error reported'-[])  ).
 
 explain_error(String, Me-Pos, Message) :-
     Start is Pos - 20, % assuming a window of 40 characters. 
