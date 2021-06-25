@@ -31,7 +31,7 @@ correspond to each operator and corresponding conditions.
 
 :- module(le_to_taxlog, [document/3]).
 :- use_module('./tokenize/prolog/tokenize.pl').
-:- thread_local literal/5, text_size/1, notice/3, dict/3.
+:- thread_local literal/5, text_size/1, notice/3, dict/3, last_nl_parsed/1.
 :- discontiguous statement/3, declaration/4, predicate/3, action/3.
 
 % Main clause: text_to_logic(+String,-Errors,-Clauses) is det
@@ -39,23 +39,32 @@ text_to_logic(String, Error, Translation) :-
     tokenize(String, Tokens, [cased(true), spaces(true)]),
     unpack_tokens(Tokens, UTokens), 
     clean_comments(UTokens, CTokens), 
+    retractall(last_nl_parsed(_)), asserta(last_nl_parsed(0)), % preparing line counting
     ( phrase(document(Translation), CTokens) -> true
         % ( print_message(informational, "Translation: ~w"-[Translation]), Error=[] )
     ;   ( showerror(Error), Translation=[])). 
 
 % document(-Translation, In, Rest)
 % a DCG predicate to translate a LE document into Taxlog prolog terms
-document(Translation, In, Rest) :-
-    spaces_or_newlines(_, In, In1),
-    header(Settings, In1, In2),
-    spaces_or_newlines(_, In2, In3),
-    rules_previous(In3, In4),  
-    content(Content, In4, Rest), 
-    append(Settings, Content, Translation).
+%document(Translation, In, Rest) :-
+%    spaces_or_newlines(_, In, In1),
+%    header(Settings, In1, In2), !, 
+%    spaces_or_newlines(_, In2, In3),
+%    rules_previous(In3, In4),  
+%    content(Content, In4, Rest), 
+%    append(Settings, Content, Translation).
+
+document(Translation) --> 
+    spaces_or_newlines(_),
+    header(Settings),  
+    spaces_or_newlines(_),
+    rules_previous,  
+    content(Content), 
+    {append(Settings, Content, Translation)}.
 
 % header parses all the declarations and assert them into memory to be invoked by the rules. 
 header(Settings, In, Next) :-
-    length(In, TextSize), 
+    length(In, TextSize), % after comments were removed
     ( settings(Rules, Settings, In, Next) -> true
     ; (Rules = [], Settings = [])),
     RulesforErrors = % rules for error have been statically added
@@ -82,11 +91,13 @@ declaration(Rules, [predicates(Fluents)]) -->
 
 predicate_previous --> 
     spaces(_), [the], spaces(_), [predicates], spaces(_), [are], spaces(_), [':'], spaces(_), newline.
+predicate_previous --> 
+    spaces(_), [the], spaces(_), [templates], spaces(_), [are], spaces(_), [':'], spaces(_), newline.
 
 list_of_predicates_decl([Ru|R1], [F|R2]) --> predicate_decl(Ru,F), rest_list_of_predicates_decl(R1,R2).
 
 rules_previous --> 
-    spaces(_), [the], spaces(_), [rules], spaces(_), [are], spaces(_), [':'], spaces(_), newline.
+    spaces(_), [the], spaces(_), [rules], spaces(_), [are], spaces(_), [':'], spaces(_), newline, !.
 rules_previous --> 
     spaces(_), [the], spaces(_), ['knowledge'], spaces(_), [base], spaces(_), [includes], spaces(_), [':'], spaces(_), newline.
 
@@ -102,7 +113,9 @@ predicate_decl(dict([Predicate|Arguments],TypesAndNames, Template), Relation) --
 % not very useful with loops, of course. 
 % error clause
 predicate_decl(_, _, Rest, _) :- 
-    text_size(Size), length(Rest, Rsize), Pos is Size - Rsize, 
+    % text_size(Size), length(Rest, Rsize), Pos is Size - Rsize,
+    last_nl_parsed(Pos), % using the last line parsed as the position of the error
+    %print_message(error, 'LE error found at a declaration at line'-Pos), fail.  
     asserterror('LE error found in a declaration ', Pos, Rest), fail.
 
 % statement: the different types of statements in a LE text
@@ -110,12 +123,13 @@ statement(Statement) -->
     literal_([], Map1, Head), body_(Body, Map1, _), period, !, % <-- CUT 
     {(Body = [] -> Statement = [Head]; Statement = [if(Head, Body)])}. 
 
-statement([Fact]) --> 
-    spaces(_), prolog_literal_(Fact, [], _), spaces_or_newlines(_), period.
+% no prolog inside LE!
+%statement([Fact]) --> 
+%    spaces(_), prolog_literal_(Fact, [], _), spaces_or_newlines(_), period.
 
 body_([], _, _) --> spaces_or_newlines(_).
 body_(Conditions, Map1, MapN) --> 
-    newline, spaces(Ind), if_, conditions(Ind, Map1, MapN, Conditions), spaces_or_newlines(_).
+    newline, spaces(Ind), if_, !, conditions(Ind, Map1, MapN, Conditions), spaces_or_newlines(_).
 body_(Conditions, Map1, MapN) --> 
     if_, newline, spaces(Ind), conditions(Ind, Map1, MapN, Conditions), spaces_or_newlines(_).
 
@@ -123,14 +137,16 @@ body_(Conditions, Map1, MapN) -->
 % it then tries to match those words against a template in memory (see dict/3 predicate)
 literal_(Map1, MapN, Literal) --> 
     predicate_template(PossibleTemplate),
-    {match_template(PossibleTemplate, Map1, MapN, Literal)}.
+    {match_template(PossibleTemplate, Map1, MapN, Literal)}, !.
 % rewritten to use in swish. Fixed! It was a name clash. Apparently "literal" is used somewhere else
 %literal_(Map1, MapN, Literal, In, Out) :-  print_message(informational, '  inside a literal'),
 %        predicate_template(PossibleTemplate, In, Out), print_message(informational, PossibleTemplate),
 %        match_template(PossibleTemplate, Map1, MapN, Literal).
 % error clause
 literal_(M, M, _, Rest, _) :- 
-    text_size(Size), length(Rest, Rsize), Pos is Size - Rsize, 
+    %text_size(Size), length(Rest, Rsize), Pos is Size - Rsize, 
+    last_nl_parsed(Pos), % using the last line parsed as the position of the error
+    %print_message(error, 'LE error found in a literal at line'-Pos), fail. 
     asserterror('LE error found in a literal ', Pos, Rest), fail.
 
 conditions(Ind0, Map1, MapN, Conds) --> 
@@ -138,17 +154,17 @@ conditions(Ind0, Map1, MapN, Conds) -->
     more_conds(Ind0, Ind0, _IndF, Map2, MapN, Cond, Conds).
     %{Ind0=<IndF}. % 
 
-% more_conds(PreviosInd, CurrentInd, MapIn, MapOut, InCond, OutConds)
-more_conds(Ind0, Ind1, Ind, Map1, MapN, Cond, Conditions) --> 
-    newline, spaces(Ind), {Ind0 =< Ind}, % if the new indentation is deeper, it goes on as before. 
-    operator(Op), condition(Cond2, Ind, Map1, MapN), 
-    {add_cond(Op, Ind1, Ind, Cond, Cond2, Conditions)}.
 % three conditions look ahead
 more_conds(Ind0, Ind1, Ind4, Map1, MapN, C1, RestMapped, In1, Out) :-
     newline(In1, In2), spaces(Ind2, In2, In3), Ind0=<Ind2, operator(Op1, In3, In4), condition(C2, Ind1, Map1, Map2, In4, In5), 
     newline(In5, In6), spaces(Ind3, In6, In7), Ind0=<Ind3, operator(Op2, In7, In8), condition(C3, Ind2, Map2, Map3, In8, In9), 
-    adjust_op(Ind2, Ind3, C1, Op1, C2, Op2, C3, Conditions), 
+    adjust_op(Ind2, Ind3, C1, Op1, C2, Op2, C3, Conditions), !, 
     more_conds(Ind0, Ind3, Ind4, Map3, MapN, Conditions, RestMapped, In9, Out). 
+% more_conds(PreviosInd, CurrentInd, MapIn, MapOut, InCond, OutConds)
+more_conds(Ind0, Ind1, Ind, Map1, MapN, Cond, Conditions) --> 
+    newline, spaces(Ind), {Ind0 =< Ind}, % if the new indentation is deeper, it goes on as before. 
+    operator(Op), condition(Cond2, Ind, Map1, MapN), 
+    {add_cond(Op, Ind1, Ind, Cond, Cond2, Conditions)}, !.
 more_conds(_, Ind, Ind, Map, Map, Cond, Cond, Rest, Rest).  
  
 % this naive definition of term is problematic
@@ -169,7 +185,9 @@ expression(Y, Map1, MapN) -->
     term_(Y, Map1, MapN), spaces(_).
 % error clause
 expression(_, _, _, Rest, _) :- 
-    text_size(Size), length(Rest, Rsize), Pos is Size - Rsize, 
+%    % text_size(Size), length(Rest, Rsize), Pos is Size - Rsize, 
+    last_nl_parsed(Pos), % using the last line parsed as the position of the error
+%    print_message(error, 'LE error found at an expression at line'-Pos), fail. 
     asserterror('LE error found at an expression ', Pos, Rest), fail.
 
 % this produces a Taxlog condition with the form: 
@@ -177,15 +195,15 @@ expression(_, _, _, Rest, _) :-
 % from a set of word such as: 
 %     and a set of previous owners is a collection of an owner / a share 
 %           where the asset is ultimately owned by the share with the owner at the previous time
-condition(FinalExpression, _, Map1, MapN) --> spypoint, 
+condition(FinalExpression, _, Map1, MapN) --> 
     %variable(Set, Map1, Map2), is_a_collection_of_, term_(Term, Map2, Map3), where_,
-    variable(Set, Map1, Map2), is_a_collection_of_, literal_(Map2, Map3, Term), % moved where to the following line
+    variable(Set, Map1, Map2), is_a_collection_of_, literal_(Map2, Map3, Term), !, % moved where to the following line
     newline, spaces(Ind2), where_, conditions(Ind2, Map3, Map4, Goals),
     modifiers(setof(Term,Goals,Set), Map4, MapN, FinalExpression).
 
 % for every a party is a party in the event, it is the case that:
-condition(FinalExpression, _, Map1, MapN) --> spypoint, 
-    for_all_cases_in_which_, newline, 
+condition(FinalExpression, _, Map1, MapN) -->  
+    for_all_cases_in_which_, newline, !, 
     spaces(Ind2), conditions(Ind2, Map1, Map2, Conds), spaces_or_newlines(_), 
     it_is_the_case_that_colon_, newline, 
     spaces(Ind3), conditions(Ind3, Map2, Map3, Goals),
@@ -193,14 +211,14 @@ condition(FinalExpression, _, Map1, MapN) --> spypoint,
 
 % the Value is the sum of each Asset Net such that
 condition(FinalExpression, _, Map1, MapN) --> 
-    variable(Value, Map1, Map2), is_the_sum_of_each_, extract_variable(Each, NameWords, _), such_that_,  
+    variable(Value, Map1, Map2), is_the_sum_of_each_, extract_variable(Each, NameWords, _), such_that_, !, 
     { name_predicate(NameWords, Name), update_map(Each, Name, Map2, Map3) }, newline, 
     spaces(Ind), conditions(Ind, Map3, Map4, Conds), 
     modifiers(aggregate_all(sum(Each),Conds,Value), Map4, MapN, FinalExpression).
     
 % it is not the case that: 
 condition(not(Conds), _, Map1, MapN) --> 
-    spaces(_), not_, newline,  
+    spaces(_), not_, newline,  !, % forget other choices. We know it is a not case
     spaces(Ind), conditions(Ind, Map1, MapN, Conds).
 
 %condition(Cond, _, Map1, MapN, R1, RN) :-  
@@ -208,20 +226,22 @@ condition(not(Conds), _, Map1, MapN) -->
 %    predicate_template(Possible, R1, RN), print_message(informational, 'Posible '), print_message(informational, Possible),
 %    match_template(Possible, Map1, MapN, Cond), !, print_message(informational, 'Literal '), print_message(informational, Cond). 
 
-condition(Cond, _, Map1, MapN) --> spypoint, 
-    literal_(Map1, MapN, Cond). 
+condition(Cond, _, Map1, MapN) -->  
+    literal_(Map1, MapN, Cond), !. 
 
 condition(assert(Prolog), _, Map1, MapN) -->
-    this_information_, prolog_literal_(Prolog, Map1, MapN), has_been_recorded_. 
+    this_information_, !, prolog_literal_(Prolog, Map1, MapN), has_been_recorded_. 
 
 % condition(-Cond, ?Ind, +InMap, -OutMap)
-condition(InfixBuiltIn, _, Map1, MapN) --> spypoint, 
+condition(InfixBuiltIn, _, Map1, MapN) --> 
     term_(Term, Map1, Map2), spaces(_), builtin_(BuiltIn), !, 
     spaces(_), expression(Expression, Map2, MapN), {InfixBuiltIn =.. [BuiltIn, Term, Expression]}. 
 
 % error clause
 condition(_, _Ind, Map, Map, Rest, _) :- 
-        text_size(Size), length(Rest, Rsize), Pos is Size - Rsize, 
+        %text_size(Size), length(Rest, Rsize), Pos is Size - Rsize, 
+        last_nl_parsed(Pos), % using the last line parsed as the position of the error
+        %print_message(error, 'LE error found in a conditions at line'-Pos), fail. 
         asserterror('LE error found at a condition ', Pos, Rest), fail.
 
 % modifiers add reifying predicates to an expression. 
@@ -251,12 +271,15 @@ spaces(0) --> [].
 
 spaces_or_newlines(N) --> [' '], !, spaces_or_newlines(M), {N is M + 1}.
 spaces_or_newlines(N) --> ['\t'], !, spaces_or_newlines(M), {N is M + 1}. % counting tab as one space
-spaces_or_newlines(N) --> ['\r'], !, spaces_or_newlines(M), {N is M + 1}. % counting \r as one space
-spaces_or_newlines(N) --> ['\n'], !, spaces_or_newlines(M), {N is M + 1}. % counting \n as one space
+spaces_or_newlines(N) --> ['\r'], !, spaces_or_newlines(M), {N is M + 1, update_nl_count}. % counting \r as one space
+spaces_or_newlines(N) --> ['\n'], !, spaces_or_newlines(M), {N is M + 1, update_nl_count}. % counting \n as one space
 spaces_or_newlines(0) --> [].
 
-newline --> ['\n'].
-newline --> ['\r'].
+newline --> ['\n'], {update_nl_count}.
+newline --> ['\r'], {update_nl_count}. %not sure what will happens on env that use \n\r
+
+update_nl_count.
+%update_nl_count :- last_nl_parsed(N), NN is N + 1, asserta(last_nl_parsed(NN)). 
 
 one_or_many_newlines --> newline, spaces(_), one_or_many_newlines, !. 
 one_or_many_newlines --> [].
@@ -371,6 +394,7 @@ extract_variable(Var, [Word|RestName], [Word|RestType], [Word|RestOfWords], Next
 name_predicate(Words, Predicate) :-
     concat_atom(Words, '_', Predicate). 
 
+% deprecated!
 % map_to_conds(+ListOfConds, -LogicallyOrderedConditions)
 % the last condition always fits in
 map_to_conds([last-_-C1], C1) :- !.   
@@ -457,8 +481,8 @@ match_template(PossibleLiteral, Map1, MapN, Literal) :-
     dictionary(Predicate, _, Candidate),
     match(Candidate, PossibleLiteral, Map1, MapN, Template), 
     dictionary(Predicate, _, Template), 
-    Literal =.. Predicate.
-    % print_message(informational,'Match!! with ~w'-[Literal]). 
+    Literal =.. Predicate,
+    print_message(informational,'Match!! with ~w'-[Literal]), !. 
 
 % match(+CandidateTemplate, +PossibleLiteral, +MapIn, -MapOut, -SelectedTemplate)
 match([], [], Map, Map, []) :- !.  % success! It succeds iff PossibleLiteral is totally consumed
@@ -474,9 +498,10 @@ match([Element|RestElements], [Det|PossibleLiteral], Map1, MapN, [Var|RestSelect
     match(RestElements, NextWords, Map2, MapN, RestSelected).  
 match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, [Constant|RestSelected]) :-
     var(Element), 
-    extract_constant(NameWords, [Word|PossibleLiteral], NextWords), NameWords \= [], % <-- CUT!  % it is not empty
+    extract_constant(NameWords, [Word|PossibleLiteral], NextWords), NameWords \= [], !, % <-- CUT!  % it is not empty
     name_predicate(NameWords, Constant),
-    %update_map(Element, Constant, Map1, Map2), % print_message(informational, 'found a constant '), print_message(informational, Constant),
+    %update_map(Element, Constant, Map1, Map2), 
+    print_message(informational, 'found a constant '), print_message(informational, Constant),
     match(RestElements, NextWords, Map1, MapN, RestSelected). 
 match([Element|RestElements], ['['|PossibleLiteral], Map1, MapN, [List|RestSelected]) :-
     var(Element), 
@@ -603,6 +628,7 @@ def_det_C('The').
 
 ind_det(a).
 ind_det(an).
+ind_det(another). % added experimentally
 % ind_det(some).
 
 def_det(the).
@@ -679,10 +705,12 @@ asserted(F) :- clause(F,true). % as a fact
 
 /* -------------------------------------------------- error handling */
 asserterror(Me, Pos, Rest) :-
-   select_first_section(Rest, 40, Context), 
-   (clause(notice(_,_,_, _), _) -> retractall(notice(_,_,_,_));true),
-   asserta(notice(error, Me, Pos, Context)).
+    %print_message(error, ' Error found'), 
+    %select_first_section(Rest, 40, Context), 
+    (clause(notice(_,_,_, _), _) -> retractall(notice(_,_,_,_));true),
+    asserta(notice(error, Me, Pos, Rest)).
 
+% to select just a chunck of Rest to show. 
 select_first_section([], _, []) :- !.
 select_first_section(_, 0, []) :- !. 
 select_first_section([E|R], N, [E|NR]) :-
@@ -692,9 +720,10 @@ select_first_section([E|R], N, [E|NR]) :-
 showerror(Me-Pos-Context) :-
    (clause(notice(error, Me,Pos, Context_), _) -> (
         atomic_list_concat(Context_,Context),
-        print_message(error, "~w at ~w just in or inside \"~w\"" - [Me, Pos,Context]) 
+        print_message(error, "~w at line ~w near this: \"~w\"" - [Me, Pos,Context]) 
         ); print_message(error,'No error reported'-[])  ).
 
+% to pinpoint exactly the error. But position is not right
 explain_error(String, Me-Pos, Message) :-
     Start is Pos - 20, % assuming a window of 40 characters. 
     (Start>0 -> 
