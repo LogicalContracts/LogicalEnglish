@@ -278,7 +278,8 @@ spaces_or_newlines(0) --> [].
 newline --> ['\n'], {update_nl_count}.
 newline --> ['\r'], {update_nl_count}. %not sure what will happens on env that use \n\r
 
-update_nl_count.
+update_nl_count :- retract(last_nl_parsed(N)), !, NN is N + 1, assert(last_nl_parsed(NN)). 
+%update_nl_count.
 %update_nl_count :- last_nl_parsed(N), NN is N + 1, asserta(last_nl_parsed(NN)). 
 
 one_or_many_newlines --> newline, spaces(_), one_or_many_newlines, !. 
