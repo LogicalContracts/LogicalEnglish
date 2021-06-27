@@ -255,7 +255,7 @@ variable(Var, Map1, MapN) -->
     { name_predicate(NameWords, Name), update_map(Var, Name, Map1, MapN) }. 
 
 constant(Constant, Map, Map) -->
-    extract_constant(NameWords), !, { name_predicate(NameWords, Constant) }. % <-- CUT!
+    extract_constant(NameWords), { NameWords\=[], name_predicate(NameWords, Constant) }, !. % <-- CUT!
 
 prolog_literal_(Prolog, Map1, MapN) -->
     predicate_name_(Predicate), parentesis_open_, extract_list(Arguments, Map1, MapN), parentesis_close_,
@@ -471,19 +471,19 @@ predicate_template(RestW, ['\t'|RestIn], Out) :- !, % skip tabs in template
     predicate_template(RestW, RestIn, Out).
 predicate_template([Word|RestW], [Word|RestIn], Out) :- 
     %not(lists:member(Word,['\n', if, and, or, '.', ','])),  !, 
-    not(lists:member(Word,['\n', if, '.', ','])),  !,
+    not(lists:member(Word,['\n', if, '.'])),  !, % leaving the comma out as well
     predicate_template(RestW, RestIn, Out).
 predicate_template([], [], []). 
 predicate_template([], [Word|Rest], [Word|Rest]) :- 
     %lists:member(Word,['\n', if, and, or, '.', ',']). 
-    lists:member(Word,['\n', if, '.', ',']). % leaving or/and out of this
+    lists:member(Word,['\n', if, '.']). % leaving or/and out of this
 
 match_template(PossibleLiteral, Map1, MapN, Literal) :- 
     dictionary(Predicate, _, Candidate),
     match(Candidate, PossibleLiteral, Map1, MapN, Template), 
     dictionary(Predicate, _, Template), 
-    Literal =.. Predicate,
-    print_message(informational,'Match!! with ~w'-[Literal]), !. 
+    Literal =.. Predicate, !. 
+    %print_message(informational,'Match!! with ~w'-[Literal]), !. 
 
 % match(+CandidateTemplate, +PossibleLiteral, +MapIn, -MapOut, -SelectedTemplate)
 match([], [], Map, Map, []) :- !.  % success! It succeds iff PossibleLiteral is totally consumed
@@ -502,11 +502,11 @@ match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, [Constant|Rest
     extract_constant(NameWords, [Word|PossibleLiteral], NextWords), NameWords \= [], !, % <-- CUT!  % it is not empty
     name_predicate(NameWords, Constant),
     %update_map(Element, Constant, Map1, Map2), 
-    print_message(informational, 'found a constant '), print_message(informational, Constant),
+    %print_message(informational, 'found a constant '), print_message(informational, Constant),
     match(RestElements, NextWords, Map1, MapN, RestSelected). 
 match([Element|RestElements], ['['|PossibleLiteral], Map1, MapN, [List|RestSelected]) :-
     var(Element), 
-    extract_list(List, Map1, Map2, PossibleLiteral, NextWords),
+    extract_list(List, Map1, Map2, PossibleLiteral, [']'|NextWords]), % matching brackets verified
     match(RestElements, NextWords, Map2, MapN, RestSelected). 
 
 % extract_constant(ListOfNameWords, +ListOfWords, NextWordsInText)
@@ -635,9 +635,9 @@ ind_det(another). % added experimentally
 def_det(the).
 
 /* ------------------------------------------------ reserved words */
-reserved_word(W) :- % more reserved words pending
+reserved_word(W) :- % more reserved words pending??
     W = 'is'; W ='not'; W='if'; W='If'; W='then'; W = 'where';  
-    W = 'at'; W= 'from'; W='to'; W='and'; W='half'; W='or'; 
+    W = 'at'; W= 'from'; W='to';  W='half'; % W='or'; W='and'; % leaving and/or out of this for now
     W = 'else'; W = 'otherwise'; 
     W = such ; 
     W = '<'; W = '='; W = '>'; W = '+'; W = '-'; W = '/'; W = '*';
@@ -658,6 +658,8 @@ punctuation('\'').
 verb(Verb) :- present_tense_verb(Verb); continuous_tense_verb(Verb); past_tense_verb(Verb). 
 
 present_tense_verb(is).
+present_tense_verb(complies). 
+present_tense_verb(does). 
 present_tense_verb(occurs).
 present_tense_verb(meets).
 present_tense_verb(relates).
@@ -670,10 +672,12 @@ present_tense_verb(belongs).
 present_tense_verb(applies).
 present_tense_verb(must).
 present_tense_verb(acts).
+present_tense_verb(falls). 
 
 
 continuous_tense_verb(according).
 
+past_tense_verb(spent). 
 past_tense_verb(looked).
 past_tense_verb(could).
 past_tense_verb(had).
