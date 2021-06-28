@@ -1,7 +1,7 @@
 /* le_to_taxlog: a prolog module with predicates to translate from an 
 extended version of Logical English into the Taxlog programming language. 
 
-Main predicate: text_to_logic(String to be translated, Error, Translation)
+Main predicate: text_to_logic(String to be translated, Translation)
 
 Main DCG nonterminal: document(Translation)
 
@@ -29,30 +29,23 @@ correspond to each operator and corresponding conditions.
 
 */
 
-:- module(le_to_taxlog, [document/3]).
+:- module(le_to_taxlog, [document/3, le_taxlog_translate/4]).
 :- use_module('./tokenize/prolog/tokenize.pl').
-:- thread_local literal/5, text_size/1, notice/3, dict/3, last_nl_parsed/1.
+:- thread_local literal/5, text_size/1, error_notice/4, dict/3, last_nl_parsed/1.
 :- discontiguous statement/3, declaration/4, predicate/3, action/3.
 
-% Main clause: text_to_logic(+String,-Errors,-Clauses) is det
-text_to_logic(String, Error, Translation) :-
+% Main clause: text_to_logic(+String,-Clauses) is det
+% Errors are added to error_notice 
+text_to_logic(String_, Translation) :-
+    % hack to ensure a newline at the end, for the sake of error reporting:
+    ((sub_atom(String_,_,1,0,NL), memberchk(NL,['\n','\r']) ) -> String=String_ ; atom_concat(String_,'\n',String)),
     tokenize(String, Tokens, [cased(true), spaces(true)]),
+    retractall(last_nl_parsed(_)), asserta(last_nl_parsed(1)), % preparing line counting
     unpack_tokens(Tokens, UTokens), 
     clean_comments(UTokens, CTokens), 
-    retractall(last_nl_parsed(_)), asserta(last_nl_parsed(0)), % preparing line counting
     ( phrase(document(Translation), CTokens) -> true
         % ( print_message(informational, "Translation: ~w"-[Translation]), Error=[] )
-    ;   ( showerror(Error), Translation=[])). 
-
-% document(-Translation, In, Rest)
-% a DCG predicate to translate a LE document into Taxlog prolog terms
-%document(Translation, In, Rest) :-
-%    spaces_or_newlines(_, In, In1),
-%    header(Settings, In1, In2), !, 
-%    spaces_or_newlines(_, In2, In3),
-%    rules_previous(In3, In4),  
-%    content(Content, In4, Rest), 
-%    append(Settings, Content, Translation).
+    ;   ( Translation=[])). 
 
 document(Translation) --> 
     spaces_or_newlines(_),
@@ -113,10 +106,8 @@ predicate_decl(dict([Predicate|Arguments],TypesAndNames, Template), Relation) --
 % not very useful with loops, of course. 
 % error clause
 predicate_decl(_, _, Rest, _) :- 
-    % text_size(Size), length(Rest, Rsize), Pos is Size - Rsize,
-    last_nl_parsed(Pos), % using the last line parsed as the position of the error
-    %print_message(error, 'LE error found at a declaration at line'-Pos), fail.  
-    asserterror('LE error found in a declaration ', Pos, Rest), fail.
+    asserterror('LE error found in a declaration ', Rest), 
+    fail.
 
 % statement: the different types of statements in a LE text
 statement(Statement) --> 
@@ -144,10 +135,7 @@ literal_(Map1, MapN, Literal) -->
 %        match_template(PossibleTemplate, Map1, MapN, Literal).
 % error clause
 literal_(M, M, _, Rest, _) :- 
-    %text_size(Size), length(Rest, Rsize), Pos is Size - Rsize, 
-    last_nl_parsed(Pos), % using the last line parsed as the position of the error
-    %print_message(error, 'LE error found in a literal at line'-Pos), fail. 
-    asserterror('LE error found in a literal ', Pos, Rest), fail.
+    asserterror('LE error found in a literal ', Rest), fail.
 
 conditions(Ind0, Map1, MapN, Conds) --> 
     condition(Cond, Ind0, Map1, Map2), 
@@ -185,10 +173,7 @@ expression(Y, Map1, MapN) -->
     term_(Y, Map1, MapN), spaces(_).
 % error clause
 expression(_, _, _, Rest, _) :- 
-%    % text_size(Size), length(Rest, Rsize), Pos is Size - Rsize, 
-    last_nl_parsed(Pos), % using the last line parsed as the position of the error
-%    print_message(error, 'LE error found at an expression at line'-Pos), fail. 
-    asserterror('LE error found at an expression ', Pos, Rest), fail.
+    asserterror('LE error found at an expression ', Rest), fail.
 
 % this produces a Taxlog condition with the form: 
 % setof(Owner/Share, is_ultimately_owned_by(Asset,Owner,Share) on Before, SetOfPreviousOwners)
@@ -239,10 +224,7 @@ condition(InfixBuiltIn, _, Map1, MapN) -->
 
 % error clause
 condition(_, _Ind, Map, Map, Rest, _) :- 
-        %text_size(Size), length(Rest, Rsize), Pos is Size - Rsize, 
-        last_nl_parsed(Pos), % using the last line parsed as the position of the error
-        %print_message(error, 'LE error found in a conditions at line'-Pos), fail. 
-        asserterror('LE error found at a condition ', Pos, Rest), fail.
+        asserterror('LE error found at a condition ', Rest), fail.
 
 % modifiers add reifying predicates to an expression. 
 % modifiers(+MainExpression, +MapIn, -MapOut, -FinalExpression)
@@ -271,16 +253,10 @@ spaces(0) --> [].
 
 spaces_or_newlines(N) --> [' '], !, spaces_or_newlines(M), {N is M + 1}.
 spaces_or_newlines(N) --> ['\t'], !, spaces_or_newlines(M), {N is M + 1}. % counting tab as one space
-spaces_or_newlines(N) --> ['\r'], !, spaces_or_newlines(M), {N is M + 1, update_nl_count}. % counting \r as one space
-spaces_or_newlines(N) --> ['\n'], !, spaces_or_newlines(M), {N is M + 1, update_nl_count}. % counting \n as one space
+spaces_or_newlines(N) --> newline, !, spaces_or_newlines(M), {N is M + 1}. % counting \r as one space
 spaces_or_newlines(0) --> [].
 
-newline --> ['\n'], {update_nl_count}.
-newline --> ['\r'], {update_nl_count}. %not sure what will happens on env that use \n\r
-
-update_nl_count :- retract(last_nl_parsed(N)), !, NN is N + 1, assert(last_nl_parsed(NN)). 
-%update_nl_count.
-%update_nl_count :- last_nl_parsed(N), NN is N + 1, asserta(last_nl_parsed(NN)). 
+newline --> [newline(_Next)].
 
 one_or_many_newlines --> newline, spaces(_), one_or_many_newlines, !. 
 one_or_many_newlines --> [].
@@ -342,7 +318,7 @@ clean_comments([Code|Rest], [Code|New]) :-
     clean_comments(Rest, New).
 
 jump_comment([], []).
-jump_comment(['\n'|Rest], ['\n'|Rest]). % leaving the end of line in place
+jump_comment([newline(N)|Rest], [newline(N)|Rest]). % leaving the end of line in place
 jump_comment([_|R1], R2) :-
     jump_comment(R1, R2). 
 
@@ -351,9 +327,7 @@ template_decl(RestW, [' '|RestIn], Out) :- !, % skip spaces in template
     template_decl(RestW, RestIn, Out).
 template_decl(RestW, ['\t'|RestIn], Out) :- !, % skip cntrl \t in template
     template_decl(RestW, RestIn, Out).
-template_decl(RestW, ['\n'|RestIn], Out) :- !, % skip cntrl \n in template
-    template_decl(RestW, RestIn, Out).
-template_decl(RestW, ['\r'|RestIn], Out) :- !, % skip cntrl \r in template
+template_decl(RestW, [newline(_)|RestIn], Out) :- !, % skip cntrl \n in template
     template_decl(RestW, RestIn, Out).
 template_decl([Word|RestW], [Word|RestIn], Out) :-
     not(lists:member(Word,['.', ','])), !,  % only . and , as boundaries. Beware!
@@ -471,12 +445,11 @@ predicate_template(RestW, ['\t'|RestIn], Out) :- !, % skip tabs in template
     predicate_template(RestW, RestIn, Out).
 predicate_template([Word|RestW], [Word|RestIn], Out) :- 
     %not(lists:member(Word,['\n', if, and, or, '.', ','])),  !, 
-    not(lists:member(Word,['\n', if, '.'])),  !, % leaving the comma out as well
+    not(lists:member(Word,[newline(_), if, '.'])),  !, % leaving the comma out as well
     predicate_template(RestW, RestIn, Out).
 predicate_template([], [], []). 
 predicate_template([], [Word|Rest], [Word|Rest]) :- 
-    %lists:member(Word,['\n', if, and, or, '.', ',']). 
-    lists:member(Word,['\n', if, '.']). % leaving or/and out of this
+    lists:member(Word,[newline(_), if, '.']). % leaving or/and out of this
 
 match_template(PossibleLiteral, Map1, MapN, Literal) :- 
     dictionary(Predicate, _, Candidate),
@@ -592,11 +565,18 @@ builtin_(BuiltIn, [BuiltIn|RestWords], RestWords) :-
     predicate_property(system:Predicate, built_in). 
 
 /* --------------------------------------------------------- Utils in Prolog */
+% Unwraps tokens, excelt for newlines which become newline(NextLineNumber)
 unpack_tokens([], []).
+unpack_tokens([cntrl(Char)|Rest], [newline(Next)|NewRest]) :- (Char=='\n' ; Char=='\r'), !,
+    %not sure what will happens on env that use \n\r
+    update_nl_count(Next), unpack_tokens(Rest, NewRest).
 unpack_tokens([First|Rest], [New|NewRest]) :-
-    (First = word(New); First=cntrl(New); First=punct(New); 
-     First=space(New); First=number(New); First=string(New)), !,
+    (First = word(New); First=cntrl(New); First=punct(New); First=space(New); First=number(New); First=string(New)), 
+     !,
     unpack_tokens(Rest, NewRest).  
+
+% increments the next line number
+update_nl_count(NN) :- retract(last_nl_parsed(N)), !, NN is N + 1, assert(last_nl_parsed(NN)). 
 
 ordinal(Ord) :-
     ordinal(_, Ord). 
@@ -709,11 +689,15 @@ asserted(F :- B) :- clause(F, B). % as a rule with a body
 asserted(F) :- clause(F,true). % as a fact
 
 /* -------------------------------------------------- error handling */
-asserterror(Me, Pos, Rest) :-
+asserterror(Me, Rest) :-
     %print_message(error, ' Error found'), 
     %select_first_section(Rest, 40, Context), 
-    (clause(notice(_,_,_, _), _) -> retractall(notice(_,_,_,_));true),
-    asserta(notice(error, Me, Pos, Rest)).
+    %retractall(error_notice(_,_,_,_)), % we will report only the last
+    once( nth1(N,Rest,newline(NextLine)) ), LineNumber is NextLine-2,
+    RelevantN is N-1,
+    length(Relevant,RelevantN), append(Relevant,_,Rest),
+    findall(Token, (member(T,Relevant), (T=newline(_) -> Token='\n' ; Token=T)), Tokens),
+    assert(error_notice(error, Me, LineNumber, Tokens)).
 
 % to select just a chunck of Rest to show. 
 select_first_section([], _, []) :- !.
@@ -722,11 +706,12 @@ select_first_section([E|R], N, [E|NR]) :-
     N > 0, NN is N - 1,
     select_first_section(R, NN, NR). 
 
-showerror(Me-Pos-Context) :-
-   (clause(notice(error, Me,Pos, Context_), _) -> (
-        atomic_list_concat(Context_,Context),
-        print_message(error, "~w at line ~w near this: \"~w\"" - [Me, Pos,Context]) 
-        ); print_message(error,'No error reported'-[])  ).
+showErrors(File,Baseline) :- 
+    forall(error_notice(error, Me,Pos, ContextTokens), (
+        atomic_list_concat([Me,': '|ContextTokens],ContextTokens_),
+        Line is Pos+Baseline,
+        print_message(error,error(syntax_error(ContextTokens_),file(File,Line,_One,_Char)))
+        )).
 
 % to pinpoint exactly the error. But position is not right
 explain_error(String, Me-Pos, Message) :-
@@ -854,13 +839,15 @@ prolog_colour:term_colours(en_decl(_Text),lps_delimiter-[classify]). % let 'en_d
 
 user:le_taxlog_translate( en(Text), Terms) :- le_taxlog_translate( en(Text), Terms).
 
-le_taxlog_translate( en(Text), Terms) :-
+le_taxlog_translate( EnText, Terms) :- le_taxlog_translate( EnText, someFile, 1, Terms).
+
+% Baseline is the line number of the start of Logical English text
+le_taxlog_translate( en(Text), File, BaseLine, Terms) :-
 	%findall(Decl, psyntax:lps_swish_clause(en_decl(Decl),_Body,_Vars), Decls),
     %combine_list_into_string(Decls, StringDecl),
 	%string_concat(StringDecl, Text, Whole_Text),
-	% Can't print here, this was getting sent into a HTTP response...: writeq(Whole_Text),
-    once( text_to_logic(Text, Error, Translation) ),
-    (Translation=[]-> Terms=Error; Terms = Translation ). 
+    once( text_to_logic(Text, Terms) ),
+    showErrors(File,BaseLine).
         %write_taxlog_code(Translation, Terms)). 
 
 combine_list_into_string(List, String) :-
@@ -876,8 +863,8 @@ user:showtaxlog :- showtaxlog.
 showtaxlog:-
     % ?????????????????????????????????????????
 	% psyntax:lps_swish_clause(en(Text),Body,_Vars),
-	once(text_to_logic(_,Error,Taxlog)),
-    writeln(Error), 
+	once(text_to_logic(_,Taxlog)),
+    showErrors(someFile,0), 
 	writeln(Taxlog),
 	fail.
 showtaxlog.

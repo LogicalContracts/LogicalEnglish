@@ -239,10 +239,10 @@ prolog_colour:term_colours(T,C) :- taxlog2prolog(T,C,_).
 user:term_expansion(NiceTerm, ExpandedTerms) :- % hook for LE extension
 	% somehow the source location is not being kept, causing later failure of clause_info/5 :-(
 	context_module(user), % LPS programs are in the user module
-	%prolog_load_context(source,File), atom_prefix(File,'pengine://'), % process only SWISH windows
-	%prolog_load_context(term_position,TP), stream_position_data(line_position,TP,Line),
-	catch(le_taxlog_translate(NiceTerm,TaxlogTerms),_,fail), 
-	print_message(informational,"expanded LE to Taxlog: ~w"-[TaxlogTerms]),
+	prolog_load_context(source,File), % atom_prefix(File,'pengine://'), % process only SWISH windows
+	prolog_load_context(term_position,TP), stream_position_data(line_count,TP,Line),
+	catch(le_taxlog_translate(NiceTerm,File,Line,TaxlogTerms),_,fail), 
+	print_message(informational,"File: ~w"-[File]),
 	!, 
 	findall(PrologTerm, (
 		member(TT_,TaxlogTerms), 
