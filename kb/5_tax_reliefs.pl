@@ -143,11 +143,11 @@ an event is exempt from SDRT
 
 the security is trading in some recognised growth market at a time
     if the security is trading in a market at the time
-    and the market is an RGM market at the time as defined at "https://www.gov.uk/hmrc-internal-manuals/stamp-taxes-shares-manual/stsm041330".
+    and the market is an RGM market at the time as defined at 'https://www.gov.uk/hmrc-internal-manuals/stamp-taxes-shares-manual/stsm041330'.
 
 the security is listed on some recognised stock exchange at a time
     if the security is listed on a stock exchange at the time
-    and the stock exchange is a recognised stock exchange at the time as defined at "https://www.gov.uk/government/publications/recognised-stock-exchanges-definition-legislation-and-tables/recognised-stock-exchanges-definition-legislation-and-tables-of-recognised-exchanges".
+    and the stock exchange is a recognised stock exchange at the time as defined at 'https://www.gov.uk/government/publications/recognised-stock-exchanges-definition-legislation-and-tables/recognised-stock-exchanges-definition-legislation-and-tables-of-recognised-exchanges'.
 
 
 A transfer is a transfer exempt
