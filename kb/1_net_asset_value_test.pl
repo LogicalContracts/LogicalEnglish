@@ -1,9 +1,28 @@
-% Logical English
-% http://demo.logicalcontracts.com:8082/p/cgt_maximum_net_asset_value.pl
-% Knowledge page carefully crafted in Taxlog/Prolog from the legislation at
-% https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/maximum-net-asset-value-test/
+:-module('https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/maximum-net-asset-value-test/',[]).
 
-the templates are:
+mainGoal(satisfies_maximum_net_asset_value_test_at(_Taxpayer, _Date), "Determine if a given entity satisfies the maximum net value test for CGT assets").
+
+example('Andrew email Feb 5 2021',[
+    /* Andrew has net CGT assets 4,000,000, has affiliate with net assets 1,000,000, has connected entity with net CGT assets of 2,000,000 */
+    scenario([
+        owns(andrew,cgt_asset_1) at myDB1,
+        is_a_cgt_asset(cgt_asset_1) at "https://www.ato.gov.au/General/Capital-gains-tax/CGT-assets-and-exemptions/",
+        is_an_earnout_cgt_asset_valued_at(cgt_asset_1,4000000) at EARNOUT,
+        % is_share_in_company(cgt_asset_1,entity) at myDB1 if false,
+        % has_to_exclude_asset(andrew,_) if false, %http://localhost:3050/p/tests.pl#tabbed-tab-0 Andrew doesn't want any asset excluded!
+        is_affiliated_with(andrew,affiliate1),
+        ++ owns(affiliate1,cgt_asset_2), ++ '\'s_net_value_is'(cgt_asset_2,1000000),
+        ++ is_the_market_value_of_at(10000000, cgt_asset_2, EARNOUT), 
+        ++ has_of_liability_that_costs(cgt_asset_2, annual_leave, 2000000), 
+        is_connected_to(andrew,entity) at "https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/connected-entities/",
+        owns(entity,asset3) at myDB1,
+        is_a_cgt_asset(asset3) at "https://www.ato.gov.au/General/Capital-gains-tax/CGT-assets-and-exemptions/",
+        is_an_earnout_cgt_asset_valued_at(asset3,2000000) at EARNOUT,
+        is_used_in_business_of(_,_) at myDB2 if false
+        ], not satisfies_maximum_net_asset_value_test(andrew, '20210205'))
+    ]) :- EARNOUT="https://www.ato.gov.au/General/Capital-gains-tax/In-detail/Business-assets/Earnout-arrangements-and-CGT/".
+
+en("the templates are:
     an asset has a type of liability that costs an amount,
     an amount is a provision on an asset's liabilities of some type that is in a set,
     a first amount is the market value of an asset at a date,
@@ -125,4 +144,11 @@ An asset is a cgt asset
 %    if myDB_entities : is_an_individual_on(the TPN,the Date).
 
 an asset is an earnout cgt asset valued at a value
-    if  the asset is an earnout cgt asset valued at the value according to other legislation.
+    if  the asset is an earnout cgt asset valued at the value according to other legislation."). 
+
+/** <examples>
+?- query_with_facts(satisfies_maximum_net_asset_value_test_at(TaxPayer, Date),'Andrew email Feb 5 2021',Unknowns,Explanation,Result).
+?- query_with_facts(satisfies_maximum_net_asset_value_test_at(andrew, Date),'Andrew email Feb 5 2021',Unknowns,Explanation,Result).
+?- query_with_facts(satisfies_maximum_net_asset_value_test_at(TaxPayer, '20210205'),'Andrew email Feb 5 2021',Unknowns,Explanation,Result).
+*/
+

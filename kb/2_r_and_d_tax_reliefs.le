@@ -3,7 +3,7 @@
 % Knowledge page carefully crafted in Taxlog/Prolog from the legislation at
 % https://www.gov.uk/guidance/corporation-tax-research-and-development-rd-relief
 
-the predicates are:
+the templates are:
     a project can request R&D relief for a credit with a deduction,
     a project qualifies for research & development relief,
     the SME R&D relief for a project is estimated at a first amount with a second amount according to other legislation,
@@ -14,37 +14,37 @@ the predicates are:
     a project had to overcome uncertainty,
     a project tried to overcome uncertainty by a solution,
     a project's previous attempts have failed,
-    a project's list of members is a members list,
+    a project has its members in a list,
     a member is in the members list,
     a member explained uncertainties as a reason,
-    a project has an experts list, 
+    a project has an experts list,
     an expert is in an experts list,
     a project could not be explained by an expert.
 
 
-the rules are:
+the knowledge base includes:
 A project can request R&D relief for a credit with a deduction
     if the project qualifies for research & development relief
     and the SME R&D relief for the project is estimated at the credit with the deduction according to other legislation
         or the project 's R&D expense credit is equal to the credit plus the deduction according to other legislation
-. 
+.
 
-A project qualifies for research & development relief 
+A project qualifies for research & development relief
     if the project looked for an advance in the field
     and the project could not be worked out by a professional in the field
     and the project had to overcome uncertainty
     and the project tried to overcome uncertainty by a solution.
 
-A project could not be worked out by a professional in the field 
+A project could not be worked out by a professional in the field
     if the project's previous attempts have failed.
 
-A project could not be worked out by a professional in the field 
-    if the project's list of members is a members list
-    and a member is in the members list
+A project could not be worked out by a professional in the field
+    if the project has its members in a list
+    and a member is in the list
     and the member explained uncertainties as a reason.
- 
-A project had to overcome uncertainty 
-    if the project has an experts list 
+
+A project had to overcome uncertainty
+    if the project has an experts list
     and an expert is in the experts list
     and the project could not be explained by the expert.
 
