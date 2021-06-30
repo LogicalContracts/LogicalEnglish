@@ -55,7 +55,7 @@ example( 'Andrew email Feb 4 2021', [
     ]) :- 
         % for mere convenience, Prolog code to setup some data and make the above less cluttered:
         EVENT=123,
-        WHEN='20200701', is_immediately_before(BEFORE,WHEN),
+        WHEN='20200701', immediately_before(BEFORE,WHEN),
         SBE= "https://www.ato.gov.au/General/Capital-gains-tax/Small-business-CGT-concessions/Basic-conditions-for-the-small-business-CGT-concessions/Small-business-entity/",
         BASICS="https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/",
         AGGREGATION="https://www.ato.gov.au/business/small-business-entity-concessions/eligibility/aggregation/",
