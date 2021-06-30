@@ -366,6 +366,7 @@ extract_variable(Var, [Word|RestName], [Word|RestType], [Word|RestOfWords], Next
     is_a_type(Word),
     extract_variable(Var, RestName, RestType, RestOfWords, NextWords).
 
+name_predicate([Number], Number) :- number(Number), !. % a quick fix for numbers extracted as constants
 name_predicate(Words, Predicate) :-
     concat_atom(Words, '_', Predicate). 
 
@@ -616,7 +617,7 @@ def_det(the).
 
 /* ------------------------------------------------ reserved words */
 reserved_word(W) :- % more reserved words pending??
-    W = 'is'; W ='not'; W='if'; W='If'; W='then'; W = 'where';  
+    W = 'is'; W ='not'; W='if'; W='If'; W='then'; W = 'where';  W = '&'; % <- hack!
     W = 'at'; W= 'from'; W='to';  W='half'; % W='or'; W='and'; % leaving and/or out of this for now
     W = 'else'; W = 'otherwise'; 
     W = such ; 
@@ -652,7 +653,8 @@ present_tense_verb(belongs).
 present_tense_verb(applies).
 present_tense_verb(must).
 present_tense_verb(acts).
-present_tense_verb(falls). 
+present_tense_verb(falls).
+present_tense_verb(corresponds).  
 
 
 continuous_tense_verb(according).
@@ -741,7 +743,7 @@ predef_dict([assert,Information], [info-clause], [this, information, Information
 predef_dict([is_a, Object, Type], [object-object, type-type], [Object, is, of, type, Type]).
 predef_dict([before, T1, T2], [time1-time, time2-time], [T1, is, before, T2]).
 predef_dict([between,Minimum,Maximum,Middle], [min-date, max-date, middle-date], 
-    [Middle, is, between, Minimum, and, Maximum]).
+    [Middle, is, between, Minimum, &, Maximum]).
 predef_dict([must_be, Type, Term], [type-type, term-term], [Term, must, be, Type]).
 predef_dict([must_not_be, A, B], [term-term, variable-variable], [A, must, not, be, B]). 
 predef_dict([myDB_entities:is_individual_or_company_on, A, B],
@@ -846,8 +848,8 @@ le_taxlog_translate( en(Text), File, BaseLine, Terms) :-
 	%findall(Decl, psyntax:lps_swish_clause(en_decl(Decl),_Body,_Vars), Decls),
     %combine_list_into_string(Decls, StringDecl),
 	%string_concat(StringDecl, Text, Whole_Text),
-    once( text_to_logic(Text, Terms) ),
-    showErrors(File,BaseLine).
+    %once( text_to_logic(Text, Terms) ),
+    text_to_logic(Text, Terms) -> true; showErrors(File,BaseLine).
         %write_taxlog_code(Translation, Terms)). 
 
 combine_list_into_string(List, String) :-

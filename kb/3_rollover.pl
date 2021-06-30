@@ -15,10 +15,10 @@ example( 'Changed share of ownership', [
         true),
     % new facts and condition:
     scenario(['Amy, Joanna and Remy establish company C, different shares', transfer_event(ID,_A,_When,_B,[_C])], 
-        not rollover_applies(ID)),
+        not applies(ID)),
     % alternative facts and another condition:
     scenario(['Amy, Joanna and Remy establish company C, different shares', 'Amy, Joanna and Remy establish company C, equal shares'], 
-        rollover_applies(ID))
+        applies(ID))
     ]).
 
 example( 'Andrew email Feb 4 2021', [
@@ -27,31 +27,31 @@ example( 'Andrew email Feb 4 2021', [
     Assets are - Goodwill, Trading stock, Plant & equipment, revenue assets
     */
     scenario([
-        owns(company1,company1_goodwill) on T at BASICS if T @=< BEFORE,
-        owns(company1,company1_trading_stock) on T at BASICS if T @=< BEFORE,
-        owns(company1,company1_plant_and_equipment) on T at BASICS if T @=< BEFORE,
-        owns(company1,company1_revenue_asset) on T at BASICS if T @=< BEFORE,
+        owns_at_according_to_other_legislation(company1,company1_goodwill, T) at BASICS if T @=< BEFORE,
+        owns_at_according_to_other_legislation(company1,company1_trading_stock, T) at BASICS if T @=< BEFORE,
+        owns_at_according_to_other_legislation(company1,company1_plant_and_equipment, T) at BASICS if T @=< BEFORE,
+        owns_at_according_to_other_legislation(company1,company1_revenue_asset,T) at BASICS if T @=< BEFORE,
         %TODO: add time here, and below...?
-        is_a_partner_in_partnership_with(andrew,company1) at BASICS, is_a_partner_in_partnership_with(miguel,company1) at BASICS, 
-        has_an_aggregated_turnover_of(company1,5300000) at AGGREGATION,
-        has_an_aggregated_turnover_of(andrew,1000000) at AGGREGATION,
-        has_an_aggregated_turnover_of(miguel,500000) at AGGREGATION,
-        is_a_small_business_entity(company1) at SBE, is_a_small_business_entity(andrew) at SBE, is_a_small_business_entity(miguel) at SBE,
+        is_a_partner_in_partnership_with_according_to_other_legislation(andrew,company1) at BASICS, is_a_partner_in_partnership_with_according_to_other_legislation(miguel,company1) at BASICS, 
+        has_of_according_to_other_legislation(company1,5300000, AGGREGATION),
+        has_of_according_to_other_legislation(andrew,1000000, AGGREGATION),
+        has_of_according_to_other_legislation(miguel,500000, AGGREGATION),
+        is_a_small_business_entity_according_to_other_legislation(company1) at SBE, is_a_small_business_entity_according_to_other_legislation(andrew) at SBE, is_a_small_business_entity_according_to_other_legislation(miguel) at SBE,
         transfer_event(EVENT,company1_goodwill,WHEN,company1,[andrew,miguel]),
         % with the rule as it is below, no point in injecting more than one event:
         %transfer_event(EVENT2,company1_trading_stock,WHEN,company1,[andrew,miguel]),
         %transfer_event(EVENT3,company1_plant_and_equipment,WHEN,company1,[andrew,miguel]),
         %transfer_event(EVENT4,company1_revenue_asset,WHEN,company1,[andrew,miguel]),
-        owns(company1,company1_goodwill) on T at BASICS if T @>= WHEN,
-        owns(company1,company1_trading_stock) on T at BASICS if T @>= WHEN,
-        owns(company1,company1_plant_and_equipment) on T at BASICS if T @>= WHEN,
-        owns(company1,company1_revenue_asset) on T at BASICS if T @>= WHEN,
+        owns_at_according_to_other_legislation(company1,company1_goodwill, T) at BASICS if T @>= WHEN,
+        owns_at_according_to_other_legislation(company1,company1_trading_stock, T) at BASICS if T @>= WHEN,
+        owns_at_according_to_other_legislation(company1,company1_plant_and_equipment, T) at BASICS if T @>= WHEN,
+        owns_at_according_to_other_legislation(company1,company1_revenue_asset,T) at BASICS if T @>= WHEN,
         part_of_genuine_restructure(EVENT) at "https://www.ato.gov.au/law/view/document?DocID=COG/LCG20163/NAT/ATO/00001&PiT=99991231235958",
         is_used_in_business_of(company1_goodwill,company1) at BASICS,
-        is_of_asset_type(company1_goodwill,trading_stock) at myDb17,
+        is_of_asset_type_according_to_other_legislation(company1_goodwill,trading_stock) at myDb17,
         is_the_trust_of(_,_) if false
         | MoreFacts
-        ], rollover_applies(EVENT))
+        ], applies(EVENT))
     ]) :- 
         % for mere convenience, Prolog code to setup some data and make the above less cluttered:
         EVENT=123,
