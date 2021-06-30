@@ -656,8 +656,9 @@ present_tense_verb(acts).
 present_tense_verb(falls).
 present_tense_verb(corresponds).  
 
-
 continuous_tense_verb(according).
+continuous_tense_verb(beginning).
+continuous_tense_verb(ending).
 
 past_tense_verb(spent). 
 past_tense_verb(looked).
@@ -749,11 +750,10 @@ predef_dict([must_not_be, A, B], [term-term, variable-variable], [A, must, not, 
 predef_dict([myDB_entities:is_individual_or_company_on, A, B],
                   [affiliate-affiliate, date-date],
                   [A, is, an, individual, or, is, a, company, at, B]).
-predef_dict([uk_tax_year_for_date,Date,Year,Start,End], [date-date,year-year,start-date,end-date], 
-                    [date, Date, falls, in, the, 'UK', tax, year, Year, that, starts, at, Start, ends, at, End]).
+predef_dict([uk_tax_year_for_date,Date,Year,Start,End], [first_date-date, year-year, second_date-date, third_date-date], 
+                    [in, the, 'UK', Date, falls, in, Year, beginning, at, Start, &, ending, at, End]).
 predef_dict([days_spent_in_uk,Individual,Start,End,TotalDays], [who-person,start-date,end-date,total-number], 
-                    [Individual, spent, TotalDays, days, in, the, 'UK', starting, at, Start, and, ending, at, End]).
-
+                    [Individual, spent, TotalDays, in, the, 'UK', starting, at, Start, &, ending, at, End]). 
 
 % support predicates
 must_be(A, var) :- var(A).
