@@ -22,8 +22,9 @@ NOTE: out of scope of original example, added a stub at 'https://www.gov.uk/hmrc
 */
     scenario([
         % a plus sign indicates this hypothetical extends, not redefines, existing rules and facts:
-        ++ (complies_to_statutory_residence_test_at(alex, _Date) if before(Date,'20180406') ), % not quite what was stated, but close
+        ++ (complies_to_statutory_residence_test_at(alex, Date) if before(Date,'20180406') ), % not quite what was stated, but close
         works_sufficient_hours_overseas(alex) at RDRM11150,
+        %++ (satisfies_first_automatic_uk_test_STEP_1_at(alex, '20180406') at THIRD_OT), 
         no_significant_breaks_from_overseas_work(alex) at THIRD_OT,
         days_working_in_uk_more_than(alex,_,0) at THIRD_OT,
         days_spent_in_uk(alex,Start,End,DaysInUK) at myDb123,
@@ -94,11 +95,11 @@ Expected result: resident
         
 
 en("the templates are:
-    a date falls in the UK tax year a year number that starts at a starting number and ends at a ending number,
     an individual is resident in the UK for a tax year,
     an individual meets the automatic residence test for a year,
     an individual meets the sufficient ties test for a year,
     an individual meets an alternative of the automatic UK tests for a year,
+    an individual meets a different alternative of the automatic overseas tests for a year,
     an individual complies to statutory residence test at a date,
     an individual satisfies first automatic uk test STEP 1 at a date,
     an individual does not meet any of three overseas tests STEP 2 at a date,
@@ -110,15 +111,13 @@ en("the templates are:
     an individual meets third automatic overseas test at a date,
     an individual meets ties test at a date,
     an individual satisfies first automatic uk test at a date,
-    an individual spent a number oof days in the UK starting at a starting day and ending at an ending day,
     an individual meets second automatic uk test at a date,
-    an individual meets second automatic uk test at the date according to other legislation,
+    an individual meets second automatic uk test at a date according to other legislation,
     an individual meets third automatic uk test at a date,
     an individual meets third automatic uk test at a date according to other legislation,
     an individual meets ties test at a date,
     an individual meets ties test at a date according to other legislation,
-    a year is between the second year & a third year,
-    the individual spent the total Days days in the UK starting at the first day and ending at the last day according to other legislation.
+    a year is between a first year - 3 and a second year - 1.
 
 the knowledge base includes:
 
@@ -126,15 +125,12 @@ An individual is resident in the UK for a tax year
     if the individual meets the automatic residence test for the year
     or the individual meets the sufficient ties test for the year.
 
-%An individual meets the automatic residence test for a year
-%    if the individual meets an alternative of the automatic UK tests for the year
-%    and the alternative is in [first, second, third, fourth]
-%    and it is not the case that
-%            the individual meets a different alternative of the automatic overseas tests for the year
-%            and the different alternative is in [first, second, third, fourth, fifth].
-
-%a date falls in the UK tax year a year number that starts at a starting number and ends at a ending number
-%    if reasoner:uk_tax_year(the date,the year number,the starting number,the ending number).
+An individual meets the automatic residence test for a year
+    if the individual meets an alternative of the automatic UK tests for the year
+    and the alternative is in [first, second, third, fourth]
+    and it is not the case that
+            the individual meets a different alternative of the automatic overseas tests for the year
+            and the different alternative is in [first, second, third, fourth, fifth].
 
 an individual complies to statutory residence test at a date
     if the individual satisfies first automatic uk test STEP 1 at the date.
@@ -167,8 +163,8 @@ an individual meets ties test STEP 4 at a date
     if the individual meets ties test at the date.
 
 an individual satisfies first automatic uk test at a date
-    if the date falls in the UK tax year a year that starts at a starting day and ends at an ending day
-    and the individual spent a number oof days in the UK starting at the starting day and ending at the ending day
+    if in the UK the date falls in a year beginning at a second date & ending at a third date
+    and the individual spent a number oof days in the UK starting at the second date & ending at the third date
     and the number oof days >= 183.
 
 an individual meets second automatic uk test at a date
@@ -180,33 +176,40 @@ an individual meets third automatic uk test at a date
 an individual meets ties test at a date
     if the individual meets ties test at the date according to other legislation.
 
-%an individual meets first automatic overseas test at a date
-%    if the date falls in the UK tax year a current year that starts at a day and ends at an other day
-%    and a previous year is between the current year - 3 & the current year - 1
-%    and a previous date falls in the UK tax year the previous year that starts at a previous starting day and ends at a previous ending day
-%    and the individual spent a number oof days in the UK starting at the previous starting day and ending at the previous ending day
-%    and the number oof days < 16
-%    and the individual complies to statutory residence test at the previous date.
+an individual meets first automatic overseas test at a date
+    if in the UK the date falls in a current year beginning at a second date & ending at a third date
+    and a previous year is between the current year - 3 and the current year - 1
+    and in the UK a previous date falls in the previous year beginning at a fourth date & ending at a fifth date
+    and the individual spent a number oof days in the UK starting at the fourth date & ending at the fifth date
+    and the number oof days < 16
+    and the individual complies to statutory residence test at the previous date.
 
-%an individual meets second automatic overseas test at a date
-%    if the date falls in the UK tax year a current year that starts at a day and ends at an other day
-%    and the individual spent a number oof days in the UK starting at the day and ending at the other day
-%    and the number oof days < 46
-%    and for all cases in which
-%            a previous year is between the current year - 3 & the current year - 1
-%            and a previous date falls in the UK tax year the previous year that starts at a previous start and ends at a previous end
-%        it is the case that:
-%            it is not the case that
-%                the individual complies to statutory residence test at the previous date.
+a middle year is between a base year - 3 and the base year - 1
+  if a first year is the base year - 3
+  and a second year is the base year - 1
+  and the middle year is between the first year & the second year.
+
+an individual meets second automatic overseas test at a date
+    if in the UK the date falls in a current year beginning at a second date & ending at a third date
+    and the individual spent a number oof days in the UK starting at the second date & ending at the third date
+    and the number oof days < 46
+    and for all cases in which
+            a previous year is between the current year - 3 and the current year - 1
+            and in the UK a previous date falls in the previous year beginning at a fourth date & ending at a fifth date
+        it is the case that:
+            it is not the case that
+                the individual complies to statutory residence test at the previous date.
 
 an individual meets third automatic overseas test at a date
     if the individual meets third automatic overseas test at the date according to other legislation.
 
-% predefined
-%an individual spent a total days days in the UK starting at a first day and ending at a last day
-%    if the individual spent the total Days days in the UK starting at the first day and ending at the last day according to other legislation.").
+an individual meets third automatic overseas test at a date
+    if the individual meets third automatic overseas test at the date according to other legislation.").
 
 
 /** <examples>
 ?- query_with_facts(complies_to_statutory_residence_test_at(Individual,'20180406') at 'https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11040','Chris Feb 12 - 2A',Unknowns,Explanation,Result).
+?- query_with_facts(complies_to_statutory_residence_test_at(Individual,'20180406') at 'https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11040','Chris Feb 12 - 2B',Unknowns,Explanation,Result).
+?- query_with_facts(complies_to_statutory_residence_test_at(Individual,'20180406') at 'https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11040','Chris Feb 12 - 2C1',Unknowns,Explanation,Result).
+?- query_with_facts(complies_to_statutory_residence_test_at(Individual,'20180406') at 'https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11040','Chris Feb 12 - 2C2',Unknowns,Explanation,Result).
 */

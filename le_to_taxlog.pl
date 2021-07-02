@@ -366,6 +366,7 @@ extract_variable(Var, [Word|RestName], [Word|RestType], [Word|RestOfWords], Next
     is_a_type(Word),
     extract_variable(Var, RestName, RestType, RestOfWords, NextWords).
 
+name_predicate([Number], Number) :- number(Number), !. % a quick fix for numbers extracted as constants
 name_predicate(Words, Predicate) :-
     concat_atom(Words, '_', Predicate). 
 
@@ -616,7 +617,7 @@ def_det(the).
 
 /* ------------------------------------------------ reserved words */
 reserved_word(W) :- % more reserved words pending??
-    W = 'is'; W ='not'; W='if'; W='If'; W='then'; W = 'where';  
+    W = 'is'; W ='not'; W='if'; W='If'; W='then'; W = 'where';  W = '&'; % <- hack!
     W = 'at'; W= 'from'; W='to';  W='half'; % W='or'; W='and'; % leaving and/or out of this for now
     W = 'else'; W = 'otherwise'; 
     W = such ; 
@@ -652,10 +653,12 @@ present_tense_verb(belongs).
 present_tense_verb(applies).
 present_tense_verb(must).
 present_tense_verb(acts).
-present_tense_verb(falls). 
-
+present_tense_verb(falls).
+present_tense_verb(corresponds).  
 
 continuous_tense_verb(according).
+continuous_tense_verb(beginning).
+continuous_tense_verb(ending).
 
 past_tense_verb(spent). 
 past_tense_verb(looked).
@@ -741,17 +744,16 @@ predef_dict([assert,Information], [info-clause], [this, information, Information
 predef_dict([is_a, Object, Type], [object-object, type-type], [Object, is, of, type, Type]).
 predef_dict([before, T1, T2], [time1-time, time2-time], [T1, is, before, T2]).
 predef_dict([between,Minimum,Maximum,Middle], [min-date, max-date, middle-date], 
-    [Middle, is, between, Minimum, and, Maximum]).
+    [Middle, is, between, Minimum, &, Maximum]).
 predef_dict([must_be, Type, Term], [type-type, term-term], [Term, must, be, Type]).
 predef_dict([must_not_be, A, B], [term-term, variable-variable], [A, must, not, be, B]). 
 predef_dict([myDB_entities:is_individual_or_company_on, A, B],
                   [affiliate-affiliate, date-date],
                   [A, is, an, individual, or, is, a, company, at, B]).
-predef_dict([uk_tax_year_for_date,Date,Year,Start,End], [date-date,year-year,start-date,end-date], 
-                    [date, Date, falls, in, the, 'UK', tax, year, Year, that, starts, at, Start, ends, at, End]).
+predef_dict([uk_tax_year_for_date,Date,Year,Start,End], [first_date-date, year-year, second_date-date, third_date-date], 
+                    [in, the, 'UK', Date, falls, in, Year, beginning, at, Start, &, ending, at, End]).
 predef_dict([days_spent_in_uk,Individual,Start,End,TotalDays], [who-person,start-date,end-date,total-number], 
-                    [Individual, spent, TotalDays, days, in, the, 'UK', starting, at, Start, and, ending, at, End]).
-
+                    [Individual, spent, TotalDays, in, the, 'UK', starting, at, Start, &, ending, at, End]). 
 
 % support predicates
 must_be(A, var) :- var(A).
@@ -846,8 +848,8 @@ le_taxlog_translate( en(Text), File, BaseLine, Terms) :-
 	%findall(Decl, psyntax:lps_swish_clause(en_decl(Decl),_Body,_Vars), Decls),
     %combine_list_into_string(Decls, StringDecl),
 	%string_concat(StringDecl, Text, Whole_Text),
-    once( text_to_logic(Text, Terms) ),
-    showErrors(File,BaseLine).
+    %once( text_to_logic(Text, Terms) ),
+    text_to_logic(Text, Terms) -> true; showErrors(File,BaseLine).
         %write_taxlog_code(Translation, Terms)). 
 
 combine_list_into_string(List, String) :-

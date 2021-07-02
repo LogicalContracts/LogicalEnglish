@@ -1,6 +1,6 @@
 :-module('https://www.gov.uk/guidance/stamp-duty-reserve-tax-reliefs-and-exemptions',[]).
 
-mainGoal(exempt_transfer(FromTaxPayer,ToTaxPayer,SecurityIdentifier,Time),"Determine if an electronic transaction is exempt from SDRT").
+mainGoal(exempt_transfer(_FromTaxPayer,_ToTaxPayer,_SecurityIdentifier,_Time),"Determine if an electronic transaction is exempt from SDRT").
 
 example('Chris Feb 12 - 1A',[
     /* 
@@ -13,10 +13,10 @@ example('Chris Feb 12 - 1A',[
     Expected result: exempt due to shares being inherited through a will.
     */
     scenario([
-        married_or_in_civil_partnership_at(alice,adam,Time) at myDB_456 if Time@>= '20110101',
+        is_married_or_in_civil_partnership_at_with_according_to_other_legislation(alice,adam,Time)at myDB_456 if Time @>= '20110101',
         shares_transfer(john,alice,sharesID,'20210201'),
-        corresponds_to_shares_inherited_in_a_will([john, alice, sharesID, '20210201']),
-        it_is_about_shares_in_a_trust if false
+        corresponds_to_shares_inherited_in([john, alice, sharesID, '20210201'], _),
+        it_is_about_shares_in_at(_Trust, _Date) if false
         ], is_a_transfer_exempt([john, alice, sharesID, '20210201']))
     ]).
 example('Chris Feb 12 - 1B1',[
@@ -28,10 +28,10 @@ example('Chris Feb 12 - 1B1',[
         Expected result: exempt due to shares trading on a recognised growth market.
         */
         scenario([
-            married_or_in_civil_partnership_at(ben,adam,Time) at myDB_456 if false,
+            is_married_or_in_civil_partnership_at_with_according_to_other_legislation(ben,adam,_Time) at myDB_456 if false,
             shares_transfer(adam,ben,sharesID,'20201010'),
-            corresponds_to_shares_received_as_gift(it) if false,
-            it_is_about_shares_in_a_trust if false,
+            corresponds_to_shares_received_as_gift([adam, ben, sharesID, '20201010']) if false,
+            it_is_about_shares_in_at(_Trust, _Date) if false,
             it_is_about_shares_trading_on_growth_market_but_unlisted_or_recognized % quick and dirty
              ], is_a_transfer_exempt([adam, ben, sharesID, '20201010']))
     ]).
@@ -45,14 +45,15 @@ example('Chris Feb 12 - 1B2',[
         market was not recognised as a high growth market at time of transfer. 
     */
     scenario([
-        married_or_in_civil_partnership_at(ben,adam,Time) at myDB_456 if false,
+        is_married_or_in_civil_partnership_at_with_according_to_other_legislation(ben,adam,Time) at myDB_456 if false,
         shares_transfer(adam,ben,sharesID,'20171210'),
-        shares_received_as_gift if false,
-        corresponds_to_shares_inherited_in_a_will([adam, ben, sharesID, '20171210']) if false,
+        corresponds_to_shares_received_as_gift([adam, ben, sharesID, '20171210']) if false,
+        corresponds_to_shares_inherited_in([adam, ben, sharesID, '20171210'], _) if false,
         corresponds_to_shares_transferred_on_divorce_or_dissolution([adam, ben, sharesID, '20171210']) if false,
-        it_corresponds_to_a_settlement_to_shareholders_on_a_business_wound_up if false,
-        it_is_about_shares_in_a_trust on T if T@>='20180101',
-        trading_in_market(sharesID,merkurMarket,_Anytime) at myDB_789,
+        it_corresponds_to_to_shareholders_on(_,_) if false,
+        it_is_about_shares_in_at(_Trust, T) if T@>='20180101',
+        merkurMarket_is_the_name_of_at_according_to_other_legislation(merkurMarket, _), 
+        is_trading_in_at(sharesID,merkurMarket,_Anytime) at myDB_789,
         is_the_grown_market(merkurMarket) on Time at "https://www.gov.uk/hmrc-internal-manuals/stamp-taxes-shares-manual/stsm041330" if Time@>='20180401' % dummy date
          ], not is_a_transfer_exempt([adam, ben, sharesID, '20171210']))
 ]).
@@ -143,11 +144,11 @@ an event is exempt from SDRT
 
 the security is trading in some recognised growth market at a time
     if the security is trading in a market at the time
-    and the market is an RGM market at the time as defined at 'https://www.gov.uk/hmrc-internal-manuals/stamp-taxes-shares-manual/stsm041330'.
+    and the market is an RGM market at the time as defined at \"https://www.gov.uk/hmrc-internal-manuals/stamp-taxes-shares-manual/stsm041330\".
 
 the security is listed on some recognised stock exchange at a time
     if the security is listed on a stock exchange at the time
-    and the stock exchange is a recognised stock exchange at the time as defined at 'https://www.gov.uk/government/publications/recognised-stock-exchanges-definition-legislation-and-tables/recognised-stock-exchanges-definition-legislation-and-tables-of-recognised-exchanges'.
+    and the stock exchange is a recognised stock exchange at the time as defined at \"https://www.gov.uk/government/publications/recognised-stock-exchanges-definition-legislation-and-tables/recognised-stock-exchanges-definition-legislation-and-tables-of-recognised-exchanges\".
 
 
 A transfer is a transfer exempt
@@ -183,6 +184,6 @@ A security ID is trading in a market
 
 
 /** <examples>
-?- query_with_facts(is_a_transfer_exempt,'Chris Feb 12 - 1A',Unknowns,Explanation,Result), render_questions(Unknowns,Questions).
-?- (Unknowns=[];Unknowns=_), query_with_facts(exempt_transfer,'Chris Feb 12 - 1B1',Unknowns,Explanation,Result).
+?- query_with_facts(is_a_transfer_exempt(Transfer),'Chris Feb 12 - 1A',Unknowns,Explanation,Result), render_questions(Unknowns,Questions).
+?- (Unknowns=[];Unknowns=_), query_with_facts(is_a_transfer_exempt(Transfer),'Chris Feb 12 - 1B1',Unknowns,Explanation,Result).
 */
