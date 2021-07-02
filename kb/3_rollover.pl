@@ -1,215 +1,246 @@
-:-module('https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11040',[]).
+:- module('https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/small-business-restructure-rollover',[]).
 
-mainGoal(complies_to_statutory_residence_test_at(_Individual, _Date), "Determine if a person is a UK resident for tax purposes").
+mainGoal(event_of_transfering_from_to_at_occurs(_ID,_Asset,_Transferor,_TransfereesList,_When), "Determine if a asset transfer event can be treated as a restructure rollover").
 
+is_after(A,B) :- A>B. 
 
-uk_tax_year_for_date(Date,Year,Start,End) :-
-    reasoner:uk_tax_year(Date,Year,Start,End). % explicit module qualifier needed
-
-example('Chris Feb 12 - 2A',[
-/*
-Determine if Alex was a UK residence for tax purposes for the tax year 6 Apr 2018 – 5 Apr 2019
--	Alex is a UK citizen who lived in the UK until March 2018.
--	Alex left the UK to work full-time in Dubai from 1 Mar 2018 – 25 Mar 2019.
--	Alex took 20 days annual leave in this period (and no sick/parental leave etc.). He spent 15 days of his annual leave in the UK. 
--	Alex moved back to the UK on 26 Mar 2019, and did not find a job until 1 May 2019 (i.e. there was a gap in employment from 26 March – 1 May)
--	Assume that Alex took no ‘significant breaks’ (I can’t find a definition for this!) from his work in Dubai.
--	Assume that Alex worked 8 hours each work-day – 40 hrs per full week.
-Expected result: non-resident by virtue of https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11140 
-   (third automatic overseas test)
-NOTE: out of scope of original example, added a stub at 'https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11150'
-   to allow testing this knowledge page
-*/
-    scenario([
-        % a plus sign indicates this hypothetical extends, not redefines, existing rules and facts:
-        ++ (complies_to_statutory_residence_test_at(alex, Date) if before(Date,'20180406') ), % not quite what was stated, but close
-        works_sufficient_hours_overseas(alex) at RDRM11150,
-        %++ (satisfies_first_automatic_uk_test_STEP_1_at(alex, '20180406') at THIRD_OT), 
-        no_significant_breaks_from_overseas_work(alex) at THIRD_OT,
-        days_working_in_uk_more_than(alex,_,0) at THIRD_OT,
-        days_spent_in_uk(alex,Start,End,DaysInUK) at myDb123,
-        second_automatic_uk_test(_) at RDRM11130 if false,
-        third_automatic_uk_test(_) at RDRM11370 if false,
-        ties_test(_) at RDRM11510 if false
-        ], not complies_to_statutory_residence_test_at(alex,A_DATE))
-    ]) :- 
-    A_DATE='20180406', uk_tax_year_for_date(A_DATE,_,Start,End),
-    RDRM11150="https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11150",
-    RDRM11130="https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11330",
-    RDRM11370="https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11370",
-    RDRM11510="https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11510",
-    THIRD_OT='https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11140',
-    subtract_days(End,'20190326',Days), DaysInUK is 15 /*leave*/ +Days.
-
-example('Chris Feb 12 - 2B',[
-/*
-Determine if Beatrice was a UK resident the tax year 6 Apr 2019 – 5 Apr 2020
--	Beatrice is a UK citizen with her home in the UK.
--	Beatrice worked as a pilot for an Airline company for the duration of this period.
--	95% of Beatrice’s work flights were cross-border flights between the UK and other countries.
--	Beatrice spent 200 days in the UK in the tax year from 6 Apr 2019 – 5 Apr 2020.
--	Beatrice worked overseas for 160 days in the same period.
--	The remaining days were spent on holiday outside the UK.
--	Assume that Beatrice worked 8 hours each work-day – 40 hrs per full week.
-Expected result: resident, does not qualify for 3rd automatic (UK) test due to her having a ‘relevant job’ as 
-    per https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11780
-*/
-    scenario([
-    % NOTE: out of scope of original example; requires 'https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11370'
-        ], complies_to_statutory_residence_test_at(beatrice,'20190406'))
+example( 'Testing scenario', [
+    % initial facts and condition:
+    scenario([event_of_transfering_from_to_at_occurs(EVENT,company1_goodwill,company1,[andrew,miguel], WHEN),
+              has_of_according_to_other_legislation(company1,_, 5300000) at "https://www.ato.gov.au/business/small-business-entity-concessions/eligibility/aggregation/"], applies(EVENT))
     ]).
 
-example('Chris Feb 12 - 2C1',[
-    /*
-Determine if Chris was a statutory resident for the UK tax year from 6 Apr 2019 – 5 Apr 2020.
-Chris is an Australian citizen, and lived there for most of his adult life. Since July 2017, Chris has spent most of his time in Europe. 
-Details of his travels for the last two years are below:
--	19 Mar 2019: Chris began living in Berlin on a German Working Holiday visa.
--	30 Nov 2019: Chris left Berlin and went back to Australia for some time.
--	Chris did not pay German income tax for the 2019 tax year in Germany on the advice of an accountant, who said he was considered 
-    an Australian resident for tax purposes for that year.
--	13 Feb 2020: Issued a UK residence permit for a T5 Youth Mobility visa valid for 2 years (27 Feb 2020 – 27 Feb 2022).
--	27 Feb 2020: Left Australia and arrived in the UK.
-Employment:
-•	1 Jan 2019 – 1 Mar 2020: Worked part-time for Outotec (Australian branch) on a casual/hourly basis.
-•	1 Jan 2019 – 1 Mar 2020: Worked part-time for Legal Technology Research (UK) on a casual/hourly basis.
-•	1 Mar 2020 – present: Works full-time for Aora on a permanent basis.
-Expected result: non-resident due to 2nd automatic test; see https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11130
-*/
-    scenario([
-    % NOTE: out of scope of original example, requires 'https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11330'
-        ],not complies_to_statutory_residence_test(chris,'20190406'))
+example( 'Ultimate ownership unchanged', [
+    % initial facts and condition:
+    scenario(['penny runs a business B','B has assets A'], is_ultimately_owned_by(A,'Penny',1)),
+    % new facts and condition:
+    scenario(['penny has trust T', transfer_event(_ID,_A,_When,_B,[_T])], is_ultimately_owned_by(A,'Penny'))
     ]).
-    
-example('Chris Feb 12 - 2C2',[
-    /*
-Determination should be made for the tax year from 6 Apr 2020 – 5 Apr 2021.
-Facts as per Example 2C1; assume that Chris remains in the UK for the remainder of 2021.
-Expected result: resident
+
+example( 'Changed share of ownership', [
+    % initial facts and condition:
+    scenario(['Amy, Joanna and Remy run a delivery business B as equal partners','B has assets A'], 
+        true),
+    % new facts and condition:
+    scenario(['Amy, Joanna and Remy establish company C, different shares', transfer_event(ID,_A,_When,_B,[_C])], 
+        not applies(ID)),
+    % alternative facts and another condition:
+    scenario(['Amy, Joanna and Remy establish company C, different shares', 'Amy, Joanna and Remy establish company C, equal shares'], 
+        applies(ID))
+    ]).
+
+example( 'Andrew email Feb 4 2021', [
+    /* Company transfers its assets to partners in a partnership on 1 July 2020. Company has turnover of 5,300,000. 
+    Company is a Small Business Entity i.e. the transferor & the partners in a partnership i.e. transferee is also a small business entity.)
+    Assets are - Goodwill, Trading stock, Plant & equipment, revenue assets
     */
-    scenario(Facts, complies_to_statutory_residence_test(chris) on '20200406')
-    % NOTE: out of scope of original example, as previous one
+    scenario([
+        owns_at_according_to_other_legislation(company1,company1_goodwill, T) at BASICS if T @=< BEFORE,
+        owns_at_according_to_other_legislation(company1,company1_trading_stock, T) at BASICS if T @=< BEFORE,
+        owns_at_according_to_other_legislation(company1,company1_plant_and_equipment, T) at BASICS if T @=< BEFORE,
+        owns_at_according_to_other_legislation(company1,company1_revenue_asset,T) at BASICS if T @=< BEFORE,
+        %TODO: add time here, and below...?
+        is_a_partner_in_partnership_with_according_to_other_legislation(andrew,company1) at BASICS, is_a_partner_in_partnership_with_according_to_other_legislation(miguel,company1) at BASICS, 
+        has_of_according_to_other_legislation(company1,_, 5300000) at AGGREGATION,
+        has_of_according_to_other_legislation(andrew,_, 1000000) at AGGREGATION,
+        has_of_according_to_other_legislation(miguel,_, 500000) at AGGREGATION,
+        is_a_small_business_entity_according_to_other_legislation(company1) at SBE, is_a_small_business_entity_according_to_other_legislation(andrew) at SBE, is_a_small_business_entity_according_to_other_legislation(miguel) at SBE,
+        event_of_transfering_from_to_at_occurs(EVENT,company1_goodwill,company1,[andrew,miguel], WHEN),
+        % with the rule as it is below, no point in injecting more than one event:
+        %transfer_event(EVENT2,company1_trading_stock,WHEN,company1,[andrew,miguel]),
+        %transfer_event(EVENT3,company1_plant_and_equipment,WHEN,company1,[andrew,miguel]),
+        %transfer_event(EVENT4,company1_revenue_asset,WHEN,company1,[andrew,miguel]),
+        owns_at_according_to_other_legislation(company1,company1_goodwill, T) at BASICS if T @>= WHEN,
+        owns_at_according_to_other_legislation(company1,company1_trading_stock, T) at BASICS if T @>= WHEN,
+        owns_at_according_to_other_legislation(company1,company1_plant_and_equipment, T) at BASICS if T @>= WHEN,
+        owns_at_according_to_other_legislation(company1,company1_revenue_asset,T) at BASICS if T @>= WHEN,
+        is_part_of_genuine_restructuring_according_to_other_legislation(EVENT) at "https://www.ato.gov.au/law/view/document?DocID=COG/LCG20163/NAT/ATO/00001&PiT=99991231235958",
+        is_used_in_business_of_according_to_other_legislation(company1_goodwill,company1) at BASICS,
+        is_of_asset_type_according_to_other_legislation(company1_goodwill,trading_stock) at myDb17,
+        is_the_trust_of(_,_) if false
+        | MoreFacts
+        ], applies(EVENT))
     ]) :- 
-        example('Chris Feb 12 - 2C1',[scenario(Facts2C1,_)]), 
-        Facts=[ + (days_spent_in_uk(chris,'20210406','20220405',Days) if subtract_days('20210406','20220405',Days) ) |Facts2C1]. 
-        
+        % for mere convenience, Prolog code to setup some data and make the above less cluttered:
+        EVENT=123,
+        WHEN='20200701', is_immediately_before(BEFORE,WHEN),
+        SBE= "https://www.ato.gov.au/General/Capital-gains-tax/Small-business-CGT-concessions/Basic-conditions-for-the-small-business-CGT-concessions/Small-business-entity/",
+        BASICS="https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/",
+        AGGREGATION="https://www.ato.gov.au/business/small-business-entity-concessions/eligibility/aggregation/",
+        findall(is_a_small_business_entity_according_to_other_legislation(E) at SBE, member(E,[company1,andrew,miguel]), MoreFacts).
+
+is_immediately_before(20200630,20200701). 
 
 en("the templates are:
-    an individual is resident in the UK for a tax year,
-    an individual meets the automatic residence test for a year,
-    an individual meets the sufficient ties test for a year,
-    an individual meets an alternative of the automatic UK tests for a year,
-    an individual meets a different alternative of the automatic overseas tests for a year,
-    an individual complies to statutory residence test at a date,
-    an individual satisfies first automatic uk test STEP 1 at a date,
-    an individual does not meet any of three overseas tests STEP 2 at a date,
-    an individual meets either the second or the third uk test STEP 3 at a date,
-    an individual meets ties test STEP 4 at a date,
-    an individual meets first automatic overseas test at a date,
-    an individual meets second automatic overseas test at a date,
-    an individual meets third automatic overseas test at a date according to other legislation,
-    an individual meets third automatic overseas test at a date,
-    an individual meets ties test at a date,
-    an individual satisfies first automatic uk test at a date,
-    an individual meets second automatic uk test at a date,
-    an individual meets second automatic uk test at a date according to other legislation,
-    an individual meets third automatic uk test at a date,
-    an individual meets third automatic uk test at a date according to other legislation,
-    an individual meets ties test at a date,
-    an individual meets ties test at a date according to other legislation,
-    a year is between a first year - 3 and a second year - 1.
+    A trust 's election ocurred,
+    A trust is the trust of a group,
+    An Event ID rollover applies,
+    An owner / a share,
+    An Event ID rollover of the transfer of an Asset from a Transferor to a Transferees List at a Time applies,
+    event an event of transfering an asset from a payer to a recipient at a time occurs,
+    the small business restructure rollover applies to an event,
+    an asset is an eligible asset,
+    an event occurs at a time,
+    an event is a transfer of an asset by a transferor to a transferee,
+    an event is part of genuine restructuring according to other legislation,
+    an event meets the ultimate ownership test at a time,
+    an event is undertaken as part of a trust,
+    a trust relates to a family group,
+    an individual is a member of a group,
+    an individual is an ultimate owner of an asset at a time,
+    a trust is a family trust,
+    a thing is of type a type,
+    a tax payer is in a transferee,
+    a time is after a second time,
+    a party is a party of an event,
+    an amount is the aggregated turnover of a party,
+    a party is an eligible party,
+    a previous time is immediately before a time,
+    an asset is ultimately owned by a share with an owner at a time,
+    an entity has a share in an asset at a time,
+    an owner owns an asset at a time according to other legislation,
+    a party is a small business entity according to other legislation,
+    a party has affiliated with an affiliate according to other legislation,
+    a party is connected to a taxpayer according to other legislation,
+    a party is a partner in partnership with a partnership according to other legislation,
+    an asset is an active asset,
+    an asset is used in business of a taxpayer according to other legislation,
+    an asset is of asset type a type,
+    an asset is of asset type a type according to other legislation,
+    a party has an aggregated turnover of an amount,
+    a party has an aggregated turnover of an amount according to other legislation,
+    a cost is a rollover cost,
+    an asset costs a cost at a time,
+    an owner / a thing is in a set.
 
 the knowledge base includes:
+An Event ID rollover of the transfer of an Asset from a Transferor to a Transferees List at a Time applies
+    if  this information transfer_event(the Event ID,the Asset,the Time,the Transferor,the Transferees List) has been recorded
+    and the Event ID rollover applies.
 
-An individual is resident in the UK for a tax year
-    if the individual meets the automatic residence test for the year
-    or the individual meets the sufficient ties test for the year.
+cgt_asset is of type asset.
+trading_stock is of type asset.
+revenue_asset is of type asset.
+depreciating_asset is of type asset.
+loan_to_shareholder is of type asset.
 
-An individual meets the automatic residence test for a year
-    if the individual meets an alternative of the automatic UK tests for the year
-    and the alternative is in [first, second, third, fourth]
-    and it is not the case that
-            the individual meets a different alternative of the automatic overseas tests for the year
-            and the different alternative is in [first, second, third, fourth, fifth].
+A tax payer is a party of an event
+   if  event the event of transfering an asset from the tax payer to a recipient at a time occurs.
 
-an individual complies to statutory residence test at a date
-    if the individual satisfies first automatic uk test STEP 1 at the date.
+A tax payer is a party of an event
+    if  event the event of transfering an asset from a somebody to a transferee at a time occurs
+    and the tax payer is in the transferee.
 
-an individual complies to statutory residence test at a date
-    if it is not the case that
-        the individual does not meet any of three overseas tests STEP 2 at the date.
-
-an individual complies to statutory residence test at a date
-    if the individual does not meet any of three overseas tests STEP 2 at the date
-    and the individual meets either the second or the third uk test STEP 3 at the date.
-
-an individual complies to statutory residence test at a date
-    if the individual does not meet any of three overseas tests STEP 2 at the date
-    and the individual meets ties test STEP 4 at the date.
-
-an individual does not meet any of three overseas tests STEP 2 at a date
-    if it is not the case that
-        the individual meets first automatic overseas test at the date
-    and it is not the case that
-        the individual meets second automatic overseas test at the date
-    and it is not the case that
-        the individual meets third automatic overseas test at the date.
-
-an individual meets either the second or the third uk test STEP 3 at a date
-    if the individual meets second automatic uk test at the date
-    or the individual meets third automatic uk test at the date.
-
-an individual meets ties test STEP 4 at a date
-    if the individual meets ties test at the date.
-
-an individual satisfies first automatic uk test at a date
-    if in the UK the date falls in a year beginning at a second date & ending at a third date
-    and the individual spent a number oof days in the UK starting at the second date & ending at the third date
-    and the number oof days >= 183.
-
-an individual meets second automatic uk test at a date
-    if the individual meets second automatic uk test at the date according to other legislation.
-
-an individual meets third automatic uk test at a date
-    if the individual meets third automatic uk test at the date according to other legislation.
-
-an individual meets ties test at a date
-    if the individual meets ties test at the date according to other legislation.
-
-an individual meets first automatic overseas test at a date
-    if in the UK the date falls in a current year beginning at a second date & ending at a third date
-    and a previous year is between the current year - 3 and the current year - 1
-    and in the UK a previous date falls in the previous year beginning at a fourth date & ending at a fifth date
-    and the individual spent a number oof days in the UK starting at the fourth date & ending at the fifth date
-    and the number oof days < 16
-    and the individual complies to statutory residence test at the previous date.
-
-a middle year is between a base year - 3 and the base year - 1
-  if a first year is the base year - 3
-  and a second year is the base year - 1
-  and the middle year is between the first year & the second year.
-
-an individual meets second automatic overseas test at a date
-    if in the UK the date falls in a current year beginning at a second date & ending at a third date
-    and the individual spent a number oof days in the UK starting at the second date & ending at the third date
-    and the number oof days < 46
+An event rollover applies
+    if event the event of transfering an asset from a sender to a recipient at a time occurs
+    and the time is after 20160701
     and for all cases in which
-            a previous year is between the current year - 3 and the current year - 1
-            and in the UK a previous date falls in the previous year beginning at a fourth date & ending at a fifth date
+           a party is a party of the event
         it is the case that:
-            it is not the case that
-                the individual complies to statutory residence test at the previous date.
+            the party has an aggregated turnover of a turnover
+            and the turnover < 10000000
+            and the party is an eligible party
+    and the event is part of genuine restructuring according to other legislation
+    and a previous time is immediately before the time
+    and a set previous owners is a collection of an owner / a share
+        where the asset is ultimately owned by the share with the owner at the previous time
+    and a set new owners is a collection of the owner / the share
+        where the asset is ultimately owned by the share with the owner at the time
+    and the set new owners = the set previous owners
+        or a family trust is the trust of a group
+            and the family trust 's election ocurred
+            and for all cases in which
+                    the owner / le_some_thing is in the set previous owners
+                it is the case that:
+                    the owner is in the group
+            and for all cases in which
+                    the owner / le_some_thing is in the set new owners
+                it is the case that:
+                   the owner is in the group
+    and the asset is an eligible asset.
 
-an individual meets third automatic overseas test at a date
-    if the individual meets third automatic overseas test at the date according to other legislation.
+the small business restructure rollover applies to an event
+        if the event occurs at a time
+        and the time is after 20160701
+        and the event is a transfer of an asset by a transferor to a transferee
+        and the asset is an eligible asset
+        and the event is part of genuine restructuring according to other legislation
+        and the event meets the ultimate ownership test at the time
+        and for all cases in which
+                a party is a party of the event
+                and an amount is the aggregated turnover of the party
+            it is the case that:
+                the party is an eligible party
+                and the amount < 10000000.
 
-an individual meets third automatic overseas test at a date
-    if the individual meets third automatic overseas test at the date according to other legislation.").
+an event meets the ultimate ownership test at a time
+        if the event is a transfer of an asset by a transferor to a transferee
+        and a previous time is immediately before the time
+        and for all cases in which
+                the entity is an ultimate owner of the asset at the time
+                and the entity has a share in the asset at the time
+            it is the case that:
+                the entity is an ultimate owner of the asset at the previous time
+                and the entity has the share in the asset at the previous time.
 
+an event meets the ultimate ownership test at a time
+        if the event is a transfer of an asset by a transferor to a transferee
+        and the event is undertaken as part of a trust
+        and the trust is a family trust
+        and the trust relates to a family group
+        and a previous time is immediately before the time
+        and for all cases in which
+                an individual is an ultimate owner of the asset at the time
+            it is the case that:
+                the individual is a member of the family group
+        and for all cases in which
+                an individual is an ultimate owner of the asset at the previous time
+            it is the case that:
+                the individual is a member of the family group.
 
-/** <examples>
-?- query_with_facts(complies_to_statutory_residence_test_at(Individual,'20180406') at 'https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11040','Chris Feb 12 - 2A',Unknowns,Explanation,Result).
-?- query_with_facts(complies_to_statutory_residence_test_at(Individual,'20180406') at 'https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11040','Chris Feb 12 - 2B',Unknowns,Explanation,Result).
-?- query_with_facts(complies_to_statutory_residence_test_at(Individual,'20180406') at 'https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11040','Chris Feb 12 - 2C1',Unknowns,Explanation,Result).
-?- query_with_facts(complies_to_statutory_residence_test_at(Individual,'20180406') at 'https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11040','Chris Feb 12 - 2C2',Unknowns,Explanation,Result).
+An asset is ultimately owned by 1 with an owner at a time
+    if  the owner owns the asset at the time according to other legislation.
+
+A party is an eligible party
+    if the party is a small business entity according to other legislation.
+
+A party is an eligible party
+    if the party has affiliated with an affiliate according to other legislation
+    and the affiliate is a small business entity according to other legislation.
+
+A party is an eligible party
+    if the party is connected to a taxpayer according to other legislation
+    and the taxpayer is a small business entity according to other legislation.
+
+A party is an eligible party
+    if the party is a partner in partnership with a partnership according to other legislation
+    and the partnership is a small business entity according to other legislation.
+
+An asset is an eligible asset
+    if  the asset is an active asset
+    and the asset is of asset type a type
+    and the type is in [cgt_event,depreciating_asset,trading_stock,revenue_asset].
+
+An asset is an active asset
+    if  the asset is used in business of a taxpayer according to other legislation.
+
+An asset is of asset type a type
+    if  the type is of type asset
+    and the asset is of asset type the type according to other legislation.
+
+A party has an aggregated turnover of an amount
+    if the party has an aggregated turnover of the amount according to other legislation.
+
+A cost is a rollover cost
+    if  the event occurs at a time
+    and the event is a transfer of an asset by a transferor to a transferee
+    and a previous time is immediately before the time
+    and the asset costs the cost at the previous time."). 
+
+/** <examples>.
+?- le(LogicalEnglish).
+?- query_with_facts(applies(Event),'Andrew email Feb 4 2021',Unknowns,Explanation,Result).
+?- query_with_facts(applies(Event),'Ultimate ownership unchanged',Unknowns,Explanation,Result).
+?- query_with_facts(applies(Event),'Changed share of ownership',Unknowns,Explanation,Result).
+?- query_with_facts(applies(Event),'Testing scenario',Unknowns,Explanation,Result).
 */
