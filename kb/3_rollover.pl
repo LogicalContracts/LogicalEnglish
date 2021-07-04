@@ -2,12 +2,15 @@
 
 mainGoal(event_of_transfering_from_to_at_occurs(_ID,_Asset,_Transferor,_TransfereesList,_When), "Determine if a asset transfer event can be treated as a restructure rollover").
 
-is_after(A,B) :- A>B. 
+%is_after(20200702,20160701).  
 
 example( 'Testing scenario', [
     % initial facts and condition:
-    scenario([event_of_transfering_from_to_at_occurs(EVENT,company1_goodwill,company1,[andrew,miguel], WHEN),
-              has_of_according_to_other_legislation(company1,_, 5300000) at "https://www.ato.gov.au/business/small-business-entity-concessions/eligibility/aggregation/"], applies(EVENT))
+    scenario([event_of_transfering_from_to_at_occurs(123,company1_goodwill,company1,[miguel], 20160701),
+             is_after(20160701,20160701), 
+             is_immediately_before(20160630, 20160701), 
+             has_of_according_to_other_legislation(miguel,aggregated, 400000),
+             has_of_according_to_other_legislation(company1,aggregated, 5300000)], applies(123))
     ]).
 
 example( 'Ultimate ownership unchanged', [
@@ -64,6 +67,46 @@ example( 'Andrew email Feb 4 2021', [
         % for mere convenience, Prolog code to setup some data and make the above less cluttered:
         EVENT=123,
         WHEN='20200701', is_immediately_before(BEFORE,WHEN),
+        SBE= "https://www.ato.gov.au/General/Capital-gains-tax/Small-business-CGT-concessions/Basic-conditions-for-the-small-business-CGT-concessions/Small-business-entity/",
+        BASICS="https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/",
+        AGGREGATION="https://www.ato.gov.au/business/small-business-entity-concessions/eligibility/aggregation/",
+        findall(is_a_small_business_entity_according_to_other_legislation(E) at SBE, member(E,[company1,andrew,miguel]), MoreFacts).
+
+example( 'Andrew email Feb 4 2021 version 2', [
+    /* Company transfers its assets to partners in a partnership on 1 July 2020. Company has turnover of 5,300,000. 
+    Company is a Small Business Entity i.e. the transferor & the partners in a partnership i.e. transferee is also a small business entity.)
+    Assets are - Goodwill, Trading stock, Plant & equipment, revenue assets
+    */
+    scenario([
+        %owns_at_according_to_other_legislation(company1,company1_goodwill, T) at BASICS if T @=< BEFORE,
+        %owns_at_according_to_other_legislation(company1,company1_trading_stock, T) at BASICS if T @=< BEFORE,
+        %owns_at_according_to_other_legislation(company1,company1_plant_and_equipment, T) at BASICS if T @=< BEFORE,
+        %owns_at_according_to_other_legislation(company1,company1_revenue_asset,T) at BASICS if T @=< BEFORE,
+        %TODO: add time here, and below...?
+        %is_a_partner_in_partnership_with_according_to_other_legislation(andrew,company1), is_a_partner_in_partnership_with_according_to_other_legislation(miguel,company1), 
+        has_of_according_to_other_legislation(company1,_, 5300000),
+        has_of_according_to_other_legislation(andrew,_, 1000000),
+        has_of_according_to_other_legislation(miguel,_, 500000),
+        %is_a_small_business_entity_according_to_other_legislation(company1) at SBE, is_a_small_business_entity_according_to_other_legislation(andrew) at SBE, is_a_small_business_entity_according_to_other_legislation(miguel) at SBE,
+        event_of_transfering_from_to_at_occurs(EVENT,company1_goodwill,company1,[andrew,miguel], WHEN)
+        % with the rule as it is below, no point in injecting more than one event:
+        %transfer_event(EVENT2,company1_trading_stock,WHEN,company1,[andrew,miguel]),
+        %transfer_event(EVENT3,company1_plant_and_equipment,WHEN,company1,[andrew,miguel]),
+        %transfer_event(EVENT4,company1_revenue_asset,WHEN,company1,[andrew,miguel]),
+        %owns_at_according_to_other_legislation(company1,company1_goodwill, T) at BASICS if T @>= WHEN,
+        %owns_at_according_to_other_legislation(company1,company1_trading_stock, T) at BASICS if T @>= WHEN,
+        %owns_at_according_to_other_legislation(company1,company1_plant_and_equipment, T) at BASICS if T @>= WHEN,
+        %owns_at_according_to_other_legislation(company1,company1_revenue_asset,T) at BASICS if T @>= WHEN,
+        %is_part_of_genuine_restructuring_according_to_other_legislation(EVENT) at "https://www.ato.gov.au/law/view/document?DocID=COG/LCG20163/NAT/ATO/00001&PiT=99991231235958",
+        %is_used_in_business_of_according_to_other_legislation(company1_goodwill,company1) at BASICS,
+        %is_of_asset_type_according_to_other_legislation(company1_goodwill,trading_stock) at myDb17,
+        %is_the_trust_of(_,_) if false
+        | MoreFacts
+        ], applies(EVENT))
+    ]) :- 
+        % for mere convenience, Prolog code to setup some data and make the above less cluttered:
+        EVENT=123,
+        %WHEN='20200701', is_immediately_before(BEFORE,WHEN),
         SBE= "https://www.ato.gov.au/General/Capital-gains-tax/Small-business-CGT-concessions/Basic-conditions-for-the-small-business-CGT-concessions/Small-business-entity/",
         BASICS="https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/",
         AGGREGATION="https://www.ato.gov.au/business/small-business-entity-concessions/eligibility/aggregation/",
@@ -239,8 +282,6 @@ A cost is a rollover cost
 
 /** <examples>.
 ?- le(LogicalEnglish).
-?- query_with_facts(applies(Event),'Andrew email Feb 4 2021',Unknowns,Explanation,Result).
-?- query_with_facts(applies(Event),'Ultimate ownership unchanged',Unknowns,Explanation,Result).
-?- query_with_facts(applies(Event),'Changed share of ownership',Unknowns,Explanation,Result).
 ?- query_with_facts(applies(Event),'Testing scenario',Unknowns,Explanation,Result).
+?- query_with_facts(applies(Event),'Andrew email Feb 4 2021 version 2',Unknowns,Explanation,Result).
 */
