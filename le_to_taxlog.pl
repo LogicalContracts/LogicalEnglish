@@ -29,9 +29,10 @@ correspond to each operator and corresponding conditions.
 
 */
 
-:- module(le_to_taxlog, [document/3, le_taxlog_translate/4]).
+:- module(le_to_taxlog, [document/3, le_taxlog_translate/4, op(1195,fx, user:(++))]).
 :- use_module('./tokenize/prolog/tokenize.pl').
-:- thread_local literal/5, text_size/1, error_notice/4, dict/3, last_nl_parsed/1.
+%:- use_module('reasoner.pl').
+:- thread_local literal/5, text_size/1, error_notice/4, dict/3, last_nl_parsed/1, kbname/1.
 :- discontiguous statement/3, declaration/4, predicate/3, action/3.
 
 % Main clause: text_to_logic(+String,-Clauses) is det
@@ -43,8 +44,8 @@ text_to_logic(String_, Translation) :-
     retractall(last_nl_parsed(_)), asserta(last_nl_parsed(1)), % preparing line counting
     unpack_tokens(Tokens, UTokens), 
     clean_comments(UTokens, CTokens), 
-    ( phrase(document(Translation), CTokens) -> true
-        % ( print_message(informational, "Translation: ~w"-[Translation]), Error=[] )
+    ( phrase(document(Translation), CTokens) -> 
+        ( print_message(informational, "Translation: ~w"-[Translation]) )
     ;   ( Translation=[])). 
 
 document(Translation) --> 
@@ -92,7 +93,12 @@ list_of_predicates_decl([Ru|R1], [F|R2]) --> predicate_decl(Ru,F), rest_list_of_
 rules_previous --> 
     spaces(_), [the], spaces(_), [rules], spaces(_), [are], spaces(_), [':'], spaces(_), newline, !.
 rules_previous --> 
-    spaces(_), [the], spaces(_), ['knowledge'], spaces(_), [base], spaces(_), [includes], spaces(_), [':'], spaces(_), newline.
+    spaces(_), [the], spaces(_), ['knowledge'], spaces(_), [base], spaces(_), [includes], spaces(_), [':'], !, spaces(_), newline.
+%rules_previous --> 
+%    spaces(_), [the], spaces(_), ['knowledge'], spaces(_), [base], extract_constant([includes], KBName), [includes], spaces(_), [':'], !, spaces(_), newline,
+%    {asserta(kbname(KBName))}.
+rules_previous -->  % backward compatibility
+    spaces(_), [the], spaces(_), ['knowledge'], spaces(_), [base], spaces(_), [includes], spaces(_), [':'], spaces(_), newline. 
 
 rest_list_of_predicates_decl(L1, L2) --> comma, list_of_predicates_decl(L1, L2).
 rest_list_of_predicates_decl([],[]) --> period.
@@ -108,11 +114,29 @@ predicate_decl(dict([Predicate|Arguments],TypesAndNames, Template), Relation) --
 predicate_decl(_, _, Rest, _) :- 
     asserterror('LE error found in a declaration ', Rest), 
     fail.
-
 % statement: the different types of statements in a LE text
+% a query
+statement(Query) -->
+    query_, extract_constant([is], NameWords), is_colon_, newline,
+    query_header(Ind0, Map1),
+    conditions(Ind0, Map1, _, Conds), period, !, 
+    {name_as_atom(NameWords, Name), Query = [question(Name, Conds)]}. %beware! overloading question!
+
+% a scenario description
+statement(Scenario) -->
+    scenario_, extract_constant([is], NameWords), is_colon_, newline,
+    list_of_facts(Facts), period, !, 
+    {name_as_atom(NameWords, Name), Scenario = [example( Name, [scenario(Facts, _Goal)])]}.
+
+% a fact or a rule
 statement(Statement) --> 
-    literal_([], Map1, Head), body_(Body, Map1, _), period, !, % <-- CUT 
+    literal_([], Map1, Head), body_(Body, Map1, _), period,  
     {(Body = [] -> Statement = [Head]; Statement = [if(Head, Body)])}. 
+
+list_of_facts([F|R1]) --> literal_([], _,F), rest_list_of_facts(R1).
+
+rest_list_of_facts(L1) --> comma, spaces_or_newlines(_), list_of_facts(L1).
+rest_list_of_facts([]) --> [].
 
 % no prolog inside LE!
 %statement([Fact]) --> 
@@ -160,7 +184,7 @@ term_(Term, Map1, MapN) -->
     (variable(Term, Map1, MapN), !); (constant(Term, Map1, MapN), !); (list_(Term, Map1, MapN), !). %; (compound_(Term, Map1, MapN), !).
 
 list_(List, Map1, MapN) --> 
-    spaces(_), bracket_open_, !, extract_list(List, Map1, MapN), bracket_close.   
+    spaces(_), bracket_open_, !, extract_list([']'], List, Map1, MapN), bracket_close.   
 
 compound_(V1/V2, Map1, MapN) --> 
     term_(V1, Map1, Map2), ['/'], term_(V2, Map2, MapN). 
@@ -196,7 +220,7 @@ condition(FinalExpression, _, Map1, MapN) -->
 
 % the Value is the sum of each Asset Net such that
 condition(FinalExpression, _, Map1, MapN) --> 
-    variable(Value, Map1, Map2), is_the_sum_of_each_, extract_variable(Each, NameWords, _), such_that_, !, 
+    variable(Value, Map1, Map2), is_the_sum_of_each_, extract_variable([such], Each, NameWords, _), such_that_, !, 
     { name_predicate(NameWords, Name), update_map(Each, Name, Map2, Map3) }, newline, 
     spaces(Ind), conditions(Ind, Map3, Map4, Conds), 
     modifiers(aggregate_all(sum(Each),Conds,Value), Map4, MapN, FinalExpression).
@@ -233,19 +257,19 @@ modifiers(MainExpression, Map1, MapN, on(MainExpression, Var) ) -->
 modifiers(MainExpression, Map, Map, MainExpression) --> [].  
 
 variable(Var, Map1, MapN) --> 
-    spaces(_), [Det], {determiner(Det)}, extract_variable(Var, NameWords, _), !, % <-- CUT!
+    spaces(_), [Det], {determiner(Det)}, extract_variable([], Var, NameWords, _), !, % <-- CUT!
     { name_predicate(NameWords, Name), update_map(Var, Name, Map1, MapN) }. 
 
 constant(Constant, Map, Map) -->
-    extract_constant(NameWords), { NameWords\=[], name_predicate(NameWords, Constant) }, !. % <-- CUT!
+    extract_constant([], NameWords), { NameWords\=[], name_predicate(NameWords, Constant) }, !. % <-- CUT!
 
 prolog_literal_(Prolog, Map1, MapN) -->
-    predicate_name_(Predicate), parentesis_open_, extract_list(Arguments, Map1, MapN), parentesis_close_,
+    predicate_name_(Predicate), parentesis_open_, extract_list([], Arguments, Map1, MapN), parentesis_close_,
     {Prolog =.. [Predicate|Arguments]}.
 
 predicate_name_(Module:Predicate) --> 
-    [Module], colon_, extract_constant(NameWords), { name_predicate(NameWords, Predicate) }, !.
-predicate_name_(Predicate) --> extract_constant(NameWords), { name_predicate(NameWords, Predicate) }.
+    [Module], colon_, extract_constant([], NameWords), { name_predicate(NameWords, Predicate) }, !.
+predicate_name_(Predicate) --> extract_constant([], NameWords), { name_predicate(NameWords, Predicate) }.
 
 spaces(N) --> [' '], !, spaces(M), {N is M + 1}.
 spaces(N) --> ['\t'], !, spaces(M), {N is M + 1}. % counting tab as one space
@@ -308,6 +332,28 @@ is_a_collection_of_ --> [is], spaces(_), [a], spaces(_), [collection], spaces(_)
 
 where_ --> [where], spaces(_). 
 
+scenario_ -->  ['Scenario'], !, spaces(_).
+scenario_ -->  [scenario], spaces(_). 
+
+is_colon_ -->  [is], spaces(_), [':'], spaces(_).
+
+query_ --> [query], spaces(_).
+
+for_which_ --> [for], spaces(_), [which], spaces(_). 
+
+query_header(Ind, Map) --> spaces(Ind), for_which_, list_of_vars([], Map), colon_, newline.
+query_header(0, []) --> []. 
+
+list_of_vars(Map1, MapN) --> 
+    extract_variable([',', and, ':'], Var, NameWords, _), 
+    { name_predicate(NameWords, Name), update_map(Var, Name, Map1, Map2) },
+    rest_of_list_of_vars(Map2, MapN).
+
+rest_of_list_of_vars(Map1, MapN) --> and_or_comma_, list_of_vars(Map1, MapN).
+rest_of_list_of_vars(Map, Map) --> []. 
+
+and_or_comma_ --> [','], spaces(_). 
+and_or_comma_ --> [and], spaces(_).
 
 /* --------------------------------------------------- Supporting code */
 clean_comments([], []) :- !.
@@ -343,61 +389,35 @@ build_template(RawTemplate, Predicate, Arguments, TypesAndNames, Template) :-
 build_template_elements([], _, [], [], [], []).     
 build_template_elements([Word|RestOfWords], Previous, [Var|RestVars], [Name-Type|RestTypes], Others, [Var|RestTemplate]) :-
     (ind_det(Word); ind_det_C(Word)), Previous \= [is|_], 
-    extract_variable(Var, NameWords, TypeWords, RestOfWords, NextWords), !, % <-- CUT!
+    extract_variable([], Var, NameWords, TypeWords, RestOfWords, NextWords), !, % <-- CUT!
     name_predicate(NameWords, Name), 
     name_predicate(TypeWords, Type), 
     build_template_elements(NextWords, [], RestVars, RestTypes, Others, RestTemplate).
 build_template_elements([Word|RestOfWords], Previous, RestVars, RestTypes,  [Word|Others], [Word|RestTemplate]) :-
     build_template_elements(RestOfWords, [Word|Previous], RestVars, RestTypes, Others, RestTemplate).
 
-% extract_variable(-Var, -ListOfNameWords, -ListOfTypeWords, +ListOfWords, -NextWordsInText)
+% extract_variable(+StopWords, -Var, -ListOfNameWords, -ListOfTypeWords, +ListOfWords, -NextWordsInText)
 % refactored as a dcg predicate
-extract_variable(_, [], [], [], []) :- !.                                % stop at when words run out
-extract_variable(_, [], [], [Word|RestOfWords], [Word|RestOfWords]) :-   % stop at reserved words, verbs or prepositions. 
-    (reserved_word(Word); verb(Word); preposition(Word); punctuation(Word); phrase(newline, [Word])), !.  % or punctuation
-extract_variable(Var, RestName, RestType, [' '|RestOfWords], NextWords) :- !, % skipping spaces
-    extract_variable(Var, RestName, RestType, RestOfWords, NextWords).
-extract_variable(Var, RestName, RestType, ['\t'|RestOfWords], NextWords) :- !,  % skipping spaces
-    extract_variable(Var, RestName, RestType, RestOfWords, NextWords).  
-extract_variable(Var, [Word|RestName], Type, [Word|RestOfWords], NextWords) :- % ordinals are not part of the name
+extract_variable(_, _, [], [], [], []) :- !.                                % stop at when words run out
+extract_variable(StopWords, _, [], [], [Word|RestOfWords], [Word|RestOfWords]) :-   % stop at reserved words, verbs or prepositions. 
+    (member(Word, StopWords); reserved_word(Word); verb(Word); preposition(Word); punctuation(Word); phrase(newline, [Word])), !.  % or punctuation
+extract_variable(SW, Var, RestName, RestType, [' '|RestOfWords], NextWords) :- !, % skipping spaces
+    extract_variable(SW, Var, RestName, RestType, RestOfWords, NextWords).
+extract_variable(SW, Var, RestName, RestType, ['\t'|RestOfWords], NextWords) :- !,  % skipping spaces
+    extract_variable(SW, Var, RestName, RestType, RestOfWords, NextWords).  
+extract_variable(SW, Var, [Word|RestName], Type, [Word|RestOfWords], NextWords) :- % ordinals are not part of the name
     ordinal(Word), !, 
-    extract_variable(Var, RestName, Type, RestOfWords, NextWords).
-extract_variable(Var, [Word|RestName], [Word|RestType], [Word|RestOfWords], NextWords) :-
+    extract_variable(SW, Var, RestName, Type, RestOfWords, NextWords).
+extract_variable(SW, Var, [Word|RestName], [Word|RestType], [Word|RestOfWords], NextWords) :-
     is_a_type(Word),
-    extract_variable(Var, RestName, RestType, RestOfWords, NextWords).
+    extract_variable(SW, Var, RestName, RestType, RestOfWords, NextWords).
 
 name_predicate([Number], Number) :- number(Number), !. % a quick fix for numbers extracted as constants
 name_predicate(Words, Predicate) :-
     concat_atom(Words, '_', Predicate). 
 
-% deprecated!
-% map_to_conds(+ListOfConds, -LogicallyOrderedConditions)
-% the last condition always fits in
-map_to_conds([last-_-C1], C1) :- !.   
-map_to_conds([and-_-C1, last-_-C2], (C1,C2)) :- !. 
-map_to_conds([or-_-C1, last-_-C2], (C1;C2)) :- !.
-% from and to and
-map_to_conds([and-Ind-C1, and-Ind-C2|RestC], ((C1, C2), RestMapped) ) :- !, 
-    map_to_conds(RestC, RestMapped).
-% from or to ord
-map_to_conds([or-Ind-C1, or-Ind-C2|RestC], ((C1; C2); RestMapped) ) :- !, 
-    map_to_conds(RestC, RestMapped).
-% from and to deeper or
-map_to_conds([and-Ind1-C1, or-Ind2-C2|RestC], (C1, (C2; RestMapped)) ) :-  
-    Ind1 < Ind2, !, 
-    map_to_conds(RestC, RestMapped).
-% from deeper or to and
-map_to_conds([or-Ind1-C1, and-Ind2-C2|RestC], ((C1; C2), RestMapped) ) :-
-    Ind1 > Ind2, !, 
-    map_to_conds([and-Ind2-C2|RestC], RestMapped).
-% from or to deeper and
-map_to_conds([or-Ind1-C1, and-Ind2-C2|RestC], (C1; (C2, RestMapped)) ) :-
-    Ind1 < Ind2, !, 
-    map_to_conds(RestC, RestMapped).
-% from deeper and to or
-map_to_conds([and-Ind1-C1, or-Ind2-C2|RestC], ((C1, C2);RestMapped ) ) :-
-    Ind1 > Ind2, 
-    map_to_conds(RestC, RestMapped).
+name_as_atom(Words, Name) :-
+    concat_atom(Words, ' ', Name). 
 
 add_cond(and, Ind1, Ind2,  (C; C3), C4, (C; (C3, C4))) :-
     Ind1 =< Ind2, !. 
@@ -446,11 +466,11 @@ predicate_template(RestW, ['\t'|RestIn], Out) :- !, % skip tabs in template
     predicate_template(RestW, RestIn, Out).
 predicate_template([Word|RestW], [Word|RestIn], Out) :- 
     %not(lists:member(Word,['\n', if, and, or, '.', ','])),  !, 
-    not(lists:member(Word,[newline(_), if, '.'])),  !, % leaving the comma out as well
+    not(lists:member(Word,[newline(_), if, '.'])),  % leaving the comma out as well (for lists and sets)
     predicate_template(RestW, RestIn, Out).
 predicate_template([], [], []). 
 predicate_template([], [Word|Rest], [Word|Rest]) :- 
-    lists:member(Word,[newline(_), if, '.']). % leaving or/and out of this
+    lists:member(Word,[',', newline(_), if, '.']). % leaving or/and out of this
 
 match_template(PossibleLiteral, Map1, MapN, Literal) :- 
     dictionary(Predicate, _, Candidate),
@@ -466,58 +486,62 @@ match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, [Element|RestS
     match(RestElements, PossibleLiteral, Map1, MapN, RestSelected). 
 match([Element|RestElements], [Det|PossibleLiteral], Map1, MapN, [Var|RestSelected]) :-
     var(Element), 
-    determiner(Det), 
-    extract_variable(Var, NameWords, _, PossibleLiteral, NextWords),  NameWords \= [], !, % <-- CUT! % it is not empty % <- leave that _ unbound!
+    determiner(Det), stop_words(RestElements, StopWords), 
+    extract_variable(StopWords, Var, NameWords, _, PossibleLiteral, NextWords),  NameWords \= [], !, % <-- CUT! % it is not empty % <- leave that _ unbound!
     name_predicate(NameWords, Name), 
     update_map(Var, Name, Map1, Map2), 
     match(RestElements, NextWords, Map2, MapN, RestSelected).  
 match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, [Constant|RestSelected]) :-
-    var(Element), 
-    extract_constant(NameWords, [Word|PossibleLiteral], NextWords), NameWords \= [], !, % <-- CUT!  % it is not empty
+    var(Element), stop_words(RestElements, StopWords),
+    extract_constant(StopWords, NameWords, [Word|PossibleLiteral], NextWords), NameWords \= [], !, % <-- CUT!  % it is not empty
     name_predicate(NameWords, Constant),
     %update_map(Element, Constant, Map1, Map2), 
     %print_message(informational, 'found a constant '), print_message(informational, Constant),
     match(RestElements, NextWords, Map1, MapN, RestSelected). 
 match([Element|RestElements], ['['|PossibleLiteral], Map1, MapN, [List|RestSelected]) :-
-    var(Element), 
-    extract_list(List, Map1, Map2, PossibleLiteral, [']'|NextWords]), % matching brackets verified
+    var(Element), stop_words(RestElements, StopWords),
+    extract_list(StopWords, List, Map1, Map2, PossibleLiteral, [']'|NextWords]), % matching brackets verified
     match(RestElements, NextWords, Map2, MapN, RestSelected). 
 
-% extract_constant(ListOfNameWords, +ListOfWords, NextWordsInText)
-extract_constant([], [], []) :- !.                                % stop at when words run out
-extract_constant([], [Word|RestOfWords], [Word|RestOfWords]) :-   % stop at reserved words, verbs? or prepositions?. 
-    (reserved_word(Word); verb(Word); preposition(Word); punctuation(Word); phrase(newline, [Word])), !.  % or punctuation
+stop_words([], []).
+stop_words([Word|_], [Word]) :- nonvar(Word). % only the next word for now
+stop_words([Word|_], []) :- var(Word).
+
+% extract_constant(+StopWords, ListOfNameWords, +ListOfWords, NextWordsInText)
+extract_constant(_, [], [], []) :- !.                                % stop at when words run out
+extract_constant(StopWords, [], [Word|RestOfWords], [Word|RestOfWords]) :-   % stop at reserved words, verbs? or prepositions?. 
+    (member(Word, StopWords); reserved_word(Word); verb(Word); preposition(Word); punctuation(Word); phrase(newline, [Word])), !.  % or punctuation
 %extract_constant([Word|RestName], [Word|RestOfWords], NextWords) :- % ordinals are not part of the name
 %    ordinal(Word), !,
 %    extract_constant(RestName, RestOfWords, NextWords).
-extract_constant(RestName, [' '|RestOfWords],  NextWords) :- !, % skipping spaces
-    extract_constant(RestName, RestOfWords, NextWords).
-extract_constant(RestName, ['\t'|RestOfWords],  NextWords) :- !, 
-    extract_constant(RestName, RestOfWords, NextWords).
-extract_constant([Word|RestName], [Word|RestOfWords],  NextWords) :-
+extract_constant(SW, RestName, [' '|RestOfWords],  NextWords) :- !, % skipping spaces
+    extract_constant(SW, RestName, RestOfWords, NextWords).
+extract_constant(SW, RestName, ['\t'|RestOfWords],  NextWords) :- !, 
+    extract_constant(SW, RestName, RestOfWords, NextWords).
+extract_constant(SW, [Word|RestName], [Word|RestOfWords],  NextWords) :-
     %is_a_type(Word),
     not(determiner(Word)), % no determiners inside constants!
-    extract_constant(RestName, RestOfWords, NextWords).
+    extract_constant(SW, RestName, RestOfWords, NextWords).
 
-% extract_list(-List, +Map1, -Map2, +[Word|PossibleLiteral], -NextWords),
-extract_list([], Map, Map, [']'|Rest], [']'|Rest]) :- !. % stop but leave the symbol for further verification
-extract_list([], Map, Map, [')'|Rest], [')'|Rest]) :- !. 
-extract_list(RestList, Map1, MapN, [' '|RestOfWords],  NextWords) :- !, % skipping spaces
-    extract_list(RestList, Map1, MapN, RestOfWords, NextWords).
-extract_list(RestList, Map1, MapN, ['\t'|RestOfWords],  NextWords) :- !, 
-    extract_list(RestList, Map1, MapN, RestOfWords, NextWords).
-extract_list(RestList, Map1, MapN, [','|RestOfWords],  NextWords) :- !, 
-    extract_list(RestList, Map1, MapN, RestOfWords, NextWords).
-extract_list([Var|RestList], Map1, MapN, [Det|InWords], LeftWords) :-
+% extract_list(+StopWords, -List, +Map1, -Map2, +[Word|PossibleLiteral], -NextWords),
+extract_list(_, [], Map, Map, [']'|Rest], [']'|Rest]) :- !. % stop but leave the symbol for further verification
+extract_list(_, [], Map, Map, [')'|Rest], [')'|Rest]) :- !. 
+extract_list(SW, RestList, Map1, MapN, [' '|RestOfWords],  NextWords) :- !, % skipping spaces
+    extract_list(SW, RestList, Map1, MapN, RestOfWords, NextWords).
+extract_list(SW, RestList, Map1, MapN, ['\t'|RestOfWords],  NextWords) :- !, 
+    extract_list(SW, RestList, Map1, MapN, RestOfWords, NextWords).
+extract_list(SW, RestList, Map1, MapN, [','|RestOfWords],  NextWords) :- !, 
+    extract_list(SW, RestList, Map1, MapN, RestOfWords, NextWords).
+extract_list(StopWords, [Var|RestList], Map1, MapN, [Det|InWords], LeftWords) :-
     determiner(Det), 
-    extract_variable(Var, NameWords, _, InWords, NextWords), NameWords \= [], % <-- CUT! % <- leave that _ unbound!
+    extract_variable(StopWords, Var, NameWords, _, InWords, NextWords), NameWords \= [], % <-- CUT! % <- leave that _ unbound!
     name_predicate(NameWords, Name),  !,
     update_map(Var, Name, Map1, Map2),
-    extract_list(RestList, Map2, MapN, NextWords, LeftWords).
-extract_list([Member|RestList], Map1, MapN, InWords, LeftWords) :-
-    extract_constant(NameWords, InWords, NextWords), NameWords \= [],
+    extract_list(StopWords, RestList, Map2, MapN, NextWords, LeftWords).
+extract_list(StopWords, [Member|RestList], Map1, MapN, InWords, LeftWords) :-
+    extract_constant(StopWords, NameWords, InWords, NextWords), NameWords \= [],
     name_predicate(NameWords, Member),
-    extract_list(RestList, Map1, MapN, NextWords, LeftWords).
+    extract_list(StopWords, RestList, Map1, MapN, NextWords, LeftWords).
 
 determiner(Det) :-
     (ind_det(Det); ind_det_C(Det); def_det(Det); def_det_C(Det)), !. 
@@ -529,13 +553,13 @@ rebuild_template(RawTemplate, Map1, MapN, Template) :-
 template_elements([], Map1, Map1, _, []).     
 template_elements([Word|RestOfWords], Map1, MapN, Previous, [Var|RestTemplate]) :-
     (ind_det(Word); ind_det_C(Word)), Previous \= [is|_], 
-    extract_variable(Var, NameWords, _, RestOfWords, NextWords), !, % <-- CUT!
+    extract_variable([], Var, NameWords, _, RestOfWords, NextWords), !, % <-- CUT!
     name_predicate(NameWords, Name), 
     update_map(Var, Name, Map1, Map2), 
     template_elements(NextWords, Map2, MapN, [], RestTemplate).
 template_elements([Word|RestOfWords], Map1, MapN, Previous, [Var|RestTemplate]) :-
     (def_det_C(Word); def_det(Word)), Previous \= [is|_], 
-    extract_variable(Var, NameWords, _, RestOfWords, NextWords), !, % <-- CUT!
+    extract_variable([], Var, NameWords, _, RestOfWords, NextWords), !, % <-- CUT!
     name_predicate(NameWords, Name), 
     member(map(Var,Name), Map1),  % confirming it is an existing variable and unifying
     template_elements(NextWords, Map1, MapN, [], RestTemplate).
@@ -605,12 +629,14 @@ is_a_type(T) :- % pending integration with wei2nlen:is_a_type/1
 ind_det_C('A').
 ind_det_C('An').
 % ind_det_C('Some').
+ind_det_('Which').  % added experimentally
 
 def_det_C('The').
 
 ind_det(a).
 ind_det(an).
 ind_det(another). % added experimentally
+ind_det(which).  % added experimentally
 % ind_det(some).
 
 def_det(the).
@@ -654,7 +680,8 @@ present_tense_verb(applies).
 present_tense_verb(must).
 present_tense_verb(acts).
 present_tense_verb(falls).
-present_tense_verb(corresponds).  
+present_tense_verb(corresponds). 
+present_tense_verb(likes). 
 
 continuous_tense_verb(according).
 continuous_tense_verb(beginning).
@@ -761,6 +788,37 @@ must_be(A, nonvar) :- nonvar(A).
 must_be_nonvar(A) :- nonvar(A).
 must_not_be(A,B) :- not(must_be(A,B)). 
 
+/* ------------------------------------------- CLI English */
+answer(English) :-
+    translate_command(English, Goal, Scenario), % later -->, Kbs),
+    %reasoner:query_with_facts(Goal,Scenario,_,_,Result),
+    query_with_facts(at(Goal,'http://tests.com'),Scenario,_,_,Result),
+    print_message(informational, "Result: ~w"-[Result]).
+
+translate_command(English_String, Goal, Scenario) :-
+    tokenize(English_String, Tokens, [cased(true), spaces(true)]),
+    unpack_tokens(Tokens, UTokens), 
+    clean_comments(UTokens, CTokens), 
+    phrase(command_(Goal, Scenario), CTokens) -> true 
+    ; ( error_notice(error, Me,Pos, ContextTokens), print_message(error, [Me,Pos,ContextTokens]) ). 
+
+command_(Goal, Scenario) --> 
+    %order_, goal_(Goal), with_, scenario_(Scenario). 
+    goal_(Goal), with_, scenario_(Scenario).
+
+%order_ --> [answer], spaces(_).
+%order_ --> [run], spaces(_).
+%order_ --> [solve], spaces(_).
+%order_ --> [resolve], spaces(_).
+
+goal_(Goal) --> extract_constant([with], GoalWords), spaces(_), 
+    {name_as_atom(GoalWords, Goal)}. % goal by name
+
+with_ --> [with], spaces(_).
+
+scenario_(Scenario) -->  extract_constant([], ScenarioWords), spaces(_), 
+{name_as_atom(ScenarioWords, Scenario)}. % Scenario by name
+
 /* ------------------------------------------ producing readable taxlog code */
 write_taxlog_code(Source, Readable) :-
     Source = [predicates(_)|Clauses],
@@ -839,6 +897,8 @@ write_taxlog_body(Lit, Readable, Map1, MapN) :-
 prolog_colour:term_colours(en(_Text),lps_delimiter-[classify]). % let 'en' stand out with other taxlog keywords
 prolog_colour:term_colours(en_decl(_Text),lps_delimiter-[classify]). % let 'en_decl' stand out with other taxlog keywords
 
+user:answer( EnText) :- answer( EnText).
+
 user:le_taxlog_translate( en(Text), Terms) :- le_taxlog_translate( en(Text), Terms).
 
 le_taxlog_translate( EnText, Terms) :- le_taxlog_translate( EnText, someFile, 1, Terms).
@@ -872,4 +932,5 @@ showtaxlog:-
 showtaxlog.
 
 sandbox:safe_primitive(le_to_taxlog:showtaxlog).
+%sandbox:safe_primitive(le_to_taxlog:answer( _EnText)).
 sandbox:safe_primitive(le_to_taxlog:le_taxlog_translate( _EnText, _Terms)).
