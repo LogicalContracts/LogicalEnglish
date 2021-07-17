@@ -31,7 +31,7 @@ correspond to each operator and corresponding conditions.
 
 :- module(le_to_taxlog, [document/3, le_taxlog_translate/4, op(1195,fx, user:(++))]).
 :- use_module('./tokenize/prolog/tokenize.pl').
-%:- use_module('reasoner.pl').
+:- use_module('reasoner.pl').
 :- thread_local literal/5, text_size/1, error_notice/4, dict/3, last_nl_parsed/1, kbname/1.
 :- discontiguous statement/3, declaration/4, predicate/3, action/3.
 
@@ -93,10 +93,8 @@ list_of_predicates_decl([Ru|R1], [F|R2]) --> predicate_decl(Ru,F), rest_list_of_
 rules_previous --> 
     spaces(_), [the], spaces(_), [rules], spaces(_), [are], spaces(_), [':'], spaces(_), newline, !.
 rules_previous --> 
-    spaces(_), [the], spaces(_), ['knowledge'], spaces(_), [base], spaces(_), [includes], spaces(_), [':'], !, spaces(_), newline.
-%rules_previous --> 
-%    spaces(_), [the], spaces(_), ['knowledge'], spaces(_), [base], extract_constant([includes], KBName), [includes], spaces(_), [':'], !, spaces(_), newline,
-%    {asserta(kbname(KBName))}.
+    spaces(_), [the], spaces(_), ['knowledge'], spaces(_), [base], extract_constant([includes], NameWords), [includes], spaces(_), [':'], !, spaces(_), newline,
+    {name_as_atom(NameWords, KBName), asserta(kbname(KBName))}.
 rules_previous -->  % backward compatibility
     spaces(_), [the], spaces(_), ['knowledge'], spaces(_), [base], spaces(_), [includes], spaces(_), [':'], spaces(_), newline. 
 
@@ -120,7 +118,7 @@ statement(Query) -->
     query_, extract_constant([is], NameWords), is_colon_, newline,
     query_header(Ind0, Map1),
     conditions(Ind0, Map1, _, Conds), period, !, 
-    {name_as_atom(NameWords, Name), Query = [question(Name, Conds)]}. %beware! overloading question!
+    {name_as_atom(NameWords, Name), Query = [query(Name, Conds)]}. 
 
 % a scenario description
 statement(Scenario) -->
@@ -790,10 +788,17 @@ must_not_be(A,B) :- not(must_be(A,B)).
 
 /* ------------------------------------------- CLI English */
 answer(English) :-
-    translate_command(English, Goal, Scenario), % later -->, Kbs),
-    %reasoner:query_with_facts(Goal,Scenario,_,_,Result),
-    query_with_facts(at(Goal,'http://tests.com'),Scenario,_,_,Result),
-    print_message(informational, "Result: ~w"-[Result]).
+    translate_command(English, GoalName, Scenario), % later -->, Kbs),
+    print_message(informational, "Goal Name: ~w"-[GoalName]),
+    trace, 
+    clause(query(GoalName, _), _, REF), clause_property(REF, module(M)), 
+    once(M:query(GoalName, Goal)),
+    print_message(informational, "Goal: ~w"-[Goal]),
+    print_message(informational, "Scenario: ~w"-[Scenario]),
+    reasoner:query_once_with_facts(at(Goal,'http://tests.com'),Scenario,_,E,Result),
+    %query_with_facts(at(Goal,'http://tests.com'),Scenario,_,_,Result),
+    print_message(informational, "Result: ~w"-[Result]),
+    print_message(informational, "Explanation: ~w"-[E]).
 
 translate_command(English_String, Goal, Scenario) :-
     tokenize(English_String, Tokens, [cased(true), spaces(true)]),
@@ -899,6 +904,8 @@ prolog_colour:term_colours(en_decl(_Text),lps_delimiter-[classify]). % let 'en_d
 
 user:answer( EnText) :- answer( EnText).
 
+user:query(Name, Goal) :- query(Name, Goal).
+
 user:le_taxlog_translate( en(Text), Terms) :- le_taxlog_translate( en(Text), Terms).
 
 le_taxlog_translate( EnText, Terms) :- le_taxlog_translate( EnText, someFile, 1, Terms).
@@ -932,5 +939,5 @@ showtaxlog:-
 showtaxlog.
 
 sandbox:safe_primitive(le_to_taxlog:showtaxlog).
-%sandbox:safe_primitive(le_to_taxlog:answer( _EnText)).
+sandbox:safe_primitive(le_to_taxlog:answer( _EnText)).
 sandbox:safe_primitive(le_to_taxlog:le_taxlog_translate( _EnText, _Terms)).

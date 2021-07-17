@@ -59,6 +59,8 @@ taxlog2prolog(question(X,QuestionTerm),delimiter-[classify,classify],question(X,
 taxlog2prolog(question(X,QuestionTerm,Answer),delimiter-[classify,classify,classify],question(X,QuestionTerm,Answer)) :- !.
 taxlog2prolog(irrelevant_explanation(G),delimiter-[Spec],irrelevant_explanation(G)) :- !, 
     taxlogBodySpec(G,Spec).
+taxlog2prolog(query(Name,Goal),delimiter-[classify,classify],query(Name,Goal)).
+
 
 % note: keep the above cases coherent with kp_loader:system_predicate/1
 
