@@ -31,6 +31,7 @@ correspond to each operator and corresponding conditions.
 
 :- module(le_to_taxlog, [document/3, le_taxlog_translate/4, op(1195,fx, user:(++))]).
 :- use_module('./tokenize/prolog/tokenize.pl').
+:- use_module(library(pengines)).
 :- use_module('reasoner.pl').
 :- thread_local literal/5, text_size/1, error_notice/4, dict/3, last_nl_parsed/1, kbname/1.
 :- discontiguous statement/3, declaration/4, predicate/3, action/3.
@@ -124,12 +125,12 @@ statement(Query) -->
 statement(Scenario) -->
     scenario_, extract_constant([is], NameWords), is_colon_, newline,
     list_of_facts(Facts), period, !, 
-    {name_as_atom(NameWords, Name), Scenario = [example( Name, [scenario(Facts, _Goal)])]}.
+    {name_as_atom(NameWords, Name), Scenario = [example( Name, [scenario(Facts, true)])]}.
 
 % a fact or a rule
 statement(Statement) --> 
     literal_([], Map1, Head), body_(Body, Map1, _), period,  
-    {(Body = [] -> Statement = [Head]; Statement = [if(Head, Body)])}. 
+    {(Body = [] -> Statement = [if(Head, true)]; Statement = [if(Head, Body)])}. 
 
 list_of_facts([F|R1]) --> literal_([], _,F), rest_list_of_facts(R1).
 
@@ -790,15 +791,20 @@ must_not_be(A,B) :- not(must_be(A,B)).
 answer(English) :-
     translate_command(English, GoalName, Scenario), % later -->, Kbs),
     print_message(informational, "Goal Name: ~w"-[GoalName]),
-    trace, 
-    clause(query(GoalName, _), _, REF), clause_property(REF, module(M)), 
-    once(M:query(GoalName, Goal)),
+    pengine_self(SwishModule), SwishModule:query(GoalName, Goal), 
     print_message(informational, "Goal: ~w"-[Goal]),
     print_message(informational, "Scenario: ~w"-[Scenario]),
-    reasoner:query_once_with_facts(at(Goal,'http://tests.com'),Scenario,_,E,Result),
+    reasoner:query_once_with_facts(Goal,Scenario,_,E,Result),
+    %reasoner:query_once_with_facts(at(Goal,'http://tests.com'),Scenario,_,E,Result),
     %query_with_facts(at(Goal,'http://tests.com'),Scenario,_,_,Result),
     print_message(informational, "Result: ~w"-[Result]),
     print_message(informational, "Explanation: ~w"-[E]).
+
+% answer(+English, -Goal, -Result)
+answer(English, Goal, Result) :-
+    translate_command(English, GoalName, Scenario), % later -->, Kbs),
+    pengine_self(SwishModule), SwishModule:query(GoalName, Goal), 
+    reasoner:query_once_with_facts(Goal,Scenario,_,E,Result).
 
 translate_command(English_String, Goal, Scenario) :-
     tokenize(English_String, Tokens, [cased(true), spaces(true)]),
@@ -903,6 +909,7 @@ prolog_colour:term_colours(en(_Text),lps_delimiter-[classify]). % let 'en' stand
 prolog_colour:term_colours(en_decl(_Text),lps_delimiter-[classify]). % let 'en_decl' stand out with other taxlog keywords
 
 user:answer( EnText) :- answer( EnText).
+user:answer( EnText, Goal, Result) :- answer( EnText, Goal, Result).
 
 user:query(Name, Goal) :- query(Name, Goal).
 
@@ -940,4 +947,5 @@ showtaxlog.
 
 sandbox:safe_primitive(le_to_taxlog:showtaxlog).
 sandbox:safe_primitive(le_to_taxlog:answer( _EnText)).
+sandbox:safe_primitive(le_to_taxlog:answer( _EnText, _Goal, _Result)).
 sandbox:safe_primitive(le_to_taxlog:le_taxlog_translate( _EnText, _Terms)).
