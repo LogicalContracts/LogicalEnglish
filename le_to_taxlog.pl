@@ -628,7 +628,7 @@ is_a_type(T) :- % pending integration with wei2nlen:is_a_type/1
 ind_det_C('A').
 ind_det_C('An').
 % ind_det_C('Some').
-ind_det_('Which').  % added experimentally
+ind_det_C('Which').  % added experimentally
 
 def_det_C('The').
 
@@ -794,17 +794,34 @@ answer(English) :-
     pengine_self(SwishModule), SwishModule:query(GoalName, Goal), 
     print_message(informational, "Goal: ~w"-[Goal]),
     print_message(informational, "Scenario: ~w"-[Scenario]),
-    reasoner:query_once_with_facts(Goal,Scenario,_,E,Result),
+    % assert facts in scenario
+    SwishModule:example(Scenario, [scenario(Facts, _)]), 
+    print_message(informational, "Facts: ~w"-[Facts]),
+    assert_facts(SwishModule, Facts),
+    % call the goal
+    call(SwishModule:Goal),
+    print_message(informational, "Result: ~w"-[Goal]),
+    % retract facts in scenario
+    retract_facts(SwishModule, Facts). 
+    %reasoner:query_once_with_facts(Goal,Scenario,_,E,Result),
     %reasoner:query_once_with_facts(at(Goal,'http://tests.com'),Scenario,_,E,Result),
     %query_with_facts(at(Goal,'http://tests.com'),Scenario,_,_,Result),
-    print_message(informational, "Result: ~w"-[Result]),
-    print_message(informational, "Explanation: ~w"-[E]).
+    %print_message(informational, "Result: ~w"-[Result]),
+    %print_message(informational, "Explanation: ~w"-[E]).
 
 % answer(+English, -Goal, -Result)
 answer(English, Goal, Result) :-
     translate_command(English, GoalName, Scenario), % later -->, Kbs),
-    pengine_self(SwishModule), SwishModule:query(GoalName, Goal), 
-    reasoner:query_once_with_facts(Goal,Scenario,_,E,Result).
+    pengine_self(SwishModule), SwishModule:query(GoalName, Goal),
+    SwishModule:example(Scenario, [scenario(Facts, _)]), 
+    setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), SwishModule:Goal, Result, retract_facts(SwishModule, Facts)).
+    %reasoner:query_once_with_facts(Goal,Scenario,_,_E,Result).
+
+assert_facts(_, []) :- !. 
+assert_facts(SwishModule, [F|R]) :- nonvar(F), asserta(SwishModule:F), assert_facts(SwishModule, R).
+
+retract_facts(_, []) :- !. 
+retract_facts(SwishModule, [F|R]) :- nonvar(F), retract(SwishModule:F), retract_facts(SwishModule, R). 
 
 translate_command(English_String, Goal, Scenario) :-
     tokenize(English_String, Tokens, [cased(true), spaces(true)]),

@@ -16,7 +16,8 @@
     op(700,xfx,user:is_not_before),
     op(700,xfx,user:before),
     op(700,xfx,user:after),
-    taxlog2prolog/3
+    taxlog2prolog/3,
+    semantics2prolog/3
     ]).
 
 :- use_module(kp_loader,[kp_location/3,my_xref_defined/3]).
@@ -60,6 +61,17 @@ taxlog2prolog(question(X,QuestionTerm,Answer),delimiter-[classify,classify,class
 taxlog2prolog(irrelevant_explanation(G),delimiter-[Spec],irrelevant_explanation(G)) :- !, 
     taxlogBodySpec(G,Spec).
 taxlog2prolog(query(Name,Goal),delimiter-[classify,classify],query(Name,Goal)).
+
+% extending to cover new structural changes at semantical level
+
+semantics2prolog(if(H,B),neck(if)-[SpecH,SpecB],(H:-B)) :- !,
+    taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB).
+semantics2prolog(mainGoal(G,Description),delimiter-[Spec,classify],(mainGoal(G,Description):-(_=1->true;GG))) :- !, % hack to avoid 'unreferenced' highlight in SWISH
+    functor(G,F,N), functor(GG,F,N), % avoid "Singleton-marked variable appears more than once"
+    taxlogBodySpec(G,Spec).
+semantics2prolog(example(T,Sequence),delimiter-[classify,Spec],example(T,Sequence)) :- !, 
+    (Sequence==[]->Spec=classify ; (Spec=list-SeqSpec, scenarioSequenceSpec(Sequence,SeqSpec))).
+semantics2prolog(query(Name,Goal),delimiter-[classify,classify],query(Name,Goal)).
 
 
 % note: keep the above cases coherent with kp_loader:system_predicate/1

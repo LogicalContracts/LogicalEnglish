@@ -168,23 +168,35 @@ A cost is a rollover cost
     and a previous time is immediately before the time
     and the asset costs the cost at the previous time.
 
+scenario testing one is:
+    event 123 of transfering company1 goodwill from company1 to miguel at 20160701 occurs,
+    20160701 is after 20160630,
+    20160630 is immediately before 20160701,
+    miguel has an aggregated turnover of 400000 according to other legislation,
+	company1 has an aggregated turnover of 5300000 according to other legislation.
 
-example( 'Testing scenario', [
-    % initial facts and condition:
-    scenario([event_of_transfering_from_to_at_occurs(123,company1_goodwill,company1,[miguel], 20160701),
-             is_after(20160701,20160701), 
-             is_immediately_before(20160630, 20160701), 
-             has_of_according_to_other_legislation(miguel,aggregated, 400000),
-             has_of_according_to_other_legislation(company1,aggregated, 5300000)], applies(123))
-    ]).
-
-
-
+scenario testing two is:
+    event 123 of transfering company1 goodwill from company1 to miguel at 20160701 occurs.    
+    
+scenario testing three is:
+    20160701 is after 20160630,
+    20160630 is immediately before 20160701.
+    
+query q one is:
+  for which event:
+      the event applies.
+    
+query q two is:
+    which tax payer is a party of which event.
+    
+query q three is:
+    A first time is after a second time
+    and the second time is immediately before the first time. 
+    
+    
 "). 
 
-
-/** <examples>.
-?- le(LogicalEnglish).
-?- query_with_facts(applies(Event),'Testing scenario',Unknowns,Explanation,Result).
-?- query_with_facts(applies(Event),'Andrew email Feb 4 2021 version 2',Unknowns,Explanation,Result).
+/** <examples>
+?- answer("q one with testing one").
+?- answer("q two with testing two", Goal, Result). 
 */
