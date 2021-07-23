@@ -121,7 +121,7 @@ statement(Query) -->
     conditions(Ind0, Map1, _, Conds), period, !, 
     {name_as_atom(NameWords, Name), Query = [query(Name, Conds)]}. 
 
-% a scenario description
+% a scenario description: assuming one example -> one scenario -> one list of facts.
 statement(Scenario) -->
     scenario_, extract_constant([is], NameWords), is_colon_, newline,
     list_of_facts(Facts), period, !, 
@@ -796,32 +796,44 @@ answer(English) :-
     print_message(informational, "Scenario: ~w"-[Scenario]),
     % assert facts in scenario
     SwishModule:example(Scenario, [scenario(Facts, _)]), 
-    print_message(informational, "Facts: ~w"-[Facts]),
-    assert_facts(SwishModule, Facts),
-    % call the goal
-    call(SwishModule:Goal),
-    print_message(informational, "Result: ~w"-[Goal]),
-    % retract facts in scenario
-    retract_facts(SwishModule, Facts). 
+    print_message(informational, "Facts: ~w"-[Facts]), 
+    setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
+            catch(SwishModule:Goal, Error, ( print_message(error, Error), fail ) ), 
+            Result, 
+            retract_facts(SwishModule, Facts)), 
     %reasoner:query_once_with_facts(Goal,Scenario,_,E,Result),
     %reasoner:query_once_with_facts(at(Goal,'http://tests.com'),Scenario,_,E,Result),
     %query_with_facts(at(Goal,'http://tests.com'),Scenario,_,_,Result),
-    %print_message(informational, "Result: ~w"-[Result]),
+    get_answer_from_goal(Goal, EnglishGoal), 
+    print_message(informational, "Answers: ~w"-[EnglishGoal]),
+    print_message(informational, "Result: ~w"-[Result]).
     %print_message(informational, "Explanation: ~w"-[E]).
 
 % answer(+English, -Goal, -Result)
-answer(English, Goal, Result) :-
+answer(English, Goal, Answers) :-
     translate_command(English, GoalName, Scenario), % later -->, Kbs),
     pengine_self(SwishModule), SwishModule:query(GoalName, Goal),
     SwishModule:example(Scenario, [scenario(Facts, _)]), 
-    setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), SwishModule:Goal, Result, retract_facts(SwishModule, Facts)).
+    setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
+            catch(SwishModule:Goal, Error, ( print_message(error, Error), fail ) ), 
+            _Result, 
+            retract_facts(SwishModule, Facts)),
+    get_answer_from_goal(Goal, Answers). 
     %reasoner:query_once_with_facts(Goal,Scenario,_,_E,Result).
 
+get_answer_from_goal((G,R), [Answer|RestAnswers]) :- 
+    G =.. GoalElements, dict(GoalElements, _, WordsAnswer), name_as_atom(WordsAnswer, Answer),
+    get_answer_from_goal(R, RestAnswers).
+get_answer_from_goal(Goal, [Answer]) :-
+    Goal =.. GoalElements, dict(GoalElements, _, WordsAnswer), name_as_atom(WordsAnswer, Answer). 
+
 assert_facts(_, []) :- !. 
-assert_facts(SwishModule, [F|R]) :- nonvar(F), asserta(SwishModule:F), assert_facts(SwishModule, R).
+assert_facts(SwishModule, [F|R]) :- nonvar(F), print_message(informational, "asserting: ~w"-[SwishModule:F]),
+    asserta(SwishModule:F), assert_facts(SwishModule, R).
 
 retract_facts(_, []) :- !. 
-retract_facts(SwishModule, [F|R]) :- nonvar(F), retract(SwishModule:F), retract_facts(SwishModule, R). 
+retract_facts(SwishModule, [F|R]) :- nonvar(F), print_message(informational, "retracting: ~w"-[SwishModule:F]),
+    retract(SwishModule:F), retract_facts(SwishModule, R). 
 
 translate_command(English_String, Goal, Scenario) :-
     tokenize(English_String, Tokens, [cased(true), spaces(true)]),
