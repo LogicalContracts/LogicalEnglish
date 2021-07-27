@@ -247,8 +247,7 @@ user:term_expansion(NiceTerm, ExpandedTerms) :- % hook for LE extension
 	findall(PrologTerm, (
 		member(TT_,TaxlogTerms), 
 		(is_list(TT_)->member(TT,TT_);TT=TT_), % the LE translator generates a list of lists... and non lists
-		%taxlog2prolog(TT,_,PrologTerm)
-		semantics2prolog(TT,_,PrologTerm)
+		(member(target(prolog),TaxlogTerms) -> semantics2prolog(TT,_,PrologTerm) ; taxlog2prolog(TT,_,PrologTerm))
 		), ExpandedTerms),
 	print_message(informational,"expanded LE to ~w"-[ExpandedTerms]).
 % This at the end, as it activates the term expansion (no harm done otherwise, just some performance..):

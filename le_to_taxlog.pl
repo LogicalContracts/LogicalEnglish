@@ -60,29 +60,31 @@ document(Translation) -->
 % header parses all the declarations and assert them into memory to be invoked by the rules. 
 header(Settings, In, Next) :-
     length(In, TextSize), % after comments were removed
-    ( settings(Rules, Settings, In, Next) -> true
-    ; (Rules = [], Settings = [])),
+    ( settings(Rules, Settings_, In, Next) -> 
+        ( member(target(_), Settings_) -> Settings = Settings_ ; Settings = [target(taxlog)|Settings_] )  % taxlog as default
+    ; (Rules = [], Settings = [target(taxlog)])), % taxlog as default
     RulesforErrors = % rules for error have been statically added
-      [(text_size(TextSize))],
+      [(text_size(TextSize))], % is text_size being used?
     append(Rules, RulesforErrors, MRules),
     assertall(MRules). % asserting contextual information
 
 /* --------------------------------------------------------- LE DCGs */
 
-settings(AllR, AllS) --> declaration(Rules,Setting), settings(RRules, RS),
-      {append(Setting, RS, AllS),
-     append(Rules, RRules, AllR)}.
+settings(AllR, AllS) --> 
+    spaces_or_newlines(_), declaration(Rules,Setting), settings(RRules, RS),
+      {append(Setting, RS, AllS), append(Rules, RRules, AllR)}.
 settings([],[]) --> [].
  
 content([S|R]) --> 
-    spaces_or_newlines(_), 
-    statement(S), !, 
-    content(R).
+    spaces_or_newlines(_),  statement(S), !,  content(R).
 content([]) --> 
     spaces_or_newlines(_), []. 
 
 declaration(Rules, [predicates(Fluents)]) -->
-    predicate_previous, list_of_predicates_decl(Rules, Fluents).
+    predicate_previous, !, list_of_predicates_decl(Rules, Fluents).
+declaration([], [target(Language)]) --> % one word description for the language: prolog, taxlog
+    spaces(_), [the], spaces(_), [target], spaces(_), [language], spaces(_), [is], spaces(_), [':'], 
+    spaces(_), [Language], spaces(_), period. 
 
 predicate_previous --> 
     spaces(_), [the], spaces(_), [predicates], spaces(_), [are], spaces(_), [':'], spaces(_), newline.
@@ -90,14 +92,6 @@ predicate_previous -->
     spaces(_), [the], spaces(_), [templates], spaces(_), [are], spaces(_), [':'], spaces(_), newline.
 
 list_of_predicates_decl([Ru|R1], [F|R2]) --> predicate_decl(Ru,F), rest_list_of_predicates_decl(R1,R2).
-
-rules_previous --> 
-    spaces(_), [the], spaces(_), [rules], spaces(_), [are], spaces(_), [':'], spaces(_), newline, !.
-rules_previous --> 
-    spaces(_), [the], spaces(_), ['knowledge'], spaces(_), [base], extract_constant([includes], NameWords), [includes], spaces(_), [':'], !, spaces(_), newline,
-    {name_as_atom(NameWords, KBName), asserta(kbname(KBName))}.
-rules_previous -->  % backward compatibility
-    spaces(_), [the], spaces(_), ['knowledge'], spaces(_), [base], spaces(_), [includes], spaces(_), [':'], spaces(_), newline. 
 
 rest_list_of_predicates_decl(L1, L2) --> comma, list_of_predicates_decl(L1, L2).
 rest_list_of_predicates_decl([],[]) --> period.
@@ -113,6 +107,15 @@ predicate_decl(dict([Predicate|Arguments],TypesAndNames, Template), Relation) --
 predicate_decl(_, _, Rest, _) :- 
     asserterror('LE error found in a declaration ', Rest), 
     fail.
+
+rules_previous --> 
+    spaces(_), [the], spaces(_), [rules], spaces(_), [are], spaces(_), [':'], spaces(_), newline, !.
+rules_previous --> 
+    spaces(_), [the], spaces(_), ['knowledge'], spaces(_), [base], extract_constant([includes], NameWords), [includes], spaces(_), [':'], !, spaces(_), newline,
+    {name_as_atom(NameWords, KBName), asserta(kbname(KBName))}.
+rules_previous -->  % backward compatibility
+    spaces(_), [the], spaces(_), ['knowledge'], spaces(_), [base], spaces(_), [includes], spaces(_), [':'], spaces(_), newline. 
+
 % statement: the different types of statements in a LE text
 % a query
 statement(Query) -->
@@ -124,8 +127,9 @@ statement(Query) -->
 % a scenario description: assuming one example -> one scenario -> one list of facts.
 statement(Scenario) -->
     scenario_, extract_constant([is], NameWords), is_colon_, newline,
-    list_of_facts(Facts), period, !, 
-    {name_as_atom(NameWords, Name), Scenario = [example( Name, [scenario(Facts, true)])]}.
+    %list_of_facts(Facts), period, !, 
+    spaces(_), assumptions_([], _, Assumptions), period, !, 
+    {name_as_atom(NameWords, Name), Scenario = [example( Name, [scenario(Assumptions, true)])]}.
 
 % a fact or a rule
 statement(Statement) --> 
@@ -136,6 +140,16 @@ list_of_facts([F|R1]) --> literal_([], _,F), rest_list_of_facts(R1).
 
 rest_list_of_facts(L1) --> comma, spaces_or_newlines(_), list_of_facts(L1).
 rest_list_of_facts([]) --> [].
+
+% assumptions
+assumptions_(InMap, OutMap, [A|R]) --> 
+        spaces_or_newlines(_),  rule_(InMap, Map2, A), !, assumptions_(Map2, OutMap, R).
+assumptions_(Map, Map, []) --> 
+        spaces_or_newlines(_), []. 
+
+rule_(InMap, OutMap, Rule) --> 
+    literal_(InMap, Map1, Head), body_(Body, Map1, OutMap), period,  
+    {(Body = [] -> Rule = (Head :-true); Rule = (Head :- Body))}. 
 
 % no prolog inside LE!
 %statement([Fact]) --> 
@@ -416,7 +430,10 @@ name_predicate(Words, Predicate) :-
     concat_atom(Words, '_', Predicate). 
 
 name_as_atom(Words, Name) :-
-    concat_atom(Words, ' ', Name). 
+    replace_vars(Words, Atoms), concat_atom(Atoms, ' ', Name). 
+
+replace_vars([],[]) :- !.
+replace_vars([W|RI], [A|RO]) :- term_to_atom(W, A), replace_vars(RI,RO).   
 
 add_cond(and, Ind1, Ind2,  (C; C3), C4, (C; (C3, C4))) :-
     Ind1 =< Ind2, !. 
@@ -787,33 +804,37 @@ must_be(A, nonvar) :- nonvar(A).
 must_be_nonvar(A) :- nonvar(A).
 must_not_be(A,B) :- not(must_be(A,B)). 
 
-/* ------------------------------------------- CLI English */
+/* ----------------------------------------------------------------- CLI English */
 answer(English) :-
     translate_command(English, GoalName, Scenario), % later -->, Kbs),
-    print_message(informational, "Goal Name: ~w"-[GoalName]),
+    %print_message(informational, "Goal Name: ~w"-[GoalName]),
     pengine_self(SwishModule), SwishModule:query(GoalName, Goal), 
-    print_message(informational, "Goal: ~w"-[Goal]),
+    copy_term(Goal, CopyOfGoal), 
+    get_answer_from_goal(CopyOfGoal, EnglishQuestion), 
+    print_message(informational, "Question: ~w"-[EnglishQuestion]),
     print_message(informational, "Scenario: ~w"-[Scenario]),
     % assert facts in scenario
-    SwishModule:example(Scenario, [scenario(Facts, _)]), 
-    print_message(informational, "Facts: ~w"-[Facts]), 
+    (Scenario==noscenario -> Facts = [] ; SwishModule:example(Scenario, [scenario(Facts, _)])), 
+    %print_message(informational, "Facts: ~w"-[Facts]), 
     setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
             catch(SwishModule:Goal, Error, ( print_message(error, Error), fail ) ), 
-            Result, 
+            _Result, 
             retract_facts(SwishModule, Facts)), 
     %reasoner:query_once_with_facts(Goal,Scenario,_,E,Result),
     %reasoner:query_once_with_facts(at(Goal,'http://tests.com'),Scenario,_,E,Result),
     %query_with_facts(at(Goal,'http://tests.com'),Scenario,_,_,Result),
-    get_answer_from_goal(Goal, EnglishGoal), 
-    print_message(informational, "Answers: ~w"-[EnglishGoal]),
-    print_message(informational, "Result: ~w"-[Result]).
+    get_answer_from_goal(Goal, EnglishAnswer), 
+    print_message(informational, "Answers: ~w"-[EnglishAnswer]).
+    %print_message(informational, "Result: ~w"-[Result]).
     %print_message(informational, "Explanation: ~w"-[E]).
 
 % answer(+English, -Goal, -Result)
-answer(English, Goal, Answers) :-
+answer(English, EnglishQuestion, Answers) :-
     translate_command(English, GoalName, Scenario), % later -->, Kbs),
     pengine_self(SwishModule), SwishModule:query(GoalName, Goal),
-    SwishModule:example(Scenario, [scenario(Facts, _)]), 
+    copy_term(Goal, CopyOfGoal), 
+    get_answer_from_goal(CopyOfGoal, EnglishQuestion), 
+    (Scenario==noscenario -> Facts = [] ; SwishModule:example(Scenario, [scenario(Facts, _)])), 
     setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
             catch(SwishModule:Goal, Error, ( print_message(error, Error), fail ) ), 
             _Result, 
@@ -828,11 +849,11 @@ get_answer_from_goal(Goal, [Answer]) :-
     Goal =.. GoalElements, dict(GoalElements, _, WordsAnswer), name_as_atom(WordsAnswer, Answer). 
 
 assert_facts(_, []) :- !. 
-assert_facts(SwishModule, [F|R]) :- nonvar(F), print_message(informational, "asserting: ~w"-[SwishModule:F]),
+assert_facts(SwishModule, [F|R]) :- nonvar(F), %print_message(informational, "asserting: ~w"-[SwishModule:F]),
     asserta(SwishModule:F), assert_facts(SwishModule, R).
 
 retract_facts(_, []) :- !. 
-retract_facts(SwishModule, [F|R]) :- nonvar(F), print_message(informational, "retracting: ~w"-[SwishModule:F]),
+retract_facts(SwishModule, [F|R]) :- nonvar(F), %print_message(informational, "retracting: ~w"-[SwishModule:F]),
     retract(SwishModule:F), retract_facts(SwishModule, R). 
 
 translate_command(English_String, Goal, Scenario) :-
@@ -845,19 +866,27 @@ translate_command(English_String, Goal, Scenario) :-
 command_(Goal, Scenario) --> 
     %order_, goal_(Goal), with_, scenario_(Scenario). 
     goal_(Goal), with_, scenario_(Scenario).
+command_(Goal, noscenario) --> 
+    goal_(Goal).
 
 %order_ --> [answer], spaces(_).
 %order_ --> [run], spaces(_).
 %order_ --> [solve], spaces(_).
 %order_ --> [resolve], spaces(_).
 
-goal_(Goal) --> extract_constant([with], GoalWords), spaces(_), 
+goal_(Goal) --> query_or_empty, extract_constant([with], GoalWords), spaces(_), 
     {name_as_atom(GoalWords, Goal)}. % goal by name
+
+query_or_empty --> query_.
+query_or_empty --> []. 
 
 with_ --> [with], spaces(_).
 
-scenario_(Scenario) -->  extract_constant([], ScenarioWords), spaces(_), 
+scenario_(Scenario) -->  scenario_or_empty_, extract_constant([], ScenarioWords), spaces(_), 
 {name_as_atom(ScenarioWords, Scenario)}. % Scenario by name
+
+scenario_or_empty_ --> [scenario], spaces(_). 
+scenario_or_empty_ --> spaces(_). 
 
 /* ------------------------------------------ producing readable taxlog code */
 write_taxlog_code(Source, Readable) :-
@@ -937,6 +966,8 @@ write_taxlog_body(Lit, Readable, Map1, MapN) :-
 prolog_colour:term_colours(en(_Text),lps_delimiter-[classify]). % let 'en' stand out with other taxlog keywords
 prolog_colour:term_colours(en_decl(_Text),lps_delimiter-[classify]). % let 'en_decl' stand out with other taxlog keywords
 
+user:resolve(Command) :- answer(Command). 
+user:resolve(Command, Question, Answers) :- resolve(Command, Question, Answers). 
 user:answer( EnText) :- answer( EnText).
 user:answer( EnText, Goal, Result) :- answer( EnText, Goal, Result).
 

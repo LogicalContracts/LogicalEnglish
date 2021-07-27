@@ -80,7 +80,7 @@ semantics2prolog(query(Name,Goal),delimiter-[classify,classify],query(Name,Goal)
 declare_dynamic(Module, [scenario(Facts, _)]) :- declare_facts_as_dynamic(Module, Facts).
 
 declare_facts_as_dynamic(_, []) :- !. 
-declare_facts_as_dynamic(M, [F|R]) :- functor(F, P, A),
+declare_facts_as_dynamic(M, [(F:-_)|R]) :- functor(F, P, A),  % facts are assumptions. Rules in general
     dynamic([M:P/A], [thread(local)]), declare_facts_as_dynamic(M, R). 
 
 % note: keep the above cases coherent with kp_loader:system_predicate/1
