@@ -155,7 +155,7 @@ rule_(InMap, OutMap, Rule) -->
 %statement([Fact]) --> 
 %    spaces(_), prolog_literal_(Fact, [], _), spaces_or_newlines(_), period.
 
-body_([], _, _) --> spaces_or_newlines(_).
+body_([], Map, Map) --> spaces_or_newlines(_).
 body_(Conditions, Map1, MapN) --> 
     newline, spaces(Ind), if_, !, conditions(Ind, Map1, MapN, Conditions), spaces_or_newlines(_).
 body_(Conditions, Map1, MapN) --> 
@@ -721,6 +721,7 @@ preposition(in).
 preposition(with).
 preposition(plus).
 preposition(as).
+preposition(by).
 
 /* ------------------------------------------------- memory handling */
 assertall([]).

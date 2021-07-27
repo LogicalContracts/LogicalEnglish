@@ -71,16 +71,18 @@ semantics2prolog(mainGoal(G,Description),delimiter-[Spec,classify],(mainGoal(G,D
     functor(G,F,N), functor(GG,F,N), % avoid "Singleton-marked variable appears more than once"
     taxlogBodySpec(G,Spec).
 semantics2prolog(example(T,Sequence),delimiter-[classify,Spec],example(T,Sequence)) :- !, 
-    pengine_self(SwishModule),
-    declare_dynamic(SwishModule, Sequence),  
     (Sequence==[]->Spec=classify ; (Spec=list-SeqSpec, scenarioSequenceSpec(Sequence,SeqSpec))).
-semantics2prolog(query(Name,Goal),delimiter-[classify,classify],query(Name,Goal)).
+semantics2prolog(query(Name,Goal),delimiter-[classify,classify],query(Name,Goal)) :- !. 
+semantics2prolog(predicates(Assumptions), delimiter-[classify,classify],predicates([])) :-
+    pengine_self(SwishModule),
+    declare_facts_as_dynamic(SwishModule, Assumptions). 
+    %print_message(informational, "asserted: ~w"-[Assumptions]).
 
-% assuming one example -> one scenario -> one list of facts. 
-declare_dynamic(Module, [scenario(Facts, _)]) :- declare_facts_as_dynamic(Module, Facts).
+% assuming one example -> one scenario -> one list of facts. % deprecated
+% declare_dynamic(Module, [scenario(Facts, _)]) :- declare_facts_as_dynamic(Module, Facts).
 
 declare_facts_as_dynamic(_, []) :- !. 
-declare_facts_as_dynamic(M, [(F:-_)|R]) :- functor(F, P, A),  % facts are assumptions. Rules in general
+declare_facts_as_dynamic(M, [F|R]) :- functor(F, P, A),  % facts are the templates now
     dynamic([M:P/A], [thread(local)]), declare_facts_as_dynamic(M, R). 
 
 % note: keep the above cases coherent with kp_loader:system_predicate/1
