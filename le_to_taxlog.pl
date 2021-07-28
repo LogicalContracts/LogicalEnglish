@@ -52,8 +52,8 @@ text_to_logic(String_, Translation) :-
 document(Translation) --> 
     spaces_or_newlines(_),
     header(Settings),  
-    spaces_or_newlines(_),
-    rules_previous,  
+    %spaces_or_newlines(_),
+    %rules_previous,  
     content(Content), 
     {append(Settings, Content, Translation)}.
 
@@ -75,10 +75,22 @@ settings(AllR, AllS) -->
       {append(Setting, RS, AllS), append(Rules, RRules, AllR)}.
 settings([],[]) --> [].
  
-content([S|R]) --> 
-    spaces_or_newlines(_),  statement(S), !,  content(R).
+content(T) --> 
+    spaces_or_newlines(_), rules_previous, kbbase_content(S), !, content(R), 
+    {append(S, R, T)}.
+content(T) --> 
+    spaces_or_newlines(_), scenario_content(S), !, content(R), 
+    {append(S, R, T)}.
+content(T) --> 
+    spaces_or_newlines(_), query_content(S), !, content(R), 
+    {append(S, R, T)}.
 content([]) --> 
     spaces_or_newlines(_), []. 
+
+kbbase_content([S|R]) --> 
+    spaces_or_newlines(_),  statement(S), !,  kbbase_content(R).
+kbbase_content([]) --> 
+    spaces_or_newlines(_), [].
 
 declaration(Rules, [predicates(Fluents)]) -->
     predicate_previous, !, list_of_predicates_decl(Rules, Fluents).
@@ -108,28 +120,30 @@ predicate_decl(_, _, Rest, _) :-
     asserterror('LE error found in a declaration ', Rest), 
     fail.
 
+kbname(default).
+
 rules_previous --> 
     spaces(_), [the], spaces(_), [rules], spaces(_), [are], spaces(_), [':'], spaces(_), newline, !.
 rules_previous --> 
     spaces(_), [the], spaces(_), ['knowledge'], spaces(_), [base], extract_constant([includes], NameWords), [includes], spaces(_), [':'], !, spaces(_), newline,
-    {name_as_atom(NameWords, KBName), asserta(kbname(KBName))}.
+    {name_as_atom(NameWords, KBName), retract(kbname(_)), asserta(kbname(KBName))}.
 rules_previous -->  % backward compatibility
     spaces(_), [the], spaces(_), ['knowledge'], spaces(_), [base], spaces(_), [includes], spaces(_), [':'], spaces(_), newline. 
 
-% statement: the different types of statements in a LE text
-% a query
-statement(Query) -->
-    query_, extract_constant([is], NameWords), is_colon_, newline,
-    query_header(Ind0, Map1),
-    conditions(Ind0, Map1, _, Conds), period, !, 
-    {name_as_atom(NameWords, Name), Query = [query(Name, Conds)]}. 
-
 % a scenario description: assuming one example -> one scenario -> one list of facts.
-statement(Scenario) -->
+scenario_content(Scenario) -->
     scenario_, extract_constant([is], NameWords), is_colon_, newline,
     %list_of_facts(Facts), period, !, 
-    spaces(_), assumptions_([], _, Assumptions), period, !, 
+    spaces(_), assumptions_([], _, Assumptions), !, % period is gone
     {name_as_atom(NameWords, Name), Scenario = [example( Name, [scenario(Assumptions, true)])]}.
+
+% statement: the different types of statements in a LE text
+% a query
+query_content(Query) -->
+    query_, extract_constant([is], NameWords), is_colon_, newline,
+    query_header(Ind0, Map1),
+    conditions(Ind0, Map1, _, Conds), period, !, % period stays!
+    {name_as_atom(NameWords, Name), Query = [query(Name, Conds)]}. 
 
 % a fact or a rule
 statement(Statement) --> 
@@ -399,10 +413,16 @@ build_template(RawTemplate, Predicate, Arguments, TypesAndNames, Template) :-
     name_predicate(OtherWords, Predicate).
 
 % build_template_elements(+Input, +Previous, -Args, -TypesNames, -OtherWords, -Template)
-build_template_elements([], _, [], [], [], []).     
+build_template_elements([], _, [], [], [], []) :- !. 
+build_template_elements(['*', Word|RestOfWords], Previous, [Var|RestVars], [Name-Type|RestTypes], Others, [Var|RestTemplate]) :-
+    (ind_det(Word); ind_det_C(Word)), Previous \= [is|_], 
+    extract_variable(['*'], Var, NameWords, TypeWords, RestOfWords, NextWords), !, % <-- CUT!
+    name_predicate(NameWords, Name), 
+    name_predicate(TypeWords, Type), 
+    build_template_elements(NextWords, [], RestVars, RestTypes, Others, RestTemplate).     
 build_template_elements([Word|RestOfWords], Previous, [Var|RestVars], [Name-Type|RestTypes], Others, [Var|RestTemplate]) :-
     (ind_det(Word); ind_det_C(Word)), Previous \= [is|_], 
-    extract_variable([], Var, NameWords, TypeWords, RestOfWords, NextWords), !, % <-- CUT!
+    extract_variable(['*'], Var, NameWords, TypeWords, RestOfWords, NextWords), !, % <-- CUT!
     name_predicate(NameWords, Name), 
     name_predicate(TypeWords, Type), 
     build_template_elements(NextWords, [], RestVars, RestTypes, Others, RestTemplate).
