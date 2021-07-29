@@ -241,13 +241,14 @@ user:term_expansion(NiceTerm, ExpandedTerms) :- % hook for LE extension
 	context_module(user), % LPS programs are in the user module
 	prolog_load_context(source,File), % atom_prefix(File,'pengine://'), % process only SWISH windows
 	prolog_load_context(term_position,TP), stream_position_data(line_count,TP,Line),
-	catch(le_taxlog_translate(NiceTerm,File,Line,TaxlogTerms),_,fail), 
-	print_message(informational,"File: ~w"-[File]),
+	catch(le_taxlog_translate(NiceTerm,File,Line,TaxlogTerms),E,	
+		(print_message(error,"Translation Error: ~w"-[E]),fail)), 
+	%print_message(informational,"File: ~w"-[File]),
 	!, 
 	findall(PrologTerm, (
 		member(TT_,TaxlogTerms), 
 		(is_list(TT_)->member(TT,TT_);TT=TT_), % the LE translator generates a list of lists... and non lists
-		taxlog2prolog(TT,_,PrologTerm)
+		(member(target(prolog),TaxlogTerms) -> semantics2prolog(TT,_,PrologTerm) ; taxlog2prolog(TT,_,PrologTerm))
 		), ExpandedTerms),
 	print_message(informational,"expanded Taxlog to ~w"-[ExpandedTerms]).
 % This at the end, as it activates the term expansion (no harm done otherwise, just some performance..):

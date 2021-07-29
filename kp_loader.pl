@@ -278,6 +278,7 @@ system_predicate(G) :- predicate_property(G,built_in).
 system_predicate(G) :- kp_dir(D), predicate_property(G,file(F)), \+ sub_atom(F,_,_,_,D).
 system_predicate(example(_,_)).
 system_predicate(mainGoal(_,_)).
+system_predicate(query(_,_)).
 system_predicate(question(_,_)).
 system_predicate(question(_,_,_)).
 system_predicate(irrelevant_explanation(_)).
