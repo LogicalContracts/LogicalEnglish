@@ -1,6 +1,4 @@
-:- module('https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/small-business-restructure-rollover',[]).
-
-mainGoal(event_of_transfering_from_to_at_occurs(_ID,_Asset,_Transferor,_TransfereesList,_When), "Determine if a asset transfer event can be treated as a restructure rollover").
+:- module('https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/small-business-restructure-rollover/',[]).
 
 en("the target language is: prolog.
     
@@ -155,12 +153,10 @@ scenario Andrew email Feb 4 2021 is:
  20200630 is immediately before 20200701.
  5300000 is the aggregated turnover of company.
  company is a small business entity according to other legislation.
-.
 
 scenario testing one is:
  20160701 is after 20160630.
  20160630 is immediately before 20160701.
-.
 
 query one is:
 for which event:
@@ -172,7 +168,6 @@ query two is:
 query three is:
  A first time is after a second time
  and the second time is immediately before the first time.
-
 "). 
 
 /** <examples>

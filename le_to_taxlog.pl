@@ -51,7 +51,7 @@ text_to_logic(String_, Translation) :-
 
 document(Translation) --> 
     spaces_or_newlines(_),
-    header(Settings),  
+    header(Settings), %{print_message(informational, "Settings: ~w"-[Settings]), trace}, 
     %spaces_or_newlines(_),
     %rules_previous,  
     content(Content), 
@@ -75,20 +75,24 @@ settings(AllR, AllS) -->
       {append(Setting, RS, AllS), append(Rules, RRules, AllR)}.
 settings([],[]) --> [].
  
-content(T) --> 
-    spaces_or_newlines(_), rules_previous, kbbase_content(S), !, content(R), 
+content(T) --> %{print_message(informational, "going for KB:"-[])},  
+    spaces_or_newlines(_), rules_previous(Kbname), %{print_message(informational, "KBName: ~w"-[Kbname])}, 
+    kbbase_content(S), %{print_message(informational, "KB: ~w"-[S])}, 
+    content(R), 
+    {append([kbname(Kbname)|S], R, T)}.
+content(T) --> %{print_message(informational, "going for scenario:"-[])},
+    spaces_or_newlines(_), scenario_content(S), %{print_message(informational, "scenario: ~w"-[S])},
+    content(R), 
     {append(S, R, T)}.
-content(T) --> 
-    spaces_or_newlines(_), scenario_content(S), !, content(R), 
-    {append(S, R, T)}.
-content(T) --> 
-    spaces_or_newlines(_), query_content(S), !, content(R), 
+content(T) --> %{print_message(informational, "going for query:"-[])},
+    spaces_or_newlines(_), query_content(S), content(R), 
     {append(S, R, T)}.
 content([]) --> 
     spaces_or_newlines(_), []. 
 
-kbbase_content([S|R]) --> 
-    spaces_or_newlines(_),  statement(S), !,  kbbase_content(R).
+kbbase_content(T) --> 
+    spaces_or_newlines(_),  statement(S),  kbbase_content(R),
+    {append(S, R, T)}, !. 
 kbbase_content([]) --> 
     spaces_or_newlines(_), [].
 
@@ -120,14 +124,12 @@ predicate_decl(_, _, Rest, _) :-
     asserterror('LE error found in a declaration ', Rest), 
     fail.
 
-kbname(default).
-
-rules_previous --> 
+rules_previous(default) --> 
     spaces(_), [the], spaces(_), [rules], spaces(_), [are], spaces(_), [':'], spaces(_), newline, !.
-rules_previous --> 
+rules_previous(KBName) --> 
     spaces(_), [the], spaces(_), ['knowledge'], spaces(_), [base], extract_constant([includes], NameWords), [includes], spaces(_), [':'], !, spaces(_), newline,
-    {name_as_atom(NameWords, KBName), retract(kbname(_)), asserta(kbname(KBName))}.
-rules_previous -->  % backward compatibility
+    {name_as_atom(NameWords, KBName)}.
+rules_previous(default) -->  % backward compatibility
     spaces(_), [the], spaces(_), ['knowledge'], spaces(_), [base], spaces(_), [includes], spaces(_), [':'], spaces(_), newline. 
 
 % a scenario description: assuming one example -> one scenario -> one list of facts.
