@@ -96,11 +96,14 @@ kbbase_content(T) -->
 kbbase_content([]) --> 
     spaces_or_newlines(_), [].
 
+declaration([], [target(Language)]) --> % one word description for the language: prolog, taxlog
+    spaces(_), [the], spaces(_), [target], spaces(_), [language], spaces(_), [is], spaces(_), colon_or_not_, 
+    spaces(_), [Language], spaces(_), period. 
 declaration(Rules, [predicates(Fluents)]) -->
     predicate_previous, !, list_of_predicates_decl(Rules, Fluents).
-declaration([], [target(Language)]) --> % one word description for the language: prolog, taxlog
-    spaces(_), [the], spaces(_), [target], spaces(_), [language], spaces(_), [is], spaces(_), [':'], 
-    spaces(_), [Language], spaces(_), period. 
+
+colon_or_not_ --> [':'], spaces(_).
+colon_or_not_ --> []. 
 
 predicate_previous --> 
     spaces(_), [the], spaces(_), [predicates], spaces(_), [are], spaces(_), [':'], spaces(_), newline.
@@ -175,7 +178,10 @@ body_([], Map, Map) --> spaces_or_newlines(_).
 body_(Conditions, Map1, MapN) --> 
     newline, spaces(Ind), if_, !, conditions(Ind, Map1, MapN, Conditions), spaces_or_newlines(_).
 body_(Conditions, Map1, MapN) --> 
-    if_, newline, spaces(Ind), conditions(Ind, Map1, MapN, Conditions), spaces_or_newlines(_).
+    if_, newline_or_nothing, spaces(Ind), conditions(Ind, Map1, MapN, Conditions), spaces_or_newlines(_).
+
+newline_or_nothing --> newline.
+newline_or_nothing --> []. 
 
 % literal_ reads a list of words until it finds one of these: ['\n', if, and, or, '.', ',']
 % it then tries to match those words against a template in memory (see dict/3 predicate)
@@ -318,7 +324,7 @@ if_ --> [if], spaces_or_newlines(_).  % so that if can be written many lines awa
 
 period --> ['.'].
 comma --> [','].
-colon_ --> [':'].
+colon_ --> [':'], spaces(_). 
 
 comma_or_period --> period, !.
 comma_or_period --> comma. 
@@ -416,12 +422,14 @@ build_template(RawTemplate, Predicate, Arguments, TypesAndNames, Template) :-
 
 % build_template_elements(+Input, +Previous, -Args, -TypesNames, -OtherWords, -Template)
 build_template_elements([], _, [], [], [], []) :- !. 
+% a variable signalled by a *
 build_template_elements(['*', Word|RestOfWords], Previous, [Var|RestVars], [Name-Type|RestTypes], Others, [Var|RestTemplate]) :-
     (ind_det(Word); ind_det_C(Word)), Previous \= [is|_], 
-    extract_variable(['*'], Var, NameWords, TypeWords, RestOfWords, NextWords), !, % <-- CUT!
+    extract_variable(['*'], Var, NameWords, TypeWords, RestOfWords, ['*'|NextWords]), !, % <-- it must end with * too
     name_predicate(NameWords, Name), 
     name_predicate(TypeWords, Type), 
-    build_template_elements(NextWords, [], RestVars, RestTypes, Others, RestTemplate).     
+    build_template_elements(NextWords, [], RestVars, RestTypes, Others, RestTemplate). 
+% a variable not signalled by a *    
 build_template_elements([Word|RestOfWords], Previous, [Var|RestVars], [Name-Type|RestTypes], Others, [Var|RestTemplate]) :-
     (ind_det(Word); ind_det_C(Word)), Previous \= [is|_], 
     extract_variable(['*'], Var, NameWords, TypeWords, RestOfWords, NextWords), !, % <-- CUT!
