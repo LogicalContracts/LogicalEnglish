@@ -75,7 +75,7 @@ semantics2prolog(example(T,Sequence),delimiter-[classify,Spec],example(T,Sequenc
 semantics2prolog(query(Name,Goal),delimiter-[classify,classify],query(Name,Goal)) :- !. 
 semantics2prolog(predicates(Assumptions), delimiter-[classify,classify],predicates([])) :-
     pengine_self(SwishModule),
-    declare_facts_as_dynamic(SwishModule, Assumptions). 
+    declare_facts_as_dynamic(SwishModule, [happens(_), initiates(_,_), terminates(_,_)|Assumptions). 
     %print_message(informational, "asserted: ~w"-[Assumptions]).
 
 % assuming one example -> one scenario -> one list of facts. % deprecated

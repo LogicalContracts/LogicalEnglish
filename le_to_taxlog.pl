@@ -29,11 +29,11 @@ correspond to each operator and corresponding conditions.
 
 */
 
-:- module(le_to_taxlog, [document/3, le_taxlog_translate/4, op(1195,fx, user:(++))]).
+:- module(le_to_taxlog, [document/3, le_taxlog_translate/4, holds/1, op(1195,fx, user:(++))]).
 :- use_module('./tokenize/prolog/tokenize.pl').
 :- use_module(library(pengines)).
 :- use_module('reasoner.pl').
-:- thread_local literal/5, text_size/1, error_notice/4, dict/3, last_nl_parsed/1, kbname/1.
+:- thread_local literal/5, text_size/1, error_notice/4, dict/3, last_nl_parsed/1, kbname/1, happens/1, initiates/2, terminates/2.
 :- discontiguous statement/3, declaration/4, predicate/3, action/3.
 
 % Main clause: text_to_logic(+String,-Clauses) is det
@@ -75,17 +75,18 @@ settings(AllR, AllS) -->
       {append(Setting, RS, AllS), append(Rules, RRules, AllR)}.
 settings([],[]) --> [].
  
+% content structure: cuts added to avoid search loop
 content(T) --> %{print_message(informational, "going for KB:"-[])},  
     spaces_or_newlines(_), rules_previous(Kbname), %{print_message(informational, "KBName: ~w"-[Kbname])}, 
-    kbbase_content(S), %{print_message(informational, "KB: ~w"-[S])}, 
+    kbbase_content(S), !, %{print_message(informational, "KB: ~w"-[S])}, 
     content(R), 
     {append([kbname(Kbname)|S], R, T)}.
 content(T) --> %{print_message(informational, "going for scenario:"-[])},
-    spaces_or_newlines(_), scenario_content(S), %{print_message(informational, "scenario: ~w"-[S])},
+    spaces_or_newlines(_), scenario_content(S), !, %{print_message(informational, "scenario: ~w"-[S])},
     content(R), 
     {append(S, R, T)}.
 content(T) --> %{print_message(informational, "going for query:"-[])},
-    spaces_or_newlines(_), query_content(S), content(R), 
+    spaces_or_newlines(_), query_content(S), !, content(R), 
     {append(S, R, T)}.
 content([]) --> 
     spaces_or_newlines(_), []. 
@@ -150,6 +151,40 @@ query_content(Query) -->
     conditions(Ind0, Map1, _, Conds), period, !, % period stays!
     {name_as_atom(NameWords, Name), Query = [query(Name, Conds)]}. 
 
+% (holds_at(_149428,_149434) if 
+% (happens_at(_150138,_150144),
+%           initiates_at(_150138,_149428,_150144)),
+%           _150144 before _149434,
+%           not ((terminates_at(_152720,_149428,_152732),_150144 before _152732),_152732 before _149434))
+
+% it becomes the case that
+%   fluent
+% when
+%   event
+% if  
+statement(Statement) --> 
+    it_becomes_the_case_that_, spaces_or_newlines(_), 
+        literal_([], Map1, Fluent), spaces_or_newlines(_), 
+    when_, spaces_or_newlines(_), 
+        literal_(Map1, Map2, Event), spaces_or_newlines(_),
+    body_(Body, Map2,_), period,  
+        {(Body = [] -> Statement = [if(initiates(Event, Fluent), true)]; 
+            (holdlemize(Body, HBody), Statement = [if(initiates(Event, Fluent), HBody)]))}.
+
+% it becomes not the case that
+%   fluent
+% when
+%   event
+% if  
+statement(Statement) --> 
+    it_becomes_not_the_case_that_, spaces_or_newlines(_), 
+        literal_([], Map1, Fluent), spaces_or_newlines(_),
+    when_, spaces_or_newlines(_),
+        literal_(Map1, Map2, Event), spaces_or_newlines(_),
+    body_(Body, Map2,_), period,  
+        {(Body = [] -> Statement = [if(terminates(Event, Fluent), true)];  
+            (holdlemize(Body, HBody), Statement = [if(initiates(Event, Fluent), HBody)]))}.
+
 % a fact or a rule
 statement(Statement) --> 
     literal_([], Map1, Head), body_(Body, Map1, _), period,  
@@ -167,7 +202,8 @@ assumptions_(Map, Map, []) -->
         spaces_or_newlines(_), []. 
 
 rule_(InMap, OutMap, Rule) --> 
-    literal_(InMap, Map1, Head), body_(Body, Map1, OutMap), period,  
+    %literal_(InMap, Map1, Head), body_(Body, Map1, OutMap), period,  
+    spaces(Ind), condition(Head, Ind, InMap, Map1), body_(Body, Map1, OutMap), period, 
     {(Body = [] -> Rule = (Head :-true); Rule = (Head :- Body))}. 
 
 % no prolog inside LE!
@@ -183,7 +219,7 @@ body_(Conditions, Map1, MapN) -->
 newline_or_nothing --> newline.
 newline_or_nothing --> []. 
 
-% literal_ reads a list of words until it finds one of these: ['\n', if, and, or, '.', ',']
+% literal_ reads a list of words until it finds one of these: ['\n', if, '.']
 % it then tries to match those words against a template in memory (see dict/3 predicate)
 literal_(Map1, MapN, Literal) --> 
     predicate_template(PossibleTemplate),
@@ -234,6 +270,10 @@ expression(Y, Map1, MapN) -->
 expression(_, _, _, Rest, _) :- 
     asserterror('LE error found at an expression ', Rest), fail.
 
+% event observations
+condition(happens(Event), _, Map1, MapN) -->
+    observe_,  literal_(Map1, MapN, Event), !.
+
 % this produces a Taxlog condition with the form: 
 % setof(Owner/Share, is_ultimately_owned_by(Asset,Owner,Share) on Before, SetOfPreviousOwners)
 % from a set of word such as: 
@@ -260,15 +300,10 @@ condition(FinalExpression, _, Map1, MapN) -->
     spaces(Ind), conditions(Ind, Map3, Map4, Conds), 
     modifiers(aggregate_all(sum(Each),Conds,Value), Map4, MapN, FinalExpression).
     
-% it is not the case that: 
+% it is not the case that 
 condition(not(Conds), _, Map1, MapN) --> 
     spaces(_), not_, newline,  !, % forget other choices. We know it is a not case
     spaces(Ind), conditions(Ind, Map1, MapN, Conds).
-
-%condition(Cond, _, Map1, MapN, R1, RN) :-  
-%    print_message(informational, ' condition/literal '),  
-%    predicate_template(Possible, R1, RN), print_message(informational, 'Posible '), print_message(informational, Possible),
-%    match_template(Possible, Map1, MapN, Cond), !, print_message(informational, 'Literal '), print_message(informational, Cond). 
 
 condition(Cond, _, Map1, MapN) -->  
     literal_(Map1, MapN, Cond), !. 
@@ -389,6 +424,21 @@ rest_of_list_of_vars(Map, Map) --> [].
 
 and_or_comma_ --> [','], spaces(_). 
 and_or_comma_ --> [and], spaces(_).
+
+it_becomes_the_case_that_ --> 
+    it_, [becomes], spaces(_), [the], spaces(_), [case], spaces(_), [that], spaces(_).
+
+it_becomes_not_the_case_that_ -->
+    it_, [becomes], spaces(_), [not], spaces(_), [the], spaces(_), [case], spaces(_), [that], spaces(_).
+it_becomes_not_the_case_that_ -->
+    it_, [becomes], spaces(_), [no], spaces(_), [longer], spaces(_), [the], spaces(_), [case], spaces(_), [that], spaces(_).
+
+when_ --> [when], spaces(_).
+
+it_ --> [it], spaces(_), !.
+it_ --> ['It'], spaces(_). 
+
+observe_ --> [observe], spaces(_).
 
 /* --------------------------------------------------- Supporting code */
 clean_comments([], []) :- !.
@@ -636,6 +686,8 @@ builtin_(BuiltIn, [BuiltIn|RestWords], RestWords) :-
     predicate_property(system:Predicate, built_in). 
 
 /* --------------------------------------------------------- Utils in Prolog */
+time_of(P, T) :- P=..[_|Arguments], lists:append(_, [T], Arguments). % it assumes time as the last argument
+
 % Unwraps tokens, excelt for newlines which become newline(NextLineNumber)
 unpack_tokens([], []).
 unpack_tokens([cntrl(Char)|Rest], [newline(Next)|NewRest]) :- (Char=='\n' ; Char=='\r'), !,
@@ -743,7 +795,7 @@ past_tense_verb(ocurred).
  
 /* ------------------------------------------------- prepositions */
 preposition(of).
-preposition(on).
+%preposition(on).
 preposition(from).
 preposition(to).
 preposition(at).
@@ -835,6 +887,53 @@ must_be(A, nonvar) :- nonvar(A).
 must_be_nonvar(A) :- nonvar(A).
 must_not_be(A,B) :- not(must_be(A,B)). 
 
+/* ----------------------------------------------------------------- Event Calculus CLI */
+
+is_it_true(EnglishFluent, Scenario) :-
+    translate_query(EnglishFluent, Goal), % later -->, Kbs),
+    %print_message(informational, "Goal Name: ~w"-[GoalName]),
+    pengine_self(SwishModule), %SwishModule:query(GoalName, Goal), 
+    copy_term(Goal, CopyOfGoal), 
+    get_answer_from_goal(CopyOfGoal, EnglishQuestion), 
+    print_message(informational, "Fluent: ~w"-[EnglishQuestion]),
+    print_message(informational, "Scenario: ~w"-[Scenario]),
+    % assert facts in scenario
+    (Scenario==noscenario -> Facts = [] ; SwishModule:example(Scenario, [scenario(Facts, _)])), 
+    %print_message(informational, "Facts: ~w"-[Facts]), 
+    setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
+            %catch(SwishModule:holds(Goal), Error, ( print_message(error, Error), fail ) ), 
+            catch(le_to_taxlog:holds(Goal), Error, ( print_message(error, Error), fail ) ), 
+            _Result, 
+            retract_facts(SwishModule, Facts)), 
+    get_answer_from_goal(Goal, EnglishAnswer),  
+    print_message(informational, "Answers: ~w"-[EnglishAnswer]).
+
+translate_query(English_String, Goal) :-
+    tokenize(English_String, Tokens, [cased(true), spaces(true)]),
+    unpack_tokens(Tokens, UTokens), 
+    clean_comments(UTokens, CTokens), 
+    phrase(literal_([], _, Goal), CTokens) -> true 
+    ; ( error_notice(error, Me,Pos, ContextTokens), print_message(error, [Me,Pos,ContextTokens]) ). 
+
+holds(Fluent) :- print_message(informational, "It is true? ~w"-[Fluent]), 
+    pengine_self(SwishModule),
+    SwishModule:happens(Event), time_of(Fluent, T), SwishModule:initiates(Event, Fluent), 
+    time_of(Event, T1), T1 =< T, not(interrupted(T1, Fluent, T)), !.
+
+% temporary hack while we find a way to signal fluents from the rest
+holds(NoFluent) :- 
+    pengine_self(SwishModule),
+    call(SwishModule:NoFluent). 
+
+interrupted(T1, Fluent, T) :-
+    pengine_self(SwishModule),
+    SwishModule:happens(Event2), SwishModule:terminates(Event2, Fluent), time_of(Event2, T2), T1 =< T2, T2 =< T.  
+
+% need to check whether they are fluents, of course.
+holdlemize(not(A), not(NA)) :- holdlemize(A, NA), !. 
+holdlemize((A,B), (NA, NB)) :- holdlemize(A,NA), holdlemize(B, NB), !.
+holdlemize(A, holds(A)). 
+
 /* ----------------------------------------------------------------- CLI English */
 answer(English) :-
     translate_command(English, GoalName, Scenario), % later -->, Kbs),
@@ -880,11 +979,11 @@ get_answer_from_goal(Goal, [Answer]) :-
     Goal =.. GoalElements, dict(GoalElements, _, WordsAnswer), name_as_atom(WordsAnswer, Answer). 
 
 assert_facts(_, []) :- !. 
-assert_facts(SwishModule, [F|R]) :- nonvar(F), %print_message(informational, "asserting: ~w"-[SwishModule:F]),
+assert_facts(SwishModule, [F|R]) :- nonvar(F), print_message(informational, "asserting: ~w"-[SwishModule:F]),
     asserta(SwishModule:F), assert_facts(SwishModule, R).
 
 retract_facts(_, []) :- !. 
-retract_facts(SwishModule, [F|R]) :- nonvar(F), %print_message(informational, "retracting: ~w"-[SwishModule:F]),
+retract_facts(SwishModule, [F|R]) :- nonvar(F), print_message(informational, "retracting: ~w"-[SwishModule:F]),
     retract(SwishModule:F), retract_facts(SwishModule, R). 
 
 translate_command(English_String, Goal, Scenario) :-
@@ -1001,6 +1100,9 @@ user:resolve(Command) :- answer(Command).
 user:resolve(Command, Question, Answers) :- resolve(Command, Question, Answers). 
 user:answer( EnText) :- answer( EnText).
 user:answer( EnText, Goal, Result) :- answer( EnText, Goal, Result).
+
+user:is_it_true( EnText, Scenario) :- is_it_true( EnText, Scenario).
+user:holds(Fluent) :- holds(Fluent). 
 
 user:query(Name, Goal) :- query(Name, Goal).
 
