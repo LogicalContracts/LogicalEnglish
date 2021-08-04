@@ -75,8 +75,14 @@ semantics2prolog(example(T,Sequence),delimiter-[classify,Spec],example(T,Sequenc
 semantics2prolog(query(Name,Goal),delimiter-[classify,classify],query(Name,Goal)) :- !. 
 semantics2prolog(predicates(Assumptions), delimiter-[classify,classify],predicates([])) :-
     pengine_self(SwishModule),
-    declare_facts_as_dynamic(SwishModule, [happens(_), initiates(_,_), terminates(_,_)|Assumptions). 
+    declare_facts_as_dynamic(SwishModule, Assumptions). 
     %print_message(informational, "asserted: ~w"-[Assumptions]).
+semantics2prolog(events(Assumptions), delimiter-[classify,classify],events([])) :-
+    pengine_self(SwishModule),
+    declare_facts_as_dynamic(SwishModule, [happens(_), initiates(_,_), terminates(_,_)|Assumptions]).
+semantics2prolog(fluents(Assumptions), delimiter-[classify,classify],fluents([])) :-
+    pengine_self(SwishModule),
+    declare_facts_as_dynamic(SwishModule, [it_is_illegal(_)|Assumptions]).
 
 % assuming one example -> one scenario -> one list of facts. % deprecated
 % declare_dynamic(Module, [scenario(Facts, _)]) :- declare_facts_as_dynamic(Module, Facts).
