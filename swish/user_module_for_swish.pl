@@ -252,5 +252,5 @@ user:term_expansion(NiceTerm, ExpandedTerms) :- % hook for LE extension
 		), ExpandedTerms),
 	print_message(informational,"expanded Taxlog to ~w"-[ExpandedTerms]).
 % This at the end, as it activates the term expansion (no harm done otherwise, just some performance..):
-user:term_expansion(T,NT) :- taxlog2prolog(T,_,NT).
+%user:term_expansion(T,NT) :- taxlog2prolog(T,_,NT).
 

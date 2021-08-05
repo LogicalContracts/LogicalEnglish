@@ -7,25 +7,59 @@ Main DCG nonterminal: document(Translation)
 
 See at the end the predicate le_taxlog_translate to be used from SWISH
 
-It assumes an entry with the following structure. The expression:
+It assumes an entry with the following structure. One of these expressions:
 
 the predicates are:
+the templates are:
+the timeless predicates are:
+the event predicates are:
+the fluents are:
+the time-varying predicates are:
 
-followed by the declarations of all the predicates involved in the knowledge base.
+followed by the declarations of all the corresponding predicates mentioned in the 
+knowledge base. 
+
 Each declarations define a template with the variables and other words required to
 describe a relevant relation. It is a comma separated list of templates which ends
 with a period. 
 
-After that period, the following statement introduces the knowledge base:
+After that period, one of the following statement introduces the knowledge base:
 
 the knowledge base includes: 
+the knowledge base <Name> includes: 
 
-And it is followed by the rules and facts written in Logical English or in 
-Taxlog/Prolog relational syntax. Each rule must end with a period. 
+And it is followed by the rules and facts written in Logical English syntax. 
+Each rule must end with a period. 
 
 Indentation is used to organize the and/or list of conditions by strict
 observance of one condition per line with a level of indentation that 
 correspond to each operator and corresponding conditions. 
+
+Similarly, there may be sections for scenarios and queries, like:
+
+--
+scenario test2 is:
+   borrower pays a amount to lender on 20150601000000. 
+--
+
+and
+
+--
+query one is:
+for which event:
+ the small business restructure rollover applies to the event.
+
+query two is:
+ which tax payer is a party of which event.
+
+query three is:
+ A first time is after a second time
+ and the second time is immediately before the first time.
+--
+
+which can then be used in the new command language interface of LE
+(e.g. answer/1, is_it_true/2 meta-predicates)
+
 
 */
 
@@ -33,21 +67,23 @@ correspond to each operator and corresponding conditions.
 :- use_module('./tokenize/prolog/tokenize.pl').
 :- use_module(library(pengines)).
 :- use_module('reasoner.pl').
-:- thread_local literal/5, text_size/1, error_notice/4, dict/3, last_nl_parsed/1, kbname/1.
-:- discontiguous statement/3, declaration/4, predicate/3, action/3.
+:- thread_local literal/5, text_size/1, error_notice/4, dict/3, 
+                last_nl_parsed/1, kbname/1, happens/1, initiates/2, terminates/2,
+                predicates/1, events/1, fluents/1. 
+:- discontiguous statement/3, declaration/4.
 
 % Main clause: text_to_logic(+String,-Clauses) is det
 % Errors are added to error_notice 
 text_to_logic(String_, Translation) :-
     % hack to ensure a newline at the end, for the sake of error reporting:
     ((sub_atom(String_,_,1,0,NL), memberchk(NL,['\n','\r']) ) -> String=String_ ; atom_concat(String_,'\n',String)),
-    tokenize(String, Tokens, [cased(true), spaces(true)]),
+    tokenize(String, Tokens, [cased(true), spaces(true), numbers(false)]),
     retractall(last_nl_parsed(_)), asserta(last_nl_parsed(1)), % preparing line counting
     unpack_tokens(Tokens, UTokens), 
     clean_comments(UTokens, CTokens), 
     ( phrase(document(Translation), CTokens) -> 
         ( print_message(informational, "Translation: ~w"-[Translation]) )
-    ;   ( Translation=[])). 
+    ;   ( print_message(informational, "Translation failed: "-[]), Translation=[])). 
 
 document(Translation) --> 
     spaces_or_newlines(_),
@@ -60,11 +96,11 @@ document(Translation) -->
 % header parses all the declarations and assert them into memory to be invoked by the rules. 
 header(Settings, In, Next) :-
     length(In, TextSize), % after comments were removed
-    ( settings(Rules, Settings_, In, Next) -> 
+    ( phrase(settings(Rules, Settings_), In, Next) -> 
         ( member(target(_), Settings_) -> Settings = Settings_ ; Settings = [target(taxlog)|Settings_] )  % taxlog as default
     ; (Rules = [], Settings = [target(taxlog)])), % taxlog as default
     RulesforErrors = % rules for error have been statically added
-      [(text_size(TextSize))], % is text_size being used?
+      [(text_size(TextSize))|Settings], % is text_size being used? % asserting the Settings too! predicates, events and fluents
     append(Rules, RulesforErrors, MRules),
     assertall(MRules). % asserting contextual information
 
@@ -75,17 +111,18 @@ settings(AllR, AllS) -->
       {append(Setting, RS, AllS), append(Rules, RRules, AllR)}.
 settings([],[]) --> [].
  
+% content structure: cuts added to avoid search loop
 content(T) --> %{print_message(informational, "going for KB:"-[])},  
     spaces_or_newlines(_), rules_previous(Kbname), %{print_message(informational, "KBName: ~w"-[Kbname])}, 
-    kbbase_content(S), %{print_message(informational, "KB: ~w"-[S])}, 
+    kbbase_content(S), !, %{print_message(informational, "KB: ~w"-[S])}, 
     content(R), 
     {append([kbname(Kbname)|S], R, T)}.
 content(T) --> %{print_message(informational, "going for scenario:"-[])},
-    spaces_or_newlines(_), scenario_content(S), %{print_message(informational, "scenario: ~w"-[S])},
+    spaces_or_newlines(_), scenario_content(S), !, %{print_message(informational, "scenario: ~w"-[S])},
     content(R), 
     {append(S, R, T)}.
 content(T) --> %{print_message(informational, "going for query:"-[])},
-    spaces_or_newlines(_), query_content(S), content(R), 
+    spaces_or_newlines(_), query_content(S), !, content(R), 
     {append(S, R, T)}.
 content([]) --> 
     spaces_or_newlines(_), []. 
@@ -96,24 +133,61 @@ kbbase_content(T) -->
 kbbase_content([]) --> 
     spaces_or_newlines(_), [].
 
+% declarations
+% target
 declaration([], [target(Language)]) --> % one word description for the language: prolog, taxlog
     spaces(_), [the], spaces(_), [target], spaces(_), [language], spaces(_), [is], spaces(_), colon_or_not_, 
-    spaces(_), [Language], spaces(_), period. 
-declaration(Rules, [predicates(Fluents)]) -->
-    predicate_previous, !, list_of_predicates_decl(Rules, Fluents).
+    spaces(_), [Language], spaces(_), period.
+%timeless 
+declaration(Rules, [predicates(Relations)]) -->
+    predicate_previous, !, list_of_predicates_decl(Rules, Relations).
+%events
+declaration(Rules, [events(EventTypes)]) -->
+    event_predicate_previous, !, list_of_predicates_decl(Rules, EventTypes).
+%time varying
+declaration(Rules, [fluents(Fluents)]) -->
+    fluent_predicate_previous, !, list_of_predicates_decl(Rules, Fluents).
 
 colon_or_not_ --> [':'], spaces(_).
 colon_or_not_ --> []. 
 
 predicate_previous --> 
-    spaces(_), [the], spaces(_), [predicates], spaces(_), [are], spaces(_), [':'], spaces(_), newline.
+    spaces(_), [the], spaces(_), [predicates], spaces(_), [are], spaces(_), [':'], spaces_or_newlines(_).
 predicate_previous --> 
-    spaces(_), [the], spaces(_), [templates], spaces(_), [are], spaces(_), [':'], spaces(_), newline.
+    spaces(_), [the], spaces(_), [templates], spaces(_), [are], spaces(_), [':'], spaces_or_newlines(_).
+predicate_previous --> 
+    spaces(_), [the], spaces(_), [timeless], spaces(_), [predicates], spaces(_), [are], spaces(_), [':'], spaces_or_newlines(_).
 
-list_of_predicates_decl([Ru|R1], [F|R2]) --> predicate_decl(Ru,F), rest_list_of_predicates_decl(R1,R2).
+event_predicate_previous --> 
+    spaces(_), [the], spaces(_), [event], spaces(_), [predicates], spaces(_), [are], spaces(_), [':'], spaces_or_newlines(_).
 
-rest_list_of_predicates_decl(L1, L2) --> comma, list_of_predicates_decl(L1, L2).
-rest_list_of_predicates_decl([],[]) --> period.
+fluent_predicate_previous --> 
+    spaces(_), [the], spaces(_), [fluents], spaces(_), [are], spaces(_), [':'], spaces_or_newlines(_).
+fluent_predicate_previous --> 
+    spaces(_), [the], spaces(_), [time], ['-'], [varying], spaces(_), [predicates], spaces(_), [are], spaces(_), [':'], spaces_or_newlines(_).
+
+% at least one predicate declaration required
+list_of_predicates_decl([], []) --> spaces_or_newlines(_), next_section, !. 
+list_of_predicates_decl([Ru|Rin], [F|Rout]) --> predicate_decl(Ru,F), comma_or_period, list_of_predicates_decl(Rin, Rout).
+
+% a hack to avoid superflous searches
+next_section(StopHere, StopHere)  :-
+    phrase(predicate_previous, StopHere, _), !.
+
+next_section(StopHere, StopHere)  :-
+    phrase(event_predicate_previous, StopHere, _), !.
+
+next_section(StopHere, StopHere)  :-
+    phrase(fluent_predicate_previous, StopHere, _), !.
+
+next_section(StopHere, StopHere)  :-
+    phrase(rules_previous(_), StopHere, _), !.
+
+next_section(StopHere, StopHere)  :-
+    phrase(scenario_, StopHere, _), !.
+
+next_section(StopHere, StopHere)  :-
+    phrase(query_, StopHere, _).
 
 predicate_decl(dict([Predicate|Arguments],TypesAndNames, Template), Relation) -->
     spaces(_), template_decl(RawTemplate), 
@@ -128,12 +202,12 @@ predicate_decl(_, _, Rest, _) :-
     fail.
 
 rules_previous(default) --> 
-    spaces(_), [the], spaces(_), [rules], spaces(_), [are], spaces(_), [':'], spaces(_), newline, !.
+    spaces_or_newlines(_), [the], spaces(_), [rules], spaces(_), [are], spaces(_), [':'], spaces(_), newline, !.
 rules_previous(KBName) --> 
-    spaces(_), [the], spaces(_), ['knowledge'], spaces(_), [base], extract_constant([includes], NameWords), [includes], spaces(_), [':'], !, spaces(_), newline,
+    spaces_or_newlines(_), [the], spaces(_), ['knowledge'], spaces(_), [base], extract_constant([includes], NameWords), [includes], spaces(_), [':'], !, spaces(_), newline,
     {name_as_atom(NameWords, KBName)}.
 rules_previous(default) -->  % backward compatibility
-    spaces(_), [the], spaces(_), ['knowledge'], spaces(_), [base], spaces(_), [includes], spaces(_), [':'], spaces(_), newline. 
+    spaces_or_newlines(_), [the], spaces(_), ['knowledge'], spaces(_), [base], spaces(_), [includes], spaces(_), [':'], spaces(_), newline. 
 
 % a scenario description: assuming one example -> one scenario -> one list of facts.
 scenario_content(Scenario) -->
@@ -149,6 +223,49 @@ query_content(Query) -->
     query_header(Ind0, Map1),
     conditions(Ind0, Map1, _, Conds), period, !, % period stays!
     {name_as_atom(NameWords, Name), Query = [query(Name, Conds)]}. 
+
+% (holds_at(_149428,_149434) if 
+% (happens_at(_150138,_150144),
+%           initiates_at(_150138,_149428,_150144)),
+%           _150144 before _149434,
+%           not ((terminates_at(_152720,_149428,_152732),_150144 before _152732),_152732 before _149434))
+
+% it becomes the case that
+%   fluent
+% when
+%   event
+% if  
+statement(Statement) --> 
+    it_becomes_the_case_that_, spaces_or_newlines(_), 
+        literal_([], Map1, holds(Fluent)), spaces_or_newlines(_), 
+    when_, spaces_or_newlines(_), 
+        literal_(Map1, Map2, happens(Event)), spaces_or_newlines(_),
+    body_(Body, Map2,_), period,  
+        {(Body = [] -> Statement = [if(initiates(Event, Fluent), true)]; 
+            (Statement = [if(initiates(Event, Fluent), Body)]))}, !.
+
+% it becomes not the case that
+%   fluent
+% when
+%   event
+% if  
+statement(Statement) --> 
+    it_becomes_not_the_case_that_, spaces_or_newlines(_), 
+        literal_([], Map1, holds(Fluent)), spaces_or_newlines(_),
+    when_, spaces_or_newlines(_),
+        literal_(Map1, Map2, happens(Event)), spaces_or_newlines(_),
+    body_(Body, Map2,_), period,  
+        {(Body = [] -> Statement = [if(terminates(Event, Fluent), true)];  
+            (Statement = [if(initiates(Event, Fluent), Body)]))}, !.
+
+% it is illegal that
+%   event
+% if ... 
+statement(Statement) -->
+    it_is_illegal_that_, spaces_or_newlines(_), 
+    literal_([], Map1, happens(Event)), body_(Body, Map1, _), period,
+    {(Body = [] -> Statement = [if(it_is_illegal(Event), true)]; 
+      Statement = [if(it_is_illegal(Event), Body)])},!. 
 
 % a fact or a rule
 statement(Statement) --> 
@@ -168,6 +285,7 @@ assumptions_(Map, Map, []) -->
 
 rule_(InMap, OutMap, Rule) --> 
     literal_(InMap, Map1, Head), body_(Body, Map1, OutMap), period,  
+    %spaces(Ind), condition(Head, Ind, InMap, Map1), body_(Body, Map1, OutMap), period, 
     {(Body = [] -> Rule = (Head :-true); Rule = (Head :- Body))}. 
 
 % no prolog inside LE!
@@ -183,11 +301,18 @@ body_(Conditions, Map1, MapN) -->
 newline_or_nothing --> newline.
 newline_or_nothing --> []. 
 
-% literal_ reads a list of words until it finds one of these: ['\n', if, and, or, '.', ',']
-% it then tries to match those words against a template in memory (see dict/3 predicate)
-literal_(Map1, MapN, Literal) --> 
+% literal_ reads a list of words until it finds one of these: ['\n', if, '.']
+% it then tries to match those words against a template in memory (see dict/3 predicate).
+% The output is then contigent to the type of literal according to the declarations. 
+literal_(Map1, MapN, FinalLiteral) --> 
     predicate_template(PossibleTemplate),
-    {match_template(PossibleTemplate, Map1, MapN, Literal)}, !.
+    {match_template(PossibleTemplate, Map1, MapN, Literal),
+     (predicates(Predicates) -> true; Predicates = []),
+     (fluents(Fluents) -> true; Fluents = []),
+     (lists:member(Literal, Predicates) -> FinalLiteral = Literal 
+      ; (lists:member(Literal, Fluents) -> FinalLiteral = holds(Literal)
+        ; FinalLiteral = happens(Literal)))}, !.
+
 % rewritten to use in swish. Fixed! It was a name clash. Apparently "literal" is used somewhere else
 %literal_(Map1, MapN, Literal, In, Out) :-  print_message(informational, '  inside a literal'),
 %        predicate_template(PossibleTemplate, In, Out), print_message(informational, PossibleTemplate),
@@ -234,6 +359,10 @@ expression(Y, Map1, MapN) -->
 expression(_, _, _, Rest, _) :- 
     asserterror('LE error found at an expression ', Rest), fail.
 
+% event observations
+condition(happens(Event), _, Map1, MapN) -->
+    observe_,  literal_(Map1, MapN, Event), !.
+
 % this produces a Taxlog condition with the form: 
 % setof(Owner/Share, is_ultimately_owned_by(Asset,Owner,Share) on Before, SetOfPreviousOwners)
 % from a set of word such as: 
@@ -260,15 +389,10 @@ condition(FinalExpression, _, Map1, MapN) -->
     spaces(Ind), conditions(Ind, Map3, Map4, Conds), 
     modifiers(aggregate_all(sum(Each),Conds,Value), Map4, MapN, FinalExpression).
     
-% it is not the case that: 
+% it is not the case that 
 condition(not(Conds), _, Map1, MapN) --> 
     spaces(_), not_, newline,  !, % forget other choices. We know it is a not case
     spaces(Ind), conditions(Ind, Map1, MapN, Conds).
-
-%condition(Cond, _, Map1, MapN, R1, RN) :-  
-%    print_message(informational, ' condition/literal '),  
-%    predicate_template(Possible, R1, RN), print_message(informational, 'Posible '), print_message(informational, Possible),
-%    match_template(Possible, Map1, MapN, Cond), !, print_message(informational, 'Literal '), print_message(informational, Cond). 
 
 condition(Cond, _, Map1, MapN) -->  
     literal_(Map1, MapN, Cond), !. 
@@ -367,12 +491,12 @@ is_a_collection_of_ --> [is], spaces(_), [a], spaces(_), [collection], spaces(_)
 
 where_ --> [where], spaces(_). 
 
-scenario_ -->  ['Scenario'], !, spaces(_).
-scenario_ -->  [scenario], spaces(_). 
+scenario_ -->  spaces_or_newlines(_), ['Scenario'], !, spaces(_).
+scenario_ -->  spaces_or_newlines(_), [scenario], spaces(_). 
 
 is_colon_ -->  [is], spaces(_), [':'], spaces(_).
 
-query_ --> [query], spaces(_).
+query_ --> spaces_or_newlines(_), [query], spaces(_).
 
 for_which_ --> [for], spaces(_), [which], spaces(_). 
 
@@ -389,6 +513,24 @@ rest_of_list_of_vars(Map, Map) --> [].
 
 and_or_comma_ --> [','], spaces(_). 
 and_or_comma_ --> [and], spaces(_).
+
+it_becomes_the_case_that_ --> 
+    it_, [becomes], spaces(_), [the], spaces(_), [case], spaces(_), [that], spaces(_).
+
+it_becomes_not_the_case_that_ -->
+    it_, [becomes], spaces(_), [not], spaces(_), [the], spaces(_), [case], spaces(_), [that], spaces(_).
+it_becomes_not_the_case_that_ -->
+    it_, [becomes], spaces(_), [no], spaces(_), [longer], spaces(_), [the], spaces(_), [case], spaces(_), [that], spaces(_).
+
+when_ --> [when], spaces(_).
+
+it_ --> [it], spaces(_), !.
+it_ --> ['It'], spaces(_). 
+
+observe_ --> [observe], spaces(_). 
+
+it_is_illegal_that_  -->
+    it_, [is], spaces(_), [illegal], spaces(_), [that], spaces(_).
 
 /* --------------------------------------------------- Supporting code */
 clean_comments([], []) :- !.
@@ -423,8 +565,8 @@ build_template(RawTemplate, Predicate, Arguments, TypesAndNames, Template) :-
 % build_template_elements(+Input, +Previous, -Args, -TypesNames, -OtherWords, -Template)
 build_template_elements([], _, [], [], [], []) :- !. 
 % a variable signalled by a *
-build_template_elements(['*', Word|RestOfWords], Previous, [Var|RestVars], [Name-Type|RestTypes], Others, [Var|RestTemplate]) :-
-    (ind_det(Word); ind_det_C(Word)), Previous \= [is|_], 
+build_template_elements(['*', Word|RestOfWords], _Previous, [Var|RestVars], [Name-Type|RestTypes], Others, [Var|RestTemplate]) :-
+    (ind_det(Word); ind_det_C(Word)), % Previous \= [is|_], % removing this requirement when * is used
     extract_variable(['*'], Var, NameWords, TypeWords, RestOfWords, ['*'|NextWords]), !, % <-- it must end with * too
     name_predicate(NameWords, Name), 
     name_predicate(TypeWords, Type), 
@@ -455,10 +597,18 @@ extract_variable(SW, Var, [Word|RestName], [Word|RestType], [Word|RestOfWords], 
     is_a_type(Word),
     extract_variable(SW, Var, RestName, RestType, RestOfWords, NextWords).
 
-name_predicate([Number], Number) :- number(Number), !. % a quick fix for numbers extracted as constants
+name_predicate([AtomNum,'.',AtomDecimal], Number) :-  
+    atomic_list_concat([AtomNum,'.',AtomDecimal], Atom), atom_number(Atom, Number). 
+name_predicate([Atom, '-'|Rest], Number-NRest) :- 
+    atom_number(Atom, Number), name_predicate(Rest, NRest), !. 
+name_predicate([Atom], Number) :- atom_number(Atom, Number), number(Number), !. % a quick fix for numbers extracted as constants
 name_predicate(Words, Predicate) :-
     concat_atom(Words, '_', Predicate). 
 
+name_as_atom([Number], Number) :-
+    number(Number), !. 
+name_as_atom([Atom], Number) :- 
+    atom_number(Atom, Number), !. 
 name_as_atom(Words, Name) :-
     replace_vars(Words, Atoms), concat_atom(Atoms, ' ', Name). 
 
@@ -533,21 +683,27 @@ match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, [Element|RestS
 match([Element|RestElements], [Det|PossibleLiteral], Map1, MapN, [Var|RestSelected]) :-
     var(Element), 
     determiner(Det), stop_words(RestElements, StopWords), 
-    extract_variable(StopWords, Var, NameWords, _, PossibleLiteral, NextWords),  NameWords \= [], !, % <-- CUT! % it is not empty % <- leave that _ unbound!
+    extract_variable(StopWords, Var, NameWords, _, PossibleLiteral, NextWords),  NameWords \= [], % <- leave that _ unbound!
     name_predicate(NameWords, Name), 
-    update_map(Var, Name, Map1, Map2), 
-    match(RestElements, NextWords, Map2, MapN, RestSelected).  
+    update_map(Var, Name, Map1, Map2), !,  % <-- CUT!  
+    match(RestElements, NextWords, Map2, MapN, RestSelected). 
+% handling symbolic variables (as long as they have been previously defined and included in the map!) 
+match([Element|RestElements], PossibleLiteral, Map1, MapN, [Var|RestSelected]) :-
+    var(Element), stop_words(RestElements, StopWords), 
+    extract_variable(StopWords, Var, NameWords, _, PossibleLiteral, NextWords),  NameWords \= [], % <- leave that _ unbound!
+    name_predicate(NameWords, Name), 
+    consult_map(Var, Name, Map1, Map2), !, % <-- CUT!  % if the variables has been previously registered
+    match(RestElements, NextWords, Map2, MapN, RestSelected).
+match([Element|RestElements], ['['|PossibleLiteral], Map1, MapN, [List|RestSelected]) :-
+    var(Element), stop_words(RestElements, StopWords),
+    extract_list(StopWords, List, Map1, Map2, PossibleLiteral, [']'|NextWords]), !, % matching brackets verified
+    match(RestElements, NextWords, Map2, MapN, RestSelected). 
 match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, [Constant|RestSelected]) :-
     var(Element), stop_words(RestElements, StopWords),
     extract_constant(StopWords, NameWords, [Word|PossibleLiteral], NextWords), NameWords \= [], !, % <-- CUT!  % it is not empty
     name_predicate(NameWords, Constant),
-    %update_map(Element, Constant, Map1, Map2), 
     %print_message(informational, 'found a constant '), print_message(informational, Constant),
     match(RestElements, NextWords, Map1, MapN, RestSelected). 
-match([Element|RestElements], ['['|PossibleLiteral], Map1, MapN, [List|RestSelected]) :-
-    var(Element), stop_words(RestElements, StopWords),
-    extract_list(StopWords, List, Map1, Map2, PossibleLiteral, [']'|NextWords]), % matching brackets verified
-    match(RestElements, NextWords, Map2, MapN, RestSelected). 
 
 stop_words([], []).
 stop_words([Word|_], [Word]) :- nonvar(Word). % only the next word for now
@@ -624,8 +780,8 @@ update_map(V, Name, InMap, OutMap) :-  % updates the map by adding a new variabl
 
 % consult_map(+V, -Name, +Inmap, -OutMap)
 consult_map(V, Name, InMap, InMap) :-
-    member(map(Var, SomeName), InMap), Var == V, Name = SomeName, !.  
-consult_map(V, V, Map, Map). % leave the name unassigned
+    member(map(Var, SomeName), InMap), (Name = SomeName -> Var = V; ( Var == V -> Name = SomeName ; fail ) ),  !.  
+%consult_map(V, V, Map, Map). % leave the name unassigned % deprecated to be used inside match
 
 builtin_(BuiltIn, [BuiltIn1, BuiltIn2|RestWords], RestWords) :- 
     atom_concat(BuiltIn1, BuiltIn2, BuiltIn), 
@@ -636,6 +792,8 @@ builtin_(BuiltIn, [BuiltIn|RestWords], RestWords) :-
     predicate_property(system:Predicate, built_in). 
 
 /* --------------------------------------------------------- Utils in Prolog */
+time_of(P, T) :- P=..[_|Arguments], lists:append(_, [T], Arguments). % it assumes time as the last argument
+
 % Unwraps tokens, excelt for newlines which become newline(NextLineNumber)
 unpack_tokens([], []).
 unpack_tokens([cntrl(Char)|Rest], [newline(Next)|NewRest]) :- (Char=='\n' ; Char=='\r'), !,
@@ -693,7 +851,7 @@ reserved_word(W) :- % more reserved words pending??
     W = 'at'; W= 'from'; W='to';  W='half'; % W='or'; W='and'; % leaving and/or out of this for now
     W = 'else'; W = 'otherwise'; 
     W = such ; 
-    W = '<'; W = '='; W = '>'; W = '+'; W = '-'; W = '/'; W = '*';
+    W = '<'; W = '='; W = '>'; % W = '+'; W = '-'; W = '/'; W = '*'; % these must be handled by parsing
     W = '{' ; W = '}' ; W = '(' ; W = ')' ; W = '[' ; W = ']';
     W = ':', W = ','; W = ';'.
 reserved_word(P) :- punctuation(P).
@@ -743,7 +901,7 @@ past_tense_verb(ocurred).
  
 /* ------------------------------------------------- prepositions */
 preposition(of).
-preposition(on).
+%preposition(on).
 preposition(from).
 preposition(to).
 preposition(at).
@@ -835,8 +993,67 @@ must_be(A, nonvar) :- nonvar(A).
 must_be_nonvar(A) :- nonvar(A).
 must_not_be(A,B) :- not(must_be(A,B)). 
 
+before(Year1-(_-(_-(_-(_-_)))), Year2-(_-(_-(_-(_-_))))) :- nonvar(Year1), nonvar(Year2), Year1 < Year2, !. 
+before(Year-(Month1-(_-(_-(_-_)))), Year-(Month2-(_-(_-(_-_))))) :- nonvar(Month1), nonvar(Month2), Month1 < Month2, !. 
+before(Year-(Month-(Day1-(_-(_-_)))), Year-(Month-(Day2-(_-(_-_))))) :- nonvar(Day1), nonvar(Day2), Day1 < Day2, !. 
+before(Year-(Month-(Day-(Hour1-(_-_)))), Year-(Month-(Day-(Hour2-(_-_))))) :- nonvar(Hour1), nonvar(Hour2), Hour1 < Hour2, !.
+before(Year-(Month-(Day-(Hour-(Min1-_)))), Year-(Month-(Day-(Hour-(Min2-_))))) :-nonvar(Min1), nonvar(Min2), Min1 < Min2, !.
+before(Year-(Month-(Day-(Hour-(Min-Sec1)))), Year-(Month-(Day-(Hour-(Min-Sec2))))) :- nonvar(Sec1), nonvar(Sec2), Sec1 < Sec2, !.
+before(A,B) :- nonvar(A), nonvar(B), number(A), number(B), A < B. 
+
+/* ----------------------------------------------------------------- Event Calculus CLI */
+
+is_it_true(English, Scenario) :-
+    translate_query(English, Question), % later -->, Kbs),
+    %print_message(informational, "Goal Name: ~w"-[GoalName]),
+    pengine_self(SwishModule), %SwishModule:query(GoalName, Goal), 
+    extract_goal_command(Question, SwishModule, Goal, Command), 
+    copy_term(Goal, CopyOfGoal), 
+    get_answer_from_goal(CopyOfGoal, EnglishQuestion), 
+    print_message(informational, "Question: ~w"-[EnglishQuestion]),
+    print_message(informational, "Scenario: ~w"-[Scenario]),
+    get_assumptions_from_scenario(Scenario, SwishModule, Assumptions), 
+    setup_call_catcher_cleanup(assert_facts(SwishModule, Assumptions), 
+            %catch(SwishModule:holds(Goal), Error, ( print_message(error, Error), fail ) ), 
+            catch(Command, Error, ( print_message(error, Error), fail ) ), 
+            _Result, 
+            retract_facts(SwishModule, Assumptions)), 
+    get_answer_from_goal(Goal, EnglishAnswer),  
+    print_message(informational, "Answers: ~w"-[EnglishAnswer]).
+
+extract_goal_command(holds(Goal), _, Goal, le_to_taxlog:holds(Goal)) :- !.
+extract_goal_command(happens(Goal), M, Goal, M:happens(Goal)) :- !.
+extract_goal_command(Goal, M, Goal, M:Goal).
+
+get_assumptions_from_scenario(noscenario, _, []) :- !.  
+get_assumptions_from_scenario(Scenario, SwishModule, Assumptions) :-
+    SwishModule:example(Scenario, [scenario(Assumptions, _)]).
+
+translate_query(English_String, Goal) :-
+    tokenize(English_String, Tokens, [cased(true), spaces(true)]),
+    unpack_tokens(Tokens, UTokens), 
+    clean_comments(UTokens, CTokens), 
+    phrase(literal_([], _, Goal), CTokens) -> true 
+    ; ( error_notice(error, Me,Pos, ContextTokens), print_message(error, [Me,Pos,ContextTokens]) ). 
+
+holds(Fluent) :- print_message(informational, "It is true? ~w"-[Fluent]), 
+    pengine_self(SwishModule),
+    SwishModule:happens(Event), time_of(Fluent, T), SwishModule:initiates(Event, Fluent), 
+    time_of(Event, T1), T1 =< T, not(interrupted(T1, Fluent, T)), !.
+
+% temporary hack while we find a way to signal fluents from the rest
+%holds(NoFluent) :- 
+%    pengine_self(SwishModule),
+%   call(SwishModule:NoFluent). 
+
+interrupted(T1, Fluent, T) :-
+    pengine_self(SwishModule),
+    SwishModule:happens(Event2), SwishModule:terminates(Event2, Fluent), time_of(Event2, T2), T1 =< T2, T2 =< T.  
+
+happens(it_is_the_end_of(T)) :- T = _-_-_-00-00-00. 
+
 /* ----------------------------------------------------------------- CLI English */
-answer(English) :-
+answer(English) :-  
     translate_command(English, GoalName, Scenario), % later -->, Kbs),
     %print_message(informational, "Goal Name: ~w"-[GoalName]),
     pengine_self(SwishModule), SwishModule:query(GoalName, Goal), 
@@ -880,11 +1097,11 @@ get_answer_from_goal(Goal, [Answer]) :-
     Goal =.. GoalElements, dict(GoalElements, _, WordsAnswer), name_as_atom(WordsAnswer, Answer). 
 
 assert_facts(_, []) :- !. 
-assert_facts(SwishModule, [F|R]) :- nonvar(F), %print_message(informational, "asserting: ~w"-[SwishModule:F]),
+assert_facts(SwishModule, [F|R]) :- nonvar(F), % print_message(informational, "asserting: ~w"-[SwishModule:F]),
     asserta(SwishModule:F), assert_facts(SwishModule, R).
 
 retract_facts(_, []) :- !. 
-retract_facts(SwishModule, [F|R]) :- nonvar(F), %print_message(informational, "retracting: ~w"-[SwishModule:F]),
+retract_facts(SwishModule, [F|R]) :- nonvar(F), % print_message(informational, "retracting: ~w"-[SwishModule:F]),
     retract(SwishModule:F), retract_facts(SwishModule, R). 
 
 translate_command(English_String, Goal, Scenario) :-
@@ -895,8 +1112,8 @@ translate_command(English_String, Goal, Scenario) :-
     ; ( error_notice(error, Me,Pos, ContextTokens), print_message(error, [Me,Pos,ContextTokens]) ). 
 
 command_(Goal, Scenario) --> 
-    %order_, goal_(Goal), with_, scenario_(Scenario). 
-    goal_(Goal), with_, scenario_(Scenario).
+    %order_, goal_(Goal), with_, scenario_name_(Scenario). 
+    goal_(Goal), with_, scenario_name_(Scenario).
 command_(Goal, noscenario) --> 
     goal_(Goal).
 
@@ -913,7 +1130,7 @@ query_or_empty --> [].
 
 with_ --> [with], spaces(_).
 
-scenario_(Scenario) -->  scenario_or_empty_, extract_constant([], ScenarioWords), spaces(_), 
+scenario_name_(Scenario) -->  scenario_or_empty_, extract_constant([], ScenarioWords), spaces(_), 
 {name_as_atom(ScenarioWords, Scenario)}. % Scenario by name
 
 scenario_or_empty_ --> [scenario], spaces(_). 
@@ -1002,6 +1219,9 @@ user:resolve(Command, Question, Answers) :- resolve(Command, Question, Answers).
 user:answer( EnText) :- answer( EnText).
 user:answer( EnText, Goal, Result) :- answer( EnText, Goal, Result).
 
+user:is_it_true( EnText, Scenario) :- is_it_true( EnText, Scenario).
+user:holds(Fluent) :- holds(Fluent). 
+
 user:query(Name, Goal) :- query(Name, Goal).
 
 user:le_taxlog_translate( en(Text), Terms) :- le_taxlog_translate( en(Text), Terms).
@@ -1014,6 +1234,7 @@ le_taxlog_translate( en(Text), File, BaseLine, Terms) :-
     %combine_list_into_string(Decls, StringDecl),
 	%string_concat(StringDecl, Text, Whole_Text),
     %once( text_to_logic(Text, Terms) ),
+    %catch(text_to_logic(Text, Terms), Error, ( print_message(error, Error),  showErrors(File,BaseLine) ) ).
     text_to_logic(Text, Terms) -> true; showErrors(File,BaseLine).
         %write_taxlog_code(Translation, Terms)). 
 
