@@ -71,7 +71,8 @@ semantics2prolog(mainGoal(G,Description),delimiter-[Spec,classify],(mainGoal(G,D
     functor(G,F,N), functor(GG,F,N), % avoid "Singleton-marked variable appears more than once"
     taxlogBodySpec(G,Spec).
 semantics2prolog(example(T,Sequence),delimiter-[classify,Spec],example(T,Sequence)) :- !, 
-    (Sequence==[]->Spec=classify ; (Spec=list-SeqSpec, scenarioSequenceSpec(Sequence,SeqSpec))).
+    Spec = classify. % just a hack - scenarioSequenceSpec must be different for prolog's scenarios
+    %(Sequence==[]->Spec=classify ; (Spec=list-SeqSpec, scenarioSequenceSpec(Sequence,SeqSpec))).
 semantics2prolog(query(Name,Goal),delimiter-[classify,classify],query(Name,Goal)) :- !. 
 semantics2prolog(predicates(Assumptions), delimiter-[classify,classify],predicates([])) :-
     pengine_self(SwishModule),

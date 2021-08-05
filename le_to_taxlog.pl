@@ -77,13 +77,13 @@ which can then be used in the new command language interface of LE
 text_to_logic(String_, Translation) :-
     % hack to ensure a newline at the end, for the sake of error reporting:
     ((sub_atom(String_,_,1,0,NL), memberchk(NL,['\n','\r']) ) -> String=String_ ; atom_concat(String_,'\n',String)),
-    tokenize(String, Tokens, [cased(true), spaces(true)]),
+    tokenize(String, Tokens, [cased(true), spaces(true), numbers(false)]),
     retractall(last_nl_parsed(_)), asserta(last_nl_parsed(1)), % preparing line counting
     unpack_tokens(Tokens, UTokens), 
     clean_comments(UTokens, CTokens), 
     ( phrase(document(Translation), CTokens) -> 
         ( print_message(informational, "Translation: ~w"-[Translation]) )
-    ;   ( Translation=[])). 
+    ;   ( print_message(informational, "Translation failed: "-[]), Translation=[])). 
 
 document(Translation) --> 
     spaces_or_newlines(_),
@@ -259,13 +259,13 @@ statement(Statement) -->
             (Statement = [if(initiates(Event, Fluent), Body)]))}, !.
 
 % it is illegal that
-%   fluent
+%   event
 % if ... 
 statement(Statement) -->
     it_is_illegal_that_, spaces_or_newlines(_), 
-    literal_([], Map1, holds(Fluent)), body_(Body, Map1, _), period,
-    {(Body = [] -> Statement = [if(it_is_illegal(Fluent), true)]; 
-      Statement = [if(it_is_illegal(Fluent), Body)])},!. 
+    literal_([], Map1, happens(Event)), body_(Body, Map1, _), period,
+    {(Body = [] -> Statement = [if(it_is_illegal(Event), true)]; 
+      Statement = [if(it_is_illegal(Event), Body)])},!. 
 
 % a fact or a rule
 statement(Statement) --> 
@@ -312,6 +312,7 @@ literal_(Map1, MapN, FinalLiteral) -->
      (lists:member(Literal, Predicates) -> FinalLiteral = Literal 
       ; (lists:member(Literal, Fluents) -> FinalLiteral = holds(Literal)
         ; FinalLiteral = happens(Literal)))}, !.
+
 % rewritten to use in swish. Fixed! It was a name clash. Apparently "literal" is used somewhere else
 %literal_(Map1, MapN, Literal, In, Out) :-  print_message(informational, '  inside a literal'),
 %        predicate_template(PossibleTemplate, In, Out), print_message(informational, PossibleTemplate),
@@ -564,8 +565,8 @@ build_template(RawTemplate, Predicate, Arguments, TypesAndNames, Template) :-
 % build_template_elements(+Input, +Previous, -Args, -TypesNames, -OtherWords, -Template)
 build_template_elements([], _, [], [], [], []) :- !. 
 % a variable signalled by a *
-build_template_elements(['*', Word|RestOfWords], Previous, [Var|RestVars], [Name-Type|RestTypes], Others, [Var|RestTemplate]) :-
-    (ind_det(Word); ind_det_C(Word)), Previous \= [is|_], 
+build_template_elements(['*', Word|RestOfWords], _Previous, [Var|RestVars], [Name-Type|RestTypes], Others, [Var|RestTemplate]) :-
+    (ind_det(Word); ind_det_C(Word)), % Previous \= [is|_], % removing this requirement when * is used
     extract_variable(['*'], Var, NameWords, TypeWords, RestOfWords, ['*'|NextWords]), !, % <-- it must end with * too
     name_predicate(NameWords, Name), 
     name_predicate(TypeWords, Type), 
@@ -596,10 +597,18 @@ extract_variable(SW, Var, [Word|RestName], [Word|RestType], [Word|RestOfWords], 
     is_a_type(Word),
     extract_variable(SW, Var, RestName, RestType, RestOfWords, NextWords).
 
-name_predicate([Number], Number) :- number(Number), !. % a quick fix for numbers extracted as constants
+name_predicate([AtomNum,'.',AtomDecimal], Number) :-  
+    atomic_list_concat([AtomNum,'.',AtomDecimal], Atom), atom_number(Atom, Number). 
+name_predicate([Atom, '-'|Rest], Number-NRest) :- 
+    atom_number(Atom, Number), name_predicate(Rest, NRest), !. 
+name_predicate([Atom], Number) :- atom_number(Atom, Number), number(Number), !. % a quick fix for numbers extracted as constants
 name_predicate(Words, Predicate) :-
     concat_atom(Words, '_', Predicate). 
 
+name_as_atom([Number], Number) :-
+    number(Number), !. 
+name_as_atom([Atom], Number) :- 
+    atom_number(Atom, Number), !. 
 name_as_atom(Words, Name) :-
     replace_vars(Words, Atoms), concat_atom(Atoms, ' ', Name). 
 
@@ -674,27 +683,27 @@ match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, [Element|RestS
 match([Element|RestElements], [Det|PossibleLiteral], Map1, MapN, [Var|RestSelected]) :-
     var(Element), 
     determiner(Det), stop_words(RestElements, StopWords), 
-    extract_variable(StopWords, Var, NameWords, _, PossibleLiteral, NextWords),  NameWords \= [], !, % <-- CUT! % it is not empty % <- leave that _ unbound!
+    extract_variable(StopWords, Var, NameWords, _, PossibleLiteral, NextWords),  NameWords \= [], % <- leave that _ unbound!
     name_predicate(NameWords, Name), 
-    update_map(Var, Name, Map1, Map2), 
+    update_map(Var, Name, Map1, Map2), !,  % <-- CUT!  
     match(RestElements, NextWords, Map2, MapN, RestSelected). 
 % handling symbolic variables (as long as they have been previously defined and included in the map!) 
 match([Element|RestElements], PossibleLiteral, Map1, MapN, [Var|RestSelected]) :-
     var(Element), stop_words(RestElements, StopWords), 
-    extract_variable(StopWords, Var, NameWords, _, PossibleLiteral, NextWords),  NameWords \= [], !, % <-- CUT! % it is not empty % <- leave that _ unbound!
+    extract_variable(StopWords, Var, NameWords, _, PossibleLiteral, NextWords),  NameWords \= [], % <- leave that _ unbound!
     name_predicate(NameWords, Name), 
-    consult_map(Var, Name, Map1, Map2), % if the variables has been previously registered
+    consult_map(Var, Name, Map1, Map2), !, % <-- CUT!  % if the variables has been previously registered
     match(RestElements, NextWords, Map2, MapN, RestSelected).
+match([Element|RestElements], ['['|PossibleLiteral], Map1, MapN, [List|RestSelected]) :-
+    var(Element), stop_words(RestElements, StopWords),
+    extract_list(StopWords, List, Map1, Map2, PossibleLiteral, [']'|NextWords]), !, % matching brackets verified
+    match(RestElements, NextWords, Map2, MapN, RestSelected). 
 match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, [Constant|RestSelected]) :-
     var(Element), stop_words(RestElements, StopWords),
     extract_constant(StopWords, NameWords, [Word|PossibleLiteral], NextWords), NameWords \= [], !, % <-- CUT!  % it is not empty
     name_predicate(NameWords, Constant),
     %print_message(informational, 'found a constant '), print_message(informational, Constant),
     match(RestElements, NextWords, Map1, MapN, RestSelected). 
-match([Element|RestElements], ['['|PossibleLiteral], Map1, MapN, [List|RestSelected]) :-
-    var(Element), stop_words(RestElements, StopWords),
-    extract_list(StopWords, List, Map1, Map2, PossibleLiteral, [']'|NextWords]), % matching brackets verified
-    match(RestElements, NextWords, Map2, MapN, RestSelected). 
 
 stop_words([], []).
 stop_words([Word|_], [Word]) :- nonvar(Word). % only the next word for now
@@ -771,7 +780,7 @@ update_map(V, Name, InMap, OutMap) :-  % updates the map by adding a new variabl
 
 % consult_map(+V, -Name, +Inmap, -OutMap)
 consult_map(V, Name, InMap, InMap) :-
-    member(map(Var, SomeName), InMap), Var = V, Name == SomeName, !.  
+    member(map(Var, SomeName), InMap), (Name = SomeName -> Var = V; ( Var == V -> Name = SomeName ; fail ) ),  !.  
 %consult_map(V, V, Map, Map). % leave the name unassigned % deprecated to be used inside match
 
 builtin_(BuiltIn, [BuiltIn1, BuiltIn2|RestWords], RestWords) :- 
@@ -842,7 +851,7 @@ reserved_word(W) :- % more reserved words pending??
     W = 'at'; W= 'from'; W='to';  W='half'; % W='or'; W='and'; % leaving and/or out of this for now
     W = 'else'; W = 'otherwise'; 
     W = such ; 
-    W = '<'; W = '='; W = '>'; W = '+'; W = '-'; W = '/'; W = '*';
+    W = '<'; W = '='; W = '>'; % W = '+'; W = '-'; W = '/'; W = '*'; % these must be handled by parsing
     W = '{' ; W = '}' ; W = '(' ; W = ')' ; W = '[' ; W = ']';
     W = ':', W = ','; W = ';'.
 reserved_word(P) :- punctuation(P).
@@ -984,28 +993,41 @@ must_be(A, nonvar) :- nonvar(A).
 must_be_nonvar(A) :- nonvar(A).
 must_not_be(A,B) :- not(must_be(A,B)). 
 
+before(Year1-(_-(_-(_-(_-_)))), Year2-(_-(_-(_-(_-_))))) :- nonvar(Year1), nonvar(Year2), Year1 < Year2, !. 
+before(Year-(Month1-(_-(_-(_-_)))), Year-(Month2-(_-(_-(_-_))))) :- nonvar(Month1), nonvar(Month2), Month1 < Month2, !. 
+before(Year-(Month-(Day1-(_-(_-_)))), Year-(Month-(Day2-(_-(_-_))))) :- nonvar(Day1), nonvar(Day2), Day1 < Day2, !. 
+before(Year-(Month-(Day-(Hour1-(_-_)))), Year-(Month-(Day-(Hour2-(_-_))))) :- nonvar(Hour1), nonvar(Hour2), Hour1 < Hour2, !.
+before(Year-(Month-(Day-(Hour-(Min1-_)))), Year-(Month-(Day-(Hour-(Min2-_))))) :-nonvar(Min1), nonvar(Min2), Min1 < Min2, !.
+before(Year-(Month-(Day-(Hour-(Min-Sec1)))), Year-(Month-(Day-(Hour-(Min-Sec2))))) :- nonvar(Sec1), nonvar(Sec2), Sec1 < Sec2, !.
+before(A,B) :- nonvar(A), nonvar(B), number(A), number(B), A < B. 
+
 /* ----------------------------------------------------------------- Event Calculus CLI */
 
 is_it_true(English, Scenario) :-
     translate_query(English, Question), % later -->, Kbs),
     %print_message(informational, "Goal Name: ~w"-[GoalName]),
     pengine_self(SwishModule), %SwishModule:query(GoalName, Goal), 
-    (Question = holds(Goal)-> Command = le_to_taxlog:Question ;
-        ( Question = happens(Goal) ->  true ; Question = Goal), Command = SwishModule:Question ), 
+    extract_goal_command(Question, SwishModule, Goal, Command), 
     copy_term(Goal, CopyOfGoal), 
     get_answer_from_goal(CopyOfGoal, EnglishQuestion), 
     print_message(informational, "Question: ~w"-[EnglishQuestion]),
     print_message(informational, "Scenario: ~w"-[Scenario]),
-    % assert facts in scenario
-    (Scenario==noscenario -> Facts = [] ; SwishModule:example(Scenario, [scenario(Facts, _)])), 
-    %print_message(informational, "Facts: ~w"-[Facts]), 
-    setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
+    get_assumptions_from_scenario(Scenario, SwishModule, Assumptions), 
+    setup_call_catcher_cleanup(assert_facts(SwishModule, Assumptions), 
             %catch(SwishModule:holds(Goal), Error, ( print_message(error, Error), fail ) ), 
             catch(Command, Error, ( print_message(error, Error), fail ) ), 
             _Result, 
-            retract_facts(SwishModule, Facts)), 
+            retract_facts(SwishModule, Assumptions)), 
     get_answer_from_goal(Goal, EnglishAnswer),  
     print_message(informational, "Answers: ~w"-[EnglishAnswer]).
+
+extract_goal_command(holds(Goal), _, Goal, le_to_taxlog:holds(Goal)) :- !.
+extract_goal_command(happens(Goal), M, Goal, M:happens(Goal)) :- !.
+extract_goal_command(Goal, M, Goal, M:Goal).
+
+get_assumptions_from_scenario(noscenario, _, []) :- !.  
+get_assumptions_from_scenario(Scenario, SwishModule, Assumptions) :-
+    SwishModule:example(Scenario, [scenario(Assumptions, _)]).
 
 translate_query(English_String, Goal) :-
     tokenize(English_String, Tokens, [cased(true), spaces(true)]),
@@ -1031,7 +1053,7 @@ interrupted(T1, Fluent, T) :-
 happens(it_is_the_end_of(T)) :- T = _-_-_-00-00-00. 
 
 /* ----------------------------------------------------------------- CLI English */
-answer(English) :-
+answer(English) :-  
     translate_command(English, GoalName, Scenario), % later -->, Kbs),
     %print_message(informational, "Goal Name: ~w"-[GoalName]),
     pengine_self(SwishModule), SwishModule:query(GoalName, Goal), 
@@ -1075,11 +1097,11 @@ get_answer_from_goal(Goal, [Answer]) :-
     Goal =.. GoalElements, dict(GoalElements, _, WordsAnswer), name_as_atom(WordsAnswer, Answer). 
 
 assert_facts(_, []) :- !. 
-assert_facts(SwishModule, [F|R]) :- nonvar(F), %print_message(informational, "asserting: ~w"-[SwishModule:F]),
+assert_facts(SwishModule, [F|R]) :- nonvar(F), % print_message(informational, "asserting: ~w"-[SwishModule:F]),
     asserta(SwishModule:F), assert_facts(SwishModule, R).
 
 retract_facts(_, []) :- !. 
-retract_facts(SwishModule, [F|R]) :- nonvar(F), %print_message(informational, "retracting: ~w"-[SwishModule:F]),
+retract_facts(SwishModule, [F|R]) :- nonvar(F), % print_message(informational, "retracting: ~w"-[SwishModule:F]),
     retract(SwishModule:F), retract_facts(SwishModule, R). 
 
 translate_command(English_String, Goal, Scenario) :-
@@ -1090,8 +1112,8 @@ translate_command(English_String, Goal, Scenario) :-
     ; ( error_notice(error, Me,Pos, ContextTokens), print_message(error, [Me,Pos,ContextTokens]) ). 
 
 command_(Goal, Scenario) --> 
-    %order_, goal_(Goal), with_, scenario_(Scenario). 
-    goal_(Goal), with_, scenario_(Scenario).
+    %order_, goal_(Goal), with_, scenario_name_(Scenario). 
+    goal_(Goal), with_, scenario_name_(Scenario).
 command_(Goal, noscenario) --> 
     goal_(Goal).
 
@@ -1108,7 +1130,7 @@ query_or_empty --> [].
 
 with_ --> [with], spaces(_).
 
-scenario_(Scenario) -->  scenario_or_empty_, extract_constant([], ScenarioWords), spaces(_), 
+scenario_name_(Scenario) -->  scenario_or_empty_, extract_constant([], ScenarioWords), spaces(_), 
 {name_as_atom(ScenarioWords, Scenario)}. % Scenario by name
 
 scenario_or_empty_ --> [scenario], spaces(_). 
@@ -1212,6 +1234,7 @@ le_taxlog_translate( en(Text), File, BaseLine, Terms) :-
     %combine_list_into_string(Decls, StringDecl),
 	%string_concat(StringDecl, Text, Whole_Text),
     %once( text_to_logic(Text, Terms) ),
+    %catch(text_to_logic(Text, Terms), Error, ( print_message(error, Error),  showErrors(File,BaseLine) ) ).
     text_to_logic(Text, Terms) -> true; showErrors(File,BaseLine).
         %write_taxlog_code(Translation, Terms)). 
 
