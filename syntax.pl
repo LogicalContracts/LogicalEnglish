@@ -90,7 +90,7 @@ semantics2prolog(fluents(Assumptions), delimiter-[classify,classify],fluents([])
 
 declare_facts_as_dynamic(_, []) :- !. 
 declare_facts_as_dynamic(M, [F|R]) :- functor(F, P, A),  % facts are the templates now
-    dynamic([M:P/A], [thread(local)]), declare_facts_as_dynamic(M, R). 
+    dynamic([M:P/A], [thread(local), discontiguous(true)]), declare_facts_as_dynamic(M, R). 
 
 % note: keep the above cases coherent with kp_loader:system_predicate/1
 
