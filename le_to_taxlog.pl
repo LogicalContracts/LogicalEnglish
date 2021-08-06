@@ -226,7 +226,7 @@ query_content(Query) -->
     {name_as_atom(NameWords, Name), Query = [query(Name, Conds)]}. 
 
 query_content(_, Rest, _) :- 
-    asserterror('LE error found in a literal ', Rest), fail.
+    asserterror('LE error found around this expression: ', Rest), fail.
 
 % (holds_at(_149428,_149434) if 
 % (happens_at(_150138,_150144),
@@ -944,7 +944,7 @@ asserterror(Me, Rest) :-
     RelevantN is N-1,
     length(Relevant,RelevantN), append(Relevant,_,Rest),
     findall(Token, (member(T,Relevant), (T=newline(_) -> Token='\n' ; Token=T)), Tokens),
-    assert(error_notice(error, Me, LineNumber, Tokens)).
+    asserta(error_notice(error, Me, LineNumber, Tokens)). % asserting the last first!
 
 % to select just a chunck of Rest to show. 
 select_first_section([], _, []) :- !.
@@ -953,12 +953,17 @@ select_first_section([E|R], N, [E|NR]) :-
     N > 0, NN is N - 1,
     select_first_section(R, NN, NR). 
 
-showErrors(File,Baseline) :- 
-    forall(error_notice(error, Me,Pos, ContextTokens), (
-        atomic_list_concat([Me,': '|ContextTokens],ContextTokens_),
-        Line is Pos+Baseline,
-        print_message(error,error(syntax_error(ContextTokens_),file(File,Line,_One,_Char)))
-        )).
+showErrors(File,Baseline) :- % showing only the last message!
+    error_notice(error, Me,Pos, ContextTokens), 
+    atomic_list_concat([Me,': '|ContextTokens],ContextTokens_),
+    Line is Pos+Baseline,
+    print_message(error,error(syntax_error(ContextTokens_),file(File,Line,_One,_Char))).
+    % to show them all
+    %forall(error_notice(error, Me,Pos, ContextTokens), (
+    %    atomic_list_concat([Me,': '|ContextTokens],ContextTokens_),
+    %    Line is Pos+Baseline,
+    %    print_message(error,error(syntax_error(ContextTokens_),file(File,Line,_One,_Char)))
+    %    )).
 
 % to pinpoint exactly the error. But position is not right
 explain_error(String, Me-Pos, Message) :-
@@ -986,7 +991,13 @@ dictionary(Predicate, VariablesNames, Template) :-
 predef_dict([member, Member, List], [member-object, list-list], [Member, is, in, List]).
 predef_dict([assert,Information], [info-clause], [this, information, Information, ' has', been, recorded]).
 predef_dict([is_a, Object, Type], [object-object, type-type], [Object, is, of, type, Type]).
-predef_dict([before, T1, T2], [time1-time, time2-time], [T1, is, before, T2]).
+predef_dict([before, T1, T2], [time1-time, time2-time], [T1, is, before, T2]). % see reasoner.pl before/2
+predef_dict([after, T1, T2], [time1-time, time2-time], [T1, is, after, T2]).  % see reasoner.pl before/2
+predef_dict([is_not_before, T1, T2], [time1-time, time2-time], [T1, is, not, before, T2]). % see reasoner.pl before/2
+predef_dict([immediately_before, T1, T2], [time1-time, time2-time], [T1, is, immediately, before, T2]). % see reasoner.pl before/2
+predef_dict([same_date, T1, T2], [time1-time, time2-time], [T1, is, the, same, date, as, T2]). % see reasoner.pl before/2
+predef_dict([=, T1, T2], [time1-time, time2-time], [T1, is, equal, to, T2]).
+predef_dict([\=, T1, T2], [time1-time, time2-time], [T1, is, different, from, T2]).
 predef_dict([between,Minimum,Maximum,Middle], [min-date, max-date, middle-date], 
     [Middle, is, between, Minimum, &, Maximum]).
 predef_dict([must_be, Type, Term], [type-type, term-term], [Term, must, be, Type]).

@@ -13,7 +13,6 @@ the timeless predicates are:
   *a borrower* represents-warrants *a requirement*, 
   *an amount* is the total due,
 
-
 the time-varying predicates are:
   *a lender* is liable to litigation after *a date*,
   *a borrower* requested *an amount* on *a date*,
@@ -96,8 +95,7 @@ it becomes the case that
     borrower paid an amount to lender on a date
 when 
     borrower pays the amount to lender on a payment date
-if it is the date
-and the payment day is before the date. 
+if it is the payment date. 
     
 it is illegal that
     borrower pays an amount to lender on a first date
@@ -177,7 +175,6 @@ and a sum is the total due
 and it is not the case that
     borrower paid the sum to lender on the previous date. 
 
-    
 It becomes the case that
     agreement is terminated at a time
 when
@@ -198,10 +195,10 @@ and borrower paid 550 to lender on a second date.
     if it is not the case that
     	borrower paid 550 to lender on a date. 
 
-%525 is the total due
-%    if borrower paid 550 to lender on a date
-%	and it is not the case that
-%    	borrower paid 525 to lender on a second date.    
+525 is the total due
+	if borrower paid 550 to lender on a date
+	and it is not the case that
+    	borrower paid 525 to lender on a  date. 
 
 scenario test1 is:
     it is the end of 2014-06-01T00:00:00.
@@ -230,6 +227,9 @@ query 5 is:
 
 query 6 is:
     the agreement is terminated at a date.
+    
+query 7 is:
+    borrower paid 525 to lender on a date.
    
 ").
 
