@@ -68,7 +68,7 @@ which can then be used in the new command language interface of LE
 :- use_module(library(pengines)).
 :- use_module('reasoner.pl').
 :- thread_local literal/5, text_size/1, error_notice/4, dict/3, 
-                last_nl_parsed/1, kbname/1, happens/1, initiates/2, terminates/2,
+                last_nl_parsed/1, kbname/1, happens/2, initiates/3, terminates/3,
                 predicates/1, events/1, fluents/1. 
 :- discontiguous statement/3, declaration/4.
 
@@ -241,12 +241,12 @@ query_content(_, Rest, _) :-
 % if  
 statement(Statement) --> 
     it_becomes_the_case_that_, spaces_or_newlines(_), 
-        literal_([], Map1, holds(Fluent)), spaces_or_newlines(_), 
+        literal_([], Map1, holds(Fluent, _)), spaces_or_newlines(_), 
     when_, spaces_or_newlines(_), 
-        literal_(Map1, Map2, happens(Event)), spaces_or_newlines(_),
+        literal_(Map1, Map2, happens(Event, T)), spaces_or_newlines(_),
     body_(Body, Map2,_), period,  
-        {(Body = [] -> Statement = [if(initiates(Event, Fluent), true)]; 
-            (Statement = [if(initiates(Event, Fluent), Body)]))}, !.
+        {(Body = [] -> Statement = [if(initiates(Event, Fluent, T), true)]; 
+            (Statement = [if(initiates(Event, Fluent, T), Body)]))}, !.
 
 % it becomes not the case that
 %   fluent
@@ -255,12 +255,12 @@ statement(Statement) -->
 % if  
 statement(Statement) --> 
     it_becomes_not_the_case_that_, spaces_or_newlines(_), 
-        literal_([], Map1, holds(Fluent)), spaces_or_newlines(_),
+        literal_([], Map1, holds(Fluent, _)), spaces_or_newlines(_),
     when_, spaces_or_newlines(_),
-        literal_(Map1, Map2, happens(Event)), spaces_or_newlines(_),
+        literal_(Map1, Map2, happens(Event, T)), spaces_or_newlines(_),
     body_(Body, Map2,_), period,  
-        {(Body = [] -> Statement = [if(terminates(Event, Fluent), true)];  
-            (Statement = [if(initiates(Event, Fluent), Body)]))}, !.
+        {(Body = [] -> Statement = [if(terminates(Event, Fluent, T), true)];  
+            (Statement = [if(initiates(Event, Fluent, T), Body)]))}, !.
 
 % it is illegal that
 %   event
@@ -312,12 +312,30 @@ newline_or_nothing --> [].
 % it then tries to match those words against a template in memory (see dict/3 predicate).
 % The output is then contigent to the type of literal according to the declarations. 
 literal_(Map1, MapN, FinalLiteral) --> 
+    at_time(T, Map1, Map2), comma, predicate_template(PossibleTemplate),  
+    {match_template(PossibleTemplate, Map2, MapN, Literal),
+     (fluents(Fluents) -> true; Fluents = []),
+     (events(Events) -> true; Events = []),
+     (lists:member(Literal, Events) -> FinalLiteral = happens(Literal, T) 
+      ; (lists:member(Literal, Fluents) -> FinalLiteral = holds(Literal, T)
+        ; FinalLiteral = Literal))}, !. % by default (including builtins) they are timeless!
+
+literal_(Map1, MapN, FinalLiteral) --> 
+    predicate_template(PossibleTemplate), comma, at_time(T, Map1, Map2),  
+    {match_template(PossibleTemplate, Map2, MapN, Literal),
+     (fluents(Fluents) -> true; Fluents = []),
+     (events(Events) -> true; Events = []),
+     (lists:member(Literal, Events) -> FinalLiteral = happens(Literal, T) 
+      ; (lists:member(Literal, Fluents) -> FinalLiteral = holds(Literal, T)
+        ; FinalLiteral = Literal))}, !. % by default (including builtins) they are timeless!
+
+literal_(Map1, MapN, FinalLiteral) --> 
     predicate_template(PossibleTemplate),
     {match_template(PossibleTemplate, Map1, MapN, Literal),
      (fluents(Fluents) -> true; Fluents = []),
      (events(Events) -> true; Events = []),
-     (lists:member(Literal, Events) -> FinalLiteral = happens(Literal) 
-      ; (lists:member(Literal, Fluents) -> FinalLiteral = holds(Literal)
+     (lists:member(Literal, Events) -> FinalLiteral = happens(Literal, _T) 
+      ; (lists:member(Literal, Fluents) -> FinalLiteral = holds(Literal, _T)
         ; FinalLiteral = Literal))}, !. % by default (including builtins) they are timeless!
 
 % rewritten to use in swish. Fixed! It was a name clash. Apparently "literal" is used somewhere else
@@ -436,6 +454,8 @@ prolog_literal_(Prolog, Map1, MapN) -->
 predicate_name_(Module:Predicate) --> 
     [Module], colon_, extract_constant([], NameWords), { name_predicate(NameWords, Predicate) }, !.
 predicate_name_(Predicate) --> extract_constant([], NameWords), { name_predicate(NameWords, Predicate) }.
+
+at_time(T, Map1, MapN) --> spaces_or_newlines(_), at_, term_(T, Map1, MapN), spaces_or_newlines(_).
 
 spaces(N) --> [' '], !, spaces(M), {N is M + 1}.
 spaces(N) --> ['\t'], !, spaces(M), {N is M + 1}. % counting tab as one space
@@ -668,16 +688,35 @@ operator(and, In, Out) :- and_(In, Out).
 operator(or, In, Out) :- or_(In, Out).
 
 % cuts added to improve efficiency
+% skipping a list
+predicate_template(Final, ['['|RestIn], Out) :- !, 
+    predicate_template_for_lists(List, RestIn, Next),  
+    predicate_template(RestW, Next, Out),
+    append(['['|List], RestW, Final).  
 predicate_template(RestW, [' '|RestIn], Out) :- !, % skip spaces in template
     predicate_template(RestW, RestIn, Out).
 predicate_template(RestW, ['\t'|RestIn], Out) :- !, % skip tabs in template
     predicate_template(RestW, RestIn, Out).
 predicate_template([Word|RestW], [Word|RestIn], Out) :- 
     %not(lists:member(Word,['\n', if, and, or, '.', ','])),  !, 
-    not(lists:member(Word,[newline(_), if, '.'])),  % leaving the comma out as well (for lists and sets)
+    not(lists:member(Word,[newline(_), if, '.', ','])), 
+    % leaving the comma in as well (for lists and sets we will have to modify this)
     predicate_template(RestW, RestIn, Out).
 predicate_template([], [], []). 
 predicate_template([], [Word|Rest], [Word|Rest]) :- 
+    lists:member(Word,[',', newline(_), if, '.', ',']). % leaving or/and out of this
+
+% using [ and ] for list and set only
+predicate_template_for_lists([], [], []) :- !.
+predicate_template_for_lists([']'], [']'|Out], Out) :- !. 
+predicate_template_for_lists(RestW, [' '|RestIn], Out) :- !, % skip spaces in template
+    predicate_template_for_lists(RestW, RestIn, Out).
+predicate_template_for_lists(RestW, ['\t'|RestIn], Out) :- !, % skip tabs in template
+    predicate_template_for_lists(RestW, RestIn, Out).
+predicate_template_for_lists([Word|RestW], [Word|RestIn], Out) :- 
+    %not(lists:member(Word,['\n', if, and, or, '.', ','])),  !, 
+    predicate_template_for_lists(RestW, RestIn, Out).
+predicate_template_for_lists([], [Word|Rest], [Word|Rest]) :- 
     lists:member(Word,[',', newline(_), if, '.']). % leaving or/and out of this
 
 match_template(PossibleLiteral, Map1, MapN, Literal) :- 
@@ -1046,8 +1085,8 @@ is_it_illegal(English, Scenario) :- % only event as possibly illegal for the tim
     get_answer_from_goal(Goal, EnglishAnswer),  
     print_message(informational, "Answers: ~w"-[EnglishAnswer]).
 
-extract_goal_command(holds(Goal), _, Goal, le_to_taxlog:holds(Goal)) :- !.
-extract_goal_command(happens(Goal), M, Goal, M:happens(Goal)) :- !.
+extract_goal_command(holds(Goal,T), _, Goal, le_to_taxlog:holds(Goal,T)) :- !.
+extract_goal_command(happens(Goal,T), M, Goal, M:happens(Goal,T)) :- !.
 extract_goal_command(Goal, M, Goal, M:Goal).
 
 get_assumptions_from_scenario(noscenario, _, []) :- !.  
@@ -1063,10 +1102,12 @@ translate_query(English_String, Goal) :-
 
 /* ----------------------------------------------------------------- Event Calculus  */
 
-holds(Fluent) :- print_message(informational, "It is true? ~w"-[Fluent]), 
+holds(Fluent, T) :- print_message(informational, "It is true ~w at ~w ?"-[Fluent, T]), 
     pengine_self(SwishModule),
-    SwishModule:happens(Event), time_of(Fluent, T), SwishModule:initiates(Event, Fluent), 
-    time_of(Event, T1), T1 =< T, not(interrupted(T1, Fluent, T)), !.
+    SwishModule:happens(Event, T1), 
+    SwishModule:initiates(Event, Fluent, T1), 
+    (nonvar(T) -> T1 =< T; true ), 
+    not(interrupted(T1, Fluent, T)), !.
 
 % temporary hack while we find a way to signal fluents from the rest
 %holds(NoFluent) :- 
@@ -1075,9 +1116,11 @@ holds(Fluent) :- print_message(informational, "It is true? ~w"-[Fluent]),
 
 interrupted(T1, Fluent, T) :-
     pengine_self(SwishModule),
-    SwishModule:happens(Event2), SwishModule:terminates(Event2, Fluent), time_of(Event2, T2), T1 =< T2, T2 =< T.  
+    SwishModule:happens(Event2, T2), 
+    SwishModule:terminates(Event2, Fluent, T2), T1 =< T2, 
+    (nonvar(T) -> T2 =< T; true ).  
 
-happens(it_is_the_end_of(T)) :- T = _-_-_-00-00-00. 
+happens(it_is_the_end_of(T), _) :- T = _-_-_-00-00-00.  % needed?
 
 /* ----------------------------------------------------------------- CLI English */
 answer(English) :-  
@@ -1247,7 +1290,7 @@ user:answer( EnText) :- answer( EnText).
 user:answer( EnText, Goal, Result) :- answer( EnText, Goal, Result).
 
 user:is_it_illegal( EnText, Scenario) :- is_it_illegal( EnText, Scenario).
-user:holds(Fluent) :- holds(Fluent). 
+user:holds(Fluent, T) :- holds(Fluent, T). 
 
 user:query(Name, Goal) :- query(Name, Goal).
 

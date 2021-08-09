@@ -80,7 +80,7 @@ semantics2prolog(predicates(Assumptions), delimiter-[classify,classify],predicat
     %print_message(informational, "asserted: ~w"-[Assumptions]).
 semantics2prolog(events(Assumptions), delimiter-[classify,classify],events([])) :-
     pengine_self(SwishModule),
-    declare_facts_as_dynamic(SwishModule, [happens(_), initiates(_,_), terminates(_,_)|Assumptions]).
+    declare_facts_as_dynamic(SwishModule, [happens(_,_), initiates(_,_,_), terminates(_,_,_)|Assumptions]).
 semantics2prolog(fluents(Assumptions), delimiter-[classify,classify],fluents([])) :-
     pengine_self(SwishModule),
     declare_facts_as_dynamic(SwishModule, [it_is_illegal(_)|Assumptions]).
