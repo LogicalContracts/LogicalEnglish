@@ -83,7 +83,7 @@ semantics2prolog(events(Assumptions), delimiter-[classify,classify],events([])) 
     declare_facts_as_dynamic(SwishModule, [happens(_,_), initiates(_,_,_), terminates(_,_,_)|Assumptions]).
 semantics2prolog(fluents(Assumptions), delimiter-[classify,classify],fluents([])) :-
     pengine_self(SwishModule),
-    declare_facts_as_dynamic(SwishModule, [it_is_illegal(_)|Assumptions]).
+    declare_facts_as_dynamic(SwishModule, [it_is_illegal(_,_)|Assumptions]).
 
 % assuming one example -> one scenario -> one list of facts. % deprecated
 % declare_dynamic(Module, [scenario(Facts, _)]) :- declare_facts_as_dynamic(Module, Facts).
