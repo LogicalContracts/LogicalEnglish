@@ -11,7 +11,7 @@ the timeless predicates are:
   *a reason* is that *a person* is bankrupted by insolvency,
   *a borrower* represents-warrants *a requirement*, 
   *an amount* is the total due,
-  *a borrower* convenants *a covenance*,
+  *a borrower* covenants *a covenance*,
 
 the time-varying predicates are:
   *a lender* is liable to litigation,
@@ -39,7 +39,7 @@ the event predicates are:
   *a borrower* goes bankrupt,
   *a borrower* is insolvent, 
   *a requirement* is proved untrue,
-  *a requirement* is failure to perfom,
+  *a requirement* is failure to perform,
 
 the knowledge base Loan includes:
 
@@ -155,13 +155,13 @@ borrower represents-warrants warrants information.
 
 % Article 5
 
-%It becomes the case that
-%    a requirement is potentially defaulted
-%when
-%    the requirement is failure to perform 
-%if borrower covenants the requirement. 
+It becomes the case that
+    a requirement is potentially defaulted
+when
+    the requirement is failure to perform 
+if borrower covenants the requirement. 
 
-%borrower covenants covenants information. 
+a borrower covenants covenants information. 
 
 % Article 6
     
@@ -202,10 +202,10 @@ and borrower paid 550 to lender on a second date.
 
 scenario test1 is:
      it is the end of 2014-06-01T00:00:00.
-     borrower requests 1000.
-     lender advances 1000.
-     borrower pays 550 to lender on 2015-06-01T12:00:00.
-     borrower pays 525 to lender on 2016-06-01T12:00:00.
+     borrower requests 1000, at 2014-06-01T00:00:00.
+     lender advances 1000, at 2014-06-02T00:00:00.
+     borrower pays 550 to lender, at 2015-06-01T12:00:00.
+     borrower pays 525 to lender, at 2016-06-01T12:00:00.
 
 scenario test2 is:
     it is 2014-08-02T00:00:00.
@@ -235,5 +235,5 @@ query 7 is:
 
 /** <examples>
 ?- answer("1 with test2").
-?- is_it_illegal("borrower pays an amount to lender on a date", test2). 
-*/
+?- is_it_illegal("borrower pays an amount to lender, at a date", test2). 
+?- answer("2 with test1").
