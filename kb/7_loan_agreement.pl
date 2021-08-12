@@ -201,11 +201,12 @@ and borrower paid 550 to lender on a second date.
     	borrower paid 525 to lender on a  date. 
 
 scenario test1 is:
-     it is the end of 2014-06-01T00:00:00.
-     borrower requests 1000, at 2014-06-01T00:00:00.
-     lender advances 1000, at 2014-06-02T00:00:00.
-     borrower pays 550 to lender, at 2015-06-01T12:00:00.
-     borrower pays 525 to lender, at 2016-06-01T12:00:00.
+    it is 2014-08-02T00:00:00.
+    it is the end of 2014-06-01.
+    borrower requests 1000, at 2014-06-01T00:00:00.
+     %lender advances 1000, at 2014-06-02T00:00:00.
+     %borrower pays 550 to lender, at 2015-06-01T12:00:00.
+     %borrower pays 525 to lender, at 2016-06-01T12:00:00.
 
 scenario test2 is:
     it is 2014-08-02T00:00:00.
@@ -237,3 +238,4 @@ query 7 is:
 ?- answer("1 with test2").
 ?- is_it_illegal("borrower pays an amount to lender, at a date", test2). 
 ?- answer("2 with test1").
+*/
