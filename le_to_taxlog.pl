@@ -723,6 +723,13 @@ match_template(PossibleLiteral, Map1, MapN, Literal) :-
 
 % match(+CandidateTemplate, +PossibleLiteral, +MapIn, -MapOut, -SelectedTemplate)
 match([], [], Map, Map, []) :- !.  % success! It succeds iff PossibleLiteral is totally consumed
+% meta level access: that New Literal
+match([Word|_LastElement], [Word|PossibleLiteral], Map1, MapN, [Word,Literal]) :- % asuming Element is last in template!
+    Word = that, % that is a reserved word "inside" templates! -> <meta level> that <object level> 
+    dictionary(Predicate, _, Candidate), % searching for a new inner literal
+    match(Candidate, PossibleLiteral, Map1, MapN, InnerTemplate),
+    dictionary(Predicate, _, InnerTemplate), 
+    Literal =.. Predicate, !. 
 match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, [Element|RestSelected]) :-
     nonvar(Element), Word = Element, 
     match(RestElements, PossibleLiteral, Map1, MapN, RestSelected). 
@@ -755,21 +762,22 @@ match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, [Expression|Re
 %expression_(List, MapIn, MapOut) --> list_(List, MapIn, MapOut), !. 
 % expression_ resolve simple math (non boolean) expressions fttb. 
 % dates must be dealt with first  
-% 2021-02-06T08:25:34
-expression_(Date, Map, Map) --> 
+% 2021-02-06T08:25:34 is transformed into 1612599934.0.
+expression_(DateInSeconds, Map, Map) --> 
     [Year,'-', Month, '-', DayTHours,':', Minutes, ':', Seconds], spaces(_),
-    { concat_atom([Year,'-', Month, '-', DayTHours,':', Minutes, ':', Seconds], '', Date) }, !.
+    { concat_atom([Year,'-', Month, '-', DayTHours,':', Minutes, ':', Seconds], '', Date), 
+      parse_time(Date,DateInSeconds) }, !.
 % 2021-02-06
-expression_(Date, Map, Map) -->  [Year,'-', Month, '-', Day],  spaces(_),
-    { concat_atom([Year, Month, Day], '', Date) }, !. 
-% basic float
+expression_(DateInSeconds, Map, Map) -->  [Year,'-', Month, '-', Day],  spaces(_),
+    { concat_atom([Year, Month, Day], '', Date), parse_time(Date, DateInSeconds) }, !. 
+% basic float  extracted from atoms from the tokenizer
 expression_(Float, Map, Map) --> [AtomNum,'.',AtomDecimal],
         { atom(AtomNum), atom(AtomDecimal), atomic_list_concat([AtomNum,'.',AtomDecimal], Atom), atom_number(Atom, Float) }, !.
 % mathematical expressions
 expression_(InfixBuiltIn, Map1, MapN) --> 
     term_(Term, Map1, Map2), spaces(_), binary_op(BuiltIn), !, 
     spaces(_), expression_(Expression, Map2, MapN), spaces(_), {InfixBuiltIn =.. [BuiltIn, Term, Expression]}.  
-% a quick fix for numbers extracted as constants
+% a quick fix for integer numbers extracted from atoms from the tokenizer
 expression_(Number, Map, Map) --> [Atom],  spaces(_), { atom(Atom), atom_number(Atom, Number) }, !. 
 expression_(Var, Map1, Map2) -->  variable(Var, Map1, Map2), !.
 expression_(Constant, Map1, Map2) -->  constant(Constant, Map1, Map2).     
@@ -1072,8 +1080,8 @@ spypoint(A,A). % for debugging
 % with the Prolog expression of that relation in LiteralElements (not yet a predicate, =.. is done elsewhere).
 % NamesAndTypes contains the external name and type (name-type) of each variable just in the other in 
 % which the variables appear in LiteralElement. 
-dictionary(Predicate, VariablesNames, Template) :- 
-    predef_dict(Predicate, VariablesNames, Template); dict(Predicate, VariablesNames, Template).
+dictionary(Predicate, VariablesNames, Template) :- dict(Predicate, VariablesNames, Template).
+    %predef_dict(Predicate, VariablesNames, Template); dict(Predicate, VariablesNames, Template).
 
 :- discontiguous predef_dict/3.
 % predefined entries:
@@ -1089,6 +1097,12 @@ predef_dict([=, T1, T2], [time1-time, time2-time], [T1, is, equal, to, T2]).
 predef_dict([\=, T1, T2], [time1-time, time2-time], [T1, is, different, from, T2]).
 %predef_dict([=<, T1, T2], [time1-time, time2-time], [T1, =, <, T2]).
 %predef_dict([>=, T1, T2], [time1-time, time2-time], [T1, >, =, T2]).
+predef_dict([is_1_day_after, A, B],
+                  [date-date, second_date-date],
+                  [A, is, '1', day, after, B]).
+predef_dict([is_days_after, A, B, C],
+                  [date-date, number-number, second_date-date],
+                  [A, is, B, days, after, C]).
 predef_dict([between,Minimum,Maximum,Middle], [min-date, max-date, middle-date], 
     [Middle, is, between, Minimum, &, Maximum]).
 predef_dict([must_be, Type, Term], [type-type, term-term], [Term, must, be, Type]).
@@ -1189,7 +1203,7 @@ answer(English) :-
     extract_goal_command(Goal, SwishModule, _InnerGoal, Command),
     print_message(informational, "Command: ~w"-[Command]),
     setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
-            catch((true, Command), Error, ( print_message(error, Error), fail ) ), 
+            catch((trace, Command), Error, ( print_message(error, Error), fail ) ), 
             _Result, 
             retract_facts(SwishModule, Facts)), 
     %reasoner:query_once_with_facts(Goal,Scenario,_,E,Result),

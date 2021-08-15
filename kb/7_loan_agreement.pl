@@ -26,9 +26,9 @@ the time-varying predicates are:
   *a requirement* is cured,
   *a requirement* is remedied,
   *a borrower* is liable to litigation, 
+  it is *a date*.
 
 the event predicates are:
-  it is *a date*.
   it is the end of *a date*,
   *a borrower* requests *an amount*,
   *a lender* advances *an amount*,
@@ -43,12 +43,20 @@ the event predicates are:
 
 the knowledge base Loan includes:
 
+% preliminars
+
+it becomes the case that 
+    it is a new day
+when
+    it is the end of a date, at the date
+if the new day is 1 day after the date. 
+
 % Article 1
     
 it becomes the case that 
     lender is liable to litigation
 when
-    it is the end of 2014-06-02
+    it is the end of 2014-06-02.
 if borrower requested 1000 on 2014-06-01
 and it is not the case that
     lender advanced 1000 on a date.
@@ -201,15 +209,17 @@ and borrower paid 550 to lender on a second date.
     	borrower paid 525 to lender on a  date. 
 
 scenario test1 is:
-    it is 2014-08-02T00:00:00.
-    it is the end of 2014-06-01.
-    borrower requests 1000, at 2014-06-01T00:00:00.
+    it is the end of 2014-06-02.
+    borrower requests 1000, at 2014-06-01.
      %lender advances 1000, at 2014-06-02T00:00:00.
      %borrower pays 550 to lender, at 2015-06-01T12:00:00.
      %borrower pays 525 to lender, at 2016-06-01T12:00:00.
 
 scenario test2 is:
-    it is 2014-08-02T00:00:00.
+    it is the end of 2014-08-01, at 2014-08-01.
+    
+query 0 is:
+    it is which day.
 
 query 1 is:
     an amount is due on a date from borrower to lender.
