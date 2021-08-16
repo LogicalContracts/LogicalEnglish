@@ -66,10 +66,11 @@ taxlog2prolog(query(Name,Goal),delimiter-[classify,classify],query(Name,Goal)).
 % extending to cover new structural changes at semantical level
 
 semantics2prolog(if(H,B),neck(if)-[SpecH,SpecB],(H:-B)) :- !,
-    taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB).
-semantics2prolog(mainGoal(G,Description),delimiter-[Spec,classify],(mainGoal(G,Description):-(_=1->true;GG))) :- !, % hack to avoid 'unreferenced' highlight in SWISH
-    functor(G,F,N), functor(GG,F,N), % avoid "Singleton-marked variable appears more than once"
-    taxlogBodySpec(G,Spec).
+    SpecH=classify, SpecB=classify. 
+    %taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB).
+%semantics2prolog(mainGoal(G,Description),delimiter-[Spec,classify],(mainGoal(G,Description):-(_=1->true;GG))) :- !, % hack to avoid 'unreferenced' highlight in SWISH
+%    functor(G,F,N), functor(GG,F,N), % avoid "Singleton-marked variable appears more than once"
+%    taxlogBodySpec(G,Spec).
 semantics2prolog(example(T,Sequence),delimiter-[classify,Spec],example(T,Sequence)) :- !, 
     Spec = classify. % just a hack - scenarioSequenceSpec must be different for prolog's scenarios
     %(Sequence==[]->Spec=classify ; (Spec=list-SeqSpec, scenarioSequenceSpec(Sequence,SeqSpec))).

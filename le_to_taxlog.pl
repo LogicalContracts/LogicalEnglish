@@ -244,7 +244,7 @@ statement(Statement) -->
         literal_([], Map1, holds(Fluent, _)), spaces_or_newlines(_), 
     when_, spaces_or_newlines(_), 
         literal_(Map1, Map2, happens(Event, T)), spaces_or_newlines(_),
-    body_(Body, Map2,_), period,  
+    body_(Body, [map(T, '_change_time')|Map2],_), period,  
         {(Body = [] -> Statement = [if(initiates(Event, Fluent, T), true)]; 
             (Statement = [if(initiates(Event, Fluent, T), Body)]))}, !.
 
@@ -258,7 +258,7 @@ statement(Statement) -->
         literal_([], Map1, holds(Fluent, _)), spaces_or_newlines(_),
     when_, spaces_or_newlines(_),
         literal_(Map1, Map2, happens(Event, T)), spaces_or_newlines(_),
-    body_(Body, Map2,_), period,  
+    body_(Body, [map(T, '_change_time')|Map2],_), period,  
         {(Body = [] -> Statement = [if(terminates(Event, Fluent, T), true)];  
             (Statement = [if(initiates(Event, Fluent, T), Body)]))}, !.
 
@@ -334,8 +334,9 @@ literal_(Map1, MapN, FinalLiteral) --> % { print_message(informational, 'just li
     {match_template(PossibleTemplate, Map1, MapN, Literal),
      (fluents(Fluents) -> true; Fluents = []),
      (events(Events) -> true; Events = []),
-     (lists:member(Literal, Events) -> FinalLiteral = happens(Literal, _T) 
-      ; (lists:member(Literal, Fluents) -> FinalLiteral = holds(Literal, _T)
+     (consult_map(Time, '_change_time', Map1, _) -> T=Time; true), 
+     (lists:member(Literal, Events) -> FinalLiteral = happens(Literal, T) 
+      ; (lists:member(Literal, Fluents) -> FinalLiteral = holds(Literal, T)
         ; FinalLiteral = Literal))}, !. % by default (including builtins) they are timeless!
 
 % rewritten to use in swish. Fixed! It was a name clash. Apparently "literal" is used somewhere else
@@ -722,6 +723,13 @@ match_template(PossibleLiteral, Map1, MapN, Literal) :-
 
 % match(+CandidateTemplate, +PossibleLiteral, +MapIn, -MapOut, -SelectedTemplate)
 match([], [], Map, Map, []) :- !.  % success! It succeds iff PossibleLiteral is totally consumed
+% meta level access: that New Literal
+match([Word|_LastElement], [Word|PossibleLiteral], Map1, MapN, [Word,Literal]) :- % asuming Element is last in template!
+    Word = that, % that is a reserved word "inside" templates! -> <meta level> that <object level> 
+    dictionary(Predicate, _, Candidate), % searching for a new inner literal
+    match(Candidate, PossibleLiteral, Map1, MapN, InnerTemplate),
+    dictionary(Predicate, _, InnerTemplate), 
+    Literal =.. Predicate, !. 
 match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, [Element|RestSelected]) :-
     nonvar(Element), Word = Element, 
     match(RestElements, PossibleLiteral, Map1, MapN, RestSelected). 
@@ -754,21 +762,22 @@ match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, [Expression|Re
 %expression_(List, MapIn, MapOut) --> list_(List, MapIn, MapOut), !. 
 % expression_ resolve simple math (non boolean) expressions fttb. 
 % dates must be dealt with first  
-% 2021-02-06T08:25:34
-expression_(Date, Map, Map) --> 
+% 2021-02-06T08:25:34 is transformed into 1612599934.0.
+expression_(DateInSeconds, Map, Map) --> 
     [Year,'-', Month, '-', DayTHours,':', Minutes, ':', Seconds], spaces(_),
-    { concat_atom([Year,'-', Month, '-', DayTHours,':', Minutes, ':', Seconds], '', Date) }, !.
+    { concat_atom([Year,'-', Month, '-', DayTHours,':', Minutes, ':', Seconds], '', Date), 
+      parse_time(Date,DateInSeconds) }, !.
 % 2021-02-06
-expression_(Date, Map, Map) -->  [Year,'-', Month, '-', Day],  spaces(_),
-    { concat_atom([Year, Month, Day], '', Date) }, !. 
-% basic float
+expression_(DateInSeconds, Map, Map) -->  [Year,'-', Month, '-', Day],  spaces(_),
+    { concat_atom([Year, Month, Day], '', Date), parse_time(Date, DateInSeconds) }, !. 
+% basic float  extracted from atoms from the tokenizer
 expression_(Float, Map, Map) --> [AtomNum,'.',AtomDecimal],
         { atom(AtomNum), atom(AtomDecimal), atomic_list_concat([AtomNum,'.',AtomDecimal], Atom), atom_number(Atom, Float) }, !.
 % mathematical expressions
 expression_(InfixBuiltIn, Map1, MapN) --> 
     term_(Term, Map1, Map2), spaces(_), binary_op(BuiltIn), !, 
     spaces(_), expression_(Expression, Map2, MapN), spaces(_), {InfixBuiltIn =.. [BuiltIn, Term, Expression]}.  
-% a quick fix for numbers extracted as constants
+% a quick fix for integer numbers extracted from atoms from the tokenizer
 expression_(Number, Map, Map) --> [Atom],  spaces(_), { atom(Atom), atom_number(Atom, Number) }, !. 
 expression_(Var, Map1, Map2) -->  variable(Var, Map1, Map2), !.
 expression_(Constant, Map1, Map2) -->  constant(Constant, Map1, Map2).     
@@ -1071,7 +1080,7 @@ spypoint(A,A). % for debugging
 % with the Prolog expression of that relation in LiteralElements (not yet a predicate, =.. is done elsewhere).
 % NamesAndTypes contains the external name and type (name-type) of each variable just in the other in 
 % which the variables appear in LiteralElement. 
-dictionary(Predicate, VariablesNames, Template) :- 
+dictionary(Predicate, VariablesNames, Template) :- % dict(Predicate, VariablesNames, Template).
     predef_dict(Predicate, VariablesNames, Template); dict(Predicate, VariablesNames, Template).
 
 :- discontiguous predef_dict/3.
@@ -1088,6 +1097,12 @@ predef_dict([=, T1, T2], [time1-time, time2-time], [T1, is, equal, to, T2]).
 predef_dict([\=, T1, T2], [time1-time, time2-time], [T1, is, different, from, T2]).
 %predef_dict([=<, T1, T2], [time1-time, time2-time], [T1, =, <, T2]).
 %predef_dict([>=, T1, T2], [time1-time, time2-time], [T1, >, =, T2]).
+predef_dict([is_1_day_after, A, B],
+                  [date-date, second_date-date],
+                  [A, is, '1', day, after, B]).
+predef_dict([is_days_after, A, B, C],
+                  [date-date, number-number, second_date-date],
+                  [A, is, B, days, after, C]).
 predef_dict([between,Minimum,Maximum,Middle], [min-date, max-date, middle-date], 
     [Middle, is, between, Minimum, &, Maximum]).
 predef_dict([must_be, Type, Term], [type-type, term-term], [Term, must, be, Type]).
@@ -1107,12 +1122,6 @@ must_be_nonvar(A) :- nonvar(A).
 must_not_be(A,B) :- not(must_be(A,B)). 
 
 % see reasoner.pl
-%before(Year1-(_-(_-(_-(_-_)))), Year2-(_-(_-(_-(_-_))))) :- nonvar(Year1), nonvar(Year2), Year1 < Year2, !. 
-%before(Year-(Month1-(_-(_-(_-_)))), Year-(Month2-(_-(_-(_-_))))) :- nonvar(Month1), nonvar(Month2), Month1 < Month2, !. 
-%before(Year-(Month-(Day1-(_-(_-_)))), Year-(Month-(Day2-(_-(_-_))))) :- nonvar(Day1), nonvar(Day2), Day1 < Day2, !. 
-%before(Year-(Month-(Day-(Hour1-(_-_)))), Year-(Month-(Day-(Hour2-(_-_))))) :- nonvar(Hour1), nonvar(Hour2), Hour1 < Hour2, !.
-%before(Year-(Month-(Day-(Hour-(Min1-_)))), Year-(Month-(Day-(Hour-(Min2-_))))) :-nonvar(Min1), nonvar(Min2), Min1 < Min2, !.
-%before(Year-(Month-(Day-(Hour-(Min-Sec1)))), Year-(Month-(Day-(Hour-(Min-Sec2))))) :- nonvar(Sec1), nonvar(Sec2), Sec1 < Sec2, !.
 %before(A,B) :- nonvar(A), nonvar(B), number(A), number(B), A < B. 
 
 /* ---------------------------------------------------------------  meta predicates CLI */
@@ -1136,7 +1145,12 @@ is_it_illegal(English, Scenario) :- % only event as possibly illegal for the tim
     get_answer_from_goal(Goal, EnglishAnswer),  
     print_message(informational, "Answers: ~w"-[EnglishAnswer]).
 
-extract_goal_command(holds(Goal,T), _, Goal, le_to_taxlog:holds(Goal,T)) :- !.
+% extract_goal_command(WrappedGoal, Module, InnerGoal, RealGoal)
+extract_goal_command((A;B), M, (IA;IB), (CA;CB)) :-
+    (extract_goal_command(A, M, IA, CA); extract_goal_command(B, M, IB, CB)), !. 
+extract_goal_command((A,B), M, (IA,IB), (CA,CB)) :-
+    extract_goal_command(A, M, IA, CA), extract_goal_command(B, M, IB, CB), !. 
+extract_goal_command(holds(Goal,T), _, Goal, holds(Goal,T)) :- !.
 extract_goal_command(happens(Goal,T), M, Goal, M:happens(Goal,T)) :- !.
 extract_goal_command(Goal, M, Goal, M:Goal).
 
@@ -1153,28 +1167,29 @@ translate_query(English_String, Goal) :-
 
 /* ----------------------------------------------------------------- Event Calculus  */
 
-holds(Fluent, T) :- print_message(informational, "It is true ~w at ~w ?"-[Fluent, T]), 
-    pengine_self(SwishModule),
+holds(Fluent, T) :- trace, 
+    pengine_self(SwishModule), 
     SwishModule:happens(Event, T1), 
     SwishModule:initiates(Event, Fluent, T1), 
-    (nonvar(T) -> T1 =< T; true ), 
-    not(interrupted(T1, Fluent, T)), !.
+    (nonvar(T) -> before(T1,T); true ), !, % T1 is strictly before T 'cos T is not a variable
+    not(interrupted(T1, Fluent, T)).
 
 % temporary hack while we find a way to signal fluents from the rest
 %holds(NoFluent) :- 
 %    pengine_self(SwishModule),
 %   call(SwishModule:NoFluent). 
 
-interrupted(T1, Fluent, T) :-
+interrupted(T1, Fluent, T2) :- trace, 
     pengine_self(SwishModule),
-    SwishModule:happens(Event2, T2), 
-    SwishModule:terminates(Event2, Fluent, T2), T1 =< T2, 
-    (nonvar(T) -> T2 =< T; true ).  
+    SwishModule:happens(Event, T), 
+    SwishModule:terminates(Event, Fluent, T), 
+    (before(T1, T); T1=T), 
+    (nonvar(T2) -> before(T, T2) ; true ), !.  
 
-happens(it_is_the_end_of(T), _) :- T = _-_-_-00-00-00.  % needed?
+%happens(it_is_the_end_of(T), _) :- T = _-_-_-00-00-00.  % needed?
 
 /* ----------------------------------------------------------------- CLI English */
-answer(English) :- 
+answer(English) :-  
     translate_command(English, GoalName, Scenario), % later -->, Kbs),
     %print_message(informational, "Goal Name: ~w"-[GoalName]),
     pengine_self(SwishModule), SwishModule:query(GoalName, Goal), 
@@ -1185,8 +1200,10 @@ answer(English) :-
     % assert facts in scenario
     (Scenario==noscenario -> Facts = [] ; SwishModule:example(Scenario, [scenario(Facts, _)])), 
     %print_message(informational, "Facts: ~w"-[Facts]), 
+    extract_goal_command(Goal, SwishModule, _InnerGoal, Command),
+    print_message(informational, "Command: ~w"-[Command]),
     setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
-            catch(SwishModule:Goal, Error, ( print_message(error, Error), fail ) ), 
+            catch((trace, Command), Error, ( print_message(error, Error), fail ) ), 
             _Result, 
             retract_facts(SwishModule, Facts)), 
     %reasoner:query_once_with_facts(Goal,Scenario,_,E,Result),
@@ -1203,9 +1220,10 @@ answer(English, EnglishQuestion, Answers) :-
     pengine_self(SwishModule), SwishModule:query(GoalName, Goal),
     copy_term(Goal, CopyOfGoal), 
     get_answer_from_goal(CopyOfGoal, EnglishQuestion), 
+    extract_goal_command(Goal, SwishModule, _InnerGoal, Command),
     (Scenario==noscenario -> Facts = [] ; SwishModule:example(Scenario, [scenario(Facts, _)])), 
     setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
-            catch(SwishModule:Goal, Error, ( print_message(error, Error), fail ) ), 
+            catch(Command, Error, ( print_message(error, Error), fail ) ), 
             _Result, 
             retract_facts(SwishModule, Facts)),
     get_answer_from_goal(Goal, Answers). 
@@ -1261,77 +1279,6 @@ scenario_name_(Scenario) -->  scenario_or_empty_, extract_constant([], ScenarioW
 scenario_or_empty_ --> [scenario], spaces(_). 
 scenario_or_empty_ --> spaces(_). 
 
-/* ------------------------------------------ producing readable taxlog code */
-write_taxlog_code(Source, Readable) :-
-    Source = [predicates(_)|Clauses],
-    write_taxlog_clauses(Clauses, Readable).
-
-write_taxlog_clauses([], []) :- !. 
-write_taxlog_clauses([If|RestClauses], [ReadableIf|RestReadable]) :-
-    write_taxlog_if(If, ReadableIf), !, 
-    write_taxlog_clauses(RestClauses, RestReadable).
-write_taxlog_clauses([Fact|RestClauses], [ReadableFact|RestReadable]) :-
-    write_taxlog_literal(Fact, ReadableFact, [], _),
-    write_taxlog_clauses(RestClauses, RestReadable). 
-
-write_taxlog_if(Rule, if(ReadableHead, ReadableBody)) :-
-    Rule = if(Head, Body),
-    write_taxlog_literal(Head, ReadableHead, [], Map2),
-    write_taxlog_body(Body, ReadableBody, Map2, _).
-
-write_taxlog_literal(not(Body), not(ReadableLiteral), Map1, MapN) :- !, 
-    write_taxlog_body(Body, ReadableLiteral, Map1, MapN). 
-
-write_taxlog_literal(aggregate_all(sum(Each),Conds,Value), aggregate_all(sum(EachName),NewConds,ValueName), Map1, MapN) :-
-    consult_map(Value, ValueName, Map1, Map2), 
-    consult_map(Each, EachName, Map2, Map3), 
-    write_taxlog_body(Conds, NewConds, Map3, MapN). 
-
-write_taxlog_literal(Literal, ReadableLiteral, Map1, MapN) :-
-    Literal =.. [Pred|ArgVars],
-    dict([Pred|ArgVars], Names, _), % to use that information
-    replace_varnames(ArgVars, Names, NewArgs, Map1, MapN),
-    ReadableLiteral =.. [Pred|NewArgs].
-
-write_taxlog_literal(InLit, OutLit, Map1, MapN) :-
-    %predicate_property(system:InBuiltIn, built_in),
-    InLit =.. [Pred|Args],
-    write_taxlog_args(Map1, MapN, Args, NewArgs),
-    OutLit =.. [Pred|NewArgs]. 
-
-write_taxlog_args(Map, Map, [], []).
-write_taxlog_args(Map1, MapN, [Arg1|RestArg], [NArg1|RestNArg]) :-
-    (var(Arg1) -> (consult_map(Arg1, Name1, Map1, Map2), NArg1 = Name1) % does name appears in Map1?
-    ; (compound(Arg1) -> write_taxlog_literal(Arg1, NArg1, Map1, Map2)
-        ; (NArg1 = Arg1, Map2 = Map1) ) ),
-    write_taxlog_args(Map2, MapN, RestArg, RestNArg). 
-
-replace_varnames([], [], [], Map, Map) :- !. 
-replace_varnames([Var|RestVar], [VarName-_|RestVarNames], [Name|NewRest], Map1, MapN) :-
-    var(Var),
-    capitalize(VarName, Name), 
-    update_map(Var, Name, Map1, Map2), 
-    replace_varnames(RestVar, RestVarNames, NewRest, Map2, MapN). 
-replace_varnames([V|RestVar], [_|RestVarNames], [V|NewRest], Map1, MapN) :-
-    nonvar(V),
-    replace_varnames(RestVar, RestVarNames, NewRest, Map1, MapN). 
-
-% from drafter.pl
-capitalize(X,NewX) :- 
-    name(X,[First|Codes]), to_upper(First,U), name(NewX,[U|Codes]).
-
-write_taxlog_body((A;B), or(NewA,NewB), Map1, MapN) :-
-    write_taxlog_body(A, NewA, Map1, Map2),
-    write_taxlog_body(B, NewB, Map2, MapN).
-
-write_taxlog_body((A,B), and(NewA, NewB), Map1, MapN) :-
-    write_taxlog_body(A, NewA, Map1, Map2),
-    write_taxlog_body(B, NewB, Map2, MapN).
-
-write_taxlog_body(Lit, Readable, Map1, MapN) :-
-    write_taxlog_literal(Lit, Readable, Map1, MapN). 
-
-
 %%% ------------------------------------------------ Swish Interface to logical english
 %% based on logicalcontracts' lc_server.pl
 
@@ -1345,7 +1292,6 @@ user:answer( EnText) :- answer( EnText).
 user:answer( EnText, Goal, Result) :- answer( EnText, Goal, Result).
 
 user:is_it_illegal( EnText, Scenario) :- is_it_illegal( EnText, Scenario).
-user:holds(Fluent, T) :- holds(Fluent, T). 
 
 user:query(Name, Goal) :- query(Name, Goal).
 

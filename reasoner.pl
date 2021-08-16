@@ -1,7 +1,7 @@
 :- module(_ThisFileName,[query/4, query_with_facts/5, query_once_with_facts/5, explanation_node_type/2, render_questions/2,
     run_examples/0, run_examples/1, myClause2/8, myClause/4, taxlogWrapper/9, niceModule/2, refToOrigin/2,
     after/2, is_not_before/2, before/2, immediately_before/2, same_date/2, subtract_days/3, this_year/1, uk_tax_year/4, in/2,
-    isExpressionFunctor/1
+    isExpressionFunctor/1, set_time_of_day/3, start_of_day/2, end_of_day/2, is_days_after/3, is_1_day_after/2
     ]).
 
 /** <module> Tax-KB reasoner and utils
@@ -581,6 +581,40 @@ is_not_before(Later,Earlier) :-
     parse_time(Later,L), parse_time(Earlier,E), L>=E.
 before(Earlier,Later) :-
     parse_time(Later,L), parse_time(Earlier,E), E<L.
+
+% Dates in seconds since 1970-01-01T00:00:00, Day in partial format Year-Month-Day
+% set_time_of_day(+Day, +Hour_Min_Secs, -DateInSeconds)
+set_time_of_day(Day, Hour_Min_Secs, DateInSeconds) :- atom(Day), 
+    concat_atom([Day, 'T', Hour_Min_Secs], '', Date), parse_time(Date,DateInSeconds). 
+
+start_of_day(Day, Date) :-
+    set_time_of_day(Day, '00:00:00', Date).
+end_of_day(Day, Date) :-
+    set_time_of_day(Day, '23:59:59', Date).
+
+unparse_time(Stamp, Date) :-
+    stamp_date_time(Stamp, DateTime, 'UTC'), 
+    %DateTime = date(Y,M,D,H,Mn,S,Off,TZ,DST)
+    DateTime = date(Year,Month,Day,Hours,Minutes,Seconds,_,_,_), 
+    concat_atom([Year,'-', Month, '-', Day,'T', Hours,':', Minutes, ':', Seconds], '', Date). 
+
+%le_to_taxlog:dict([is_1_day_after, Later, Before],
+%        [date-date, second_date-date],
+%        [Later, is, '1', day, after, Before]).
+is_1_day_after(Later, Before) :-
+    is_days_after(Later, 1, Before).
+%le_to_taxlog:dict([is_days_after, A, B, C],
+%        [date-date, number-number, second_date-date],
+%        [A, is, B, days, after, C]).
+is_days_after(Later, Count, Before) :-
+    nonvar(Before), nonvar(Count), !, 
+    Later is Count*86400 + Before. 
+is_days_after(Later, Count, Before) :-
+    nonvar(Later), nonvar(Count), !, 
+    Before is Later - Count*86400. 
+is_days_after(Later, Count, Before) :-
+    nonvar(Later), nonvar(Before),
+    Count is (Later - Before) div 86400. 
 
 %! immediately_before(?Earlier,?Later) is det.
 %  Later is 24h after Earlier; at least one must be known
