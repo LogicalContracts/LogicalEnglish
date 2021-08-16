@@ -1080,8 +1080,8 @@ spypoint(A,A). % for debugging
 % with the Prolog expression of that relation in LiteralElements (not yet a predicate, =.. is done elsewhere).
 % NamesAndTypes contains the external name and type (name-type) of each variable just in the other in 
 % which the variables appear in LiteralElement. 
-dictionary(Predicate, VariablesNames, Template) :- dict(Predicate, VariablesNames, Template).
-    %predef_dict(Predicate, VariablesNames, Template); dict(Predicate, VariablesNames, Template).
+dictionary(Predicate, VariablesNames, Template) :- % dict(Predicate, VariablesNames, Template).
+    predef_dict(Predicate, VariablesNames, Template); dict(Predicate, VariablesNames, Template).
 
 :- discontiguous predef_dict/3.
 % predefined entries:
