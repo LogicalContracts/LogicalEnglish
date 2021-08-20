@@ -400,7 +400,7 @@ condition(FinalExpression, _, Map1, MapN) -->
 
 % the Value is the sum of each Asset Net such that
 condition(FinalExpression, _, Map1, MapN) --> 
-    variable(Value, Map1, Map2), is_the_sum_of_each_, extract_variable([such], Each, NameWords, _), such_that_, !, 
+    variable(Value, Map1, Map2), is_the_sum_of_each_, extract_variable([such], Each, [], NameWords, _), such_that_, !, 
     { name_predicate(NameWords, Name), update_map(Each, Name, Map2, Map3) }, newline, 
     spaces(Ind), conditions(Ind, Map3, Map4, Conds), 
     modifiers(aggregate_all(sum(Each),Conds,Value), Map4, MapN, FinalExpression).
@@ -432,11 +432,11 @@ modifiers(MainExpression, Map1, MapN, on(MainExpression, Var) ) -->
 modifiers(MainExpression, Map, Map, MainExpression) --> [].  
 
 variable(Var, Map1, MapN) --> 
-    spaces(_), [Det], {determiner(Det)}, extract_variable([], Var, NameWords, _), !, % <-- CUT!
+    spaces(_), [Det], {determiner(Det)}, extract_variable([], Var, [], NameWords, _), !, % <-- CUT!
     { name_predicate(NameWords, Name), update_map(Var, Name, Map1, MapN) }. 
 % allowing for symbolic variables: 
 variable(Var, Map1, MapN) --> 
-    spaces(_), extract_variable([], Var, NameWords, _),
+    spaces(_), extract_variable([], Var, [], NameWords, _),
     { name_predicate(NameWords, Name), consult_map(Var, Name, Map1, MapN) }. 
 
 constant(Constant, Map, Map) -->
@@ -526,7 +526,7 @@ query_header(Ind, Map) --> spaces(Ind), for_which_, list_of_vars([], Map), colon
 query_header(0, []) --> []. 
 
 list_of_vars(Map1, MapN) --> 
-    extract_variable([',', and, ':'], Var, NameWords, _), 
+    extract_variable([',', and, ':'], Var, [], NameWords, _), 
     { name_predicate(NameWords, Name), update_map(Var, Name, Map1, Map2) },
     rest_of_list_of_vars(Map2, MapN).
 
@@ -589,35 +589,38 @@ build_template_elements([], _, [], [], [], []) :- !.
 % a variable signalled by a *
 build_template_elements(['*', Word|RestOfWords], _Previous, [Var|RestVars], [Name-Type|RestTypes], Others, [Var|RestTemplate]) :-
     (ind_det(Word); ind_det_C(Word)), % Previous \= [is|_], % removing this requirement when * is used
-    extract_variable(['*'], Var, NameWords, TypeWords, RestOfWords, ['*'|NextWords]), !, % <-- it must end with * too
+    extract_variable(['*'], Var, [], NameWords, TypeWords, RestOfWords, ['*'|NextWords]), !, % <-- it must end with * too
     name_predicate(NameWords, Name), 
     name_predicate(TypeWords, Type), 
     build_template_elements(NextWords, [], RestVars, RestTypes, Others, RestTemplate). 
-% a variable not signalled by a *    
+% a variable not signalled by a *  % for backward compatibility  
 build_template_elements([Word|RestOfWords], Previous, [Var|RestVars], [Name-Type|RestTypes], Others, [Var|RestTemplate]) :-
     (ind_det(Word); ind_det_C(Word)), Previous \= [is|_], 
-    extract_variable(['*'], Var, NameWords, TypeWords, RestOfWords, NextWords), !, % <-- CUT!
+    extract_variable(['*'], Var, [], NameWords, TypeWords, RestOfWords, NextWords), !, % <-- CUT!
     name_predicate(NameWords, Name), 
     name_predicate(TypeWords, Type), 
     build_template_elements(NextWords, [], RestVars, RestTypes, Others, RestTemplate).
 build_template_elements([Word|RestOfWords], Previous, RestVars, RestTypes,  [Word|Others], [Word|RestTemplate]) :-
     build_template_elements(RestOfWords, [Word|Previous], RestVars, RestTypes, Others, RestTemplate).
 
-% extract_variable(+StopWords, -Var, -ListOfNameWords, -ListOfTypeWords, +ListOfWords, -NextWordsInText)
+% extract_variable(+StopWords, -Var, +InitListOfNameWords, -ListOfNameWords, -ListOfTypeWords, +ListOfWords, -NextWordsInText)
 % refactored as a dcg predicate
-extract_variable(_, _, [], [], [], []) :- !.                                % stop at when words run out
-extract_variable(StopWords, _, [], [], [Word|RestOfWords], [Word|RestOfWords]) :-   % stop at reserved words, verbs or prepositions. 
+extract_variable(_, _, Names, Names, [], [], []) :- !.                                % stop at when words run out
+extract_variable(StopWords, _, Names, Names, [], [Word|RestOfWords], [Word|RestOfWords]) :-   % stop at reserved words, verbs or prepositions. 
     (member(Word, StopWords); reserved_word(Word); verb(Word); preposition(Word); punctuation(Word); phrase(newline, [Word])), !.  % or punctuation
-extract_variable(SW, Var, RestName, RestType, [' '|RestOfWords], NextWords) :- !, % skipping spaces
-    extract_variable(SW, Var, RestName, RestType, RestOfWords, NextWords).
-extract_variable(SW, Var, RestName, RestType, ['\t'|RestOfWords], NextWords) :- !,  % skipping spaces
-    extract_variable(SW, Var, RestName, RestType, RestOfWords, NextWords).  
-extract_variable(SW, Var, [Word|RestName], Type, [Word|RestOfWords], NextWords) :- % ordinals are not part of the name
+extract_variable(SW, Var, InName, OutName, RestType, [' '|RestOfWords], NextWords) :- !, % skipping spaces
+    extract_variable(SW, Var, InName, OutName, RestType, RestOfWords, NextWords).
+extract_variable(SW, Var, InName, OutName, RestType, ['\t'|RestOfWords], NextWords) :- !,  % skipping spaces
+    extract_variable(SW, Var, InName, OutName, RestType, RestOfWords, NextWords).  
+extract_variable(SW, Var, InName, OutName, Type, [Word|RestOfWords], NextWords) :- % ordinals are not part of the type
     ordinal(Word), !, 
-    extract_variable(SW, Var, RestName, Type, RestOfWords, NextWords).
-extract_variable(SW, Var, [Word|RestName], [Word|RestType], [Word|RestOfWords], NextWords) :-
+    extract_variable(SW, Var, [Word|InName], OutName, Type, RestOfWords, NextWords).
+extract_variable(SW, Var, InName, OutName, [Word|RestType], [Word|RestOfWords], NextWords) :- % types are not part of the name
     is_a_type(Word),
-    extract_variable(SW, Var, RestName, RestType, RestOfWords, NextWords).
+    extract_variable(SW, Var, InName, NextName, RestType, RestOfWords, NextWords),
+    (NextName = [] -> OutName = [Word]; OutName = NextName).
+extract_variable(SW, Var, InName, OutName, RestType, [Word|RestOfWords], NextWords) :- % everything else is part of the name
+    extract_variable(SW, Var, [Word|InName], OutName, RestType, RestOfWords, NextWords).
 
 %name_predicate([AtomNum,'.',AtomDecimal], Number) :-  
 %    atomic_list_concat([AtomNum,'.',AtomDecimal], Atom), atom_number(Atom, Number). 
@@ -637,9 +640,26 @@ name_as_atom([Number], Number) :-
 name_as_atom([Atom], Number) :- 
     atom_number(Atom, Number), !. 
 name_as_atom(Words, Name) :-
-    replace_vars(Words, Atoms), concat_atom(Atoms, ' ', Name). 
+    numbervars(Words, 0, _, [functor_name('___________')]),
+    replace_vars(Words, Atoms), 
+    list_words_to_codes(Atoms, Codes),
+    atom_codes(Name, Codes).  
+
+% maps a list of words to a list of corresponding codes
+% adding an space between words-codes (32). 
+list_words_to_codes([], []).
+list_words_to_codes([Word|RestW], Out) :-
+    atom_codes(Word, Codes),
+    remove_quotes(Codes, CleanCodes), 
+    list_words_to_codes(RestW, Next),
+    append(CleanCodes, [32|Next], Out). 
+
+remove_quotes([], []) :-!.
+remove_quotes([39|RestI], RestC) :- remove_quotes(RestI, RestC), !.
+remove_quotes([C|RestI], [C|RestC]) :- remove_quotes(RestI, RestC). 
 
 replace_vars([],[]) :- !.
+replace_vars([A|RI], [A|RO]) :- atom(A), replace_vars(RI,RO), !.
 replace_vars([W|RI], [A|RO]) :- term_to_atom(W, A), replace_vars(RI,RO).   
 
 add_cond(and, Ind1, Ind2,  (C; C3), C4, (C; (C3, C4))) :-
@@ -736,14 +756,14 @@ match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, [Element|RestS
 match([Element|RestElements], [Det|PossibleLiteral], Map1, MapN, [Var|RestSelected]) :-
     var(Element), 
     determiner(Det), stop_words(RestElements, StopWords), 
-    extract_variable(StopWords, Var, NameWords, _, PossibleLiteral, NextWords),  NameWords \= [], % <- leave that _ unbound!
+    extract_variable(StopWords, Var, [], NameWords, _, PossibleLiteral, NextWords),  NameWords \= [], % <- leave that _ unbound!
     name_predicate(NameWords, Name), 
     update_map(Var, Name, Map1, Map2), !,  % <-- CUT!  
     match(RestElements, NextWords, Map2, MapN, RestSelected). 
 % handling symbolic variables (as long as they have been previously defined and included in the map!) 
 match([Element|RestElements], PossibleLiteral, Map1, MapN, [Var|RestSelected]) :-
     var(Element), stop_words(RestElements, StopWords), 
-    extract_variable(StopWords, Var, NameWords, _, PossibleLiteral, NextWords),  NameWords \= [], % <- leave that _ unbound!
+    extract_variable(StopWords, Var, [], NameWords, _, PossibleLiteral, NextWords),  NameWords \= [], % <- leave that _ unbound!
     name_predicate(NameWords, Name), 
     consult_map(Var, Name, Map1, Map2), !, % <-- CUT!  % if the variables has been previously registered
     match(RestElements, NextWords, Map2, MapN, RestSelected).
@@ -839,12 +859,12 @@ extract_list(SW, RestList, Map1, MapN, [','|RestOfWords],  NextWords) :- !,
     extract_list(SW, RestList, Map1, MapN, RestOfWords, NextWords).
 extract_list(StopWords, [Var|RestList], Map1, MapN, [Det|InWords], LeftWords) :-
     determiner(Det), 
-    extract_variable(StopWords, Var, NameWords, _, InWords, NextWords), NameWords \= [], % <- leave that _ unbound!
+    extract_variable(StopWords, Var, [], NameWords, _, InWords, NextWords), NameWords \= [], % <- leave that _ unbound!
     name_predicate(NameWords, Name),  
     update_map(Var, Name, Map1, Map2), !,
     extract_list(StopWords, RestList, Map2, MapN, NextWords, LeftWords).
 extract_list(StopWords, [Var|RestList], Map1, MapN, InWords, LeftWords) :-
-    extract_variable(StopWords, Var, NameWords, _, InWords, NextWords), NameWords \= [],  % <- leave that _ unbound!
+    extract_variable(StopWords, Var,[], NameWords, _, InWords, NextWords), NameWords \= [],  % <- leave that _ unbound!
     name_predicate(NameWords, Name),  
     consult_map(Var, Name, Map1, Map2), !,
     extract_list(StopWords, RestList, Map2, MapN, NextWords, LeftWords).
@@ -864,13 +884,13 @@ rebuild_template(RawTemplate, Map1, MapN, Template) :-
 template_elements([], Map1, Map1, _, []).     
 template_elements([Word|RestOfWords], Map1, MapN, Previous, [Var|RestTemplate]) :-
     (ind_det(Word); ind_det_C(Word)), Previous \= [is|_], 
-    extract_variable([], Var, NameWords, _, RestOfWords, NextWords), !, % <-- CUT!
+    extract_variable([], Var, [], NameWords, _, RestOfWords, NextWords), !, % <-- CUT!
     name_predicate(NameWords, Name), 
     update_map(Var, Name, Map1, Map2), 
     template_elements(NextWords, Map2, MapN, [], RestTemplate).
 template_elements([Word|RestOfWords], Map1, MapN, Previous, [Var|RestTemplate]) :-
     (def_det_C(Word); def_det(Word)), Previous \= [is|_], 
-    extract_variable([], Var, NameWords, _, RestOfWords, NextWords), !, % <-- CUT!
+    extract_variable([], Var, [], NameWords, _, RestOfWords, NextWords), !, % <-- CUT!
     name_predicate(NameWords, Name), 
     member(map(Var,Name), Map1),  % confirming it is an existing variable and unifying
     template_elements(NextWords, Map1, MapN, [], RestTemplate).
@@ -932,10 +952,11 @@ ordinal(10, 'tenth').
 
 is_a_type(T) :- % pending integration with wei2nlen:is_a_type/1
    ground(T),
-   not(number(T)), not(punctuation(T)),
-   not(reserved_word(T)),
-   not(verb(T)),
-   not(preposition(T)). 
+   (T=time; T=date; T=number; T=person). % primitive types to start with
+   %not(number(T)), not(punctuation(T)),
+   %not(reserved_word(T)),
+   %not(verb(T)),
+   %not(preposition(T)). 
 
 /* ------------------------------------------------ determiners */
 
@@ -1097,6 +1118,7 @@ predef_dict([=, T1, T2], [time1-time, time2-time], [T1, is, equal, to, T2]).
 predef_dict([\=, T1, T2], [time1-time, time2-time], [T1, is, different, from, T2]).
 %predef_dict([=<, T1, T2], [time1-time, time2-time], [T1, =, <, T2]).
 %predef_dict([>=, T1, T2], [time1-time, time2-time], [T1, >, =, T2]).
+predef_dict([unparse_time, Secs, Date], [secs-seconds, date-date], [Secs, corresponds, to, date, Date]).
 predef_dict([is_1_day_after, A, B],
                   [date-date, second_date-date],
                   [A, is, '1', day, after, B]).
@@ -1132,7 +1154,7 @@ is_it_illegal(English, Scenario) :- % only event as possibly illegal for the tim
     pengine_self(SwishModule), %SwishModule:query(GoalName, Goal), 
     %extract_goal_command(Question, SwishModule, Goal, Command), 
     copy_term(Goal, CopyOfGoal), 
-    get_answer_from_goal(CopyOfGoal, EnglishQuestion), 
+    get_answer_from_goal(CopyOfGoal, RawGoal),  name_as_atom(RawGoal, EnglishQuestion), 
     print_message(informational, "Testing illegality: ~w"-[EnglishQuestion]),
     print_message(informational, "Scenario: ~w"-[Scenario]),
     get_assumptions_from_scenario(Scenario, SwishModule, Assumptions), 
@@ -1142,7 +1164,7 @@ is_it_illegal(English, Scenario) :- % only event as possibly illegal for the tim
             catch(SwishModule:it_is_illegal(Goal, T), Error, ( print_message(error, Error), fail ) ), 
             _Result, 
             retract_facts(SwishModule, Assumptions)), 
-    get_answer_from_goal(Goal, EnglishAnswer),  
+    get_answer_from_goal(Goal, RawAnswer), name_as_atom(RawAnswer, EnglishAnswer),  
     print_message(informational, "Answers: ~w"-[EnglishAnswer]).
 
 % extract_goal_command(WrappedGoal, Module, InnerGoal, RealGoal)
@@ -1150,8 +1172,8 @@ extract_goal_command((A;B), M, (IA;IB), (CA;CB)) :-
     (extract_goal_command(A, M, IA, CA); extract_goal_command(B, M, IB, CB)), !. 
 extract_goal_command((A,B), M, (IA,IB), (CA,CB)) :-
     extract_goal_command(A, M, IA, CA), extract_goal_command(B, M, IB, CB), !. 
-extract_goal_command(holds(Goal,T), _, Goal, holds(Goal,T)) :- !.
-extract_goal_command(happens(Goal,T), M, Goal, M:happens(Goal,T)) :- !.
+extract_goal_command(holds(Goal,T), M, Goal, (holds(Goal,T);M:holds(Goal,T))) :- !.
+extract_goal_command(happens(Goal,T), M, Goal, (happens(Goal,T);M:happens(Goal,T))) :- !.
 extract_goal_command(Goal, M, Goal, M:Goal).
 
 get_assumptions_from_scenario(noscenario, _, []) :- !.  
@@ -1166,12 +1188,11 @@ translate_query(English_String, Goal) :-
     ; ( error_notice(error, Me,Pos, ContextTokens), print_message(error, [Me,Pos,ContextTokens]) ). 
 
 /* ----------------------------------------------------------------- Event Calculus  */
-
-holds(Fluent, T) :- trace, 
+holds(Fluent, T) :- %trace, 
     pengine_self(SwishModule), 
     SwishModule:happens(Event, T1), 
     SwishModule:initiates(Event, Fluent, T1), 
-    (nonvar(T) -> before(T1,T); true ), !, % T1 is strictly before T 'cos T is not a variable
+    (nonvar(T) -> before(T1,T); T=(after(T1)-_)),  % T1 is strictly before T 'cos T is not a variable
     not(interrupted(T1, Fluent, T)).
 
 % temporary hack while we find a way to signal fluents from the rest
@@ -1179,37 +1200,41 @@ holds(Fluent, T) :- trace,
 %    pengine_self(SwishModule),
 %   call(SwishModule:NoFluent). 
 
-interrupted(T1, Fluent, T2) :- trace, 
+interrupted(T1, Fluent, T2) :- %trace, 
     pengine_self(SwishModule),
     SwishModule:happens(Event, T), 
     SwishModule:terminates(Event, Fluent, T), 
     (before(T1, T); T1=T), 
-    (nonvar(T2) -> before(T, T2) ; true ), !.  
+    %(nonvar(T2) -> before(T, T2) ; true ), !.  
+    (T2=(after(T1)-_)->T2=(after(T1)-before(T)); before(T,T2)). 
+
+happens(it_is_the_end_of(Date),T) :- %trace, 
+    var(T), Date=T. 
 
 %happens(it_is_the_end_of(T), _) :- T = _-_-_-00-00-00.  % needed?
 
 /* ----------------------------------------------------------------- CLI English */
-answer(English) :-  
+answer(English) :-  %trace, 
     translate_command(English, GoalName, Scenario), % later -->, Kbs),
     %print_message(informational, "Goal Name: ~w"-[GoalName]),
     pengine_self(SwishModule), SwishModule:query(GoalName, Goal), 
     copy_term(Goal, CopyOfGoal), 
-    get_answer_from_goal(CopyOfGoal, EnglishQuestion), 
+    get_answer_from_goal(CopyOfGoal, RawGoal), name_as_atom(RawGoal, EnglishQuestion), 
     print_message(informational, "Question: ~w"-[EnglishQuestion]),
-    print_message(informational, "Scenario: ~w"-[Scenario]),
+    %print_message(informational, "Scenario: ~w"-[Scenario]),
     % assert facts in scenario
-    (Scenario==noscenario -> Facts = [] ; SwishModule:example(Scenario, [scenario(Facts, _)])), 
+    (Scenario==noscenario -> Facts = [] ; SwishModule:example(Scenario, [scenario(Facts, _)])), !, 
     %print_message(informational, "Facts: ~w"-[Facts]), 
-    extract_goal_command(Goal, SwishModule, _InnerGoal, Command),
-    print_message(informational, "Command: ~w"-[Command]),
+    extract_goal_command(Goal, SwishModule, _InnerGoal, Command), 
+    %print_message(informational, "Command: ~w"-[Command]),
     setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
             catch((trace, Command), Error, ( print_message(error, Error), fail ) ), 
             _Result, 
-            retract_facts(SwishModule, Facts)), 
+            retract_facts(SwishModule, Facts)),
     %reasoner:query_once_with_facts(Goal,Scenario,_,E,Result),
     %reasoner:query_once_with_facts(at(Goal,'http://tests.com'),Scenario,_,E,Result),
     %query_with_facts(at(Goal,'http://tests.com'),Scenario,_,_,Result),
-    get_answer_from_goal(Goal, EnglishAnswer), 
+    get_answer_from_goal(Goal, RawAnswer), name_as_atom(RawAnswer, EnglishAnswer),  
     print_message(informational, "Answers: ~w"-[EnglishAnswer]).
     %print_message(informational, "Result: ~w"-[Result]).
     %print_message(informational, "Explanation: ~w"-[E]).
@@ -1219,7 +1244,7 @@ answer(English, EnglishQuestion, Answers) :-
     translate_command(English, GoalName, Scenario), % later -->, Kbs),
     pengine_self(SwishModule), SwishModule:query(GoalName, Goal),
     copy_term(Goal, CopyOfGoal), 
-    get_answer_from_goal(CopyOfGoal, EnglishQuestion), 
+    get_answer_from_goal(CopyOfGoal, RawGoal), name_as_atom(RawGoal, EnglishQuestion), 
     extract_goal_command(Goal, SwishModule, _InnerGoal, Command),
     (Scenario==noscenario -> Facts = [] ; SwishModule:example(Scenario, [scenario(Facts, _)])), 
     setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
@@ -1229,15 +1254,22 @@ answer(English, EnglishQuestion, Answers) :-
     get_answer_from_goal(Goal, Answers). 
     %reasoner:query_once_with_facts(Goal,Scenario,_,_E,Result).
 
-get_answer_from_goal((G,R), [Answer|RestAnswers]) :- 
-    G =.. GoalElements, dict(GoalElements, _, WordsAnswer), name_as_atom(WordsAnswer, Answer),
-    get_answer_from_goal(R, RestAnswers).
-get_answer_from_goal(happens(Goal,T), [Answer]) :- !, 
-    Goal =.. GoalElements, dict(GoalElements, _, WordsAnswer), name_as_atom(['At', T, ','|WordsAnswer], Answer).
-get_answer_from_goal(holds(Goal,T), [Answer]) :- !, 
-    Goal =.. GoalElements, dict(GoalElements, _, WordsAnswer), name_as_atom(['At', T, ','|WordsAnswer], Answer).
-get_answer_from_goal(Goal, [Answer]) :-
-    Goal =.. GoalElements, dict(GoalElements, _, WordsAnswer), name_as_atom(WordsAnswer, Answer). 
+get_answer_from_goal((G,R), WholeAnswer) :- 
+    get_answer_from_goal(G, Answer), 
+    get_answer_from_goal(R, RestAnswers), 
+    append(Answer, [and|RestAnswers], WholeAnswer).
+get_answer_from_goal(happens(Goal,T), Answer) :- !, % simple goals do not return a list, just a literal
+    Goal =.. GoalElements, dict(GoalElements, _, WordsAnswer), 
+    ((nonvar(T), number(T)) -> unparse_time(T, Time); Time = T),
+    Answer = ['At a time', Time, it, occurs, that|WordsAnswer].
+    %name_as_atom(['At a time', Time, it, holds, that|WordsAnswer], Answer).
+get_answer_from_goal(holds(Goal,T), Answer) :- !, 
+    Goal =.. GoalElements, dict(GoalElements, _, WordsAnswer), 
+    ((nonvar(T), number(T)) -> unparse_time(T, Time); Time = T),
+    Answer = ['At a time', Time, it, holds, that|WordsAnswer].
+    %name_as_atom(['At', Time, ','|WordsAnswer], Answer).
+get_answer_from_goal(Goal, WordsAnswer) :-
+    Goal =.. GoalElements, dict(GoalElements, _, WordsAnswer). %, name_as_atom(WordsAnswer, Answer). 
 
 assert_facts(_, []) :- !. 
 assert_facts(SwishModule, [F|R]) :- nonvar(F), % print_message(informational, "asserting: ~w"-[SwishModule:F]),
@@ -1306,7 +1338,7 @@ le_taxlog_translate( en(Text), File, BaseLine, Terms) :-
 	%string_concat(StringDecl, Text, Whole_Text),
     %once( text_to_logic(Text, Terms) ),
     %catch(text_to_logic(Text, Terms), Error, ( print_message(error, Error),  showErrors(File,BaseLine) ) ).
-    text_to_logic(Text, Terms) -> true; (!, showErrors(File,BaseLine)).
+    text_to_logic(Text, Terms) -> true; showErrors(File,BaseLine). % cut didnt work.
         %write_taxlog_code(Translation, Terms)). 
 
 combine_list_into_string(List, String) :-

@@ -4,14 +4,15 @@ en("the target language is: prolog.
 
 the timeless predicates are:
   *an amount* is due on *a date* from *a borrower* to *a lender*,
-  *a payment* is that *a borrower* pays *an amount* to *a lender*,
-  *a message* is that *a requirement* is in default,
-  *a message* is that *a requirement* is remedy,
+  *a concept* is that *a definition*,
   *a thing* is different from *a second thing*,
-  *a reason* is that *a person* is bankrupted by insolvency,
-  *a borrower* represents-warrants *a requirement*, 
+  *a borrower* represents-warrants *a requirement*,
   *an amount* is the total due,
   *a borrower* covenants *a covenance*,
+  *a borrower* pays *an amount* to *a lender*,
+  *a requirement* is in default,
+  *a requirement* is remedy,
+  *a person* is bankrupted by insolvency,
 
 the time-varying predicates are:
   *a lender* is liable to litigation,
@@ -25,7 +26,7 @@ the time-varying predicates are:
   *a requirement* is defaulted on *a date*,
   *a requirement* is cured,
   *a requirement* is remedied,
-  *a borrower* is liable to litigation, 
+  *a borrower* is liable to litigation,
   it is *a date*.
 
 the event predicates are:
@@ -37,18 +38,18 @@ the event predicates are:
   *a person* notifies *a message*,
   *a requirement* remedies,
   *a borrower* goes bankrupt,
-  *a borrower* is insolvent, 
+  *a borrower* is insolvent,
   *a requirement* is proved untrue,
   *a requirement* is failure to perform,
 
 the knowledge base Loan includes:
-
+    
 % preliminars
 
 it becomes the case that 
     it is a new day
 when
-    it is the end of a date, at the date
+    it is the end of a date
 if the new day is 1 day after the date. 
 
 % Article 1
@@ -56,7 +57,7 @@ if the new day is 1 day after the date.
 it becomes the case that 
     lender is liable to litigation
 when
-    it is the end of 2014-06-02.
+    it is the end of 2014-06-02
 if borrower requested 1000 on 2014-06-01
 and it is not the case that
     lender advanced 1000 on a date.
@@ -71,14 +72,14 @@ if it is not the case that
 it becomes the case that
     borrower requested an amount on a date
 when
-    borrower requests the amount
-if it is the date.
+    borrower requests the amount, at the date. 
+%if it is the date.
 
 it becomes the case that
     lender advanced an amount on a date
 when
-    lender advances the amount
-if it is the date.
+    lender advances the amount, at the date. 
+%if it is the date.
 
 % Articles 2 and 10
     
@@ -97,22 +98,22 @@ and it is not the case that
 it becomes the case that
     borrower paid an amount to lender on a date
 when 
-    borrower pays the amount to lender
-if it is the date. 
+    borrower pays the amount to lender, at the date. 
+%if it is the date. 
     
 it is illegal that
     borrower pays an amount to lender
 if an amount is due on a date from borrower to lender
 and it is a second date
-and the second date is before the date.
+and the second date is before the date.    
 
 % Article 5    
 
 It becomes the case that
     a person notified a message on a date
 when
-    the person notifies the message
-if it is the date. 
+    the person notifies the message, at the date. 
+%if it is the date. 
      
 It becomes the case that
     a requirement is defaulted on a date
@@ -209,11 +210,10 @@ and borrower paid 550 to lender on a second date.
     	borrower paid 525 to lender on a  date. 
 
 scenario test1 is:
-    it is the end of 2014-06-02.
     borrower requests 1000, at 2014-06-01.
-     %lender advances 1000, at 2014-06-02T00:00:00.
-     %borrower pays 550 to lender, at 2015-06-01T12:00:00.
-     %borrower pays 525 to lender, at 2016-06-01T12:00:00.
+    lender advances 1000, at 2014-06-02.
+    borrower pays 550 to lender, at 2015-06-01.
+    borrower pays 525 to lender, at 2016-06-01.
 
 scenario test2 is:
     it is the end of 2014-08-01, at 2014-08-01.
@@ -241,6 +241,12 @@ query 6 is:
     
 query 7 is:
     borrower paid 525 to lender on a date.
+    
+query 8 is:
+    which requirement is potentially defaulted.
+
+query 9 is:
+     which one represents-warrants which cause.
    
 ").
 
@@ -248,4 +254,6 @@ query 7 is:
 ?- answer("1 with test2").
 ?- is_it_illegal("borrower pays an amount to lender, at a date", test2). 
 ?- answer("2 with test1").
+?- answer("9 with test1").
+?- answer("3 with test1").
 */

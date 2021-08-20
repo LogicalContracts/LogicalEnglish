@@ -71,20 +71,24 @@ semantics2prolog(if(H,B),neck(if)-[SpecH,SpecB],(H:-B)) :- !,
 %semantics2prolog(mainGoal(G,Description),delimiter-[Spec,classify],(mainGoal(G,Description):-(_=1->true;GG))) :- !, % hack to avoid 'unreferenced' highlight in SWISH
 %    functor(G,F,N), functor(GG,F,N), % avoid "Singleton-marked variable appears more than once"
 %    taxlogBodySpec(G,Spec).
-semantics2prolog(example(T,Sequence),delimiter-[classify,Spec],example(T,Sequence)) :- !, 
+semantics2prolog(example(T,Sequence),delimiter-[classify,Spec],example(T,Sequence)) :-  
+    pengine_self(SwishModule),
+    declare_facts_as_dynamic(SwishModule, [example(_,_)]), !, 
     Spec = classify. % just a hack - scenarioSequenceSpec must be different for prolog's scenarios
     %(Sequence==[]->Spec=classify ; (Spec=list-SeqSpec, scenarioSequenceSpec(Sequence,SeqSpec))).
-semantics2prolog(query(Name,Goal),delimiter-[classify,classify],query(Name,Goal)) :- !. 
-semantics2prolog(predicates(Assumptions), delimiter-[classify,classify],predicates([])) :-
+semantics2prolog(query(Name,Goal),delimiter-[classify,classify],query(Name,Goal)) :-
     pengine_self(SwishModule),
-    declare_facts_as_dynamic(SwishModule, Assumptions). 
+    declare_facts_as_dynamic(SwishModule, [query(_,_)]), !. 
+semantics2prolog(predicates(Assumptions), delimiter-[classify,classify],predicates([])) :- 
+    pengine_self(SwishModule),
+    declare_facts_as_dynamic(SwishModule, Assumptions), !. 
     %print_message(informational, "asserted: ~w"-[Assumptions]).
-semantics2prolog(events(Assumptions), delimiter-[classify,classify],events([])) :-
+semantics2prolog(events(Assumptions), delimiter-[classify,classify],events([])) :- 
     pengine_self(SwishModule),
-    declare_facts_as_dynamic(SwishModule, [happens(_,_), initiates(_,_,_), terminates(_,_,_)|Assumptions]).
+    declare_facts_as_dynamic(SwishModule, [happens(_,_), initiates(_,_,_), terminates(_,_,_)|Assumptions]), !.
 semantics2prolog(fluents(Assumptions), delimiter-[classify,classify],fluents([])) :-
     pengine_self(SwishModule),
-    declare_facts_as_dynamic(SwishModule, [it_is_illegal(_,_)|Assumptions]).
+    declare_facts_as_dynamic(SwishModule, [it_is_illegal(_,_)|Assumptions]), !.
 
 % assuming one example -> one scenario -> one list of facts. % deprecated
 % declare_dynamic(Module, [scenario(Facts, _)]) :- declare_facts_as_dynamic(Module, Facts).

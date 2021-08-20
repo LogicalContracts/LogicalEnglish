@@ -1,7 +1,7 @@
 :- module(_ThisFileName,[query/4, query_with_facts/5, query_once_with_facts/5, explanation_node_type/2, render_questions/2,
     run_examples/0, run_examples/1, myClause2/8, myClause/4, taxlogWrapper/9, niceModule/2, refToOrigin/2,
     after/2, is_not_before/2, before/2, immediately_before/2, same_date/2, subtract_days/3, this_year/1, uk_tax_year/4, in/2,
-    isExpressionFunctor/1, set_time_of_day/3, start_of_day/2, end_of_day/2, is_days_after/3, is_1_day_after/2
+    isExpressionFunctor/1, set_time_of_day/3, start_of_day/2, end_of_day/2, is_days_after/3, is_1_day_after/2, unparse_time/2
     ]).
 
 /** <module> Tax-KB reasoner and utils
@@ -614,7 +614,7 @@ is_days_after(Later, Count, Before) :-
     Before is Later - Count*86400. 
 is_days_after(Later, Count, Before) :-
     nonvar(Later), nonvar(Before),
-    Count is (Later - Before) div 86400. 
+    Count is round(abs(Later - Before)) div 86400. 
 
 %! immediately_before(?Earlier,?Later) is det.
 %  Later is 24h after Earlier; at least one must be known
