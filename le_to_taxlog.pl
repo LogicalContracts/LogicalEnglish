@@ -640,7 +640,7 @@ name_as_atom([Number], Number) :-
 name_as_atom([Atom], Number) :- 
     atom_number(Atom, Number), !. 
 name_as_atom(Words, Name) :-
-    numbervars(Words, 0, _, [functor_name('___________')]),
+    numbervars(Words, 1, _, [functor_name('Which ')]),
     replace_vars(Words, Atoms), 
     list_words_to_codes(Atoms, Codes),
     atom_codes(Name, Codes).  
@@ -656,6 +656,9 @@ list_words_to_codes([Word|RestW], Out) :-
 
 remove_quotes([], []) :-!.
 remove_quotes([39|RestI], RestC) :- remove_quotes(RestI, RestC), !.
+% quick fix to remove parentesis too. 
+remove_quotes([40|RestI], RestC) :- remove_quotes(RestI, RestC), !.
+remove_quotes([41|RestI], RestC) :- remove_quotes(RestI, RestC), !.
 remove_quotes([C|RestI], [C|RestC]) :- remove_quotes(RestI, RestC). 
 
 replace_vars([],[]) :- !.
@@ -952,7 +955,7 @@ ordinal(10, 'tenth').
 
 is_a_type(T) :- % pending integration with wei2nlen:is_a_type/1
    ground(T),
-   (T=time; T=date; T=number; T=person). % primitive types to start with
+   (T=time; T=date; T=number; T=person; T=day). % primitive types to start with
    %not(number(T)), not(punctuation(T)),
    %not(reserved_word(T)),
    %not(verb(T)),
@@ -1218,9 +1221,9 @@ answer(English) :-  %trace,
     translate_command(English, GoalName, Scenario), % later -->, Kbs),
     %print_message(informational, "Goal Name: ~w"-[GoalName]),
     pengine_self(SwishModule), SwishModule:query(GoalName, Goal), 
-    copy_term(Goal, CopyOfGoal), 
+    copy_term(Goal, CopyOfGoal),  
     get_answer_from_goal(CopyOfGoal, RawGoal), name_as_atom(RawGoal, EnglishQuestion), 
-    print_message(informational, "Question: ~w"-[EnglishQuestion]),
+    print_message(informational, "Query ~w with ~w: ~w"-[GoalName, Scenario, EnglishQuestion]),
     %print_message(informational, "Scenario: ~w"-[Scenario]),
     % assert facts in scenario
     (Scenario==noscenario -> Facts = [] ; SwishModule:example(Scenario, [scenario(Facts, _)])), !, 
@@ -1228,14 +1231,14 @@ answer(English) :-  %trace,
     extract_goal_command(Goal, SwishModule, _InnerGoal, Command), 
     %print_message(informational, "Command: ~w"-[Command]),
     setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
-            catch((trace, Command), Error, ( print_message(error, Error), fail ) ), 
+            catch((true, Command), Error, ( print_message(error, Error), fail ) ), 
             _Result, 
             retract_facts(SwishModule, Facts)),
     %reasoner:query_once_with_facts(Goal,Scenario,_,E,Result),
     %reasoner:query_once_with_facts(at(Goal,'http://tests.com'),Scenario,_,E,Result),
     %query_with_facts(at(Goal,'http://tests.com'),Scenario,_,_,Result),
     get_answer_from_goal(Goal, RawAnswer), name_as_atom(RawAnswer, EnglishAnswer),  
-    print_message(informational, "Answers: ~w"-[EnglishAnswer]).
+    print_message(informational, "Answer: ~w"-[EnglishAnswer]).
     %print_message(informational, "Result: ~w"-[Result]).
     %print_message(informational, "Explanation: ~w"-[E]).
 
@@ -1258,18 +1261,41 @@ get_answer_from_goal((G,R), WholeAnswer) :-
     get_answer_from_goal(G, Answer), 
     get_answer_from_goal(R, RestAnswers), 
     append(Answer, [and|RestAnswers], WholeAnswer).
-get_answer_from_goal(happens(Goal,T), Answer) :- !, % simple goals do not return a list, just a literal
-    Goal =.. GoalElements, dict(GoalElements, _, WordsAnswer), 
-    ((nonvar(T), number(T)) -> unparse_time(T, Time); Time = T),
-    Answer = ['At a time', Time, it, occurs, that|WordsAnswer].
-    %name_as_atom(['At a time', Time, it, holds, that|WordsAnswer], Answer).
+get_answer_from_goal(happens(Goal,T), Answer) :- !,   % simple goals do not return a list, just a literal
+    Goal =.. [Pred|GoalElements], dict([Pred|GoalElements], Types, WordsAnswer), 
+    process_types(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), 
+    process_time_term(T, TimeExplain),
+    Answer = ['At', TimeExplain, it, occurs, that|ProcessedWordsAnswers].
 get_answer_from_goal(holds(Goal,T), Answer) :- !, 
-    Goal =.. GoalElements, dict(GoalElements, _, WordsAnswer), 
-    ((nonvar(T), number(T)) -> unparse_time(T, Time); Time = T),
-    Answer = ['At a time', Time, it, holds, that|WordsAnswer].
-    %name_as_atom(['At', Time, ','|WordsAnswer], Answer).
-get_answer_from_goal(Goal, WordsAnswer) :-
-    Goal =.. GoalElements, dict(GoalElements, _, WordsAnswer). %, name_as_atom(WordsAnswer, Answer). 
+    Goal =.. [Pred|GoalElements], dict([Pred|GoalElements], Types, WordsAnswer), 
+    process_types(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), 
+    process_time_term(T, TimeExplain),
+    Answer = ['At', TimeExplain, it, holds, that|ProcessedWordsAnswers].
+get_answer_from_goal(Goal, ProcessedWordsAnswers) :-  
+    Goal =.. [Pred|GoalElements], dict([Pred|GoalElements], Types, WordsAnswer),
+    process_types(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers). 
+
+process_time_term(T,T) :- var(T). % in case of vars
+process_time_term(T,T) :- nonvar(T), atom(T), !. 
+process_time_term(T,Time) :- nonvar(T), number(T), unparse_time(T, Time), !. 
+process_time_term((after(T)-Var), Explain) :- var(Var), !,
+    process_time_term(T, Time), 
+    name_as_atom([any, time, after, Time], Explain).
+process_time_term((after(T1)-before(T2)), Explain) :- !,
+    process_time_term(T1, Time1), process_time_term(T2, Time2),
+    name_as_atom([any, time, after, Time1, and, before, Time2], Explain).
+    
+process_types([], _, _, []) :- !.
+process_types([Word|RestWords], Elements, Types, [PrintWord|RestPrintWords] ) :- 
+    matches_type(Word, Elements, Types, date), 
+    ((nonvar(Word), number(Word)) -> unparse_time(Word, PrintWord); PrintWord = Word), !, 
+    process_types(RestWords,  Elements, Types, RestPrintWords). 
+process_types([Word|RestWords],  Elements, Types, [Word|RestPrintWords] ) :-
+    process_types(RestWords,  Elements, Types, RestPrintWords).
+
+matches_type(Word, [Element|_], [_-date|_], date) :- Word == Element, !.
+matches_type(Word, [_|RestElem], [_|RestTypes], Type) :-
+    matches_type(Word, RestElem, RestTypes, Type). 
 
 assert_facts(_, []) :- !. 
 assert_facts(SwishModule, [F|R]) :- nonvar(F), % print_message(informational, "asserting: ~w"-[SwishModule:F]),
