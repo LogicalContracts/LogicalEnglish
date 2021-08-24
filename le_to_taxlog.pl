@@ -758,10 +758,17 @@ match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, [Element|RestS
     match(RestElements, PossibleLiteral, Map1, MapN, RestSelected). 
 match([Element|RestElements], [Det|PossibleLiteral], Map1, MapN, [Var|RestSelected]) :-
     var(Element), 
-    determiner(Det), stop_words(RestElements, StopWords), 
+    indef_determiner(Det), stop_words(RestElements, StopWords), 
     extract_variable(StopWords, Var, [], NameWords, _, PossibleLiteral, NextWords),  NameWords \= [], % <- leave that _ unbound!
     name_predicate(NameWords, Name), 
     update_map(Var, Name, Map1, Map2), !,  % <-- CUT!  
+    match(RestElements, NextWords, Map2, MapN, RestSelected). 
+match([Element|RestElements], [Det|PossibleLiteral], Map1, MapN, [Var|RestSelected]) :-
+    var(Element), 
+    def_determiner(Det), stop_words(RestElements, StopWords), 
+    extract_variable(StopWords, Var, [], NameWords, _, PossibleLiteral, NextWords),  NameWords \= [], % <- leave that _ unbound!
+    name_predicate(NameWords, Name), 
+    consult_map(Var, Name, Map1, Map2), !,  % <-- CUT!  
     match(RestElements, NextWords, Map2, MapN, RestSelected). 
 % handling symbolic variables (as long as they have been previously defined and included in the map!) 
 match([Element|RestElements], PossibleLiteral, Map1, MapN, [Var|RestSelected]) :-
@@ -777,10 +784,11 @@ match([Element|RestElements], ['['|PossibleLiteral], Map1, MapN, [List|RestSelec
 % enabling expressions and constants
 match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, [Expression|RestSelected]) :-
     var(Element), stop_words(RestElements, StopWords),
-    extract_expression([','|StopWords], NameWords, [Word|PossibleLiteral], NextWords), NameWords \= [], 
-    ( phrase(expression_(Expression, Map1, Map2), NameWords) -> true ; ( Map1 = Map2, name_predicate(NameWords, Expression) ) ),
+    extract_expression([','|StopWords], NameWords, [Word|PossibleLiteral], NextWords), NameWords \= [],
+    % this expression cannot add variables 
+    ( phrase(expression_(Expression, Map1, Map1), NameWords) -> true ; ( name_predicate(NameWords, Expression) ) ),
     %print_message(informational, 'found a constant or an expression '), print_message(informational, Expression),
-    match(RestElements, NextWords, Map2, MapN, RestSelected). 
+    match(RestElements, NextWords, Map1, MapN, RestSelected). 
 
 %expression_(List, MapIn, MapOut) --> list_(List, MapIn, MapOut), !. 
 % expression_ resolve simple math (non boolean) expressions fttb. 
@@ -847,7 +855,7 @@ extract_constant(SW, RestName, ['\t'|RestOfWords],  NextWords) :- !,
     extract_constant(SW, RestName, RestOfWords, NextWords).
 extract_constant(SW, [Word|RestName], [Word|RestOfWords],  NextWords) :-
     %is_a_type(Word),
-    not(determiner(Word)), % no determiners inside constants!
+    %not(determiner(Word)), % no determiners inside constants!
     extract_constant(SW, RestName, RestOfWords, NextWords).
 
 % extract_list(+StopWords, -List, +Map1, -Map2, +[Word|PossibleLiteral], -NextWords),
@@ -861,10 +869,16 @@ extract_list(SW, RestList, Map1, MapN, ['\t'|RestOfWords],  NextWords) :- !,
 extract_list(SW, RestList, Map1, MapN, [','|RestOfWords],  NextWords) :- !, 
     extract_list(SW, RestList, Map1, MapN, RestOfWords, NextWords).
 extract_list(StopWords, [Var|RestList], Map1, MapN, [Det|InWords], LeftWords) :-
-    determiner(Det), 
+    indef_determiner(Det), 
     extract_variable(StopWords, Var, [], NameWords, _, InWords, NextWords), NameWords \= [], % <- leave that _ unbound!
     name_predicate(NameWords, Name),  
     update_map(Var, Name, Map1, Map2), !,
+    extract_list(StopWords, RestList, Map2, MapN, NextWords, LeftWords).
+extract_list(StopWords, [Var|RestList], Map1, MapN, [Det|InWords], LeftWords) :-
+    def_determiner(Det), 
+    extract_variable(StopWords, Var, [], NameWords, _, InWords, NextWords), NameWords \= [], % <- leave that _ unbound!
+    name_predicate(NameWords, Name),  
+    consult_map(Var, Name, Map1, Map2), !,
     extract_list(StopWords, RestList, Map2, MapN, NextWords, LeftWords).
 extract_list(StopWords, [Var|RestList], Map1, MapN, InWords, LeftWords) :-
     extract_variable(StopWords, Var,[], NameWords, _, InWords, NextWords), NameWords \= [],  % <- leave that _ unbound!
@@ -879,6 +893,12 @@ extract_list(StopWords, [Expression|RestList], Map1, MapN, InWords, LeftWords) :
 
 determiner(Det) :-
     (ind_det(Det); ind_det_C(Det); def_det(Det); def_det_C(Det)), !. 
+
+indef_determiner(Det) :-
+    (ind_det(Det); ind_det_C(Det)), !. 
+
+def_determiner(Det) :-
+    (def_det(Det); def_det_C(Det)), !. 
 
 rebuild_template(RawTemplate, Map1, MapN, Template) :-
     template_elements(RawTemplate, Map1, MapN, [], Template).
@@ -912,7 +932,7 @@ update_map(V, Name, InMap, OutMap) :-  % updates the map by adding a new variabl
 
 % consult_map(+V, -Name, +Inmap, -OutMap)
 consult_map(V, Name, InMap, InMap) :-
-    member(map(Var, SomeName), InMap), (Name = SomeName -> Var = V; ( Var == V -> Name = SomeName ; fail ) ),  !.  
+    member(map(Var, SomeName), InMap), (Name == SomeName -> Var = V; ( Var == V -> Name = SomeName ; fail ) ),  !.  
 %consult_map(V, V, Map, Map). % leave the name unassigned % deprecated to be used inside match
 
 builtin_(BuiltIn, [BuiltIn1, BuiltIn2|RestWords], RestWords) :- 
@@ -1105,7 +1125,8 @@ spypoint(A,A). % for debugging
 % NamesAndTypes contains the external name and type (name-type) of each variable just in the other in 
 % which the variables appear in LiteralElement. 
 dictionary(Predicate, VariablesNames, Template) :- % dict(Predicate, VariablesNames, Template).
-    predef_dict(Predicate, VariablesNames, Template); dict(Predicate, VariablesNames, Template).
+    dict(Predicate, VariablesNames, Template); predef_dict(Predicate, VariablesNames, Template).
+%    predef_dict(Predicate, VariablesNames, Template); dict(Predicate, VariablesNames, Template).
 
 :- discontiguous predef_dict/3.
 % predefined entries:
@@ -1288,6 +1309,10 @@ process_time_term((after(T1)-before(T2)), Explain) :- !,
 process_types([], _, _, []) :- !.
 process_types([Word|RestWords], Elements, Types, [PrintWord|RestPrintWords] ) :- 
     matches_type(Word, Elements, Types, date), 
+    ((nonvar(Word), number(Word)) -> unparse_time(Word, PrintWord); PrintWord = Word), !, 
+    process_types(RestWords,  Elements, Types, RestPrintWords). 
+process_types([Word|RestWords], Elements, Types, [PrintWord|RestPrintWords] ) :- 
+    matches_type(Word, Elements, Types, day), 
     ((nonvar(Word), number(Word)) -> unparse_time(Word, PrintWord); PrintWord = Word), !, 
     process_types(RestWords,  Elements, Types, RestPrintWords). 
 process_types([Word|RestWords],  Elements, Types, [Word|RestPrintWords] ) :-
