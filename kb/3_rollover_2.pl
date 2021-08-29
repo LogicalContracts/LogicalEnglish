@@ -3,47 +3,41 @@
 en("the target language is: prolog.
     
 the templates are:
- An entity is an ultimate owner of an asset at a time, 
- A trust 's election ocurred,
- A trust is the trust of a group,
- An owner / a share,
- the small business restructure rollover applies to an event,
- an asset is an eligible asset,
- an event occurs at a time,
- an event is a transfer of an asset by a transferor to a transferee,
- an event is part of genuine restructuring according to other legislation,
- an event meets the ultimate ownership test at a time,
- an event is undertaken as part of a trust,
- a trust relates to a family group,
- an individual is a member of a group,
- an individual is an ultimate owner of an asset at a time,
- a trust is a family trust,
- a thing is of type a type,
- a tax payer is in a transferee,
- a time is after a second time,
- a party is a party of an event,
- an amount is the aggregated turnover of a party,
- a party is an eligible party,
- a previous time is immediately before a time,
- an asset is ultimately owned by a share with an owner at a time,
- an entity has a share in an asset at a time,
- an owner owns an asset at a time according to other legislation,
- a party is a small business entity according to other legislation,
- a party has affiliated with an affiliate according to other legislation,
- a party is connected to a taxpayer according to other legislation,
- a party is a partner in partnership with a partnership according to other legislation,
- an asset is an active asset,
- an asset is used in business of a taxpayer according to other legislation,
- an asset is of asset type a type,
- an asset is of asset type a type according to other legislation,
- a party has an aggregated turnover of an amount,
- a party has an aggregated turnover of an amount according to other legislation,
- a cost is a rollover cost,
- an asset costs a cost at a time,
- an owner / a thing is in a set.
+ *An entity* is an ultimate owner of *an asset* at *a time*,
+ the small business restructure rollover applies to *an event*,
+ *an event* occurs at *a time*,
+ *an event* is a transfer of *an asset* by *a transferor* to *a transferee*,
+ *an event* is part of genuine restructuring as informed by *a source*,
+ *an event* meets the ultimate ownership test at *a time*,
+ *an event* is undertaken as part of *a trust*,
+ *a trust* relates to a family group,
+ *an individual* is a member of *a group*,
+ *a trust* is a family trust,
+ *a thing* is of type *a type*,
+ *a party* is a party of *an event*,
+ *an amount* is the aggregated turnover of *a party*,
+ *a party* is an eligible party,
+ *an asset* is an eligible asset,
+ *an asset* is ultimately owned by *a share* with *an owner* at *a time*,
+ *an entity* has a share in *an asset* at *a time*,
+ *an owner* owns *an asset* at *a time* as informed by *a source*,
+ *a party* is a small business entity as informed by *a source*,
+ *a party* has affiliated with *an affiliate* as informed by *a source*,
+ *a party* is connected to *a taxpayer* as informed by *a source*,
+ *a party* is a partner in partnership with *a partnership* as informed by *a source*,
+ *an asset* is an active asset,
+ *an asset* is used in business of *a taxpayer* as informed by *a source*,
+ *an asset* is of asset type *a type* as informed by *a source*,
+ *an asset* is of asset type *a type*,
+ *a party* has an aggregated turnover of *an amount* as informed by *a source*,
+ *a party* has an aggregated turnover of *an amount*,
+ *a cost* is a rollover cost,
+ *an asset* costs *an amount* at *a time*,
 
 the knowledge base Rollover includes:
 
+% these facts are not being used:
+goodwill is of type asset. 
 cgt asset is of type asset.
 trading stock is of type asset.
 revenue asset is of type asset.
@@ -52,10 +46,10 @@ loan_to_shareholder is of type asset.
 
 the small business restructure rollover applies to an event
      if the event occurs at a time
-     and the time is after 20160701
+     and the time is after 2016-07-01
      and the event is a transfer of an asset by a transferor to a transferee
      and the asset is an eligible asset
-     and the event is part of genuine restructuring according to other legislation
+     and the event is part of genuine restructuring as informed by a source
      and the event meets the ultimate ownership test at the time
      and for all cases in which
              a party is a party of the event
@@ -72,7 +66,7 @@ an event meets the ultimate ownership test at a time
              and the entity has a share in the asset at the time
          it is the case that:
              the entity is an ultimate owner of the asset at the previous time
-             and the entity has the share in the asset at the previous time.
+             and the entity has a share in the asset at the previous time.
 
 an event meets the ultimate ownership test at a time
      if the event is a transfer of an asset by a transferor to a transferee
@@ -96,22 +90,22 @@ A tax payer is a party of an event
 if  the event is a transfer of an asset by a transferor to the tax payer.
 
 An asset is ultimately owned by 1 with an owner at a time
- if  the owner owns the asset at the time according to other legislation.
+ if  the owner owns the asset at the time as informed by a source.
 
 A party is an eligible party
- if the party is a small business entity according to other legislation.
+ if the party is a small business entity as informed by a source.
 
 A party is an eligible party
- if the party has affiliated with an affiliate according to other legislation
- and the affiliate is a small business entity according to other legislation.
+ if the party has affiliated with an affiliate as informed by a source
+ and the affiliate is a small business entity as informed by a source.
 
 A party is an eligible party
- if the party is connected to a taxpayer according to other legislation
- and the taxpayer is a small business entity according to other legislation.
+ if the party is connected to a taxpayer as informed by a source
+ and the taxpayer is a small business entity as informed by a source.
 
 A party is an eligible party
- if the party is a partner in partnership with a partnership according to other legislation
- and the partnership is a small business entity according to other legislation.
+ if the party is a partner in partnership with a partnership as informed by a source
+ and the partnership is a small business entity as informed by a source.
 
 An asset is an eligible asset
  if  the asset is an active asset
@@ -119,14 +113,13 @@ An asset is an eligible asset
  and the type is in [cgt event,depreciating asset,trading stock,revenue asset].
 
 An asset is an active asset
- if  the asset is used in business of a taxpayer according to other legislation.
+ if  the asset is used in business of a taxpayer as informed by a source.
 
 An asset is of asset type a type
- if  the type is of type asset
- and the asset is of asset type the type according to other legislation.
+ if the asset is of asset type the type as informed by a source.
 
 A party has an aggregated turnover of an amount
- if the party has an aggregated turnover of the amount according to other legislation.
+ if the party has an aggregated turnover of the amount as informed by a source.
 
 A cost is a rollover cost
  if  the event occurs at a time
@@ -142,21 +135,21 @@ A cost is a rollover cost
 % Trading stock
 % Plant & equipment
 scenario Andrew email Feb 4 2021 is:
- transfer_20200701 occurs at 20200701.
- 20200701 is after 20160701.
+ transfer_20200701 occurs at 2020-07-01.
+ 2020-07-01 is after 2016-07-01.
  transfer_20200701 is a transfer of goodwill by company1 to andrew.
  transfer_20200701 is a transfer of trading stock by company1 to andrew.
  transfer_20200701 is a transfer of plant and equipment by company1 to andrew.
- goodwill is used in business of a taxpayer according to other legislation.
- goodwill is of asset type revenue asset according to other legislation.
- transfer_20200701 is part of genuine restructuring according to other legislation.
- 20200630 is immediately before 20200701.
+ goodwill is used in business of a taxpayer as informed by a source.
+ goodwill is of asset type revenue asset as informed by a source.
+ transfer_20200701 is part of genuine restructuring as informed by a source.
+ 2020-06-30 is immediately before 2020-07-01.
  5300000 is the aggregated turnover of company.
- company is a small business entity according to other legislation.
+ company is a small business entity as informed by a source.
 
 scenario testing one is:
- 20160701 is after 20160630.
- 20160630 is immediately before 20160701.
+ 2016-07-01 is after 2016-06-30.
+ 2016-06-30 is immediately before 2016-07-01.
 
 query one is:
 for which event:
@@ -168,8 +161,13 @@ query two is:
 query three is:
  A first time is after a second time
  and the second time is immediately before the first time.
+    
+query four is:
+    An asset is of asset type a type.
+    
 "). 
 
 /** <examples>
 ?- answer("one with Andrew email Feb 4 2021"). 
+?- answer("four with Andrew email Feb 4 2021").
 */

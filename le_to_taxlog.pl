@@ -9,6 +9,7 @@ See at the end the predicate le_taxlog_translate to be used from SWISH
 
 It assumes an entry with the following structure. One of these expressions:
 
+the meta predicates are:
 the predicates are:
 the templates are:
 the timeless predicates are:
@@ -67,9 +68,9 @@ which can then be used in the new command language interface of LE
 :- use_module('./tokenize/prolog/tokenize.pl').
 :- use_module(library(pengines)).
 :- use_module('reasoner.pl').
-:- thread_local literal/5, text_size/1, error_notice/4, dict/3, 
+:- thread_local literal/5, text_size/1, error_notice/4, dict/3, meta_dict/3, 
                 last_nl_parsed/1, kbname/1, happens/2, initiates/3, terminates/3,
-                predicates/1, events/1, fluents/1. 
+                predicates/1, events/1, fluents/1, metapredicates/1. 
 :- discontiguous statement/3, declaration/4.
 
 % Main clause: text_to_logic(+String,-Clauses) is det
@@ -139,9 +140,12 @@ kbbase_content([]) -->
 declaration([], [target(Language)]) --> % one word description for the language: prolog, taxlog
     spaces(_), [the], spaces(_), [target], spaces(_), [language], spaces(_), [is], spaces(_), colon_or_not_, 
     spaces(_), [Language], spaces(_), period.
+% meta predicates
+declaration(Rules, [metapredicates(MetaTemplates)]) -->
+    meta_predicate_previous, !, list_of_meta_predicates_decl(Rules, MetaTemplates).
 %timeless 
-declaration(Rules, [predicates(Relations)]) -->
-    predicate_previous, !, list_of_predicates_decl(Rules, Relations).
+declaration(Rules, [predicates(Templates)]) -->
+    predicate_previous, !, list_of_predicates_decl(Rules, Templates).
 %events
 declaration(Rules, [events(EventTypes)]) -->
     event_predicate_previous, !, list_of_predicates_decl(Rules, EventTypes).
@@ -151,6 +155,13 @@ declaration(Rules, [fluents(Fluents)]) -->
 
 colon_or_not_ --> [':'], spaces(_).
 colon_or_not_ --> []. 
+
+meta_predicate_previous --> 
+    spaces(_), [the], spaces(_), [metapredicates], spaces(_), [are], spaces(_), [':'], spaces_or_newlines(_).
+meta_predicate_previous --> 
+    spaces(_), [the], spaces(_), [meta], spaces(_), [predicates], spaces(_), [are], spaces(_), [':'], spaces_or_newlines(_).
+meta_predicate_previous --> 
+    spaces(_), [the], spaces(_), [meta], spaces(_), ['-'], spaces(_), [predicates], spaces(_), [are], spaces(_), [':'], spaces_or_newlines(_).
 
 predicate_previous --> 
     spaces(_), [the], spaces(_), [predicates], spaces(_), [are], spaces(_), [':'], spaces_or_newlines(_).
@@ -171,7 +182,14 @@ fluent_predicate_previous -->
 list_of_predicates_decl([], []) --> spaces_or_newlines(_), next_section, !. 
 list_of_predicates_decl([Ru|Rin], [F|Rout]) --> predicate_decl(Ru,F), comma_or_period, list_of_predicates_decl(Rin, Rout).
 
+% at least one predicate declaration required
+list_of_meta_predicates_decl([], []) --> spaces_or_newlines(_), next_section, !. 
+list_of_meta_predicates_decl([Ru|Rin], [F|Rout]) --> meta_predicate_decl(Ru,F), comma_or_period, list_of_meta_predicates_decl(Rin, Rout).
+
 % a hack to avoid superflous searches
+next_section(StopHere, StopHere)  :-
+    phrase(meta_predicate_previous, StopHere, _), !.
+
 next_section(StopHere, StopHere)  :-
     phrase(predicate_previous, StopHere, _), !.
 
@@ -194,12 +212,20 @@ predicate_decl(dict([Predicate|Arguments],TypesAndNames, Template), Relation) --
     spaces(_), template_decl(RawTemplate), 
     {build_template(RawTemplate, Predicate, Arguments, TypesAndNames, Template),
      Relation =.. [Predicate|Arguments]}.
-
 % we are using this resource of the last clause to record the error and its details
 % not very useful with loops, of course. 
 % error clause
 predicate_decl(_, _, Rest, _) :- 
     asserterror('LE error found in a declaration ', Rest), 
+    fail.
+
+meta_predicate_decl(meta_dict([Predicate|Arguments],TypesAndNames, Template), Relation) -->
+    spaces(_), template_decl(RawTemplate), 
+    {build_template(RawTemplate, Predicate, Arguments, TypesAndNames, Template),
+     Relation =.. [Predicate|Arguments]}.
+
+meta_predicate_decl(_, _, Rest, _) :- 
+    asserterror('LE error found in a meta template declaration ', Rest), 
     fail.
 
 rules_previous(default) --> 
@@ -622,16 +648,6 @@ extract_variable(SW, Var, InName, OutName, [Word|RestType], [Word|RestOfWords], 
 extract_variable(SW, Var, InName, OutName, RestType, [Word|RestOfWords], NextWords) :- % everything else is part of the name
     extract_variable(SW, Var, [Word|InName], OutName, RestType, RestOfWords, NextWords).
 
-%name_predicate([AtomNum,'.',AtomDecimal], Number) :-  
-%    atomic_list_concat([AtomNum,'.',AtomDecimal], Atom), atom_number(Atom, Number). 
-%name_predicate([Atom, '-'|Rest], Number-NRest) :- 
-%    atom_number(Atom, Number), name_predicate(Rest, NRest), !. 
-% 2021-02-06T08:25:34
-%name_predicate([Year,'-', Month, '-', DayTHours,':', Minutes, ':', Seconds], Date) :-
-%    concat_atom([Year,'-', Month, '-', DayTHours,':', Minutes, ':', Seconds], '', Date), !.
-%name_predicate([Year,'-', Month, '-', Day], Date) :-
-%    concat_atom([Year, Month, Day], '', Date), !.
-%name_predicate([Atom], Number) :- atom_number(Atom, Number), number(Number), !. % a quick fix for numbers extracted as constants
 name_predicate(Words, Predicate) :-
     concat_atom(Words, '_', Predicate). 
 
@@ -737,21 +753,90 @@ possible_template_for_lists([Word|RestW], [Word|RestIn], Out) :-
 %possible_template_for_lists([], [Word|Rest], [Word|Rest]) :- 
 %    lists:member(Word,[',', newline(_), if, '.']). % leaving or/and out of this
 
+match_template(PossibleLiteral, Map1, MapN, Literal) :-
+    meta_dictionary(Predicate, _, MetaCandidate),
+    meta_match(MetaCandidate, PossibleLiteral, Map1, MapN, MetaTemplate), !, 
+    meta_dictionary(Predicate, _, MetaTemplate),
+    Literal =.. Predicate. 
+
 match_template(PossibleLiteral, Map1, MapN, Literal) :- 
     dictionary(Predicate, _, Candidate),
-    match(Candidate, PossibleLiteral, Map1, MapN, Template), 
+    match(Candidate, PossibleLiteral, Map1, MapN, Template), !, 
     dictionary(Predicate, _, Template), 
-    Literal =.. Predicate, !. 
+    Literal =.. Predicate. 
     %print_message(informational,'Match!! with ~w'-[Literal]), !. 
+
+% meta_match(+CandidateTemplate, +PossibleLiteral, +MapIn, -MapOut, -SelectedTemplate)
+meta_match([], [], Map, Map, []) :- !.
+meta_match([Word|_LastElement], [Word|PossibleLiteral], Map1, MapN, [Word,Literal]) :- % asuming Element is last in template!
+    Word = that, % that is a reserved word "inside" templates! -> <meta level> that <object level> 
+    (meta_dictionary(Predicate, _, Candidate); dictionary(Predicate, _, Candidate)), % searching for a new inner literal
+    match(Candidate, PossibleLiteral, Map1, MapN, InnerTemplate),
+    (meta_dictionary(Predicate, _, InnerTemplate); dictionary(Predicate, _, InnerTemplate)), 
+    Literal =.. Predicate, !. 
+meta_match([MetaElement|RestMetaElements], [MetaWord|RestPossibleLiteral], Map1, MapN, [MetaElement|RestSelected]) :-
+    nonvar(MetaElement), MetaWord = MetaElement, !, 
+    meta_match(RestMetaElements, RestPossibleLiteral, Map1, MapN, RestSelected).
+%meta_match([MetaElement|RestMetaElements], PossibleLiteral, Map1, MapN, [Literal|RestSelected]) :-
+%    var(MetaElement), stop_words(RestMetaElements, StopWords), 
+%    extract_literal(StopWords, LiteralWords, PossibleLiteral, NextWords),
+%    meta_dictionary(Predicate, _, Candidate),
+%    match(Candidate, LiteralWords, Map1, Map2, Template),  %only two meta levels! % does not work. 
+%    meta_dictionary(Predicate, _, Template), 
+%    Literal =.. Predicate, !, 
+%    meta_match(RestMetaElements, NextWords, Map2, MapN, RestSelected).  
+meta_match([MetaElement|RestMetaElements], PossibleLiteral, Map1, MapN, [Literal|RestSelected]) :-
+    var(MetaElement), stop_words(RestMetaElements, StopWords), 
+    extract_literal(StopWords, LiteralWords, PossibleLiteral, NextWords),
+    dictionary(Predicate, _, Candidate), % this assumes that the "contained" literal is an object level literal. 
+    match(Candidate, LiteralWords, Map1, Map2, Template), 
+    dictionary(Predicate, _, Template), 
+    Literal =.. Predicate, !, 
+    meta_match(RestMetaElements, NextWords, Map2, MapN, RestSelected).  
+% it could also be an object level matching of other kind
+meta_match([Element|RestElements], [Det|PossibleLiteral], Map1, MapN, [Var|RestSelected]) :-
+    var(Element), 
+    indef_determiner(Det), stop_words(RestElements, StopWords), 
+    extract_variable(StopWords, Var, [], NameWords, _, PossibleLiteral, NextWords),  NameWords \= [], % <- leave that _ unbound!
+    name_predicate(NameWords, Name), 
+    update_map(Var, Name, Map1, Map2), !,  % <-- CUT!  
+    meta_match(RestElements, NextWords, Map2, MapN, RestSelected). 
+meta_match([Element|RestElements], [Det|PossibleLiteral], Map1, MapN, [Var|RestSelected]) :-
+    var(Element), 
+    def_determiner(Det), stop_words(RestElements, StopWords), 
+    extract_variable(StopWords, Var, [], NameWords, _, PossibleLiteral, NextWords),  NameWords \= [], % <- leave that _ unbound!
+    name_predicate(NameWords, Name), 
+    consult_map(Var, Name, Map1, Map2), !,  % <-- CUT!  
+    meta_match(RestElements, NextWords, Map2, MapN, RestSelected). 
+% handling symbolic variables (as long as they have been previously defined and included in the map!) 
+meta_match([Element|RestElements], PossibleLiteral, Map1, MapN, [Var|RestSelected]) :-
+    var(Element), stop_words(RestElements, StopWords), 
+    extract_variable(StopWords, Var, [], NameWords, _, PossibleLiteral, NextWords),  NameWords \= [], % <- leave that _ unbound!
+    name_predicate(NameWords, Name), 
+    consult_map(Var, Name, Map1, Map2), !, % <-- CUT!  % if the variables has been previously registered
+    meta_match(RestElements, NextWords, Map2, MapN, RestSelected).
+meta_match([Element|RestElements], ['['|PossibleLiteral], Map1, MapN, [List|RestSelected]) :-
+    var(Element), stop_words(RestElements, StopWords),
+    extract_list([']'|StopWords], List, Map1, Map2, PossibleLiteral, [']'|NextWords]), !, % matching brackets verified
+    meta_match(RestElements, NextWords, Map2, MapN, RestSelected).
+% enabling expressions and constants
+meta_match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, [Expression|RestSelected]) :-
+    var(Element), stop_words(RestElements, StopWords),
+    extract_expression([','|StopWords], NameWords, [Word|PossibleLiteral], NextWords), NameWords \= [],
+    % this expression cannot add variables 
+    ( phrase(expression_(Expression, Map1, Map1), NameWords) -> true ; ( name_predicate(NameWords, Expression) ) ),
+    %print_message(informational, 'found a constant or an expression '), print_message(informational, Expression),
+    meta_match(RestElements, NextWords, Map1, MapN, RestSelected). 
+
 
 % match(+CandidateTemplate, +PossibleLiteral, +MapIn, -MapOut, -SelectedTemplate)
 match([], [], Map, Map, []) :- !.  % success! It succeds iff PossibleLiteral is totally consumed
 % meta level access: that New Literal
 match([Word|_LastElement], [Word|PossibleLiteral], Map1, MapN, [Word,Literal]) :- % asuming Element is last in template!
     Word = that, % that is a reserved word "inside" templates! -> <meta level> that <object level> 
-    dictionary(Predicate, _, Candidate), % searching for a new inner literal
+    (meta_dictionary(Predicate, _, Candidate); dictionary(Predicate, _, Candidate)), % searching for a new inner literal
     match(Candidate, PossibleLiteral, Map1, MapN, InnerTemplate),
-    dictionary(Predicate, _, InnerTemplate), 
+    (meta_dictionary(Predicate, _, InnerTemplate); dictionary(Predicate, _, InnerTemplate)), 
     Literal =.. Predicate, !. 
 match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, [Element|RestSelected]) :-
     nonvar(Element), Word = Element, 
@@ -824,6 +909,16 @@ binary_op(Op) --> [Op], { atom(Op), current_op(_Prec, Fix, Op),
 stop_words([], []).
 stop_words([Word|_], [Word]) :- nonvar(Word). % only the next word for now
 stop_words([Word|_], []) :- var(Word).
+
+extract_literal(_, [], [], []) :- !. 
+extract_literal(StopWords, [],  [Word|RestOfWords],  [Word|RestOfWords]) :-
+    (member(Word, StopWords); phrase(newline, [Word])), !. 
+extract_literal(SW, RestName, [' '|RestOfWords],  NextWords) :- !, % skipping spaces
+    extract_literal(SW, RestName, RestOfWords, NextWords).
+extract_literal(SW, RestName, ['\t'|RestOfWords],  NextWords) :- !, 
+    extract_literal(SW, RestName, RestOfWords, NextWords).
+extract_literal(SW, [Word|RestName], [Word|RestOfWords],  NextWords) :-
+    extract_literal(SW, RestName, RestOfWords, NextWords).
 
 % extract_expression(+StopWords, ListOfNameWords, +ListOfWords, NextWordsInText)
 % it does not stop at reserved words!
@@ -986,6 +1081,7 @@ is_a_type(T) :- % pending integration with wei2nlen:is_a_type/1
 ind_det_C('A').
 ind_det_C('An').
 % ind_det_C('Some').
+ind_det_C('Each'). % added experimental
 ind_det_C('Which').  % added experimentally
 
 def_det_C('The').
@@ -994,6 +1090,7 @@ ind_det(a).
 ind_det(an).
 ind_det(another). % added experimentally
 ind_det(which).  % added experimentally
+ind_det(each).  % added experimentally
 % ind_det(some).
 
 def_det(the).
@@ -1119,6 +1216,15 @@ explain_error(String, Me-Pos, Message) :-
 
 spypoint(A,A). % for debugging
 
+% meta_dictionary(?LiteralElements, ?NamesAndTypes, ?Template)
+% for meta templates. See below
+meta_dictionary(Predicate, VariablesNames, Template) :- 
+    meta_dict(Predicate, VariablesNames, Template); predef_meta_dict(Predicate, VariablesNames, Template).
+
+:- discontiguous predef_meta_dict/3.
+predef_meta_dict([=, T1, T2], [time1-time, time2-time], [T1, is, equal, to, T2]).
+predef_meta_dict([\=, T1, T2], [time1-time, time2-time], [T1, is, different, from, T2]).
+
 % dictionary(?LiteralElements, ?NamesAndTypes, ?Template)
 % this is a multimodal predicate used to associate a Template with its particular other of the words for LE
 % with the Prolog expression of that relation in LiteralElements (not yet a predicate, =.. is done elsewhere).
@@ -1238,7 +1344,7 @@ happens(it_is_the_end_of(Date),T) :- %trace,
 %happens(it_is_the_end_of(T), _) :- T = _-_-_-00-00-00.  % needed?
 
 /* ----------------------------------------------------------------- CLI English */
-answer(English) :-  %trace, 
+answer(English) :- % trace, 
     translate_command(English, GoalName, Scenario), % later -->, Kbs),
     %print_message(informational, "Goal Name: ~w"-[GoalName]),
     pengine_self(SwishModule), SwishModule:query(GoalName, Goal), 
@@ -1252,7 +1358,7 @@ answer(English) :-  %trace,
     extract_goal_command(Goal, SwishModule, _InnerGoal, Command), 
     %print_message(informational, "Command: ~w"-[Command]),
     setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
-            catch((true, Command), Error, ( print_message(error, Error), fail ) ), 
+            catch((trace, Command), Error, ( print_message(error, Error), fail ) ), 
             _Result, 
             retract_facts(SwishModule, Facts)),
     %reasoner:query_once_with_facts(Goal,Scenario,_,E,Result),
@@ -1291,7 +1397,10 @@ get_answer_from_goal(holds(Goal,T), Answer) :- !,
     Goal =.. [Pred|GoalElements], dict([Pred|GoalElements], Types, WordsAnswer), 
     process_types(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), 
     process_time_term(T, TimeExplain),
-    Answer = ['At', TimeExplain, it, holds, that|ProcessedWordsAnswers].
+    Answer = ['At', TimeExplain, it, holds, that|ProcessedWordsAnswers], !.
+get_answer_from_goal(Goal, ProcessedWordsAnswers) :-  
+    Goal =.. [Pred|GoalElements], meta_dict([Pred|GoalElements], Types, WordsAnswer),
+    process_types(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), !. 
 get_answer_from_goal(Goal, ProcessedWordsAnswers) :-  
     Goal =.. [Pred|GoalElements], dict([Pred|GoalElements], Types, WordsAnswer),
     process_types(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers). 
@@ -1315,6 +1424,11 @@ process_types([Word|RestWords], Elements, Types, [PrintWord|RestPrintWords] ) :-
     matches_type(Word, Elements, Types, day), 
     ((nonvar(Word), number(Word)) -> unparse_time(Word, PrintWord); PrintWord = Word), !, 
     process_types(RestWords,  Elements, Types, RestPrintWords). 
+process_types([Word|RestWords],  Elements, Types, Output) :-
+    compound(Word), 
+    get_answer_from_goal(Word, PrintWord), 
+    process_types(RestWords,  Elements, Types, RestPrintWords),
+    append(PrintWord, RestPrintWords, Output). 
 process_types([Word|RestWords],  Elements, Types, [Word|RestPrintWords] ) :-
     process_types(RestWords,  Elements, Types, RestPrintWords).
 
@@ -1324,7 +1438,7 @@ matches_type(Word, [_|RestElem], [_|RestTypes], Type) :-
 
 assert_facts(_, []) :- !. 
 assert_facts(SwishModule, [F|R]) :- nonvar(F), % print_message(informational, "asserting: ~w"-[SwishModule:F]),
-    asserta(SwishModule:F), assert_facts(SwishModule, R).
+    assertz(SwishModule:F), assert_facts(SwishModule, R).
 
 retract_facts(_, []) :- !. 
 retract_facts(SwishModule, [F|R]) :- nonvar(F), % print_message(informational, "retracting: ~w"-[SwishModule:F]),
