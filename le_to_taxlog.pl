@@ -656,7 +656,7 @@ name_as_atom([Number], Number) :-
 name_as_atom([Atom], Number) :- 
     atom_number(Atom, Number), !. 
 name_as_atom(Words, Name) :-
-    numbervars(Words, 1, _, [functor_name('Which ')]),
+    numbervars(Words, 1, _, [functor_name('________')]),
     replace_vars(Words, Atoms), 
     list_words_to_codes(Atoms, Codes),
     atom_codes(Name, Codes).  
@@ -672,9 +672,9 @@ list_words_to_codes([Word|RestW], Out) :-
 
 remove_quotes([], []) :-!.
 remove_quotes([39|RestI], RestC) :- remove_quotes(RestI, RestC), !.
-% quick fix to remove parentesis too. 
-remove_quotes([40|RestI], RestC) :- remove_quotes(RestI, RestC), !.
-remove_quotes([41|RestI], RestC) :- remove_quotes(RestI, RestC), !.
+% quick fix to remove parentesis and numbers too. 
+remove_quotes([40, _, 41|RestI], RestC) :- remove_quotes(RestI, RestC), !.
+%remove_quotes([41|RestI], RestC) :- remove_quotes(RestI, RestC), !.
 remove_quotes([C|RestI], [C|RestC]) :- remove_quotes(RestI, RestC). 
 
 replace_vars([],[]) :- !.
@@ -1358,7 +1358,7 @@ answer(English) :- % trace,
     extract_goal_command(Goal, SwishModule, _InnerGoal, Command), 
     %print_message(informational, "Command: ~w"-[Command]),
     setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
-            catch((trace, Command), Error, ( print_message(error, Error), fail ) ), 
+            catch((true, Command), Error, ( print_message(error, Error), fail ) ), 
             _Result, 
             retract_facts(SwishModule, Facts)),
     %reasoner:query_once_with_facts(Goal,Scenario,_,E,Result),
@@ -1390,20 +1390,20 @@ get_answer_from_goal((G,R), WholeAnswer) :-
     append(Answer, [and|RestAnswers], WholeAnswer).
 get_answer_from_goal(happens(Goal,T), Answer) :- !,   % simple goals do not return a list, just a literal
     Goal =.. [Pred|GoalElements], dict([Pred|GoalElements], Types, WordsAnswer), 
-    process_types(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), 
+    process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), 
     process_time_term(T, TimeExplain),
     Answer = ['At', TimeExplain, it, occurs, that|ProcessedWordsAnswers].
 get_answer_from_goal(holds(Goal,T), Answer) :- !, 
     Goal =.. [Pred|GoalElements], dict([Pred|GoalElements], Types, WordsAnswer), 
-    process_types(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), 
+    process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), 
     process_time_term(T, TimeExplain),
     Answer = ['At', TimeExplain, it, holds, that|ProcessedWordsAnswers], !.
 get_answer_from_goal(Goal, ProcessedWordsAnswers) :-  
     Goal =.. [Pred|GoalElements], meta_dict([Pred|GoalElements], Types, WordsAnswer),
-    process_types(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), !. 
+    process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), !. 
 get_answer_from_goal(Goal, ProcessedWordsAnswers) :-  
     Goal =.. [Pred|GoalElements], dict([Pred|GoalElements], Types, WordsAnswer),
-    process_types(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers). 
+    process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers). 
 
 process_time_term(T,T) :- var(T). % in case of vars
 process_time_term(T,T) :- nonvar(T), atom(T), !. 
@@ -1415,24 +1415,43 @@ process_time_term((after(T1)-before(T2)), Explain) :- !,
     process_time_term(T1, Time1), process_time_term(T2, Time2),
     name_as_atom([any, time, after, Time1, and, before, Time2], Explain).
     
-process_types([], _, _, []) :- !.
-process_types([Word|RestWords], Elements, Types, [PrintWord|RestPrintWords] ) :- 
+process_types_or_names([], _, _, []) :- !.
+process_types_or_names([Word|RestWords], Elements, Types, PrintExpression ) :- 
+    var(Word), matches_name(Word, Elements, Types, Name), !, 
+    process_types_or_names(RestWords,  Elements, Types, RestPrintWords),
+    tokenize_atom(Name, NameWords), add_determiner(NameWords, PrintName),
+    append(PrintName, RestPrintWords, PrintExpression).
+process_types_or_names([Word|RestWords], Elements, Types, [PrintWord|RestPrintWords] ) :- 
     matches_type(Word, Elements, Types, date), 
     ((nonvar(Word), number(Word)) -> unparse_time(Word, PrintWord); PrintWord = Word), !, 
-    process_types(RestWords,  Elements, Types, RestPrintWords). 
-process_types([Word|RestWords], Elements, Types, [PrintWord|RestPrintWords] ) :- 
+    process_types_or_names(RestWords,  Elements, Types, RestPrintWords). 
+process_types_or_names([Word|RestWords], Elements, Types, [PrintWord|RestPrintWords] ) :- 
     matches_type(Word, Elements, Types, day), 
     ((nonvar(Word), number(Word)) -> unparse_time(Word, PrintWord); PrintWord = Word), !, 
-    process_types(RestWords,  Elements, Types, RestPrintWords). 
-process_types([Word|RestWords],  Elements, Types, Output) :-
+    process_types_or_names(RestWords,  Elements, Types, RestPrintWords). 
+process_types_or_names([Word|RestWords],  Elements, Types, Output) :-
     compound(Word), 
-    get_answer_from_goal(Word, PrintWord), 
-    process_types(RestWords,  Elements, Types, RestPrintWords),
+    get_answer_from_goal(Word, PrintWord), !, % cut the alternatives
+    process_types_or_names(RestWords,  Elements, Types, RestPrintWords),
     append(PrintWord, RestPrintWords, Output). 
-process_types([Word|RestWords],  Elements, Types, [Word|RestPrintWords] ) :-
-    process_types(RestWords,  Elements, Types, RestPrintWords).
+process_types_or_names([Word|RestWords],  Elements, Types, [Word|RestPrintWords] ) :-
+    process_types_or_names(RestWords,  Elements, Types, RestPrintWords).
 
-matches_type(Word, [Element|_], [_-date|_], date) :- Word == Element, !.
+add_determiner([Word|RestWords], [Det, Word|RestWords]) :-
+    name(Word,[First|_]), proper_det(First, Det).
+
+proper_det(97, an) :- !.
+proper_det(101, an) :- !.
+proper_det(105, an) :- !.
+proper_det(111, an) :- !.
+proper_det(117, an) :- !.
+proper_det(_, a). 
+
+matches_name(Word, [Element|_], [Name-_|_], Name) :- Word == Element, !.
+matches_name(Word, [_|RestElem], [_|RestTypes], Name) :-
+    matches_name(Word, RestElem, RestTypes, Name). 
+
+matches_type(Word, [Element|_], [_-Type|_], Type) :- Word == Element, !.
 matches_type(Word, [_|RestElem], [_|RestTypes], Type) :-
     matches_type(Word, RestElem, RestTypes, Type). 
 
