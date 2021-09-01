@@ -1417,6 +1417,10 @@ process_time_term((after(T1)-before(T2)), Explain) :- !,
     
 process_types_or_names([], _, _, []) :- !.
 process_types_or_names([Word|RestWords], Elements, Types, PrintExpression ) :- 
+    atom(Word), concat_atom(WordList, '_', Word), !, 
+    process_types_or_names(RestWords,  Elements, Types, RestPrintWords),
+    append(WordList, RestPrintWords, PrintExpression).
+process_types_or_names([Word|RestWords], Elements, Types, PrintExpression ) :- 
     var(Word), matches_name(Word, Elements, Types, Name), !, 
     process_types_or_names(RestWords,  Elements, Types, RestPrintWords),
     tokenize_atom(Name, NameWords), add_determiner(NameWords, PrintName),
