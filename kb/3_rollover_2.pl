@@ -37,7 +37,6 @@ the templates are:
 the knowledge base Rollover includes:
 
 % these facts are not being used:
-goodwill is of type asset. 
 cgt asset is of type asset.
 trading stock is of type asset.
 revenue asset is of type asset.
@@ -62,7 +61,7 @@ an event meets the ultimate ownership test at a time
      if the event is a transfer of an asset by a transferor to a transferee
      and a previous time is immediately before the time
      and for all cases in which
-             the entity is an ultimate owner of the asset at the time
+             an entity is an ultimate owner of the asset at the time
              and the entity has a share in the asset at the time
          it is the case that:
              the entity is an ultimate owner of the asset at the previous time
@@ -141,11 +140,17 @@ scenario Andrew email Feb 4 2021 is:
  transfer_20200701 is a transfer of trading stock by company1 to andrew.
  transfer_20200701 is a transfer of plant and equipment by company1 to andrew.
  goodwill is used in business of a taxpayer as informed by a source.
+ plant and equipment is used in business of a taxpayer as informed by a source. 
  goodwill is of asset type revenue asset as informed by a source.
+ plant and equipment is of asset type revenue asset as informed by a source.
  transfer_20200701 is part of genuine restructuring as informed by a source.
  2020-06-30 is immediately before 2020-07-01.
  5300000 is the aggregated turnover of company.
  company is a small business entity as informed by a source.
+ company is an ultimate owner of goodwill at 2020-07-01.
+ company has share_goodwill in goodwill at 2020-07-01.
+ company is an ultimate owner of goodwill at 2020-06-30.
+ company has share_goodwill in goodwill at 2020-06-30.
 
 scenario testing one is:
  2016-07-01 is after 2016-06-30.
@@ -161,13 +166,8 @@ query two is:
 query three is:
  A first time is after a second time
  and the second time is immediately before the first time.
-    
-query four is:
-    An asset is of asset type a type.
-    
 "). 
 
 /** <examples>
 ?- answer("one with Andrew email Feb 4 2021"). 
-?- answer("four with Andrew email Feb 4 2021").
 */
