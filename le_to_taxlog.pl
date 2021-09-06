@@ -1191,10 +1191,14 @@ select_first_section([E|R], N, [E|NR]) :-
     N > 0, NN is N - 1,
     select_first_section(R, NN, NR). 
 
-showErrors(File,Baseline) :- % showing only the last message!
-    error_notice(error, Me,Pos, ContextTokens), 
-    atomic_list_concat([Me,': '|ContextTokens],ContextTokens_),
-    Line is Pos+Baseline,
+showErrors(File,Baseline) :- % showing the deepest message!
+    findall(error_notice(error, Me,Pos, ContextTokens), 
+        error_notice(error, Me,Pos, ContextTokens), ErrorsList),
+    deepest(ErrorsList, 
+        error_notice(error, 'None',0, 'There was no syntax error'), 
+        error_notice(error, MeMax,PosMax, ContextTokensMax)), 
+    atomic_list_concat([MeMax,': '|ContextTokensMax],ContextTokens_),
+    Line is PosMax+Baseline,
     print_message(error,error(syntax_error(ContextTokens_),file(File,Line,_One,_Char))).
     % to show them all
     %forall(error_notice(error, Me,Pos, ContextTokens), (
@@ -1202,6 +1206,14 @@ showErrors(File,Baseline) :- % showing only the last message!
     %    Line is Pos+Baseline,
     %    print_message(error,error(syntax_error(ContextTokens_),file(File,Line,_One,_Char)))
     %    )).
+
+deepest([], Deepest, Deepest) :- !.
+deepest([error_notice(error, Me,Pos, ContextTokens)|Rest], 
+        error_notice(error,_Me0,Pos0,_ContextTokens0), Out) :-
+    Pos0 < Pos, !, 
+    deepest(Rest, error_notice(error, Me,Pos, ContextTokens), Out).
+deepest([_|Rest], In, Out) :-
+    deepest(Rest, In, Out).
 
 % to pinpoint exactly the error. But position is not right
 explain_error(String, Me-Pos, Message) :-
@@ -1358,7 +1370,7 @@ answer(English) :- % trace,
     extract_goal_command(Goal, SwishModule, _InnerGoal, Command), 
     %print_message(informational, "Command: ~w"-[Command]),
     setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
-            catch((true, Command), Error, ( print_message(error, Error), fail ) ), 
+            catch((trace, Command), Error, ( print_message(error, Error), fail ) ), 
             _Result, 
             retract_facts(SwishModule, Facts)),
     %reasoner:query_once_with_facts(Goal,Scenario,_,E,Result),
