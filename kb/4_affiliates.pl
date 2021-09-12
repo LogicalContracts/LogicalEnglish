@@ -1,4 +1,4 @@
-:-module('https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/affiliates/',[]).
+:-module('one+https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/affiliates/',[]).
 
 % indicate future API entry point: predicate pattern, description
 mainGoal(has_affiliated_with(_Entity,_Affiliate),"Determine if a given entity is affiliate of another (also given)").

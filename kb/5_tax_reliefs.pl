@@ -1,4 +1,4 @@
-:-module('https://www.gov.uk/guidance/stamp-duty-reserve-tax-reliefs-and-exemptions',[]).
+:-module('one+https://www.gov.uk/guidance/stamp-duty-reserve-tax-reliefs-and-exemptions',[]).
 
 mainGoal(exempt_transfer(_FromTaxPayer,_ToTaxPayer,_SecurityIdentifier,_Time),"Determine if an electronic transaction is exempt from SDRT").
 

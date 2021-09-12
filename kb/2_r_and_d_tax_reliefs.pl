@@ -1,4 +1,4 @@
-:-module('https://www.gov.uk/guidance/corporation-tax-research-and-development-rd-relief',[]).
+:-module('one+https://www.gov.uk/guidance/corporation-tax-research-and-development-rd-relief',[]).
 
 mainGoal('can_request_R_&_D_relief_for_with'(_ProjectID,_ExtraDeduction,_TaxCredit), "Determine if a project qualifies for the EIS").
 

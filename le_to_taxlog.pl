@@ -59,7 +59,7 @@ query three is:
 --
 
 which can then be used in the new command language interface of LE
-(e.g. answer/1, is_it_true/2 meta-predicates)
+(e.g. answer/1 and others meta-predicates)
 
 
 */
@@ -243,16 +243,19 @@ scenario_content(Scenario) -->
     spaces(_), assumptions_([], _, Assumptions), !, % period is gone
     {name_as_atom(NameWords, Name), Scenario = [example( Name, [scenario(Assumptions, true)])]}.
 
+scenario_content(_,  Rest, _) :- 
+    asserterror('LE error found around this scenario expression: ', Rest), fail.
+
 % statement: the different types of statements in a LE text
 % a query
 query_content(Query) -->
     query_, extract_constant([is], NameWords), is_colon_, newline,
-    query_header(Ind0, Map1),
-    conditions(Ind0, Map1, _, Conds), period, !, % period stays!
+    query_header(Ind0, Map1),  
+    conditions(Ind0, Map1, _, Conds), !, period,  % period stays!
     {name_as_atom(NameWords, Name), Query = [query(Name, Conds)]}. 
 
 query_content(_, Rest, _) :- 
-    asserterror('LE error found around this expression: ', Rest), fail.
+    asserterror('LE error found around this query expression: ', Rest), fail.
 
 % (holds_at(_149428,_149434) if 
 % (happens_at(_150138,_150144),
@@ -433,8 +436,8 @@ condition(FinalExpression, _, Map1, MapN) -->
     
 % it is not the case that 
 condition(not(Conds), _, Map1, MapN) --> 
-    spaces(_), not_, newline,  !, % forget other choices. We know it is a not case
-    spaces(Ind), conditions(Ind, Map1, MapN, Conds).
+    spaces(_), not_, newline,  % forget other choices. We know it is a not case
+    spaces(Ind), conditions(Ind, Map1, MapN, Conds), !.
 
 condition(Cond, _, Map1, MapN) -->  
     literal_(Map1, MapN, Cond), !. 
@@ -544,7 +547,9 @@ scenario_ -->  spaces_or_newlines(_), [scenario], spaces(_).
 
 is_colon_ -->  [is], spaces(_), [':'], spaces(_).
 
+query_ --> spaces_or_newlines(_), ['Query'], !, spaces(_).
 query_ --> spaces_or_newlines(_), [query], spaces(_).
+
 
 for_which_ --> [for], spaces(_), [which], spaces(_). 
 

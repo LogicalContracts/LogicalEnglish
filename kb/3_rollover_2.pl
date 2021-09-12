@@ -1,4 +1,4 @@
-:- module('https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/small-business-restructure-rollover/',[]).
+:- module('two+https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/small-business-restructure-rollover/',[]).
 
 en("the target language is: prolog.
     
