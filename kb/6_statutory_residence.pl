@@ -1,4 +1,4 @@
-:-module('https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11040',[]).
+:-module('one+https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11040',[]).
 
 mainGoal(complies_to_statutory_residence_test_at(_Individual, _Date), "Determine if a person is a UK resident for tax purposes").
 

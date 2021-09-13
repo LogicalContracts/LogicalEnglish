@@ -1,4 +1,4 @@
-:- module('https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/small-business-restructure-rollover',[]).
+:- module('one+https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/small-business-restructure-rollover',[]).
 
 mainGoal(event_of_transfering_from_to_at_occurs(_ID,_Asset,_Transferor,_TransfereesList,_When), "Determine if a asset transfer event can be treated as a restructure rollover").
 

@@ -59,7 +59,7 @@ query three is:
 --
 
 which can then be used in the new command language interface of LE
-(e.g. answer/1, is_it_true/2 meta-predicates)
+(e.g. answer/1 and others meta-predicates)
 
 
 */
@@ -243,16 +243,19 @@ scenario_content(Scenario) -->
     spaces(_), assumptions_([], _, Assumptions), !, % period is gone
     {name_as_atom(NameWords, Name), Scenario = [example( Name, [scenario(Assumptions, true)])]}.
 
+scenario_content(_,  Rest, _) :- 
+    asserterror('LE error found around this scenario expression: ', Rest), fail.
+
 % statement: the different types of statements in a LE text
 % a query
 query_content(Query) -->
     query_, extract_constant([is], NameWords), is_colon_, newline,
-    query_header(Ind0, Map1),
-    conditions(Ind0, Map1, _, Conds), period, !, % period stays!
+    query_header(Ind0, Map1),  
+    conditions(Ind0, Map1, _, Conds), !, period,  % period stays!
     {name_as_atom(NameWords, Name), Query = [query(Name, Conds)]}. 
 
 query_content(_, Rest, _) :- 
-    asserterror('LE error found around this expression: ', Rest), fail.
+    asserterror('LE error found around this query expression: ', Rest), fail.
 
 % (holds_at(_149428,_149434) if 
 % (happens_at(_150138,_150144),
@@ -433,8 +436,8 @@ condition(FinalExpression, _, Map1, MapN) -->
     
 % it is not the case that 
 condition(not(Conds), _, Map1, MapN) --> 
-    spaces(_), not_, newline,  !, % forget other choices. We know it is a not case
-    spaces(Ind), conditions(Ind, Map1, MapN, Conds).
+    spaces(_), not_, newline,  % forget other choices. We know it is a not case
+    spaces(Ind), conditions(Ind, Map1, MapN, Conds), !.
 
 condition(Cond, _, Map1, MapN) -->  
     literal_(Map1, MapN, Cond), !. 
@@ -544,7 +547,9 @@ scenario_ -->  spaces_or_newlines(_), [scenario], spaces(_).
 
 is_colon_ -->  [is], spaces(_), [':'], spaces(_).
 
+query_ --> spaces_or_newlines(_), ['Query'], !, spaces(_).
 query_ --> spaces_or_newlines(_), [query], spaces(_).
+
 
 for_which_ --> [for], spaces(_), [which], spaces(_). 
 
@@ -1191,10 +1196,14 @@ select_first_section([E|R], N, [E|NR]) :-
     N > 0, NN is N - 1,
     select_first_section(R, NN, NR). 
 
-showErrors(File,Baseline) :- % showing only the last message!
-    error_notice(error, Me,Pos, ContextTokens), 
-    atomic_list_concat([Me,': '|ContextTokens],ContextTokens_),
-    Line is Pos+Baseline,
+showErrors(File,Baseline) :- % showing the deepest message!
+    findall(error_notice(error, Me,Pos, ContextTokens), 
+        error_notice(error, Me,Pos, ContextTokens), ErrorsList),
+    deepest(ErrorsList, 
+        error_notice(error, 'None',0, 'There was no syntax error'), 
+        error_notice(error, MeMax,PosMax, ContextTokensMax)), 
+    atomic_list_concat([MeMax,': '|ContextTokensMax],ContextTokens_),
+    Line is PosMax+Baseline,
     print_message(error,error(syntax_error(ContextTokens_),file(File,Line,_One,_Char))).
     % to show them all
     %forall(error_notice(error, Me,Pos, ContextTokens), (
@@ -1202,6 +1211,14 @@ showErrors(File,Baseline) :- % showing only the last message!
     %    Line is Pos+Baseline,
     %    print_message(error,error(syntax_error(ContextTokens_),file(File,Line,_One,_Char)))
     %    )).
+
+deepest([], Deepest, Deepest) :- !.
+deepest([error_notice(error, Me,Pos, ContextTokens)|Rest], 
+        error_notice(error,_Me0,Pos0,_ContextTokens0), Out) :-
+    Pos0 < Pos, !, 
+    deepest(Rest, error_notice(error, Me,Pos, ContextTokens), Out).
+deepest([_|Rest], In, Out) :-
+    deepest(Rest, In, Out).
 
 % to pinpoint exactly the error. But position is not right
 explain_error(String, Me-Pos, Message) :-
@@ -1358,7 +1375,7 @@ answer(English) :- % trace,
     extract_goal_command(Goal, SwishModule, _InnerGoal, Command), 
     %print_message(informational, "Command: ~w"-[Command]),
     setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
-            catch((true, Command), Error, ( print_message(error, Error), fail ) ), 
+            catch((trace, Command), Error, ( print_message(error, Error), fail ) ), 
             _Result, 
             retract_facts(SwishModule, Facts)),
     %reasoner:query_once_with_facts(Goal,Scenario,_,E,Result),
