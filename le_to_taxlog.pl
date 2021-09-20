@@ -638,7 +638,8 @@ build_template_elements([Word|RestOfWords], Previous, RestVars, RestTypes,  [Wor
 % refactored as a dcg predicate
 extract_variable(_, _, Names, Names, [], [], []) :- !.                                % stop at when words run out
 extract_variable(StopWords, _, Names, Names, [], [Word|RestOfWords], [Word|RestOfWords]) :-   % stop at reserved words, verbs or prepositions. 
-    (member(Word, StopWords); reserved_word(Word); verb(Word); preposition(Word); punctuation(Word); phrase(newline, [Word])), !.  % or punctuation
+    %(member(Word, StopWords); reserved_word(Word); verb(Word); preposition(Word); punctuation(Word); phrase(newline, [Word])), !.  % or punctuation
+    (member(Word, StopWords); punctuation(Word); phrase(newline, [Word])), !.
 extract_variable(SW, Var, InName, OutName, RestType, [' '|RestOfWords], NextWords) :- !, % skipping spaces
     extract_variable(SW, Var, InName, OutName, RestType, RestOfWords, NextWords).
 extract_variable(SW, Var, InName, OutName, RestType, ['\t'|RestOfWords], NextWords) :- !,  % skipping spaces
@@ -945,7 +946,8 @@ extract_expression(SW, [Word|RestName], [Word|RestOfWords],  NextWords) :-
 % extract_constant(+StopWords, ListOfNameWords, +ListOfWords, NextWordsInText)
 extract_constant(_, [], [], []) :- !.                                % stop at when words run out
 extract_constant(StopWords, [], [Word|RestOfWords], [Word|RestOfWords]) :-   % stop at reserved words, verbs? or prepositions?. 
-    (member(Word, StopWords); reserved_word(Word); verb(Word); preposition(Word); punctuation(Word); phrase(newline, [Word])), !.  % or punctuation
+    %(member(Word, StopWords); reserved_word(Word); verb(Word); preposition(Word); punctuation(Word); phrase(newline, [Word])), !.  % or punctuation
+    (member(Word, StopWords); punctuation(Word); phrase(newline, [Word])), !.
 %extract_constant([Word|RestName], [Word|RestOfWords], NextWords) :- % ordinals are not part of the name
 %    ordinal(Word), !,
 %    extract_constant(RestName, RestOfWords, NextWords).
@@ -1236,7 +1238,7 @@ spypoint(A,A). % for debugging
 % meta_dictionary(?LiteralElements, ?NamesAndTypes, ?Template)
 % for meta templates. See below
 meta_dictionary(Predicate, VariablesNames, Template) :- 
-    meta_dict(Predicate, VariablesNames, Template); predef_meta_dict(Predicate, VariablesNames, Template).
+    meta_dict(Predicate, VariablesNames, Template). %; predef_meta_dict(Predicate, VariablesNames, Template).
 
 :- discontiguous predef_meta_dict/3.
 predef_meta_dict([=, T1, T2], [time1-time, time2-time], [T1, is, equal, to, T2]).
@@ -1248,7 +1250,7 @@ predef_meta_dict([\=, T1, T2], [time1-time, time2-time], [T1, is, different, fro
 % NamesAndTypes contains the external name and type (name-type) of each variable just in the other in 
 % which the variables appear in LiteralElement. 
 dictionary(Predicate, VariablesNames, Template) :- % dict(Predicate, VariablesNames, Template).
-    dict(Predicate, VariablesNames, Template); predef_dict(Predicate, VariablesNames, Template).
+    dict(Predicate, VariablesNames, Template). %; predef_dict(Predicate, VariablesNames, Template).
 %    predef_dict(Predicate, VariablesNames, Template); dict(Predicate, VariablesNames, Template).
 
 :- discontiguous predef_dict/3.
