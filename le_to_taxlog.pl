@@ -305,6 +305,10 @@ statement(Statement) -->
     literal_([], Map1, Head), body_(Body, Map1, _), period,  
     {(Body = [] -> Statement = [if(Head, true)]; Statement = [if(Head, Body)])}. 
 
+% error
+statement(_, Rest, _) :- 
+    asserterror('LE error found around this stat: ', Rest), fail.
+
 list_of_facts([F|R1]) --> literal_([], _,F), rest_list_of_facts(R1).
 
 rest_list_of_facts(L1) --> comma, spaces_or_newlines(_), list_of_facts(L1).
@@ -423,7 +427,7 @@ condition(FinalExpression, _, Map1, MapN) -->
 condition(FinalExpression, _, Map1, MapN) -->  
     for_all_cases_in_which_, newline, !, 
     spaces(Ind2), conditions(Ind2, Map1, Map2, Conds), spaces_or_newlines(_), 
-    it_is_the_case_that_colon_, newline, 
+    it_is_the_case_that_, newline, 
     spaces(Ind3), conditions(Ind3, Map2, Map3, Goals),
     modifiers(forall(Conds,Goals), Map3, MapN, FinalExpression).
 
@@ -446,9 +450,10 @@ condition(Cond, _, Map1, MapN) -->
 %    this_information_, !, prolog_literal_(Prolog, Map1, MapN), has_been_recorded_. 
 
 % condition(-Cond, ?Ind, +InMap, -OutMap)
-condition(InfixBuiltIn, _, Map1, MapN) --> 
-    term_(Term, Map1, Map2), spaces(_), builtin_(BuiltIn), !, 
-    spaces(_), expression_(Expression, Map2, MapN), {InfixBuiltIn =.. [BuiltIn, Term, Expression]}. 
+% builtins have been included as predefined templates in the predef_dict
+%condition(InfixBuiltIn, _, Map1, MapN) --> 
+%    term_(Term, Map1, Map2), spaces_or_newlines(_), builtin_(BuiltIn), 
+%    spaces_or_newlines(_), expression_(Expression, Map2, MapN), !, {InfixBuiltIn =.. [BuiltIn, Term, Expression]}. 
 
 % error clause
 condition(_, _Ind, Map, Map, Rest, _) :- 
@@ -461,7 +466,7 @@ modifiers(MainExpression, Map1, MapN, on(MainExpression, Var) ) -->
 modifiers(MainExpression, Map, Map, MainExpression) --> [].  
 
 variable(Var, Map1, MapN) --> 
-    spaces(_), [Det], {determiner(Det)}, extract_variable([], Var, [], NameWords, _), !, % <-- CUT!
+    spaces(_), [Det], {determiner(Det)}, extract_variable([], Var, [], NameWords, _), % <-- CUT!
     { name_predicate(NameWords, Name), update_map(Var, Name, Map1, MapN) }. 
 % allowing for symbolic variables: 
 variable(Var, Map1, MapN) --> 
@@ -536,7 +541,7 @@ has_been_recorded_ --> [has], spaces(_), [been], spaces(_), [recorded], spaces(_
 
 for_all_cases_in_which_ --> spaces_or_newlines(_), [for], spaces(_), [all], spaces(_), [cases], spaces(_), [in], spaces(_), [which], spaces(_).
 
-it_is_the_case_that_colon_ --> [it], spaces(_), [is], spaces(_), [the], spaces(_), [case], spaces(_), [that], spaces(_), [':'], spaces(_).
+it_is_the_case_that_ --> [it], spaces(_), [is], spaces(_), [the], spaces(_), [case], spaces(_), [that], spaces(_).
 
 is_a_collection_of_ --> [is], spaces(_), [a], spaces(_), [collection], spaces(_), [of], spaces(_). 
 
@@ -1238,7 +1243,7 @@ spypoint(A,A). % for debugging
 % meta_dictionary(?LiteralElements, ?NamesAndTypes, ?Template)
 % for meta templates. See below
 meta_dictionary(Predicate, VariablesNames, Template) :- 
-    meta_dict(Predicate, VariablesNames, Template). %; predef_meta_dict(Predicate, VariablesNames, Template).
+    meta_dict(Predicate, VariablesNames, Template) ; predef_meta_dict(Predicate, VariablesNames, Template).
 
 :- discontiguous predef_meta_dict/3.
 predef_meta_dict([=, T1, T2], [time1-time, time2-time], [T1, is, equal, to, T2]).
@@ -1250,7 +1255,7 @@ predef_meta_dict([\=, T1, T2], [time1-time, time2-time], [T1, is, different, fro
 % NamesAndTypes contains the external name and type (name-type) of each variable just in the other in 
 % which the variables appear in LiteralElement. 
 dictionary(Predicate, VariablesNames, Template) :- % dict(Predicate, VariablesNames, Template).
-    dict(Predicate, VariablesNames, Template). %; predef_dict(Predicate, VariablesNames, Template).
+    dict(Predicate, VariablesNames, Template) ; predef_dict(Predicate, VariablesNames, Template).
 %    predef_dict(Predicate, VariablesNames, Template); dict(Predicate, VariablesNames, Template).
 
 :- discontiguous predef_dict/3.
@@ -1263,10 +1268,20 @@ predef_dict([after, T1, T2], [time1-time, time2-time], [T1, is, after, T2]).  % 
 predef_dict([is_not_before, T1, T2], [time1-time, time2-time], [T1, is, not, before, T2]). % see reasoner.pl before/2
 predef_dict([immediately_before, T1, T2], [time1-time, time2-time], [T1, is, immediately, before, T2]). % see reasoner.pl before/2
 predef_dict([same_date, T1, T2], [time1-time, time2-time], [T1, is, the, same, date, as, T2]). % see reasoner.pl before/2
-predef_dict([=, T1, T2], [time1-time, time2-time], [T1, is, equal, to, T2]).
-predef_dict([\=, T1, T2], [time1-time, time2-time], [T1, is, different, from, T2]).
-%predef_dict([=<, T1, T2], [time1-time, time2-time], [T1, =, <, T2]).
-%predef_dict([>=, T1, T2], [time1-time, time2-time], [T1, >, =, T2]).
+predef_dict([=, T1, T2], [thing1-thing, thing2-thing], [T1, is, equal, to, T2]).
+predef_dict([==, T1, T2], [thing1-thing, thing2-thing], [T1, is, equivalent, to, T2]).
+predef_dict([\=, T1, T2], [thing1-thing, thing2-thing], [T1, is, different, from, T2]).
+predef_dict([=, T1, T2], [thing1-thing, thing2-thing], [T1, =, T2]).
+predef_dict([==, T1, T2], [thing1-thing, thing2-thing], [T1, =,=, T2]).
+predef_dict([=@=, T1, T2], [thing1-thing, thing2-thing], [T1, =,@,=, T2]).
+predef_dict([=\=, T1, T2], [thing1-thing, thing2-thing], [T1, =,\,=, T2]).
+predef_dict([\==, T1, T2], [thing1-thing, thing2-thing], [T1, \,=,=, T2]).
+predef_dict([\=@=, T1, T2], [thing1-thing, thing2-thing], [T1, \,=,@,=, T2]).
+predef_dict([<, T1, T2], [thing1-thing, thing2-thing], [T1, <, T2]).
+predef_dict([=<, T1, T2], [thing1-thing, thing2-thing], [T1, =, <, T2]).
+predef_dict([=<, T1, T2], [thing1-thing, thing2-thing], [T1, =, <, T2]).
+predef_dict([>, T1, T2], [thing1-thing, thing2-thing], [T1, >, T2]).
+predef_dict([>=, T1, T2], [thing1-thing, thing2-thing], [T1, >, =, T2]).
 predef_dict([unparse_time, Secs, Date], [secs-seconds, date-date], [Secs, corresponds, to, date, Date]).
 predef_dict([is_1_day_after, A, B],
                   [date-date, second_date-date],
@@ -1363,7 +1378,7 @@ happens(it_is_the_end_of(Date),T) :- %trace,
 %happens(it_is_the_end_of(T), _) :- T = _-_-_-00-00-00.  % needed?
 
 /* ----------------------------------------------------------------- CLI English */
-answer(English) :- % trace, 
+answer(English) :-  %trace, 
     translate_command(English, GoalName, Scenario), % later -->, Kbs),
     %print_message(informational, "Goal Name: ~w"-[GoalName]),
     pengine_self(SwishModule), SwishModule:query(GoalName, Goal), 
