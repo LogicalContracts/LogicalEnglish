@@ -613,7 +613,7 @@ is_days_after(Later, Count, Before) :-
     Before is Later - Count*86400. 
 is_days_after(Later, Count, Before) :-
     nonvar(Later), nonvar(Before),
-    Count is round(abs(Later - Before)) div 86400. 
+    Count is round(Later - Before) div 86400. % using negative number to indicate reserve order 
 
 %! immediately_before(?Earlier,?Later) is det.
 %  Later is 24h after Earlier; at least one must be known

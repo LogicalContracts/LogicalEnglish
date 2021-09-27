@@ -180,11 +180,17 @@ fluent_predicate_previous -->
 
 % at least one predicate declaration required
 list_of_predicates_decl([], []) --> spaces_or_newlines(_), next_section, !. 
-list_of_predicates_decl([Ru|Rin], [F|Rout]) --> predicate_decl(Ru,F), comma_or_period, list_of_predicates_decl(Rin, Rout).
+list_of_predicates_decl([Ru|Rin], [F|Rout]) --> spaces_or_newlines(_), predicate_decl(Ru,F), comma_or_period, list_of_predicates_decl(Rin, Rout).
+list_of_predicates_decl(_, _, Rest, _) :- 
+    asserterror('LE error found in a declaration ', Rest), 
+    fail.
 
 % at least one predicate declaration required
 list_of_meta_predicates_decl([], []) --> spaces_or_newlines(_), next_section, !. 
-list_of_meta_predicates_decl([Ru|Rin], [F|Rout]) --> meta_predicate_decl(Ru,F), comma_or_period, list_of_meta_predicates_decl(Rin, Rout).
+list_of_meta_predicates_decl([Ru|Rin], [F|Rout]) --> spaces_or_newlines(_), meta_predicate_decl(Ru,F), comma_or_period, list_of_meta_predicates_decl(Rin, Rout).
+list_of_meta_predicates_decl(_, _, Rest, _) :- 
+    asserterror('LE error found in the declaration of a meta template ', Rest), 
+    fail.
 
 % a hack to avoid superflous searches
 next_section(StopHere, StopHere)  :-
@@ -229,12 +235,12 @@ meta_predicate_decl(_, _, Rest, _) :-
     fail.
 
 rules_previous(default) --> 
-    spaces_or_newlines(_), [the], spaces(_), [rules], spaces(_), [are], spaces(_), [':'], spaces(_), newline, !.
+    spaces_or_newlines(_), [the], spaces(_), [rules], spaces(_), [are], spaces(_), [':'], spaces_or_newlines(_), !.
 rules_previous(KBName) --> 
-    spaces_or_newlines(_), [the], spaces(_), ['knowledge'], spaces(_), [base], extract_constant([includes], NameWords), [includes], spaces(_), [':'], !, spaces(_), newline,
+    spaces_or_newlines(_), [the], spaces(_), ['knowledge'], spaces(_), [base], extract_constant([includes], NameWords), [includes], spaces(_), [':'], !, spaces_or_newlines(_).
     {name_as_atom(NameWords, KBName)}.
 rules_previous(default) -->  % backward compatibility
-    spaces_or_newlines(_), [the], spaces(_), ['knowledge'], spaces(_), [base], spaces(_), [includes], spaces(_), [':'], spaces(_), newline. 
+    spaces_or_newlines(_), [the], spaces(_), ['knowledge'], spaces(_), [base], spaces(_), [includes], spaces(_), [':'], spaces_or_newlines(_). 
 
 % a scenario description: assuming one example -> one scenario -> one list of facts.
 scenario_content(Scenario) -->
@@ -249,13 +255,13 @@ scenario_content(_,  Rest, _) :-
 % statement: the different types of statements in a LE text
 % a query
 query_content(Query) -->
-    query_, extract_constant([is], NameWords), is_colon_, newline,
+    query_, extract_constant([is], NameWords), is_colon_, spaces_or_newlines(_),
     query_header(Ind0, Map1),  
     conditions(Ind0, Map1, _, Conds), !, period,  % period stays!
     {name_as_atom(NameWords, Name), Query = [query(Name, Conds)]}. 
 
 query_content(_, Rest, _) :- 
-    asserterror('LE error found around this query expression: ', Rest), fail.
+    asserterror('LE error found around this expression: ', Rest), fail.
 
 % (holds_at(_149428,_149434) if 
 % (happens_at(_150138,_150144),
@@ -307,7 +313,7 @@ statement(Statement) -->
 
 % error
 statement(_, Rest, _) :- 
-    asserterror('LE error found around this stat: ', Rest), fail.
+    asserterror('LE error found around this statement: ', Rest), fail.
 
 list_of_facts([F|R1]) --> literal_([], _,F), rest_list_of_facts(R1).
 
@@ -439,6 +445,7 @@ condition(FinalExpression, _, Map1, MapN) -->
     modifiers(aggregate_all(sum(Each),Conds,Value), Map4, MapN, FinalExpression).
     
 % it is not the case that 
+%condition((pengine_self(M), not(M:Conds)), _, Map1, MapN) --> 
 condition(not(Conds), _, Map1, MapN) --> 
     spaces(_), not_, newline,  % forget other choices. We know it is a not case
     spaces(Ind), conditions(Ind, Map1, MapN, Conds), !.
@@ -558,7 +565,7 @@ query_ --> spaces_or_newlines(_), [query], spaces(_).
 
 for_which_ --> [for], spaces(_), [which], spaces(_). 
 
-query_header(Ind, Map) --> spaces(Ind), for_which_, list_of_vars([], Map), colon_, newline.
+query_header(Ind, Map) --> spaces(Ind), for_which_, list_of_vars([], Map), colon_, spaces_or_newlines(_).
 query_header(0, []) --> []. 
 
 list_of_vars(Map1, MapN) --> 
@@ -1259,29 +1266,40 @@ dictionary(Predicate, VariablesNames, Template) :- % dict(Predicate, VariablesNa
 %    predef_dict(Predicate, VariablesNames, Template); dict(Predicate, VariablesNames, Template).
 
 :- discontiguous predef_dict/3.
-% predefined entries:
-predef_dict([member, Member, List], [member-object, list-list], [Member, is, in, List]).
-predef_dict([assert,Information], [info-clause], [this, information, Information, ' has', been, recorded]).
+% predef_dict/3 is a database with predefined templates for LE
+% it must be ordered by the side of the third argument, to allow the system to check first the longer template
+% with the corresponding starting words. 
+predef_dict([days_spent_in_uk,Individual,Start,End,TotalDays], [who-person,start-date,end-date,total-number], 
+                    [Individual, spent, TotalDays, in, the, 'UK', starting, at, Start, &, ending, at, End]). 
+predef_dict([uk_tax_year_for_date,Date,Year,Start,End], [first_date-date, year-year, second_date-date, third_date-date], 
+                    [in, the, 'UK', Date, falls, in, Year, beginning, at, Start, &, ending, at, End]).
+predef_dict([myDB_entities:is_individual_or_company_on, A, B],
+                    [affiliate-affiliate, date-date],
+                    [A, is, an, individual, or, is, a, company, at, B]).
+% Prolog
+predef_dict([same_date, T1, T2], [time1-time, time2-time], [T1, is, the, same, date, as, T2]). % see reasoner.pl before/2
+predef_dict([immediately_before, T1, T2], [time1-time, time2-time], [T1, is, immediately, before, T2]). % see reasoner.pl before/2
+predef_dict([\=, T1, T2], [thing1-thing, thing2-thing], [T1, is, different, from, T2]).
+predef_dict([==, T1, T2], [thing1-thing, thing2-thing], [T1, is, equivalent, to, T2]).
 predef_dict([is_a, Object, Type], [object-object, type-type], [Object, is, of, type, Type]).
+predef_dict([is_not_before, T1, T2], [time1-time, time2-time], [T1, is, not, before, T2]). % see reasoner.pl before/2
+predef_dict([=, T1, T2], [thing1-thing, thing2-thing], [T1, is, equal, to, T2]).
 predef_dict([before, T1, T2], [time1-time, time2-time], [T1, is, before, T2]). % see reasoner.pl before/2
 predef_dict([after, T1, T2], [time1-time, time2-time], [T1, is, after, T2]).  % see reasoner.pl before/2
-predef_dict([is_not_before, T1, T2], [time1-time, time2-time], [T1, is, not, before, T2]). % see reasoner.pl before/2
-predef_dict([immediately_before, T1, T2], [time1-time, time2-time], [T1, is, immediately, before, T2]). % see reasoner.pl before/2
-predef_dict([same_date, T1, T2], [time1-time, time2-time], [T1, is, the, same, date, as, T2]). % see reasoner.pl before/2
-predef_dict([=, T1, T2], [thing1-thing, thing2-thing], [T1, is, equal, to, T2]).
-predef_dict([==, T1, T2], [thing1-thing, thing2-thing], [T1, is, equivalent, to, T2]).
-predef_dict([\=, T1, T2], [thing1-thing, thing2-thing], [T1, is, different, from, T2]).
-predef_dict([=, T1, T2], [thing1-thing, thing2-thing], [T1, =, T2]).
-predef_dict([==, T1, T2], [thing1-thing, thing2-thing], [T1, =,=, T2]).
-predef_dict([=@=, T1, T2], [thing1-thing, thing2-thing], [T1, =,@,=, T2]).
-predef_dict([=\=, T1, T2], [thing1-thing, thing2-thing], [T1, =,\,=, T2]).
-predef_dict([\==, T1, T2], [thing1-thing, thing2-thing], [T1, \,=,=, T2]).
+predef_dict([member, Member, List], [member-object, list-list], [Member, is, in, List]).
+% predefined entries:
+%predef_dict([assert,Information], [info-clause], [this, information, Information, ' has', been, recorded]).
 predef_dict([\=@=, T1, T2], [thing1-thing, thing2-thing], [T1, \,=,@,=, T2]).
+predef_dict([\==, T1, T2], [thing1-thing, thing2-thing], [T1, \,=,=, T2]).
+predef_dict([=\=, T1, T2], [thing1-thing, thing2-thing], [T1, =,\,=, T2]).
+predef_dict([=@=, T1, T2], [thing1-thing, thing2-thing], [T1, =,@,=, T2]).
+predef_dict([==, T1, T2], [thing1-thing, thing2-thing], [T1, =,=, T2]).
+predef_dict([=<, T1, T2], [thing1-thing, thing2-thing], [T1, =,<, T2]).
+predef_dict([=<, T1, T2], [thing1-thing, thing2-thing], [T1, =,<, T2]).
+predef_dict([>=, T1, T2], [thing1-thing, thing2-thing], [T1, >,=, T2]).
+predef_dict([=, T1, T2], [thing1-thing, thing2-thing], [T1, =, T2]).
 predef_dict([<, T1, T2], [thing1-thing, thing2-thing], [T1, <, T2]).
-predef_dict([=<, T1, T2], [thing1-thing, thing2-thing], [T1, =, <, T2]).
-predef_dict([=<, T1, T2], [thing1-thing, thing2-thing], [T1, =, <, T2]).
 predef_dict([>, T1, T2], [thing1-thing, thing2-thing], [T1, >, T2]).
-predef_dict([>=, T1, T2], [thing1-thing, thing2-thing], [T1, >, =, T2]).
 predef_dict([unparse_time, Secs, Date], [secs-seconds, date-date], [Secs, corresponds, to, date, Date]).
 predef_dict([is_1_day_after, A, B],
                   [date-date, second_date-date],
@@ -1293,13 +1311,6 @@ predef_dict([between,Minimum,Maximum,Middle], [min-date, max-date, middle-date],
     [Middle, is, between, Minimum, &, Maximum]).
 predef_dict([must_be, Type, Term], [type-type, term-term], [Term, must, be, Type]).
 predef_dict([must_not_be, A, B], [term-term, variable-variable], [A, must, not, be, B]). 
-predef_dict([myDB_entities:is_individual_or_company_on, A, B],
-                  [affiliate-affiliate, date-date],
-                  [A, is, an, individual, or, is, a, company, at, B]).
-predef_dict([uk_tax_year_for_date,Date,Year,Start,End], [first_date-date, year-year, second_date-date, third_date-date], 
-                    [in, the, 'UK', Date, falls, in, Year, beginning, at, Start, &, ending, at, End]).
-predef_dict([days_spent_in_uk,Individual,Start,End,TotalDays], [who-person,start-date,end-date,total-number], 
-                    [Individual, spent, TotalDays, in, the, 'UK', starting, at, Start, &, ending, at, End]). 
 
 % support predicates
 must_be(A, var) :- var(A).
