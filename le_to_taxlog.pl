@@ -229,7 +229,6 @@ meta_predicate_decl(meta_dict([Predicate|Arguments],TypesAndNames, Template), Re
     spaces(_), template_decl(RawTemplate), 
     {build_template(RawTemplate, Predicate, Arguments, TypesAndNames, Template),
      Relation =.. [Predicate|Arguments]}.
-
 meta_predicate_decl(_, _, Rest, _) :- 
     asserterror('LE error found in a meta template declaration ', Rest), 
     fail.
@@ -237,7 +236,7 @@ meta_predicate_decl(_, _, Rest, _) :-
 rules_previous(default) --> 
     spaces_or_newlines(_), [the], spaces(_), [rules], spaces(_), [are], spaces(_), [':'], spaces_or_newlines(_), !.
 rules_previous(KBName) --> 
-    spaces_or_newlines(_), [the], spaces(_), ['knowledge'], spaces(_), [base], extract_constant([includes], NameWords), [includes], spaces(_), [':'], !, spaces_or_newlines(_).
+    spaces_or_newlines(_), [the], spaces(_), ['knowledge'], spaces(_), [base], extract_constant([includes], NameWords), [includes], spaces(_), [':'], !, spaces_or_newlines(_),
     {name_as_atom(NameWords, KBName)}.
 rules_previous(default) -->  % backward compatibility
     spaces_or_newlines(_), [the], spaces(_), ['knowledge'], spaces(_), [base], spaces(_), [includes], spaces(_), [':'], spaces_or_newlines(_). 
@@ -1363,12 +1362,20 @@ translate_query(English_String, Goal) :-
     ; ( error_notice(error, Me,Pos, ContextTokens), print_message(error, [Me,Pos,ContextTokens]) ). 
 
 /* ----------------------------------------------------------------- Event Calculus  */
-holds(Fluent, T) :- %trace, 
-    pengine_self(SwishModule), 
+holds(Fluent, T) :-
+    pengine_self(SwishModule), %trace, 
     SwishModule:happens(Event, T1), 
     SwishModule:initiates(Event, Fluent, T1), 
-    (nonvar(T) -> before(T1,T); T=(after(T1)-_)),  % T1 is strictly before T 'cos T is not a variable
+    %(nonvar(T) -> rbefore(T1,T); T=(after(T1)-_)),  % T1 is strictly before T 'cos T is not a variable
+    %(nonvar(T) -> rbefore(T1,T); true),
+    rbefore(T1,T),  
     not(interrupted(T1, Fluent, T)).
+
+rbefore(T1, T) :-
+    nonvar(T1), nonvar(T), before(T1, T), !.
+rbefore(T1, T) :- (var(T1); var(T)), !. 
+%rbefore(T1, (after(T2)-_)) :-
+%    nonvar(T1), nonvar(T2), before(T1, T2).
 
 % temporary hack while we find a way to signal fluents from the rest
 %holds(NoFluent) :- 
@@ -1379,17 +1386,17 @@ interrupted(T1, Fluent, T2) :- %trace,
     pengine_self(SwishModule),
     SwishModule:happens(Event, T), 
     SwishModule:terminates(Event, Fluent, T), 
-    (before(T1, T); T1=T), 
+    (rbefore(T1, T); T1=T), !, rbefore(T, T2).
     %(nonvar(T2) -> before(T, T2) ; true ), !.  
-    (T2=(after(T1)-_)->T2=(after(T1)-before(T)); before(T,T2)). 
+    %(T2=(after(T1)-_)->T2=(after(T1)-before(T)); before(T,T2)). 
 
-happens(it_is_the_end_of(Date),T) :- %trace, 
-    var(T), Date=T. 
+%happens(it_is_the_end_of(Date),T) :- %trace, 
+%    var(T), Date=T. 
 
 %happens(it_is_the_end_of(T), _) :- T = _-_-_-00-00-00.  % needed?
 
 /* ----------------------------------------------------------------- CLI English */
-answer(English) :-  %trace, 
+answer(English) :- % trace, 
     translate_command(English, GoalName, Scenario), % later -->, Kbs),
     %print_message(informational, "Goal Name: ~w"-[GoalName]),
     pengine_self(SwishModule), SwishModule:query(GoalName, Goal), 
@@ -1398,7 +1405,7 @@ answer(English) :-  %trace,
     print_message(informational, "Query ~w with ~w: ~w"-[GoalName, Scenario, EnglishQuestion]),
     %print_message(informational, "Scenario: ~w"-[Scenario]),
     % assert facts in scenario
-    (Scenario==noscenario -> Facts = [] ; SwishModule:example(Scenario, [scenario(Facts, _)])), !, 
+    (Scenario==noscenario -> Facts = [] ; SwishModule:example(Scenario, [scenario(Facts, _)])), !,  
     %print_message(informational, "Facts: ~w"-[Facts]), 
     extract_goal_command(Goal, SwishModule, _InnerGoal, Command), 
     %print_message(informational, "Command: ~w"-[Command]),
@@ -1559,6 +1566,8 @@ user:answer( EnText, Goal, Result) :- answer( EnText, Goal, Result).
 user:is_it_illegal( EnText, Scenario) :- is_it_illegal( EnText, Scenario).
 
 user:query(Name, Goal) :- query(Name, Goal).
+
+user:holds(Fluent, Time) :- holds(Fluent, Time). 
 
 user:le_taxlog_translate( en(Text), Terms) :- le_taxlog_translate( en(Text), Terms).
 
