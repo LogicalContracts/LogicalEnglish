@@ -69,7 +69,7 @@ which can then be used in the new command language interface of LE
 :- use_module(library(pengines)).
 :- use_module('reasoner.pl').
 :- thread_local literal/5, text_size/1, error_notice/4, dict/3, meta_dict/3, 
-                last_nl_parsed/1, kbname/1, happens/2, initiates/3, terminates/3,
+                last_nl_parsed/1, kbname/1, happens/2, initiates/3, terminates/3, 
                 predicates/1, events/1, fluents/1, metapredicates/1. 
 :- discontiguous statement/3, declaration/4.
 
@@ -89,11 +89,9 @@ text_to_logic(String_, Translation) :-
 
 document(Translation) --> 
     spaces_or_newlines(_),
-    header(Settings), %{print_message(informational, "Settings: ~w"-[Settings]), trace}, 
-    %spaces_or_newlines(_),
-    %rules_previous,  
-    content(Content), 
-    {append(Settings, Content, Translation)}.
+    header(Settings), 
+    content(Content),  
+    {append(Settings, Content, Translation)}, !.  % forget alternatives!
 
 % header parses all the declarations and assert them into memory to be invoked by the rules. 
 header(Settings, In, Next) :-
@@ -104,54 +102,70 @@ header(Settings, In, Next) :-
     RulesforErrors = % rules for error have been statically added
       [(text_size(TextSize))|Settings], % is text_size being used? % asserting the Settings too! predicates, events and fluents
     append(Rules, RulesforErrors, MRules),
-    assertall(MRules). % asserting contextual information
+    assertall(MRules), !. % asserting contextual information
+header(_, Rest, _) :- 
+    asserterror('LE error in the header ', Rest), 
+    fail.
 
 /* --------------------------------------------------------- LE DCGs */
 
 settings(AllR, AllS) --> 
-    spaces_or_newlines(_), declaration(Rules,Setting), settings(RRules, RS),
-      {append(Setting, RS, AllS), append(Rules, RRules, AllR)}.
-settings([],[]) --> [].
- 
+    spaces_or_newlines(_), declaration(Rules,Setting), settings(RRules, RS), 
+      {append(Setting, RS, AllS), append(Rules, RRules, AllR)}, !.
+settings(_, _, Rest, _) :- 
+    asserterror('LE error in the declarations ', Rest), 
+    fail.
+settings([],[]) --> []. 
+
 % content structure: cuts added to avoid search loop
 content(T) --> %{print_message(informational, "going for KB:"-[])},  
     spaces_or_newlines(_), rules_previous(Kbname), %{print_message(informational, "KBName: ~w"-[Kbname])}, 
-    kbbase_content(S), !, %{print_message(informational, "KB: ~w"-[S])}, 
+    kbbase_content(S),  %{print_message(informational, "KB: ~w"-[S])}, 
     content(R), 
-    {append([kbname(Kbname)|S], R, T)}.
+    {append([kbname(Kbname)|S], R, T)}, !.
 content(T) --> %{print_message(informational, "going for scenario:"-[])},
     spaces_or_newlines(_), scenario_content(S), !, %{print_message(informational, "scenario: ~w"-[S])},
     content(R), 
-    {append(S, R, T)}.
+    {append(S, R, T)}, !.
 content(T) --> %{print_message(informational, "going for query:"-[])},
     spaces_or_newlines(_), query_content(S), !, content(R), 
-    {append(S, R, T)}.
+    {append(S, R, T)}, !.
 content([]) --> 
     spaces_or_newlines(_), []. 
+content(_, Rest, _) :- 
+    asserterror('LE error in the content ', Rest), 
+    fail.
 
 kbbase_content(T) --> 
     spaces_or_newlines(_),  statement(S),  kbbase_content(R),
     {append(S, R, T)}, !. 
 kbbase_content([]) --> 
     spaces_or_newlines(_), [].
+kbbase_content(_, Rest, _) :- 
+    asserterror('LE error in a knowledge base ', Rest), 
+    fail.
 
 % declarations
 % target
 declaration([], [target(Language)]) --> % one word description for the language: prolog, taxlog
     spaces(_), [the], spaces(_), [target], spaces(_), [language], spaces(_), [is], spaces(_), colon_or_not_, 
-    spaces(_), [Language], spaces(_), period.
+    spaces(_), [Language], spaces(_), period, !.
 % meta predicates
 declaration(Rules, [metapredicates(MetaTemplates)]) -->
-    meta_predicate_previous, !, list_of_meta_predicates_decl(Rules, MetaTemplates).
+    meta_predicate_previous, list_of_meta_predicates_decl(Rules, MetaTemplates), !.
 %timeless 
 declaration(Rules, [predicates(Templates)]) -->
-    predicate_previous, !, list_of_predicates_decl(Rules, Templates).
+    predicate_previous, list_of_predicates_decl(Rules, Templates), !.
 %events
 declaration(Rules, [events(EventTypes)]) -->
-    event_predicate_previous, !, list_of_predicates_decl(Rules, EventTypes).
+    event_predicate_previous, list_of_predicates_decl(Rules, EventTypes), !.
 %time varying
 declaration(Rules, [fluents(Fluents)]) -->
-    fluent_predicate_previous, !, list_of_predicates_decl(Rules, Fluents).
+    fluent_predicate_previous, list_of_predicates_decl(Rules, Fluents), !.
+%
+declaration(_, _, Rest, _) :- 
+    asserterror('LE error in a declaration ', Rest), 
+    fail.
 
 colon_or_not_ --> [':'], spaces(_).
 colon_or_not_ --> []. 
@@ -180,44 +194,45 @@ fluent_predicate_previous -->
 
 % at least one predicate declaration required
 list_of_predicates_decl([], []) --> spaces_or_newlines(_), next_section, !. 
-list_of_predicates_decl([Ru|Rin], [F|Rout]) --> spaces_or_newlines(_), predicate_decl(Ru,F), comma_or_period, list_of_predicates_decl(Rin, Rout).
+list_of_predicates_decl([Ru|Rin], [F|Rout]) --> spaces_or_newlines(_), predicate_decl(Ru,F), comma_or_period, list_of_predicates_decl(Rin, Rout), !.
 list_of_predicates_decl(_, _, Rest, _) :- 
     asserterror('LE error found in a declaration ', Rest), 
     fail.
 
 % at least one predicate declaration required
 list_of_meta_predicates_decl([], []) --> spaces_or_newlines(_), next_section, !. 
-list_of_meta_predicates_decl([Ru|Rin], [F|Rout]) --> spaces_or_newlines(_), meta_predicate_decl(Ru,F), comma_or_period, list_of_meta_predicates_decl(Rin, Rout).
+list_of_meta_predicates_decl([Ru|Rin], [F|Rout]) --> 
+    spaces_or_newlines(_), meta_predicate_decl(Ru,F), comma_or_period, list_of_meta_predicates_decl(Rin, Rout).
 list_of_meta_predicates_decl(_, _, Rest, _) :- 
     asserterror('LE error found in the declaration of a meta template ', Rest), 
     fail.
 
-% a hack to avoid superflous searches
+% a hack to avoid superflous searches  format(string(Mess), "~w", [StopHere]), print_message(informational, Message), 
 next_section(StopHere, StopHere)  :-
-    phrase(meta_predicate_previous, StopHere, _), !.
+    phrase(meta_predicate_previous, StopHere, _), !. % format(string(Message), "Next meta predicates", []), print_message(informational, Message).
 
 next_section(StopHere, StopHere)  :-
-    phrase(predicate_previous, StopHere, _), !.
+    phrase(predicate_previous, StopHere, _), !. % format(string(Message), "Next predicates", []), print_message(informational, Message).
 
 next_section(StopHere, StopHere)  :-
-    phrase(event_predicate_previous, StopHere, _), !.
+    phrase(event_predicate_previous, StopHere, _), !. % format(string(Message), "Next ecent predicates", []), print_message(informational, Message).
 
 next_section(StopHere, StopHere)  :-
-    phrase(fluent_predicate_previous, StopHere, _), !.
+    phrase(fluent_predicate_previous, StopHere, _), !. % format(string(Message), "Next fluents", []), print_message(informational, Message).
 
 next_section(StopHere, StopHere)  :-
-    phrase(rules_previous(_), StopHere, _), !.
+    phrase(rules_previous(_), StopHere, _), !. % format(string(Message), "Next knowledge base", []), print_message(informational, Message).
 
 next_section(StopHere, StopHere)  :-
-    phrase(scenario_, StopHere, _), !.
+    phrase(scenario_, StopHere, _), !. % format(string(Message), "Next scenario", []), print_message(informational, Message).
 
 next_section(StopHere, StopHere)  :-
-    phrase(query_, StopHere, _).
+    phrase(query_, StopHere, _).  % format(string(Message), "Next query", []), print_message(informational, Message).
 
 predicate_decl(dict([Predicate|Arguments],TypesAndNames, Template), Relation) -->
     spaces(_), template_decl(RawTemplate), 
     {build_template(RawTemplate, Predicate, Arguments, TypesAndNames, Template),
-     Relation =.. [Predicate|Arguments]}.
+     Relation =.. [Predicate|Arguments]}, !.
 % we are using this resource of the last clause to record the error and its details
 % not very useful with loops, of course. 
 % error clause
@@ -614,13 +629,16 @@ template_decl(RestW, [' '|RestIn], Out) :- !, % skip spaces in template
     template_decl(RestW, RestIn, Out).
 template_decl(RestW, ['\t'|RestIn], Out) :- !, % skip cntrl \t in template
     template_decl(RestW, RestIn, Out).
-template_decl(RestW, [newline(_)|RestIn], Out) :- !, % skip cntrl \n in template
-    template_decl(RestW, RestIn, Out).
+% excluding ends of lines from templates
+%template_decl(RestW, [newline(_)|RestIn], Out) :- !, % skip cntrl \n in template
+%    template_decl(RestW, RestIn, Out).
 template_decl([Word|RestW], [Word|RestIn], Out) :-
-    not(lists:member(Word,['.', ','])), !,  % only . and , as boundaries. Beware!
-    template_decl(RestW, RestIn, Out).
+    not(lists:member(Word,['.', ','])),   % only . and , as boundaries. Beware!
+    template_decl(RestW, RestIn, Out), !.
 template_decl([], [Word|Rest], [Word|Rest]) :-
-    lists:member(Word,['.', ',']). 
+    lists:member(Word,['.', ',']), !.
+template_decl(_, Rest, _) :- 
+    asserterror('LE error found in a template declaration ', Rest), fail.
 
 build_template(RawTemplate, Predicate, Arguments, TypesAndNames, Template) :-
     build_template_elements(RawTemplate, [], Arguments, TypesAndNames, OtherWords, Template),
@@ -630,7 +648,8 @@ build_template(RawTemplate, Predicate, Arguments, TypesAndNames, Template) :-
 build_template_elements([], _, [], [], [], []) :- !. 
 % a variable signalled by a *
 build_template_elements(['*', Word|RestOfWords], _Previous, [Var|RestVars], [Name-Type|RestTypes], Others, [Var|RestTemplate]) :-
-    (ind_det(Word); ind_det_C(Word)), % Previous \= [is|_], % removing this requirement when * is used
+    %(ind_det(Word); ind_det_C(Word)), % Previous \= [is|_], % removing this requirement when * is used
+    determiner(Word), % allows the for variables in templates declarations only
     extract_variable(['*'], Var, [], NameWords, TypeWords, RestOfWords, ['*'|NextWords]), !, % <-- it must end with * too
     name_predicate(NameWords, Name), 
     name_predicate(TypeWords, Type), 
@@ -771,12 +790,14 @@ possible_template_for_lists([Word|RestW], [Word|RestIn], Out) :-
 %    lists:member(Word,[',', newline(_), if, '.']). % leaving or/and out of this
 
 match_template(PossibleLiteral, Map1, MapN, Literal) :-
+    %print_message(informational,'Possible Meta Literal ~w'-[PossibleLiteral]),
     meta_dictionary(Predicate, _, MetaCandidate),
     meta_match(MetaCandidate, PossibleLiteral, Map1, MapN, MetaTemplate), !, 
     meta_dictionary(Predicate, _, MetaTemplate),
     Literal =.. Predicate. 
 
 match_template(PossibleLiteral, Map1, MapN, Literal) :- 
+    %print_message(informational,'Possible Literal ~w'-[PossibleLiteral]),
     dictionary(Predicate, _, Candidate),
     match(Candidate, PossibleLiteral, Map1, MapN, Template), !, 
     dictionary(Predicate, _, Template), 
@@ -1213,7 +1234,7 @@ showErrors(File,Baseline) :- % showing the deepest message!
     findall(error_notice(error, Me,Pos, ContextTokens), 
         error_notice(error, Me,Pos, ContextTokens), ErrorsList),
     deepest(ErrorsList, 
-        error_notice(error, 'None',0, 'There was no syntax error'), 
+        error_notice(error, 'None',0, ['There was no syntax error']), 
         error_notice(error, MeMax,PosMax, ContextTokensMax)), 
     atomic_list_concat([MeMax,': '|ContextTokensMax],ContextTokens_),
     Line is PosMax+Baseline,
@@ -1233,16 +1254,16 @@ deepest([error_notice(error, Me,Pos, ContextTokens)|Rest],
 deepest([_|Rest], In, Out) :-
     deepest(Rest, In, Out).
 
-% to pinpoint exactly the error. But position is not right
-explain_error(String, Me-Pos, Message) :-
-    Start is Pos - 20, % assuming a window of 40 characters. 
-    (Start>0 -> 
-        ( sub_string(String,Start,40, _, Windows),
-          sub_string(Windows, 0, 20, _, Left),
-          sub_string(Windows, 20, 20, _, Right) )
-    ;   ( sub_string(String,Pos,40, _, Windows), 
-          Left = "", Right = Windows ) ),
-    Message = [Me, at , Pos, near, ':', Left, '<-HERE->', Right]. 
+showProgress :-
+    findall(error_notice(error, Me,Pos, ContextTokens), 
+        error_notice(error, Me,Pos, ContextTokens), ErrorsList),
+    deepest(ErrorsList, 
+        error_notice(error, 'None',0, ['There was no syntax error']), 
+        error_notice(error, MeMax,PosMax, ContextTokensMax)), 
+    atomic_list_concat([MeMax,': '|ContextTokensMax],ContextTokens_),
+    Line is PosMax+1,
+    print_message(informational,error(syntax_error(ContextTokens_),file(someFile,Line,_One,_Char))).
+
 
 spypoint(A,A). % for debugging
 
@@ -1276,6 +1297,9 @@ predef_dict([myDB_entities:is_individual_or_company_on, A, B],
                     [affiliate-affiliate, date-date],
                     [A, is, an, individual, or, is, a, company, at, B]).
 % Prolog
+predef_dict([has_as_head_before, A, B, C], [list-list, symbol-term, list_the_of_rest-list], [A, has, B, as, head, before, C]).
+predef_dict([append, A, B, C],[list_first-list, list_second-list, list_third_the-list], [one, appends, A, to, B, to, obtain, C]).
+predef_dict([reverse, A, B], [list1-list, list_other-list], [A, is, the, reverse, of, B]).
 predef_dict([same_date, T1, T2], [time1-time, time2-time], [T1, is, the, same, date, as, T2]). % see reasoner.pl before/2
 predef_dict([immediately_before, T1, T2], [time1-time, time2-time], [T1, is, immediately, before, T2]). % see reasoner.pl before/2
 predef_dict([\=, T1, T2], [thing1-thing, thing2-thing], [T1, is, different, from, T2]).
@@ -1316,6 +1340,8 @@ must_be(A, var) :- var(A).
 must_be(A, nonvar) :- nonvar(A).
 must_be_nonvar(A) :- nonvar(A).
 must_not_be(A,B) :- not(must_be(A,B)). 
+
+has_as_head_before([B|C], B, C). 
 
 % see reasoner.pl
 %before(A,B) :- nonvar(A), nonvar(B), number(A), number(B), A < B. 
@@ -1568,6 +1594,8 @@ user:is_it_illegal( EnText, Scenario) :- is_it_illegal( EnText, Scenario).
 user:query(Name, Goal) :- query(Name, Goal).
 
 user:holds(Fluent, Time) :- holds(Fluent, Time). 
+
+user:has_as_head_before(List, Head, Rest) :- has_as_head_before(List, Head, Rest). 
 
 user:le_taxlog_translate( en(Text), Terms) :- le_taxlog_translate( en(Text), Terms).
 
