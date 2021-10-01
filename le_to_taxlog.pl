@@ -70,7 +70,7 @@ which can then be used in the new command language interface of LE
 :- use_module('reasoner.pl').
 :- thread_local literal/5, text_size/1, error_notice/4, dict/3, meta_dict/3, 
                 last_nl_parsed/1, kbname/1, happens/2, initiates/3, terminates/3, 
-                predicates/1, events/1, fluents/1, metapredicates/1. 
+                predicates/1, events/1, fluents/1, metapredicates/1, parsed/0.  
 :- discontiguous statement/3, declaration/4.
 
 % Main clause: text_to_logic(+String,-Clauses) is det
@@ -87,11 +87,12 @@ text_to_logic(String_, Translation) :-
     %    ( print_message(informational, "Translation: ~w"-[Translation]) )
     %;   ( print_message(informational, "Translation failed: "-[]), Translation=[], fail)). 
 
-document(Translation) --> 
-    spaces_or_newlines(_),
-    header(Settings), 
-    content(Content),  
-    {append(Settings, Content, Translation)}, !.  % forget alternatives!
+document(Translation, In, Rest) :- 
+    (parsed -> retract(parsed); true), 
+    phrase(header(Settings), In, AfterHeader), !, print_message(informational, "Declarations completed: ~w"-[Settings]), 
+    phrase(content(Content), AfterHeader, Rest), 
+    append(Settings, Content, Translation), !,  
+    assertz(parsed). 
 
 % header parses all the declarations and assert them into memory to be invoked by the rules. 
 header(Settings, In, Next) :-
@@ -625,6 +626,9 @@ jump_comment([_|R1], R2) :-
     jump_comment(R1, R2). 
 
 % cuts added to improve efficiency
+template_decl([], [newline(_)|RestIn], [newline(_)|RestIn]) :- 
+    asserterror('LE error found in a template declaration ', RestIn), !, 
+    fail. % cntrl \n should be rejected as part of a template
 template_decl(RestW, [' '|RestIn], Out) :- !, % skip spaces in template
     template_decl(RestW, RestIn, Out).
 template_decl(RestW, ['\t'|RestIn], Out) :- !, % skip cntrl \t in template
@@ -1248,7 +1252,7 @@ showErrors(File,Baseline) :- % showing the deepest message!
 
 deepest([], Deepest, Deepest) :- !.
 deepest([error_notice(error, Me,Pos, ContextTokens)|Rest], 
-        error_notice(error,_Me0,Pos0,_ContextTokens0), Out) :-
+        error_notice(error,_Me0, Pos0,_ContextTokens0), Out) :-
     Pos0 < Pos, !, 
     deepest(Rest, error_notice(error, Me,Pos, ContextTokens), Out).
 deepest([_|Rest], In, Out) :-
@@ -1349,6 +1353,7 @@ has_as_head_before([B|C], B, C).
 /* ---------------------------------------------------------------  meta predicates CLI */
 
 is_it_illegal(English, Scenario) :- % only event as possibly illegal for the time being
+    (parsed -> true; fail), !, 
     translate_query(English, happens(Goal, T)), % later -->, Kbs),
     %print_message(informational, "Goal Name: ~w"-[GoalName]),
     pengine_self(SwishModule), %SwishModule:query(GoalName, Goal), 
@@ -1423,15 +1428,20 @@ interrupted(T1, Fluent, T2) :- %trace,
 
 /* ----------------------------------------------------------------- CLI English */
 answer(English) :- % trace, 
+    (parsed -> true; fail), !, 
     translate_command(English, GoalName, Scenario), % later -->, Kbs),
     %print_message(informational, "Goal Name: ~w"-[GoalName]),
-    pengine_self(SwishModule), SwishModule:query(GoalName, Goal), 
+    pengine_self(SwishModule), 
+    (SwishModule:query(GoalName, Goal)-> 
+        true;  (print_message(error, "No goal named: ~w"-[GoalName])), fail ), !, 
     copy_term(Goal, CopyOfGoal),  
     get_answer_from_goal(CopyOfGoal, RawGoal), name_as_atom(RawGoal, EnglishQuestion), 
     print_message(informational, "Query ~w with ~w: ~w"-[GoalName, Scenario, EnglishQuestion]),
     %print_message(informational, "Scenario: ~w"-[Scenario]),
     % assert facts in scenario
-    (Scenario==noscenario -> Facts = [] ; SwishModule:example(Scenario, [scenario(Facts, _)])), !,  
+    (Scenario==noscenario -> Facts = [] ; 
+        (SwishModule:example(Scenario, [scenario(Facts, _)]) -> 
+            true;  print_message(error, "Scenario: ~w does not exist"-[Scenario]))), !,  
     %print_message(informational, "Facts: ~w"-[Facts]), 
     extract_goal_command(Goal, SwishModule, _InnerGoal, Command), 
     %print_message(informational, "Command: ~w"-[Command]),
@@ -1449,6 +1459,7 @@ answer(English) :- % trace,
 
 % answer(+English, -Goal, -Result)
 answer(English, EnglishQuestion, Answers) :-
+    (parsed -> true; fail), !, 
     translate_command(English, GoalName, Scenario), % later -->, Kbs),
     pengine_self(SwishModule), SwishModule:query(GoalName, Goal),
     copy_term(Goal, CopyOfGoal), 
