@@ -658,6 +658,8 @@ uk_tax_year(Start,StartYear,Start,End) :- must_be(integer,StartYear),
 %  X is in List
 in(X,List) :- must_be(list,List), member(X,List).
 
+has_as_head_before([Head|Rest],Head,Rest). 
+
 :- if(current_module(swish)). %%%%% On SWISH:
 
 sandbox:safe_primitive(reasoner:query(_,_,_,_)).
