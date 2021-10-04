@@ -112,11 +112,16 @@ header(_, Rest, _) :-
 
 settings(AllR, AllS) --> 
     spaces_or_newlines(_), declaration(Rules,Setting), settings(RRules, RS), 
-      {append(Setting, RS, AllS), append(Rules, RRules, AllR)}, !.
+    {append(Setting, RS, AllS), append(Rules, RRules, AllR)}, !.
+settings([], [], Stay, Stay) :-
+    ( phrase(rules_previous(_), Stay, _) ; 
+      phrase(scenario_, Stay, _)  ;  
+      phrase(query_, Stay, _) ), !.  
+    % settings ending with the start of the knowledge base or scenarios or queries. 
 settings(_, _, Rest, _) :- 
     asserterror('LE error in the declarations ', Rest), 
     fail.
-settings([],[]) --> []. 
+settings([], [], Stay, Stay).
 
 % content structure: cuts added to avoid search loop
 content(T) --> %{print_message(informational, "going for KB:"-[])},  
