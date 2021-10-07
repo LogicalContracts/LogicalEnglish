@@ -1,5 +1,5 @@
 # TaxKB
-Prolog based generic knowledge base for tax regulations, including reasoner, editor and other tools
+Prolog based generic knowledge base for tax regulations, including reasoner, editor and other tools.
 
 <!-- vscode-markdown-toc -->
 * 1. [Initial sample of examples](#Initialsampleofexamples)

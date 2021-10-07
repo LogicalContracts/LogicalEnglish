@@ -230,7 +230,7 @@ i(G,M,CID,Cref,U,E) :- system_predicate(G), !,
     evalArgExpressions(G,M,NewG,CID,Cref,Uargs,E_),
     % floundering originates unknown:
     catch(( myCall(M:NewG), U=Uargs, E=E_), 
-        error(instantiation_error,_Cx), 
+        error(_Error,_Cx), 
         (append(Uargs,[at(instantiation_error(G),M)/c(Cref)],U), append(E_,[u(instantiation_error(G),M,Cref,[])],E) )).
 i(at(G,KP),M,CID,Cref,U,E) :- shouldMapModule(KP,UUID), !, 
     i(at(G,UUID),M,CID,Cref,U,E). % use SWISH's latest editor version
@@ -303,7 +303,8 @@ evalArgExpressions(G,M,NewG,CID,Cref,U,E) :-
 evalExpression(_M,_CID,_Cref,X,X,[],[]) :- var(X), !.
 evalExpression(M,CID,Cref,Exp,R,U,[s(function(Exp),M,Ref,Children)]) :- M:clause(function(Exp,R),Body,Ref), !,
     once( i(Body,M,CID,Cref,U,Children) ).
-evalExpression(_M,_CID,_Cref,Exp,R,[],[]) :- Exp=..[F,_|_], isExpressionFunctor(F), !, R is Exp.
+evalExpression(M,_CID,Cref,Exp,R,U,Why) :- Exp=..[F,_|_], isExpressionFunctor(F), !, 
+    catch((R is Exp, U=[], Why=[]), Ex, ( U=[at(instantiation_error(Ex),M)/c(Cref)], Why=[u(instantiation_error(Ex),M,Cref,[])] )).
 evalExpression(_M,_CID,_,X,X,[],[]).
 
 isExpressionFunctor(F) :- memberchk(F,[+,-,*,/]).

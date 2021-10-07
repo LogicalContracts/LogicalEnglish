@@ -20,5 +20,5 @@ RUN mkdir -p ${SWISH_DIR}/config-enabled && \
 	cp ${SWISH_DIR}/config-available/auth_http_always.pl ${SWISH_DIR}/config-enabled/
 
 # Swish likes to check existence of a /data directory:
-WORKDIR /
+WORKDIR ${SWISH_DATA}
 ENTRYPOINT /usr/bin/swipl ${LOAD} ${SWISH_DIR}/daemon.pl --no-fork --port=3050 --user=$MY_USER --workers=16

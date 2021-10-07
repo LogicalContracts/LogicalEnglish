@@ -141,6 +141,8 @@ clauseNavigator_(Ref,i(" ~w"-[Ref]),onclick='').
 
 :- multifile user:file_search_path/2.
 user:file_search_path(example, D) :- kp_dir(D).
+user:file_search_path(profile, PD) :- taxkb_dir(D), format(string(PD),"~a/swish/profiles",[D]).
+
 
 % PATCH to swish to avoid duplicate example and help menu and profile entries on Linux
 % list_without_duplicates(+L,-NL) 
