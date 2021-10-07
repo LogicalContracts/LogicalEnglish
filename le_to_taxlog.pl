@@ -466,6 +466,7 @@ condition(FinalExpression, _, Map1, MapN) -->
     
 % it is not the case that 
 %condition((pengine_self(M), not(M:Conds)), _, Map1, MapN) --> 
+%condition((trace, not(Conds)), _, Map1, MapN) --> 
 condition(not(Conds), _, Map1, MapN) --> 
     spaces(_), not_, newline,  % forget other choices. We know it is a not case
     spaces(Ind), conditions(Ind, Map1, MapN, Conds), !.
@@ -701,7 +702,7 @@ name_as_atom([Number], Number) :-
 name_as_atom([Atom], Number) :- 
     atom_number(Atom, Number), !. 
 name_as_atom(Words, Name) :-
-    numbervars(Words, 1, _, [functor_name('________')]),
+    numbervars(Words, 1, _, [functor_name('unknown')]),
     replace_vars(Words, Atoms), 
     list_words_to_codes(Atoms, Codes),
     atom_codes(Name, Codes).  
@@ -1481,7 +1482,9 @@ answer(English, EnglishQuestion, Answers) :-
 get_answer_from_goal((G,R), WholeAnswer) :- 
     get_answer_from_goal(G, Answer), 
     get_answer_from_goal(R, RestAnswers), 
-    append(Answer, [and|RestAnswers], WholeAnswer).
+    append(Answer, ['\n','\t',and|RestAnswers], WholeAnswer).
+get_answer_from_goal(not(G), [it,is,not,the,case,that,'\n', '\t'|Answer]) :- 
+    get_answer_from_goal(G, Answer).
 get_answer_from_goal(happens(Goal,T), Answer) :- !,   % simple goals do not return a list, just a literal
     Goal =.. [Pred|GoalElements], dict([Pred|GoalElements], Types, WordsAnswer), 
     process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), 
@@ -1499,7 +1502,7 @@ get_answer_from_goal(Goal, ProcessedWordsAnswers) :-
     Goal =.. [Pred|GoalElements], dict([Pred|GoalElements], Types, WordsAnswer),
     process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers). 
 
-process_time_term(T,T) :- var(T). % in case of vars
+process_time_term(T,ExplainT) :- var(T), name_as_atom([a, time, T], ExplainT). % in case of vars
 process_time_term(T,T) :- nonvar(T), atom(T), !. 
 process_time_term(T,Time) :- nonvar(T), number(T), unparse_time(T, Time), !. 
 process_time_term((after(T)-Var), Explain) :- var(Var), !,
