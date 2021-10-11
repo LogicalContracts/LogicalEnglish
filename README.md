@@ -198,10 +198,10 @@ Notice that SpaCy, being a neural parser embedding a model trained from many rea
 ###  3.4. <a name='Technicaldetails'></a>Technical details
 The Logical English generator is based on cascading two main predicates:
 
-- [le_clause(Head,Module,Ref,LogicalEnglish)](https://github.com/mcalejo/TaxKB/blob/main/logical_english.pl#L264), which introspects a single Prolog clause and returns an intermediate LE representation
-- [le_kp_html(Module,Options,TermrisedHTML)](https://github.com/mcalejo/TaxKB/blob/main/logical_english.pl#L72), which processes the above into HTML. 
+- [le_clause(Head,Module,Ref,LogicalEnglish)](https://github.com/mcalejo/TaxKB/blob/main/le_output.pl#L264), which introspects a single Prolog clause and returns an intermediate LE representation
+- [le_kp_html(Module,Options,TermrisedHTML)](https://github.com/mcalejo/TaxKB/blob/main/le_output.pl#L72), which processes the above into HTML. 
 
-The latter includes the (*potentially more expensive*) step of calling the Spacy parser REST service to parse the generated atomic sentences, source code specifically [here](https://github.com/mcalejo/TaxKB/blob/main/logical_english.pl#L225).
+The latter includes the (*potentially more expensive*) step of calling the Spacy parser REST service to parse the generated atomic sentences, source code specifically [here](https://github.com/mcalejo/TaxKB/blob/main/le_output.pl#L225).
 
 Standard Prolog clause introspection is used, plus some SWI-Prolog extensions for variable names, combined with CamelCase and under_score [detection](https://github.com/mcalejo/TaxKB/blob/main/drafter.pl#L79)
 

@@ -53,7 +53,7 @@ the small business restructure rollover applies to an event
      and for all cases in which
              a party is a party of the event
              and an amount is the aggregated turnover of the party
-         it is the case that:
+         it is the case that
              the party is an eligible party
              and the amount < 10000000.
 
@@ -63,7 +63,7 @@ an event meets the ultimate ownership test at a time
      and for all cases in which
              an entity is an ultimate owner of the asset at the time
              and the entity has a share in the asset at the time
-         it is the case that:
+         it is the case that
              the entity is an ultimate owner of the asset at the previous time
              and the entity has a share in the asset at the previous time.
 
@@ -75,11 +75,11 @@ an event meets the ultimate ownership test at a time
      and a previous time is immediately before the time
      and for all cases in which
              an individual is an ultimate owner of the asset at the time
-         it is the case that:
+         it is the case that
              the individual is a member of the family group
      and for all cases in which
              an individual is an ultimate owner of the asset at the previous time
-         it is the case that:
+         it is the case that
              the individual is a member of the family group.
 
 A tax payer is a party of an event
@@ -148,9 +148,9 @@ scenario Andrew email Feb 4 2021 is:
  5300000 is the aggregated turnover of company.
  company is a small business entity as informed by a source.
  company is an ultimate owner of goodwill at 2020-07-01.
- company has share_goodwill in goodwill at 2020-07-01.
+ %company has share_goodwill in goodwill at 2020-07-01.
  company is an ultimate owner of goodwill at 2020-06-30.
- company has share_goodwill in goodwill at 2020-06-30.
+ %company has share_goodwill in goodwill at 2020-06-30.
 
 scenario testing one is:
  2016-07-01 is after 2016-06-30.

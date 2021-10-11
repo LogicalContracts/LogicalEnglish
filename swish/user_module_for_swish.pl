@@ -56,8 +56,8 @@ swish_config:config(include_alias,	example).
 :- use_module('../api.pl').
 :- use_module('../spacy/spacy.pl').
 :- use_module('../drafter.pl').
-:- use_module('../logical_english.pl').
-:- use_module('../le_to_taxlog.pl').
+:- use_module('../le_output.pl').
+:- use_module('../le_input.pl').
 
 :- use_module(swish(lib/html_output),[html/1]).
 myhtml(H) :-  pengine_self(SwishModule), !, SwishModule:html(H).
