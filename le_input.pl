@@ -1,4 +1,4 @@
-/* le_to_taxlog: a prolog module with predicates to translate from an 
+/* le_input: a prolog module with predicates to translate from an 
 extended version of Logical English into the Taxlog programming language. 
 
 Main predicate: text_to_logic(String to be translated, Translation)
@@ -34,13 +34,13 @@ Each rule must end with a period.
 
 Indentation is used to organize the and/or list of conditions by strict
 observance of one condition per line with a level of indentation that 
-correspond to each operator and corresponding conditions. 
+corresponds to each operator and corresponding conditions. 
 
 Similarly, there may be sections for scenarios and queries, like:
 
 --
 scenario test2 is:
-   borrower pays a amount to lender on 20150601000000. 
+   borrower pays an amount to lender on 2015-06-01T00:00:00. 
 --
 
 and
@@ -58,13 +58,14 @@ query three is:
  and the second time is immediately before the first time.
 --
 
-which can then be used in the new command language interface of LE
-(e.g. answer/1 and others meta-predicates)
+ which can then be used on the new command interface of LE on SWISH
+(e.g. answer/1 and others querying predicates):
 
+? answer("query one with scenario test"). 
 
 */
 
-:- module(le_to_taxlog, [document/3, le_taxlog_translate/4, op(1195,fx, user:(++))]).
+:- module(le_input, [document/3, le_taxlog_translate/4, op(1195,fx, user:(++))]).
 :- use_module('./tokenize/prolog/tokenize.pl').
 :- use_module(library(pengines)).
 :- use_module('reasoner.pl').
@@ -97,16 +98,40 @@ document(Translation, In, Rest) :-
 % header parses all the declarations and assert them into memory to be invoked by the rules. 
 header(Settings, In, Next) :-
     length(In, TextSize), % after comments were removed
-    ( phrase(settings(Rules, Settings_), In, Next) -> 
-        ( member(target(_), Settings_) -> Settings = Settings_ ; Settings = [target(taxlog)|Settings_] )  % taxlog as default
-    ; (Rules = [], Settings = [target(taxlog)])), % taxlog as default
-    RulesforErrors = % rules for error have been statically added
+    ( phrase(settings(DictEntries, Settings_), In, Next) -> 
+        ( member(target(_), Settings_) -> Settings1 = Settings_ ; Settings1 = [target(taxlog)|Settings_] )  % taxlog as default
+    ; (DictEntries = [], Settings1 = [target(taxlog)] ) ), % taxlog as default
+    Settings = [query(null, true), example(null, [])|Settings1], % a hack to stop the loop when query is empty
+    RulesforErrors = % rules for errors that have been statically added
       [(text_size(TextSize))|Settings], % is text_size being used? % asserting the Settings too! predicates, events and fluents
-    append(Rules, RulesforErrors, MRules),
+    %order_templates(DictEntries, OrderedEntries), 
+    append(DictEntries, RulesforErrors, MRules),
     assertall(MRules), !. % asserting contextual information
 header(_, Rest, _) :- 
     asserterror('LE error in the header ', Rest), 
     fail.
+
+% Experimental rules for reordering of templates
+order_templates(NonOrdered, Ordered) :-
+	predsort(compare_templates, NonOrdered, Ordered).
+
+compare_templates(<, meta_dict(_,_,_), dict(_,_,_)). 
+
+compare_templates(=, dict(_,_,T1), dict(_,_,T2)) :- T1 =@= T2. 
+compare_templates(<, dict(_,_,T1), dict(_,_,T2)) :- length(T1, N1), length(T2, N2), N1>N2. 
+compare_templates(<, dict(_,_,T1), dict(_,_,T2)) :- length(T1, N), length(T2, N), template_before(T1, T2).  
+
+compare_templates(>, Dict1, Dict2) :- not(compare_templates(=, Dict1, Dict2)), not(compare_templates(<, Dict1, Dict2)). 
+
+compare_templates(=, meta_dict(_,_,T1), meta_dict(_,_,T2)) :- T1 =@= T2. 
+compare_templates(<, meta_dict(_,_,T1), meta_dict(_,_,T2)) :- length(T1, N1), length(T2, N2), N1>N2. 
+compare_templates(<, meta_dict(_,_,T1), meta_dict(_,_,T2)) :- length(T1, N), length(T2, N), template_before(T1, T2).  
+
+template_before([H1], [H2]) :- H1 =@= H2. 
+template_before([H1|_R1], [H2|_R2]) :- nonvar(H1), var(H2).
+template_before([H1|_R1], [H2|_R2]) :- H1 @> H2. 
+template_before([H1|R1], [H2|R2]) :- H1=@=H2, template_before(R1, R2). 
+
 
 /* --------------------------------------------------------- LE DCGs */
 
@@ -466,8 +491,8 @@ condition(FinalExpression, _, Map1, MapN) -->
     
 % it is not the case that 
 %condition((pengine_self(M), not(M:Conds)), _, Map1, MapN) --> 
-%condition((trace, not(Conds)), _, Map1, MapN) --> 
-condition(not(Conds), _, Map1, MapN) --> 
+condition((trace, not(Conds)), _, Map1, MapN) --> 
+%condition(not(Conds), _, Map1, MapN) --> 
     spaces(_), not_, newline,  % forget other choices. We know it is a not case
     spaces(Ind), conditions(Ind, Map1, MapN, Conds), !.
 
@@ -664,13 +689,13 @@ build_template_elements(['*', Word|RestOfWords], _Previous, [Var|RestVars], [Nam
     name_predicate(NameWords, Name), 
     name_predicate(TypeWords, Type), 
     build_template_elements(NextWords, [], RestVars, RestTypes, Others, RestTemplate). 
-% a variable not signalled by a *  % for backward compatibility  
-build_template_elements([Word|RestOfWords], Previous, [Var|RestVars], [Name-Type|RestTypes], Others, [Var|RestTemplate]) :-
-    (ind_det(Word); ind_det_C(Word)), Previous \= [is|_], 
-    extract_variable(['*'], Var, [], NameWords, TypeWords, RestOfWords, NextWords), !, % <-- CUT!
-    name_predicate(NameWords, Name), 
-    name_predicate(TypeWords, Type), 
-    build_template_elements(NextWords, [], RestVars, RestTypes, Others, RestTemplate).
+% a variable not signalled by a *  % for backward compatibility  \\ DEPRECATED
+%build_template_elements([Word|RestOfWords], Previous, [Var|RestVars], [Name-Type|RestTypes], Others, [Var|RestTemplate]) :-
+%    (ind_det(Word); ind_det_C(Word)), Previous \= [is|_], 
+%    extract_variable(['*'], Var, [], NameWords, TypeWords, RestOfWords, NextWords), !, % <-- CUT!
+%    name_predicate(NameWords, Name), 
+%    name_predicate(TypeWords, Type), 
+%    build_template_elements(NextWords, [], RestVars, RestTypes, Others, RestTemplate).
 build_template_elements([Word|RestOfWords], Previous, RestVars, RestTypes,  [Word|Others], [Word|RestTemplate]) :-
     build_template_elements(RestOfWords, [Word|Previous], RestVars, RestTypes, Others, RestTemplate).
 
@@ -1649,7 +1674,7 @@ showtaxlog:-
 	fail.
 showtaxlog.
 
-sandbox:safe_primitive(le_to_taxlog:showtaxlog).
-sandbox:safe_primitive(le_to_taxlog:answer( _EnText)).
-sandbox:safe_primitive(le_to_taxlog:answer( _EnText, _Goal, _Result)).
-sandbox:safe_primitive(le_to_taxlog:le_taxlog_translate( _EnText, _Terms)).
+sandbox:safe_primitive(le_input:showtaxlog).
+sandbox:safe_primitive(le_input:answer( _EnText)).
+sandbox:safe_primitive(le_input:answer( _EnText, _Goal, _Result)).
+sandbox:safe_primitive(le_input:le_taxlog_translate( _EnText, _Terms)).

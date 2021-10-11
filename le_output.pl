@@ -46,7 +46,7 @@ argument(the(Name)) --> shortVarName(Name).
 
 %%%% And now for something completely different: LE generation from Taxlog
 
-% Ex: logical_english:test_kp_le('https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/maximum-net-asset-value-test/').
+% Ex: le_output:test_kp_le('https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/maximum-net-asset-value-test/').
 test_kp_le(KP,Options) :-
     tmp_file(le,Tmp), atom_concat(Tmp, '.html', F),
     tell(F), print_kp_le(KP,Options), told, www_open_url(F).
@@ -452,7 +452,7 @@ handle_le(Request) :-
         |TheHTML
     ]).
 
-:- discontiguous logical_english:dict/3.
+:- discontiguous le_output:dict/3.
 % dict(?LiteralElements, ?NamesAndTypes, ?Template)
 % this is a multimodal predicate used to associate a Template with its particular other of the words for LE
 % with the Prolog expression of that relation in LiteralElements (not yet a predicate =.. is done outside).
@@ -499,7 +499,7 @@ dict([days_spent_in_uk,Individual,Start,End,TotalDays], [who-person,start-date,e
 
 :- if(current_module(swish)). %%%%% On SWISH:
 :- multifile sandbox:safe_primitive/1.
-sandbox:safe_primitive(logical_english:print_kp_le(_)).
-sandbox:safe_primitive(logical_english:le(_)).
-sandbox:safe_primitive(logical_english:le(_,_)).
+sandbox:safe_primitive(le_output:print_kp_le(_)).
+sandbox:safe_primitive(le_output:le(_)).
+sandbox:safe_primitive(le_output:le(_,_)).
 :- endif.
