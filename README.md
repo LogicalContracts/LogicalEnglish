@@ -25,6 +25,7 @@ Prolog based generic knowledge base for tax regulations, including reasoner, edi
 * 6. [Implementational aspects](#Implementationalaspects)
 	* 6.1. [Rendering](#Rendering)
 	* 6.2. [Editor](#Editor)
+* 7. [Release Notes](#Releases)
 
 <!-- vscode-markdown-toc-config
 	numbering=true
@@ -341,3 +342,16 @@ SWISH includes a powerful Prolog term renderer mechanism, allowing the generatio
 The SWISH editor was slightly customised:
 - A SWISH internal file was patched to provide more flexibility handling "long clicks" (the mouse event for navigation to the selected predicate)
 - Taxlog-specific syntax colouring, namely the [taxlog2prolog](https://github.com/mcalejo/TaxKB/blob/main/syntax.pl) predicate.
+
+##  7. <a name='Releases'></a>Release Notes
+
+- [2021-10-12] Alfa testing
+	- The word "that" is no longer allowed as part of variable names, constants or expressions. 
+	- Fixing `get_answer_from_goal/2` to include predef templates while producing LE version of an answer. 
+- [2021-10-13] Alfa testing.
+	- template instances with "that" can be written in more than one line (new line before or after "that")
+	- Asteriks in a template must be paired. Otherwise, a syntax error will be issued.
+- [2021-10-14] Alfa testing.  Previous version: [ef5a1d66ed4d706829cd9b66a6b1cc052799eac5](https://github.com/mcalejo/TaxKB/commit/ef5a1d66ed4d706829cd9b66a6b1cc052799eac5)
+	- Repairing the structure `a variable is a set of a term where .. `. The term is restricted to be another variable, a constant or a list. For example: `[an element, a second element]` 
+	- Fixes for `variable`, `term_` and other related predicates. 
+
