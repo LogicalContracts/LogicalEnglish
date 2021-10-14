@@ -71,11 +71,12 @@ query three is:
 :- use_module('reasoner.pl').
 :- thread_local literal/5, text_size/1, error_notice/4, dict/3, meta_dict/3, 
                 last_nl_parsed/1, kbname/1, happens/2, initiates/3, terminates/3, 
-                predicates/1, events/1, fluents/1, metapredicates/1, parsed/0.  
+                predicates/1, events/1, fluents/1, metapredicates/1, parsed/0, op_stop/1.  
 :- discontiguous statement/3, declaration/4.
 
 % Main clause: text_to_logic(+String,-Clauses) is det
 % Errors are added to error_notice 
+% text_to_logic/2
 text_to_logic(String_, Translation) :-
     % hack to ensure a newline at the end, for the sake of error reporting:
     ((sub_atom(String_,_,1,0,NL), memberchk(NL,['\n','\r']) ) -> String=String_ ; atom_concat(String_,'\n',String)),
@@ -88,6 +89,7 @@ text_to_logic(String_, Translation) :-
     %    ( print_message(informational, "Translation: ~w"-[Translation]) )
     %;   ( print_message(informational, "Translation failed: "-[]), Translation=[], fail)). 
 
+% document/3 (or document/1 in dcg)
 document(Translation, In, Rest) :- 
     (parsed -> retract(parsed); true), 
     phrase(header(Settings), In, AfterHeader), !, print_message(informational, "Declarations completed: ~w"-[Settings]), 
@@ -96,6 +98,7 @@ document(Translation, In, Rest) :-
     assertz(parsed). 
 
 % header parses all the declarations and assert them into memory to be invoked by the rules. 
+% header/3
 header(Settings, In, Next) :-
     length(In, TextSize), % after comments were removed
     ( phrase(settings(DictEntries, Settings_), In, Next) -> 
@@ -104,14 +107,15 @@ header(Settings, In, Next) :-
     Settings = [query(null, true), example(null, [])|Settings1], % a hack to stop the loop when query is empty
     RulesforErrors = % rules for errors that have been statically added
       [(text_size(TextSize))|Settings], % is text_size being used? % asserting the Settings too! predicates, events and fluents
-    %order_templates(DictEntries, OrderedEntries), 
-    append(DictEntries, RulesforErrors, MRules),
+    order_templates(DictEntries, OrderedEntries), 
+    append(OrderedEntries, RulesforErrors, MRules),
     assertall(MRules), !. % asserting contextual information
 header(_, Rest, _) :- 
     asserterror('LE error in the header ', Rest), 
     fail.
 
 % Experimental rules for reordering of templates
+% order_templates/2
 order_templates(NonOrdered, Ordered) :-
 	predsort(compare_templates, NonOrdered, Ordered).
 
@@ -134,7 +138,7 @@ template_before([H1|R1], [H2|R2]) :- H1=@=H2, template_before(R1, R2).
 
 
 /* --------------------------------------------------------- LE DCGs */
-
+% settings/2 or /4
 settings(AllR, AllS) --> 
     spaces_or_newlines(_), declaration(Rules,Setting), settings(RRules, RS), 
     {append(Setting, RS, AllS), append(Rules, RRules, AllR)}, !.
@@ -149,9 +153,10 @@ settings(_, _, Rest, _) :-
 settings([], [], Stay, Stay).
 
 % content structure: cuts added to avoid search loop
+% content/1 or /3
 content(T) --> %{print_message(informational, "going for KB:"-[])},  
     spaces_or_newlines(_), rules_previous(Kbname), %{print_message(informational, "KBName: ~w"-[Kbname])}, 
-    kbbase_content(S),  %{print_message(informational, "KB: ~w"-[S])}, 
+    kbase_content(S),  %{print_message(informational, "KB: ~w"-[S])}, 
     content(R), 
     {append([kbname(Kbname)|S], R, T)}, !.
 content(T) --> %{print_message(informational, "going for scenario:"-[])},
@@ -167,16 +172,17 @@ content(_, Rest, _) :-
     asserterror('LE error in the content ', Rest), 
     fail.
 
-kbbase_content(T) --> 
-    spaces_or_newlines(_),  statement(S),  kbbase_content(R),
+% kbase_content/1 or /3
+kbase_content(T) --> 
+    spaces_or_newlines(_),  statement(S),  kbase_content(R),
     {append(S, R, T)}, !. 
-kbbase_content([]) --> 
+kbase_content([]) --> 
     spaces_or_newlines(_), [].
-kbbase_content(_, Rest, _) :- 
+kbase_content(_, Rest, _) :- 
     asserterror('LE error in a knowledge base ', Rest), 
     fail.
 
-% declarations
+% declaration/2 or /4
 % target
 declaration([], [target(Language)]) --> % one word description for the language: prolog, taxlog
     spaces(_), [the], spaces(_), [target], spaces(_), [language], spaces(_), [is], spaces(_), colon_or_not_, 
@@ -238,6 +244,7 @@ list_of_meta_predicates_decl(_, _, Rest, _) :-
     asserterror('LE error found in the declaration of a meta template ', Rest), 
     fail.
 
+% next_section/2
 % a hack to avoid superflous searches  format(string(Mess), "~w", [StopHere]), print_message(informational, Message), 
 next_section(StopHere, StopHere)  :-
     phrase(meta_predicate_previous, StopHere, _), !. % format(string(Message), "Next meta predicates", []), print_message(informational, Message).
@@ -260,6 +267,7 @@ next_section(StopHere, StopHere)  :-
 next_section(StopHere, StopHere)  :-
     phrase(query_, StopHere, _).  % format(string(Message), "Next query", []), print_message(informational, Message).
 
+% predicate_decl/2
 predicate_decl(dict([Predicate|Arguments],TypesAndNames, Template), Relation) -->
     spaces(_), template_decl(RawTemplate), 
     {build_template(RawTemplate, Predicate, Arguments, TypesAndNames, Template),
@@ -271,6 +279,7 @@ predicate_decl(_, _, Rest, _) :-
     asserterror('LE error found in a declaration ', Rest), 
     fail.
 
+% meta_predicate_decl/2
 meta_predicate_decl(meta_dict([Predicate|Arguments],TypesAndNames, Template), Relation) -->
     spaces(_), template_decl(RawTemplate), 
     {build_template(RawTemplate, Predicate, Arguments, TypesAndNames, Template),
@@ -287,6 +296,7 @@ rules_previous(KBName) -->
 rules_previous(default) -->  % backward compatibility
     spaces_or_newlines(_), [the], spaces(_), ['knowledge'], spaces(_), [base], spaces(_), [includes], spaces(_), [':'], spaces_or_newlines(_). 
 
+% scenario_content/1 or /3
 % a scenario description: assuming one example -> one scenario -> one list of facts.
 scenario_content(Scenario) -->
     scenario_, extract_constant([is], NameWords), is_colon_, newline,
@@ -297,6 +307,7 @@ scenario_content(Scenario) -->
 scenario_content(_,  Rest, _) :- 
     asserterror('LE error found around this scenario expression: ', Rest), fail.
 
+% query_content/1 or /3
 % statement: the different types of statements in a LE text
 % a query
 query_content(Query) -->
@@ -318,7 +329,8 @@ query_content(_, Rest, _) :-
 %   fluent
 % when
 %   event
-% if  
+% if 
+% statement/1 or /3 
 statement(Statement) --> 
     it_becomes_the_case_that_, spaces_or_newlines(_), 
         literal_([], Map1, holds(Fluent, _)), spaces_or_newlines(_), 
@@ -365,7 +377,7 @@ list_of_facts([F|R1]) --> literal_([], _,F), rest_list_of_facts(R1).
 rest_list_of_facts(L1) --> comma, spaces_or_newlines(_), list_of_facts(L1).
 rest_list_of_facts([]) --> [].
 
-% assumptions
+% assumptions_/3 or /5
 assumptions_(InMap, OutMap, [A|R]) --> 
         spaces_or_newlines(_),  rule_(InMap, Map2, A), !, assumptions_(Map2, OutMap, R).
 assumptions_(Map, Map, []) --> 
@@ -382,7 +394,7 @@ rule_(M, M, _, Rest, _) :-
 % no prolog inside LE!
 %statement([Fact]) --> 
 %    spaces(_), prolog_literal_(Fact, [], _), spaces_or_newlines(_), period.
-
+% body/3 or /5
 body_([], Map, Map) --> spaces_or_newlines(_).
 body_(Conditions, Map1, MapN) --> 
     newline, spaces(Ind), if_, !, conditions(Ind, Map1, MapN, Conditions), spaces_or_newlines(_).
@@ -392,11 +404,12 @@ body_(Conditions, Map1, MapN) -->
 newline_or_nothing --> newline.
 newline_or_nothing --> []. 
 
+% literal_/3 or /5
 % literal_ reads a list of words until it finds one of these: ['\n', if, '.']
 % it then tries to match those words against a template in memory (see dict/3 predicate).
 % The output is then contigent to the type of literal according to the declarations. 
 literal_(Map1, MapN, FinalLiteral) --> % { print_message(informational, 'at time, literal') },
-    at_time(T, Map1, Map2), comma, possible_template(PossibleTemplate),  
+    at_time(T, Map1, Map2), comma, possible_instance(PossibleTemplate),  
     {match_template(PossibleTemplate, Map2, MapN, Literal),
      (fluents(Fluents) -> true; Fluents = []),
      (events(Events) -> true; Events = []),
@@ -405,7 +418,7 @@ literal_(Map1, MapN, FinalLiteral) --> % { print_message(informational, 'at time
         ; FinalLiteral = Literal))}, !. % by default (including builtins) they are timeless!
 
 literal_(Map1, MapN, FinalLiteral) --> % { print_message(informational, 'literal, at time') },
-    possible_template(PossibleTemplate), comma, at_time(T, Map1, Map2),  
+    possible_instance(PossibleTemplate), comma, at_time(T, Map1, Map2),  
     {match_template(PossibleTemplate, Map2, MapN, Literal),
      (fluents(Fluents) -> true; Fluents = []),
      (events(Events) -> true; Events = []),
@@ -414,7 +427,7 @@ literal_(Map1, MapN, FinalLiteral) --> % { print_message(informational, 'literal
         ; FinalLiteral = Literal))}, !. % by default (including builtins) they are timeless!
 
 literal_(Map1, MapN, FinalLiteral) --> % { print_message(informational, 'just literal') },
-    possible_template(PossibleTemplate),
+    possible_instance(PossibleTemplate),
     {match_template(PossibleTemplate, Map1, MapN, Literal),
      (fluents(Fluents) -> true; Fluents = []),
      (events(Events) -> true; Events = []),
@@ -425,12 +438,13 @@ literal_(Map1, MapN, FinalLiteral) --> % { print_message(informational, 'just li
 
 % rewritten to use in swish. Fixed! It was a name clash. Apparently "literal" is used somewhere else
 %literal_(Map1, MapN, Literal, In, Out) :-  print_message(informational, '  inside a literal'),
-%        possible_template(PossibleTemplate, In, Out), print_message(informational, PossibleTemplate),
+%        possible_instance(PossibleTemplate, In, Out), print_message(informational, PossibleTemplate),
 %        match_template(PossibleTemplate, Map1, MapN, Literal).
 % error clause
 literal_(M, M, _, Rest, _) :- 
     asserterror('LE error found in a literal ', Rest), fail.
 
+% conditions/4 or /6
 conditions(Ind0, Map1, MapN, Conds) --> 
     condition(Cond, Ind0, Map1, Map2), 
     more_conds(Ind0, Ind0, _IndF, Map2, MapN, Cond, Conds).
@@ -450,27 +464,29 @@ more_conds(Ind0, Ind1, Ind, Map1, MapN, Cond, Conditions) -->
 more_conds(_, Ind, Ind, Map, Map, Cond, Cond, Rest, Rest).  
  
 % this naive definition of term is problematic
-term_(Term, Map1, MapN) --> 
-    (variable(Term, Map1, MapN), !); (constant(Term, Map1, MapN), !); (list_(Term, Map1, MapN), !). %; (compound_(Term, Map1, MapN), !).
+% term_/4 or /6
+term_(StopWords, Term, Map1, MapN) --> 
+    (variable(StopWords, Term, Map1, MapN), !); (constant(StopWords, Term, Map1, MapN), !); (list_(Term, Map1, MapN), !). %; (compound_(Term, Map1, MapN), !).
 
+% list_/3 or /5
 list_(List, Map1, MapN) --> 
     spaces(_), bracket_open_, !, extract_list([']'], List, Map1, MapN), bracket_close.   
 
 compound_(V1/V2, Map1, MapN) --> 
-    term_(V1, Map1, Map2), ['/'], term_(V2, Map2, MapN). 
+    term_(['/'], V1, Map1, Map2), ['/'], term_([], V2, Map2, MapN). 
 
 % event observations
 %condition(happens(Event), _, Map1, MapN) -->
 %    observe_,  literal_(Map1, MapN, Event), !.
 
+% condition/4 or /6
 % this produces a Taxlog condition with the form: 
 % setof(Owner/Share, is_ultimately_owned_by(Asset,Owner,Share) on Before, SetOfPreviousOwners)
 % from a set of word such as: 
-%     and a set of previous owners is a collection of an owner / a share 
+%     and a record of previous owners is a set of [an owner, a share] 
 %           where the asset is ultimately owned by the share with the owner at the previous time
 condition(FinalExpression, _, Map1, MapN) --> 
-    %variable(Set, Map1, Map2), is_a_collection_of_, term_(Term, Map2, Map3), where_,
-    variable(Set, Map1, Map2), is_a_collection_of_, literal_(Map2, Map3, Term), !, % moved where to the following line
+    variable([is], Set, Map1, Map2), is_a_set_of_, term_([], Term, Map2, Map3), !, % moved where to the following line
     newline, spaces(Ind2), where_, conditions(Ind2, Map3, Map4, Goals),
     modifiers(setof(Term,Goals,Set), Map4, MapN, FinalExpression).
 
@@ -484,7 +500,7 @@ condition(FinalExpression, _, Map1, MapN) -->
 
 % the Value is the sum of each Asset Net such that
 condition(FinalExpression, _, Map1, MapN) --> 
-    variable(Value, Map1, Map2), is_the_sum_of_each_, extract_variable([such], Each, [], NameWords, _), such_that_, !, 
+    variable([is], Value, Map1, Map2), is_the_sum_of_each_, extract_variable([such], Each, [], NameWords, _), such_that_, !, 
     { name_predicate(NameWords, Name), update_map(Each, Name, Map2, Map3) }, newline, 
     spaces(Ind), conditions(Ind, Map3, Map4, Conds), 
     modifiers(aggregate_all(sum(Each),Conds,Value), Map4, MapN, FinalExpression).
@@ -515,20 +531,26 @@ condition(_, _Ind, Map, Map, Rest, _) :-
 % modifiers add reifying predicates to an expression. 
 % modifiers(+MainExpression, +MapIn, -MapOut, -FinalExpression)
 modifiers(MainExpression, Map1, MapN, on(MainExpression, Var) ) -->
-    newline, spaces(_), at_, variable(Var, Map1, MapN). % newline before a reifying expression
+    newline, spaces(_), at_, variable([], Var, Map1, MapN). % newline before a reifying expression
 modifiers(MainExpression, Map, Map, MainExpression) --> [].  
 
-variable(Var, Map1, MapN) --> 
-    spaces(_), [Det], {determiner(Det)}, extract_variable([], Var, [], NameWords, _), % <-- CUT!
-    { name_predicate(NameWords, Name), update_map(Var, Name, Map1, MapN) }. 
+% variable/4 or /6
+variable(StopWords, Var, Map1, MapN) --> 
+    spaces(_), [Det], {indef_determiner(Det)}, extract_variable(StopWords, Var, [], NameWords, _), % <-- CUT!
+    {  NameWords\=[], name_predicate(NameWords, Name), update_map(Var, Name, Map1, MapN) }. 
+variable(StopWords, Var, Map1, MapN) --> 
+    spaces(_), [Det], {def_determiner(Det)}, extract_variable(StopWords, Var, [], NameWords, _), % <-- CUT!
+    {  NameWords\=[], name_predicate(NameWords, Name), consult_map(Var, Name, Map1, MapN) }. 
 % allowing for symbolic variables: 
-variable(Var, Map1, MapN) --> 
-    spaces(_), extract_variable([], Var, [], NameWords, _),
-    { name_predicate(NameWords, Name), consult_map(Var, Name, Map1, MapN) }. 
+variable(StopWords, Var, Map1, MapN) --> 
+    spaces(_), extract_variable(StopWords, Var, [], NameWords, _),
+    {  NameWords\=[], name_predicate(NameWords, Name), consult_map(Var, Name, Map1, MapN) }. 
 
-constant(Constant, Map, Map) -->
-    extract_constant([], NameWords), { NameWords\=[], name_predicate(NameWords, Constant) }. 
+% constant/4 or /6
+constant(StopWords, Constant, Map, Map) -->
+    extract_constant(StopWords, NameWords), { NameWords\=[], name_predicate(NameWords, Constant) }. 
 
+% deprecated
 prolog_literal_(Prolog, Map1, MapN) -->
     predicate_name_(Predicate), parentesis_open_, extract_list([], Arguments, Map1, MapN), parentesis_close_,
     {Prolog =.. [Predicate|Arguments]}.
@@ -596,7 +618,7 @@ for_all_cases_in_which_ --> spaces_or_newlines(_), [for], spaces(_), [all], spac
 
 it_is_the_case_that_ --> [it], spaces(_), [is], spaces(_), [the], spaces(_), [case], spaces(_), [that], spaces(_).
 
-is_a_collection_of_ --> [is], spaces(_), [a], spaces(_), [collection], spaces(_), [of], spaces(_). 
+is_a_set_of_ --> [is], spaces(_), [a], spaces(_), [set], spaces(_), [of], spaces(_). 
 
 where_ --> [where], spaces(_). 
 
@@ -656,9 +678,10 @@ jump_comment([newline(N)|Rest], [newline(N)|Rest]). % leaving the end of line in
 jump_comment([_|R1], R2) :-
     jump_comment(R1, R2). 
 
+% template_decl/4
 % cuts added to improve efficiency
 template_decl([], [newline(_)|RestIn], [newline(_)|RestIn]) :- 
-    asserterror('LE error found in a template declaration ', RestIn), !, 
+    asserterror('LE error: misplace new line found in a template declaration ', RestIn), !, 
     fail. % cntrl \n should be rejected as part of a template
 template_decl(RestW, [' '|RestIn], Out) :- !, % skip spaces in template
     template_decl(RestW, RestIn, Out).
@@ -675,6 +698,7 @@ template_decl([], [Word|Rest], [Word|Rest]) :-
 template_decl(_, Rest, _) :- 
     asserterror('LE error found in a template declaration ', Rest), fail.
 
+% build_template/5
 build_template(RawTemplate, Predicate, Arguments, TypesAndNames, Template) :-
     build_template_elements(RawTemplate, [], Arguments, TypesAndNames, OtherWords, Template),
     name_predicate(OtherWords, Predicate).
@@ -683,12 +707,15 @@ build_template(RawTemplate, Predicate, Arguments, TypesAndNames, Template) :-
 build_template_elements([], _, [], [], [], []) :- !. 
 % a variable signalled by a *
 build_template_elements(['*', Word|RestOfWords], _Previous, [Var|RestVars], [Name-Type|RestTypes], Others, [Var|RestTemplate]) :-
+    has_pairing_asteriks([Word|RestOfWords]), 
     %(ind_det(Word); ind_det_C(Word)), % Previous \= [is|_], % removing this requirement when * is used
     determiner(Word), % allows the for variables in templates declarations only
     extract_variable(['*'], Var, [], NameWords, TypeWords, RestOfWords, ['*'|NextWords]), !, % <-- it must end with * too
     name_predicate(NameWords, Name), 
     name_predicate(TypeWords, Type), 
     build_template_elements(NextWords, [], RestVars, RestTypes, Others, RestTemplate). 
+build_template_elements(['*', Word|RestOfWords], _Previous,_, _, _, _) :-
+    not(has_pairing_asteriks([Word|RestOfWords])), !, fail. % produce an error report if asterisks are not paired
 % a variable not signalled by a *  % for backward compatibility  \\ DEPRECATED
 %build_template_elements([Word|RestOfWords], Previous, [Var|RestVars], [Name-Type|RestTypes], Others, [Var|RestTemplate]) :-
 %    (ind_det(Word); ind_det_C(Word)), Previous \= [is|_], 
@@ -699,29 +726,13 @@ build_template_elements(['*', Word|RestOfWords], _Previous, [Var|RestVars], [Nam
 build_template_elements([Word|RestOfWords], Previous, RestVars, RestTypes,  [Word|Others], [Word|RestTemplate]) :-
     build_template_elements(RestOfWords, [Word|Previous], RestVars, RestTypes, Others, RestTemplate).
 
-% extract_variable(+StopWords, -Var, +InitListOfNameWords, -ListOfNameWords, -ListOfTypeWords, +ListOfWords, -NextWordsInText)
-% refactored as a dcg predicate
-extract_variable(_, _, Names, Names, [], [], []) :- !.                                % stop at when words run out
-extract_variable(StopWords, _, Names, Names, [], [Word|RestOfWords], [Word|RestOfWords]) :-   % stop at reserved words, verbs or prepositions. 
-    %(member(Word, StopWords); reserved_word(Word); verb(Word); preposition(Word); punctuation(Word); phrase(newline, [Word])), !.  % or punctuation
-    (member(Word, StopWords); punctuation(Word); phrase(newline, [Word])), !.
-extract_variable(SW, Var, InName, OutName, RestType, [' '|RestOfWords], NextWords) :- !, % skipping spaces
-    extract_variable(SW, Var, InName, OutName, RestType, RestOfWords, NextWords).
-extract_variable(SW, Var, InName, OutName, RestType, ['\t'|RestOfWords], NextWords) :- !,  % skipping spaces
-    extract_variable(SW, Var, InName, OutName, RestType, RestOfWords, NextWords).  
-extract_variable(SW, Var, InName, OutName, Type, [Word|RestOfWords], NextWords) :- % ordinals are not part of the type
-    ordinal(Word), !, 
-    extract_variable(SW, Var, [Word|InName], OutName, Type, RestOfWords, NextWords).
-extract_variable(SW, Var, InName, OutName, [Word|RestType], [Word|RestOfWords], NextWords) :- % types are not part of the name
-    is_a_type(Word),
-    extract_variable(SW, Var, InName, NextName, RestType, RestOfWords, NextWords),
-    (NextName = [] -> OutName = [Word]; OutName = NextName).
-extract_variable(SW, Var, InName, OutName, RestType, [Word|RestOfWords], NextWords) :- % everything else is part of the name
-    extract_variable(SW, Var, [Word|InName], OutName, RestType, RestOfWords, NextWords).
+has_pairing_asteriks(RestOfTemplate) :-
+    findall('*',member('*', RestOfTemplate), Asteriks), length(Asteriks, N), 1 is mod(N, 2).
 
 name_predicate(Words, Predicate) :-
     concat_atom(Words, '_', Predicate). 
 
+% name_as_atom/2
 name_as_atom([Number], Number) :-
     number(Number), !. 
 name_as_atom([Atom], Number) :- 
@@ -792,38 +803,44 @@ adjust_op(Ind1, Ind2, C1, and, C2, or, C3, ((C1, C2); C3) ) :-
 operator(and, In, Out) :- and_(In, Out).
 operator(or, In, Out) :- or_(In, Out).
 
+% possible_instance/3
 % cuts added to improve efficiency
 % skipping a list
-possible_template([], [], []) :- !. 
-possible_template(Final, ['['|RestIn], Out) :- !, 
-    possible_template_for_lists(List, RestIn, [']'|Next]),  
-    possible_template(RestW, Next, Out),
+possible_instance([], [], []) :- !. 
+possible_instance(Final, ['['|RestIn], Out) :- !, 
+    possible_instance_for_lists(List, RestIn, [']'|Next]),  
+    possible_instance(RestW, Next, Out),
     append(['['|List], [']'|RestW], Final).  
-possible_template(RestW, [' '|RestIn], Out) :- !, % skip spaces in template
-    possible_template(RestW, RestIn, Out).
-possible_template(RestW, ['\t'|RestIn], Out) :- !, % skip tabs in template
-    possible_template(RestW, RestIn, Out).
-possible_template([Word|RestW], [Word|RestIn], Out) :- 
+possible_instance(RestW, [' '|RestIn], Out) :- !, % skip spaces in template
+    possible_instance(RestW, RestIn, Out).
+possible_instance(RestW, ['\t'|RestIn], Out) :- !, % skip tabs in template
+    possible_instance(RestW, RestIn, Out).
+possible_instance([that|Instance], In, Out) :- % to allow "that" instances to spread over more than one line
+    phrase(spaces_or_newlines(_), In, [that|Rest]),
+    phrase(spaces_or_newlines(_), Rest, Next), !, 
+    possible_instance(Instance, Next, Out).
+possible_instance([Word|RestW], [Word|RestIn], Out) :- 
     %not(lists:member(Word,['\n', if, and, or, '.', ','])),  !, 
     not(lists:member(Word,[newline(_), if, '.', ','])), 
     % leaving the comma in as well (for lists and sets we will have to modify this)
-    possible_template(RestW, RestIn, Out).
-possible_template([], [Word|Rest], [Word|Rest]) :- 
+    possible_instance(RestW, RestIn, Out).
+possible_instance([], [Word|Rest], [Word|Rest]) :- 
     lists:member(Word,[newline(_), if, '.', ',']). % leaving or/and out of this
 
 % using [ and ] for list and set only to avoid clashes for commas
-%possible_template_for_lists([], [], []) :- !.
-possible_template_for_lists([], [']'|Out], [']'|Out]) :- !. 
-possible_template_for_lists(RestW, [' '|RestIn], Out) :- !, % skip spaces in template
-    possible_template_for_lists(RestW, RestIn, Out).
-possible_template_for_lists(RestW, ['\t'|RestIn], Out) :- !, % skip tabs in template
-    possible_template_for_lists(RestW, RestIn, Out).
-possible_template_for_lists([Word|RestW], [Word|RestIn], Out) :- 
+%possible_instance_for_lists([], [], []) :- !.
+possible_instance_for_lists([], [']'|Out], [']'|Out]) :- !. 
+possible_instance_for_lists(RestW, [' '|RestIn], Out) :- !, % skip spaces in template
+    possible_instance_for_lists(RestW, RestIn, Out).
+possible_instance_for_lists(RestW, ['\t'|RestIn], Out) :- !, % skip tabs in template
+    possible_instance_for_lists(RestW, RestIn, Out).
+possible_instance_for_lists([Word|RestW], [Word|RestIn], Out) :- 
     %not(lists:member(Word,['\n', if, and, or, '.', ','])),  !, 
-    possible_template_for_lists(RestW, RestIn, Out).
-%possible_template_for_lists([], [Word|Rest], [Word|Rest]) :- 
+    possible_instance_for_lists(RestW, RestIn, Out).
+%possible_instance_for_lists([], [Word|Rest], [Word|Rest]) :- 
 %    lists:member(Word,[',', newline(_), if, '.']). % leaving or/and out of this
 
+% match_template/4
 match_template(PossibleLiteral, Map1, MapN, Literal) :-
     %print_message(informational,'Possible Meta Literal ~w'-[PossibleLiteral]),
     meta_dictionary(Predicate, _, MetaCandidate),
@@ -839,6 +856,7 @@ match_template(PossibleLiteral, Map1, MapN, Literal) :-
     Literal =.. Predicate. 
     %print_message(informational,'Match!! with ~w'-[Literal]), !. 
 
+% meta_match/5
 % meta_match(+CandidateTemplate, +PossibleLiteral, +MapIn, -MapOut, -SelectedTemplate)
 meta_match([], [], Map, Map, []) :- !.
 meta_match([Word|_LastElement], [Word|PossibleLiteral], Map1, MapN, [Word,Literal]) :- % asuming Element is last in template!
@@ -901,7 +919,7 @@ meta_match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, [Expressi
     %print_message(informational, 'found a constant or an expression '), print_message(informational, Expression),
     meta_match(RestElements, NextWords, Map1, MapN, RestSelected). 
 
-
+% match/5
 % match(+CandidateTemplate, +PossibleLiteral, +MapIn, -MapOut, -SelectedTemplate)
 match([], [], Map, Map, []) :- !.  % success! It succeds iff PossibleLiteral is totally consumed
 % meta level access: that New Literal
@@ -948,6 +966,7 @@ match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, [Expression|Re
     %print_message(informational, 'found a constant or an expression '), print_message(informational, Expression),
     match(RestElements, NextWords, Map1, MapN, RestSelected). 
 
+% expression/3 or /5
 %expression_(List, MapIn, MapOut) --> list_(List, MapIn, MapOut), !. 
 % expression_ resolve simple math (non boolean) expressions fttb. 
 % dates must be dealt with first  
@@ -964,28 +983,138 @@ expression_(Float, Map, Map) --> [AtomNum,'.',AtomDecimal],
         { atom(AtomNum), atom(AtomDecimal), atomic_list_concat([AtomNum,'.',AtomDecimal], Atom), atom_number(Atom, Float) }, !.
 % mathematical expressions
 expression_(InfixBuiltIn, Map1, MapN) --> 
-    term_(Term, Map1, Map2), spaces(_), binary_op(BuiltIn), !, 
+    {op_stop(Stop)}, term_(Stop, Term, Map1, Map2), spaces(_), binary_op(BuiltIn), !, 
     spaces(_), expression_(Expression, Map2, MapN), spaces(_), {InfixBuiltIn =.. [BuiltIn, Term, Expression]}.  
 % a quick fix for integer numbers extracted from atoms from the tokenizer
 expression_(Number, Map, Map) --> [Atom],  spaces(_), { atom(Atom), atom_number(Atom, Number) }, !. 
-expression_(Var, Map1, Map2) -->  variable(Var, Map1, Map2), !.
-expression_(Constant, Map1, Map2) -->  constant(Constant, Map1, Map2).     
+expression_(Var, Map1, Map2) -->  {op_stop(Stop)}, variable(Stop, Var, Map1, Map2), !.
+expression_(Constant, Map1, Map2) -->  {op_stop(Stop)}, constant(Stop, Constant, Map1, Map2).     
 % error clause
 expression(_, _, _, Rest, _) :- 
     asserterror('LE error found in an expression ', Rest), fail.
 
 % only one word operators
-binary_op(Op) --> [Op], { atom(Op), current_op(_Prec, Fix, Op),
-    Op \= '.',
-    (Fix = 'xfx'; Fix='yfx'; Fix='xfy'; Fix='yfy') }.
+%binary_op(Op) --> [Op], { atom(Op), current_op(_Prec, Fix, Op),
+%    Op \= '.',
+%    (Fix = 'xfx'; Fix='yfx'; Fix='xfy'; Fix='yfy') }.
+
+% operators with any amout of words/symbols
+% binary_op/3
+binary_op(Op, In, Out) :-
+    op_tokens(Op, OpTokens),
+    append(OpTokens, Out, In).
+
+op_tokens(Op, OpTokens) :-
+    current_op(_Prec, Fix, Op), Op \= '.',
+    (Fix = 'xfx'; Fix='yfx'; Fix='xfy'; Fix='yfy'),
+    term_string(Op, OpString), tokenize(OpString, Tokens, [cased(true), spaces(true), numbers(false)]),
+    unpack_tokens(Tokens, OpTokens).
+
+% very inefficient. Better to compute and store. See below
+op_stop_words(Words) :-
+    op_stop(Words) -> true; (    
+        findall(Word, 
+            (current_op(_Prec, _, Op), Op \= '.', % don't include the period!
+            term_string(Op, OpString), 
+            tokenize(OpString, Tokens, [cased(true), spaces(true), numbers(false)]),
+            unpack_tokens(Tokens, [Word|_])), Words), % taking only the first word as stop word 
+        assertz(op_stop(Words))
+        ), !. 
+
+op_stop([ (on), 
+        (because),
+        (is_not_before),
+        (not),
+        (before),
+        (and),
+        (or),
+        (at),
+        (html_meta),
+        (after),
+        (in),
+        (else),
+        (+),
+        (then),
+        (must),
+        (if),
+        (if),
+        ($),
+        (\),
+        (=),
+        (thread_initialization),
+        (:),
+        (\),
+        '\'',
+        (xor),
+        (:),
+        (rem),
+        (\),
+        (table),
+        (initialization),
+        (rdiv),
+        (/),
+        (>),
+        (>),
+        (=),
+        (=),
+        (;),
+        (as),
+        (is),
+        (=),
+        @,
+        @,
+        @,
+        @,
+        (\),
+        (thread_local),
+        (>),
+        (=),
+        (<),
+        (*),
+        '\'',
+        (=),
+        (\),
+        (\),
+        (+),
+        (+),
+        (:),
+        (>),
+        (div),
+        (discontiguous),
+        (<),
+        (/),
+        (meta_predicate),
+        (=),
+        (-),
+        (-),
+        (volatile),
+        (public),
+        (-),
+        (:),
+        (:),
+        (*),
+        ?,
+        (/),
+        (*),
+        (-),
+        (multifile),
+        (dynamic),
+        (mod),
+        (^),
+        (module_transparent)
+      ]).
 
 stop_words([], []).
 stop_words([Word|_], [Word]) :- nonvar(Word). % only the next word for now
 stop_words([Word|_], []) :- var(Word).
 
+% list_symbol/1: a symbol specific for list that can be used as stop word for others
+list_symbol('[').
+list_symbol(']'). 
+
 extract_literal(_, [], [], []) :- !. 
 extract_literal(StopWords, [],  [Word|RestOfWords],  [Word|RestOfWords]) :-
-    (member(Word, StopWords); phrase(newline, [Word])), !. 
+    (member(Word, StopWords); that_(Word); phrase(newline, [Word])), !. 
 extract_literal(SW, RestName, [' '|RestOfWords],  NextWords) :- !, % skipping spaces
     extract_literal(SW, RestName, RestOfWords, NextWords).
 extract_literal(SW, RestName, ['\t'|RestOfWords],  NextWords) :- !, 
@@ -993,11 +1122,33 @@ extract_literal(SW, RestName, ['\t'|RestOfWords],  NextWords) :- !,
 extract_literal(SW, [Word|RestName], [Word|RestOfWords],  NextWords) :-
     extract_literal(SW, RestName, RestOfWords, NextWords).
 
+% extract_variable/7
+% extract_variable(+StopWords, -Var, +InitListOfNameWords, -ListOfNameWords, -ListOfTypeWords, +ListOfWords, -NextWordsInText)
+% refactored as a dcg predicate
+extract_variable(_, _, Names, Names, [], [], []) :- !.                                % stop at when words run out
+extract_variable(StopWords, _, Names, Names, [], [Word|RestOfWords], [Word|RestOfWords]) :-   % stop at reserved words, verbs or prepositions. 
+    %(member(Word, StopWords); reserved_word(Word); verb(Word); preposition(Word); punctuation(Word); phrase(newline, [Word])), !.  % or punctuation
+    (member(Word, StopWords); that_(Word); list_symbol(Word); punctuation(Word); phrase(newline, [Word])), !.
+extract_variable(SW, Var, InName, OutName, RestType, [' '|RestOfWords], NextWords) :- !, % skipping spaces
+    extract_variable(SW, Var, InName, OutName, RestType, RestOfWords, NextWords).
+extract_variable(SW, Var, InName, OutName, RestType, ['\t'|RestOfWords], NextWords) :- !,  % skipping spaces
+    extract_variable(SW, Var, InName, OutName, RestType, RestOfWords, NextWords).  
+extract_variable(SW, Var, InName, OutName, Type, [Word|RestOfWords], NextWords) :- % ordinals are not part of the type
+    ordinal(Word), !, 
+    extract_variable(SW, Var, [Word|InName], OutName, Type, RestOfWords, NextWords).
+extract_variable(SW, Var, InName, OutName, [Word|RestType], [Word|RestOfWords], NextWords) :- % types are not part of the name
+    is_a_type(Word),
+    extract_variable(SW, Var, InName, NextName, RestType, RestOfWords, NextWords),
+    (NextName = [] -> OutName = [Word]; OutName = NextName).
+extract_variable(SW, Var, InName, OutName, RestType, [Word|RestOfWords], NextWords) :- % everything else is part of the name
+    extract_variable(SW, Var, [Word|InName], OutName, RestType, RestOfWords, NextWords).
+
+% extract_expression/4
 % extract_expression(+StopWords, ListOfNameWords, +ListOfWords, NextWordsInText)
 % it does not stop at reserved words!
 extract_expression(_, [], [], []) :- !.                                % stop at when words run out
 extract_expression(StopWords, [], [Word|RestOfWords], [Word|RestOfWords]) :-   % stop at  verbs? or prepositions?. 
-    (member(Word, StopWords); phrase(newline, [Word])), !.  
+    (member(Word, StopWords); that_(Word); list_symbol(Word); phrase(newline, [Word])), !.  
 %extract_expression([Word|RestName], [Word|RestOfWords], NextWords) :- % ordinals are not part of the name
 %    ordinal(Word), !,
 %    extract_constant(RestName, RestOfWords, NextWords).
@@ -1010,11 +1161,12 @@ extract_expression(SW, [Word|RestName], [Word|RestOfWords],  NextWords) :-
     %not(determiner(Word)), % no determiners inside constants!
     extract_expression(SW, RestName, RestOfWords, NextWords).
 
+% extract_constant/4
 % extract_constant(+StopWords, ListOfNameWords, +ListOfWords, NextWordsInText)
 extract_constant(_, [], [], []) :- !.                                % stop at when words run out
 extract_constant(StopWords, [], [Word|RestOfWords], [Word|RestOfWords]) :-   % stop at reserved words, verbs? or prepositions?. 
     %(member(Word, StopWords); reserved_word(Word); verb(Word); preposition(Word); punctuation(Word); phrase(newline, [Word])), !.  % or punctuation
-    (member(Word, StopWords); punctuation(Word); phrase(newline, [Word])), !.
+    (member(Word, StopWords); that_(Word); list_symbol(Word); punctuation(Word); phrase(newline, [Word])), !.
 %extract_constant([Word|RestName], [Word|RestOfWords], NextWords) :- % ordinals are not part of the name
 %    ordinal(Word), !,
 %    extract_constant(RestName, RestOfWords, NextWords).
@@ -1027,6 +1179,7 @@ extract_constant(SW, [Word|RestName], [Word|RestOfWords],  NextWords) :-
     %not(determiner(Word)), % no determiners inside constants!
     extract_constant(SW, RestName, RestOfWords, NextWords).
 
+% extract_list/6
 % extract_list(+StopWords, -List, +Map1, -Map2, +[Word|PossibleLiteral], -NextWords),
 extract_list(SW, [], Map, Map, [Word|Rest], [Word|Rest]) :- 
     lists:member(Word, SW), !. % stop but leave the symbol for further verification
@@ -1035,24 +1188,24 @@ extract_list(SW, RestList, Map1, MapN, [' '|RestOfWords],  NextWords) :- !, % sk
     extract_list(SW, RestList, Map1, MapN, RestOfWords, NextWords).
 extract_list(SW, RestList, Map1, MapN, ['\t'|RestOfWords],  NextWords) :- !, 
     extract_list(SW, RestList, Map1, MapN, RestOfWords, NextWords).
-extract_list(SW, RestList, Map1, MapN, [','|RestOfWords],  NextWords) :- !, 
+extract_list(SW, RestList, Map1, MapN, [','|RestOfWords],  NextWords) :- !, % skip over commas
     extract_list(SW, RestList, Map1, MapN, RestOfWords, NextWords).
 extract_list(StopWords, [Var|RestList], Map1, MapN, [Det|InWords], LeftWords) :-
     indef_determiner(Det), 
     extract_variable(StopWords, Var, [], NameWords, _, InWords, NextWords), NameWords \= [], % <- leave that _ unbound!
     name_predicate(NameWords, Name),  
-    update_map(Var, Name, Map1, Map2), !,
+    update_map(Var, Name, Map1, Map2), 
     extract_list(StopWords, RestList, Map2, MapN, NextWords, LeftWords).
 extract_list(StopWords, [Var|RestList], Map1, MapN, [Det|InWords], LeftWords) :-
     def_determiner(Det), 
     extract_variable(StopWords, Var, [], NameWords, _, InWords, NextWords), NameWords \= [], % <- leave that _ unbound!
     name_predicate(NameWords, Name),  
-    consult_map(Var, Name, Map1, Map2), !,
+    consult_map(Var, Name, Map1, Map2), 
     extract_list(StopWords, RestList, Map2, MapN, NextWords, LeftWords).
-extract_list(StopWords, [Var|RestList], Map1, MapN, InWords, LeftWords) :-
+extract_list(StopWords, [Var|RestList], Map1, MapN, InWords, LeftWords) :- % symbolic variables without determiner
     extract_variable(StopWords, Var,[], NameWords, _, InWords, NextWords), NameWords \= [],  % <- leave that _ unbound!
     name_predicate(NameWords, Name),  
-    consult_map(Var, Name, Map1, Map2), !,
+    consult_map(Var, Name, Map1, Map2), 
     extract_list(StopWords, RestList, Map2, MapN, NextWords, LeftWords).
 extract_list(StopWords, [Expression|RestList], Map1, MapN, InWords, LeftWords) :-
     extract_expression([','|StopWords], NameWords, InWords, NextWords), NameWords \= [], 
@@ -1089,16 +1242,19 @@ template_elements([Word|RestOfWords], Map1, MapN, Previous, [Var|RestTemplate]) 
 template_elements([Word|RestOfWords], Map1, MapN, Previous, [Word|RestTemplate]) :-
     template_elements(RestOfWords, Map1, MapN, [Word|Previous], RestTemplate).
 
+% update_map/4
 % update_map(?V, +Name, +InMap, -OutMap)
-update_map(V, Name, InMap, InMap) :- % unify V with the variable with the same name in the current map
+update_map(V, Name, InMap, InMap) :- 
     var(V), nonvar(Name), nonvar(InMap), 
-    member(map(V,Name),InMap).
+    member(map(O,Name), InMap), O\==V, fail, !. 
 update_map(V, Name, InMap, OutMap) :-  % updates the map by adding a new variable into it. 
     var(V), nonvar(Name), nonvar(InMap), 
+    not(member(map(_,Name), InMap)), 
     OutMap = [map(V,Name)|InMap]. 
 %update_map(V, _, Map, Map) :-
 %    nonvar(V). 
 
+% consult_map/4
 % consult_map(+V, -Name, +Inmap, -OutMap)
 consult_map(V, Name, InMap, InMap) :-
     member(map(Var, SomeName), InMap), (Name == SomeName -> Var = V; ( Var == V -> Name = SomeName ; fail ) ),  !.  
@@ -1179,6 +1335,9 @@ reserved_word(W) :- % more reserved words pending??
     W = '{' ; W = '}' ; W = '(' ; W = ')' ; W = '[' ; W = ']',
     W = ':', W = ','; W = ';'. % these must be handled by parsing
 reserved_word(P) :- punctuation(P).
+
+that_(that).
+that_('That'). 
 
 /* ------------------------------------------------ punctuation */
 %punctuation(punct(_P)).
@@ -1458,7 +1617,8 @@ interrupted(T1, Fluent, T2) :- %trace,
 %happens(it_is_the_end_of(T), _) :- T = _-_-_-00-00-00.  % needed?
 
 /* ----------------------------------------------------------------- CLI English */
-answer(English) :- % trace, 
+% answer/1
+answer(English) :- %trace, 
     (parsed -> true; fail), !, 
     translate_command(English, GoalName, Scenario), % later -->, Kbs),
     %print_message(informational, "Goal Name: ~w"-[GoalName]),
@@ -1488,6 +1648,7 @@ answer(English) :- % trace,
     %print_message(informational, "Result: ~w"-[Result]).
     %print_message(informational, "Explanation: ~w"-[E]).
 
+% answer/3
 % answer(+English, -Goal, -Result)
 answer(English, EnglishQuestion, Answers) :-
     (parsed -> true; fail), !, 
@@ -1504,6 +1665,7 @@ answer(English, EnglishQuestion, Answers) :-
     get_answer_from_goal(Goal, Answers). 
     %reasoner:query_once_with_facts(Goal,Scenario,_,_E,Result).
 
+% get_answer_from_goal/2
 get_answer_from_goal((G,R), WholeAnswer) :- 
     get_answer_from_goal(G, Answer), 
     get_answer_from_goal(R, RestAnswers), 
@@ -1521,10 +1683,10 @@ get_answer_from_goal(holds(Goal,T), Answer) :- !,
     process_time_term(T, TimeExplain),
     Answer = ['At', TimeExplain, it, holds, that|ProcessedWordsAnswers], !.
 get_answer_from_goal(Goal, ProcessedWordsAnswers) :-  
-    Goal =.. [Pred|GoalElements], meta_dict([Pred|GoalElements], Types, WordsAnswer),
+    Goal =.. [Pred|GoalElements], meta_dictionary([Pred|GoalElements], Types, WordsAnswer),
     process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), !. 
 get_answer_from_goal(Goal, ProcessedWordsAnswers) :-  
-    Goal =.. [Pred|GoalElements], dict([Pred|GoalElements], Types, WordsAnswer),
+    Goal =.. [Pred|GoalElements], dictionary([Pred|GoalElements], Types, WordsAnswer),
     process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers). 
 
 process_time_term(T,ExplainT) :- var(T), name_as_atom([a, time, T], ExplainT). % in case of vars
