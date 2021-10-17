@@ -71,7 +71,7 @@ query three is:
 :- use_module('reasoner.pl').
 :- thread_local literal/5, text_size/1, error_notice/4, dict/3, meta_dict/3, 
                 last_nl_parsed/1, kbname/1, happens/2, initiates/3, terminates/3, 
-                predicates/1, events/1, fluents/1, metapredicates/1, parsed/0, op_stop/1.  
+                predicates/1, events/1, fluents/1, metapredicates/1, parsed/0.  
 :- discontiguous statement/3, declaration/4.
 
 % Main clause: text_to_logic(+String,-Clauses) is det
@@ -352,7 +352,8 @@ statement(Statement) -->
         literal_(Map1, Map2, happens(Event, T)), spaces_or_newlines(_),
     body_(Body, [map(T, '_change_time')|Map2],_), period,  
         {(Body = [] -> Statement = [if(terminates(Event, Fluent, T), true)];  
-            (Statement = [if(initiates(Event, Fluent, T), Body)]))}, !.
+            (Statement = [if(initiates(Event, Fluent, T), Body)] %, print_message(informational, "~w"-Statement)
+            ))}, !.
 
 % it is illegal that
 %   event
@@ -431,10 +432,12 @@ literal_(Map1, MapN, FinalLiteral) --> % { print_message(informational, 'just li
     {match_template(PossibleTemplate, Map1, MapN, Literal),
      (fluents(Fluents) -> true; Fluents = []),
      (events(Events) -> true; Events = []),
-     (consult_map(Time, '_change_time', Map1, _) -> T=Time; true), 
+     (consult_map(Time, '_change_time', Map1, _MapF) -> T=Time; true), 
      (lists:member(Literal, Events) -> FinalLiteral = happens(Literal, T) 
       ; (lists:member(Literal, Fluents) -> FinalLiteral = holds(Literal, T)
-        ; FinalLiteral = Literal))}, !. % by default (including builtins) they are timeless!
+        ; (FinalLiteral = Literal)))
+      %print_message(informational, "~w with ~w"-[FinalLiteral, MapF])
+     }, !. % by default (including builtins) they are timeless!
 
 % rewritten to use in swish. Fixed! It was a name clash. Apparently "literal" is used somewhere else
 %literal_(Map1, MapN, Literal, In, Out) :-  print_message(informational, '  inside a literal'),
@@ -681,7 +684,7 @@ jump_comment([_|R1], R2) :-
 % template_decl/4
 % cuts added to improve efficiency
 template_decl([], [newline(_)|RestIn], [newline(_)|RestIn]) :- 
-    asserterror('LE error: misplace new line found in a template declaration ', RestIn), !, 
+    asserterror('LE error: misplaced new line found in a template declaration ', RestIn), !, 
     fail. % cntrl \n should be rejected as part of a template
 template_decl(RestW, [' '|RestIn], Out) :- !, % skip spaces in template
     template_decl(RestW, RestIn, Out).
@@ -853,8 +856,8 @@ match_template(PossibleLiteral, Map1, MapN, Literal) :-
     dictionary(Predicate, _, Candidate),
     match(Candidate, PossibleLiteral, Map1, MapN, Template), !, 
     dictionary(Predicate, _, Template), 
-    Literal =.. Predicate. 
-    %print_message(informational,'Match!! with ~w'-[Literal]), !. 
+    Literal =.. Predicate.
+    %print_message(informational,'Match!! with ~w'-[Literal]).% !. 
 
 % meta_match/5
 % meta_match(+CandidateTemplate, +PossibleLiteral, +MapIn, -MapOut, -SelectedTemplate)
@@ -960,7 +963,9 @@ match([Element|RestElements], ['['|PossibleLiteral], Map1, MapN, [List|RestSelec
 % enabling expressions and constants
 match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, [Expression|RestSelected]) :-
     var(Element), stop_words(RestElements, StopWords),
+    %print_message(informational, [Word|PossibleLiteral]),
     extract_expression([','|StopWords], NameWords, [Word|PossibleLiteral], NextWords), NameWords \= [],
+    %print_message(informational, "Expression? ~w"-[NameWords]),
     % this expression cannot add variables 
     ( phrase(expression_(Expression, Map1, Map1), NameWords) -> true ; ( name_predicate(NameWords, Expression) ) ),
     %print_message(informational, 'found a constant or an expression '), print_message(informational, Expression),
@@ -983,12 +988,15 @@ expression_(Float, Map, Map) --> [AtomNum,'.',AtomDecimal],
         { atom(AtomNum), atom(AtomDecimal), atomic_list_concat([AtomNum,'.',AtomDecimal], Atom), atom_number(Atom, Float) }, !.
 % mathematical expressions
 expression_(InfixBuiltIn, Map1, MapN) --> 
+    %{print_message(informational, "Binary exp map ~w"-[Map1])}, 
     {op_stop(Stop)}, term_(Stop, Term, Map1, Map2), spaces(_), binary_op(BuiltIn), !, 
-    spaces(_), expression_(Expression, Map2, MapN), spaces(_), {InfixBuiltIn =.. [BuiltIn, Term, Expression]}.  
+    %{print_message(informational, "Binary exp first term ~w and op ~w"-[Term, BuiltIn])}, 
+    spaces(_), expression_(Expression, Map2, MapN), spaces(_), 
+    {InfixBuiltIn =.. [BuiltIn, Term, Expression]}.%, print_message(informational, "Binary exp ~w"-InfixBuiltIn)}.  
 % a quick fix for integer numbers extracted from atoms from the tokenizer
 expression_(Number, Map, Map) --> [Atom],  spaces(_), { atom(Atom), atom_number(Atom, Number) }, !. 
-expression_(Var, Map1, Map2) -->  {op_stop(Stop)}, variable(Stop, Var, Map1, Map2), !.
-expression_(Constant, Map1, Map2) -->  {op_stop(Stop)}, constant(Stop, Constant, Map1, Map2).     
+expression_(Var, Map1, Map2) -->  {op_stop(Stop)}, variable(Stop, Var, Map1, Map2),!.%, {print_message(informational, "Just var ~w"-Var)}, 
+expression_(Constant, Map1, Map2) -->  {op_stop(Stop)}, constant(Stop, Constant, Map1, Map2).%, {print_message(informational, "Constant ~w"-Constant)}.     
 % error clause
 expression(_, _, _, Rest, _) :- 
     asserterror('LE error found in an expression ', Rest), fail.
@@ -1495,6 +1503,12 @@ predef_dict([has_as_head_before, A, B, C], [list-list, symbol-term, list_the_of_
 predef_dict([append, A, B, C],[list_first-list, list_second-list, list_third_the-list], [one, appends, A, to, B, to, obtain, C]).
 predef_dict([reverse, A, B], [list1-list, list_other-list], [A, is, the, reverse, of, B]).
 predef_dict([same_date, T1, T2], [time1-time, time2-time], [T1, is, the, same, date, as, T2]). % see reasoner.pl before/2
+predef_dict([between,Minimum,Maximum,Middle], [min-date, max-date, middle-date], 
+                [Middle, is, between, Minimum, &, Maximum]).
+predef_dict([is_1_day_after, A, B], [date-date, second_date-date],
+                [A, is, '1', day, after, B]).
+predef_dict([is_days_after, A, B, C], [date-date, number-number, second_date-date],
+                  [A, is, B, days, after, C]).
 predef_dict([immediately_before, T1, T2], [time1-time, time2-time], [T1, is, immediately, before, T2]). % see reasoner.pl before/2
 predef_dict([\=, T1, T2], [thing1-thing, thing2-thing], [T1, is, different, from, T2]).
 predef_dict([==, T1, T2], [thing1-thing, thing2-thing], [T1, is, equivalent, to, T2]).
@@ -1504,6 +1518,7 @@ predef_dict([=, T1, T2], [thing1-thing, thing2-thing], [T1, is, equal, to, T2]).
 predef_dict([before, T1, T2], [time1-time, time2-time], [T1, is, before, T2]). % see reasoner.pl before/2
 predef_dict([after, T1, T2], [time1-time, time2-time], [T1, is, after, T2]).  % see reasoner.pl before/2
 predef_dict([member, Member, List], [member-object, list-list], [Member, is, in, List]).
+predef_dict([is, A, B], [member-object, list-list], [A, is, B]). % builtin Prolog assignment
 % predefined entries:
 %predef_dict([assert,Information], [info-clause], [this, information, Information, ' has', been, recorded]).
 predef_dict([\=@=, T1, T2], [thing1-thing, thing2-thing], [T1, \,=,@,=, T2]).
@@ -1518,14 +1533,6 @@ predef_dict([=, T1, T2], [thing1-thing, thing2-thing], [T1, =, T2]).
 predef_dict([<, T1, T2], [thing1-thing, thing2-thing], [T1, <, T2]).
 predef_dict([>, T1, T2], [thing1-thing, thing2-thing], [T1, >, T2]).
 predef_dict([unparse_time, Secs, Date], [secs-seconds, date-date], [Secs, corresponds, to, date, Date]).
-predef_dict([is_1_day_after, A, B],
-                  [date-date, second_date-date],
-                  [A, is, '1', day, after, B]).
-predef_dict([is_days_after, A, B, C],
-                  [date-date, number-number, second_date-date],
-                  [A, is, B, days, after, C]).
-predef_dict([between,Minimum,Maximum,Middle], [min-date, max-date, middle-date], 
-    [Middle, is, between, Minimum, &, Maximum]).
 predef_dict([must_be, Type, Term], [type-type, term-term], [Term, must, be, Type]).
 predef_dict([must_not_be, A, B], [term-term, variable-variable], [A, must, not, be, B]). 
 
@@ -1583,8 +1590,9 @@ translate_query(English_String, Goal) :-
     ; ( error_notice(error, Me,Pos, ContextTokens), print_message(error, [Me,Pos,ContextTokens]) ). 
 
 /* ----------------------------------------------------------------- Event Calculus  */
+% holds/2
 holds(Fluent, T) :-
-    pengine_self(SwishModule), %trace, 
+    pengine_self(SwishModule), trace, 
     SwishModule:happens(Event, T1), 
     SwishModule:initiates(Event, Fluent, T1), 
     %(nonvar(T) -> rbefore(T1,T); T=(after(T1)-_)),  % T1 is strictly before T 'cos T is not a variable
@@ -1603,7 +1611,8 @@ rbefore(T1, T) :- (var(T1); var(T)), !.
 %    pengine_self(SwishModule),
 %   call(SwishModule:NoFluent). 
 
-interrupted(T1, Fluent, T2) :- %trace, 
+% interrupted/3
+interrupted(T1, Fluent, T2) :- trace, 
     pengine_self(SwishModule),
     SwishModule:happens(Event, T), 
     SwishModule:terminates(Event, Fluent, T), 
@@ -1804,6 +1813,8 @@ user:holds(Fluent, Time) :- holds(Fluent, Time).
 user:has_as_head_before(List, Head, Rest) :- has_as_head_before(List, Head, Rest). 
 
 user:le_taxlog_translate( en(Text), Terms) :- le_taxlog_translate( en(Text), Terms).
+
+user:op_stop(StopWords) :- op_stop(StopWords). 
 
 le_taxlog_translate( EnText, Terms) :- le_taxlog_translate( EnText, someFile, 1, Terms).
 
