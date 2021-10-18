@@ -345,13 +345,17 @@ The SWISH editor was slightly customised:
 
 ##  7. <a name='Releases'></a>Release Notes
 
-- [2021-10-12] Alfa testing
+- [2021-10-12] Alfa testing  Previous version: [ef5a1d66ed4d706829cd9b66a6b1cc052799eac5](https://github.com/mcalejo/TaxKB/commit/ef5a1d66ed4d706829cd9b66a6b1cc052799eac5)
 	- The word "that" is no longer allowed as part of variable names, constants or expressions. 
 	- Fixing `get_answer_from_goal/2` to include predef templates while producing LE version of an answer. 
 - [2021-10-13] Alfa testing.
 	- template instances with "that" can be written in more than one line (new line before or after "that")
 	- Asteriks in a template must be paired. Otherwise, a syntax error will be issued.
-- [2021-10-14] Alfa testing.  Previous version: [ef5a1d66ed4d706829cd9b66a6b1cc052799eac5](https://github.com/mcalejo/TaxKB/commit/ef5a1d66ed4d706829cd9b66a6b1cc052799eac5)
+- [2021-10-14] Alfa testing. 
 	- Repairing the structure `a variable is a set of a term where .. `. The term is restricted to be another variable, a constant or a list. For example: `[an element, a second element]` 
 	- Fixes for `variable`, `term_` and other related predicates. 
+- [2021-10-17] Alfa testing.  Previous version: [de95523ab71785c5e46190d0fcea7ad347b689be](https://github.com/mcalejo/TaxKB/commit/de95523ab71785c5e46190d0fcea7ad347b689be)
+	- Fixing bug to allow prolog builtins to be used in expressions (op_stop).
+	- Adding 014_escrow.pl example
+ 
 
