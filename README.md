@@ -357,5 +357,8 @@ The SWISH editor was slightly customised:
 - [2021-10-17] Alfa testing.  Previous version: [de95523ab71785c5e46190d0fcea7ad347b689be](https://github.com/mcalejo/TaxKB/commit/de95523ab71785c5e46190d0fcea7ad347b689be)
 	- Fixing bug to allow prolog builtins to be used in expressions (op_stop).
 	- Adding 014_escrow.pl example
- 
+- [2021-10-18] Alfa testing.  Previous version: [bafa1d38c759a9eb0787185ef197276415144144](https://github.com/mcalejo/TaxKB/commit/bafa1d38c759a9eb0787185ef197276415144144) 
+	- Fixing bug in translation of `it becomes not the case`. Extending definition of before/2 to support simple numbers (not only dates). Adjusting answer output not to translate any number below 100 to 
+	standard format for dates. 
+	- Example 014_escrow.pl is fully functional. 
 

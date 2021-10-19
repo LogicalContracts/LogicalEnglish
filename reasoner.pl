@@ -580,7 +580,10 @@ after(Later,Earlier) :-
 is_not_before(Later,Earlier) :-
     parse_time(Later,L), parse_time(Earlier,E), L>=E.
 before(Earlier,Later) :-
-    parse_time(Later,L), parse_time(Earlier,E), E<L.
+    parse_time(Later,L), parse_time(Earlier,E), E<L, !.
+% an argument can be any number
+before(Earlier,Later) :-
+    number(Later), number(Earlier), Earlier<Later.
 
 % Dates in seconds since 1970-01-01T00:00:00, Day in partial format Year-Month-Day
 % set_time_of_day(+Day, +Hour_Min_Secs, -DateInSeconds)

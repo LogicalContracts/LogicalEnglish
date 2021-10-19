@@ -352,7 +352,7 @@ statement(Statement) -->
         literal_(Map1, Map2, happens(Event, T)), spaces_or_newlines(_),
     body_(Body, [map(T, '_change_time')|Map2],_), period,  
         {(Body = [] -> Statement = [if(terminates(Event, Fluent, T), true)];  
-            (Statement = [if(initiates(Event, Fluent, T), Body)] %, print_message(informational, "~w"-Statement)
+            (Statement = [if(terminates(Event, Fluent, T), Body)] %, print_message(informational, "~w"-Statement)
             ))}, !.
 
 % it is illegal that
@@ -979,7 +979,8 @@ match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, [Expression|Re
 expression_(DateInSeconds, Map, Map) --> 
     [Year,'-', Month, '-', DayTHours,':', Minutes, ':', Seconds], spaces(_),
     { concat_atom([Year,'-', Month, '-', DayTHours,':', Minutes, ':', Seconds], '', Date), 
-      parse_time(Date,DateInSeconds) }, !.
+      parse_time(Date,DateInSeconds) %, print_message(informational, "~w"-[DateInSeconds])  
+    }, !.
 % 2021-02-06
 expression_(DateInSeconds, Map, Map) -->  [Year,'-', Month, '-', Day],  spaces(_),
     { concat_atom([Year, Month, Day], '', Date), parse_time(Date, DateInSeconds) }, !. 
@@ -1594,36 +1595,27 @@ translate_query(English_String, Goal) :-
 holds(Fluent, T) :-
     pengine_self(SwishModule), trace, 
     SwishModule:happens(Event, T1), 
+    rbefore(T1,T),  
     SwishModule:initiates(Event, Fluent, T1), 
     %(nonvar(T) -> rbefore(T1,T); T=(after(T1)-_)),  % T1 is strictly before T 'cos T is not a variable
     %(nonvar(T) -> rbefore(T1,T); true),
-    rbefore(T1,T),  
     not(interrupted(T1, Fluent, T)).
 
 rbefore(T1, T) :-
-    nonvar(T1), nonvar(T), before(T1, T), !.
-rbefore(T1, T) :- (var(T1); var(T)), !. 
+    nonvar(T1), nonvar(T), before(T1, T). %, !.
+%rbefore(T1, T) :- (var(T1); var(T)), !. % if anyone is a variable, don't compute
 %rbefore(T1, (after(T2)-_)) :-
 %    nonvar(T1), nonvar(T2), before(T1, T2).
-
-% temporary hack while we find a way to signal fluents from the rest
-%holds(NoFluent) :- 
-%    pengine_self(SwishModule),
-%   call(SwishModule:NoFluent). 
 
 % interrupted/3
 interrupted(T1, Fluent, T2) :- trace, 
     pengine_self(SwishModule),
     SwishModule:happens(Event, T), 
+    rbefore(T, T2), 
     SwishModule:terminates(Event, Fluent, T), 
-    (rbefore(T1, T); T1=T), !, rbefore(T, T2).
-    %(nonvar(T2) -> before(T, T2) ; true ), !.  
-    %(T2=(after(T1)-_)->T2=(after(T1)-before(T)); before(T,T2)). 
-
-%happens(it_is_the_end_of(Date),T) :- %trace, 
-%    var(T), Date=T. 
-
-%happens(it_is_the_end_of(T), _) :- T = _-_-_-00-00-00.  % needed?
+    (rbefore(T1, T); T1=T), !.
+    %(nonvar(T2) -> rbefore(T, T2) ; true ), !.  
+    %(T2=(after(T1)-_)->T2=(after(T1)-before(T)); rbefore(T,T2)). 
 
 /* ----------------------------------------------------------------- CLI English */
 % answer/1
@@ -1700,7 +1692,8 @@ get_answer_from_goal(Goal, ProcessedWordsAnswers) :-
 
 process_time_term(T,ExplainT) :- var(T), name_as_atom([a, time, T], ExplainT). % in case of vars
 process_time_term(T,T) :- nonvar(T), atom(T), !. 
-process_time_term(T,Time) :- nonvar(T), number(T), unparse_time(T, Time), !. 
+process_time_term(T,Time) :- nonvar(T), number(T), T>100, unparse_time(T, Time), !.  
+process_time_term(T,Time) :- nonvar(T), number(T), T=<100, T=Time, !.  % hack to avoid standard time transformation
 process_time_term((after(T)-Var), Explain) :- var(Var), !,
     process_time_term(T, Time), 
     name_as_atom([any, time, after, Time], Explain).
