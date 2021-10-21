@@ -361,4 +361,8 @@ The SWISH editor was slightly customised:
 	- Fixing bug in translation of `it becomes not the case`. Extending definition of before/2 to support simple numbers (not only dates). Adjusting answer output not to translate any number below 100 to 
 	standard format for dates. 
 	- Example 014_escrow.pl is fully functional. 
+- [2021-10-19] Alfa testing. 
+	- Correcting misspelling in 014_escrow.pl
+- [2021-10-20] Alfa testing. Previous version: [02010de1abaecb801075454ea5afe06e170356fb](https://github.com/mcalejo/TaxKB/commit/02010de1abaecb801075454ea5afe06e170356fb)
+	- Fixing mayor bug in parsing of assumptions in scenarios. 
 

@@ -3,7 +3,7 @@
 en("the target language is: prolog. % other languages available soon
 
 the templates are:
-  *an agent* has payed itself *a fee*.
+  *an agent* has paid itself *a fee*.
 
 the event predicates are:
 	*a payer* sets up *an escrow* for *an agent* to pay *an amount* to *a payee* and deduct *a fee*.
@@ -26,7 +26,7 @@ it becomes the case that
 when
 	an agent pays out the amount of the escrow to the payee
 if a payer has the escrow for the agent to pay a sum to the payee and deduct a fee
-and the agent has payed itself the fee
+and the agent has paid itself the fee
 and the amount is the sum - the fee.
 
 it becomes not the case that
@@ -34,7 +34,7 @@ it becomes not the case that
 when
 	the agent pays out an amount of the escrow to the payee
 if the payer has the escrow for the agent to pay the sum to the payee and deduct the fee
-and the agent has payed itself the fee
+and the agent has paid itself the fee
 and the amount is the sum - the fee.
 
 it becomes not the case that
@@ -42,7 +42,7 @@ it becomes not the case that
 when
 	the agent pays back an amount of the escrow to the payer
 if the payer has the escrow for the agent to pay the sum to the payee and deduct the fee
-and the agent has payed itself the fee
+and the agent has paid itself the fee
 and the amount is the sum - the fee.    
     
 % initial act  
@@ -50,11 +50,11 @@ and the amount is the sum - the fee.
 the payer sets up the escrow for the agent to pay 500 to the payee and deduct 5, at 1.     
     
 scenario clause one is:
-  the agent has payed itself each fee. 
+  the agent has paid itself each fee. 
   the agent pays out 495 of the escrow to the payee, at 5. 
     
 scenario clause two is:
-  the agent has payed itself each fee. 
+  the agent has paid itself each fee. 
   the agent pays back 495 of the escrow to the payee, at 5. 
    
 query one is:
@@ -64,7 +64,7 @@ query two is:
     a payer has an escrow for an agent to pay an amount to a payee and deduct a fee, at 8. 
     
 query three is:
-    which agent pays back which amount of which escrow to which payee. 
+    which agent pays back which amount of which escrow to which payer. 
 
 ").
 
