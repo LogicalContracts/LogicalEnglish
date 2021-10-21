@@ -301,7 +301,7 @@ rules_previous(default) -->  % backward compatibility
 scenario_content(Scenario) -->
     scenario_, extract_constant([is], NameWords), is_colon_, newline,
     %list_of_facts(Facts), period, !, 
-    spaces(_), assumptions_([], _, Assumptions), !, % period is gone
+    spaces(_), assumptions_(Assumptions), !, % period is gone
     {name_as_atom(NameWords, Name), Scenario = [example( Name, [scenario(Assumptions, true)])]}.
 
 scenario_content(_,  Rest, _) :- 
@@ -379,9 +379,9 @@ rest_list_of_facts(L1) --> comma, spaces_or_newlines(_), list_of_facts(L1).
 rest_list_of_facts([]) --> [].
 
 % assumptions_/3 or /5
-assumptions_(InMap, OutMap, [A|R]) --> 
-        spaces_or_newlines(_),  rule_(InMap, Map2, A), !, assumptions_(Map2, OutMap, R).
-assumptions_(Map, Map, []) --> 
+assumptions_([A|R]) --> 
+        spaces_or_newlines(_),  rule_([], _, A), !, assumptions_(R).
+assumptions_([]) --> 
         spaces_or_newlines(_), []. 
 
 rule_(InMap, OutMap, Rule) --> 
