@@ -975,7 +975,7 @@ match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, [Expression|Re
     match(RestElements, NextWords, Map1, MapN, RestSelected). 
 
 correct_list([], []) :- !. 
-correct_list([A,B], [A,B]) :- not(is_list(B)), !. 
+correct_list([A,B], [A,B]) :- atom(B), !. % not(is_list(B)), !. 
 correct_list([A,B], [A|B] ) :- !. 
 correct_list([A|B], [A|NB]) :- correct_list(B, NB). 
 
