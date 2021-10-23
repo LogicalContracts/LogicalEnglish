@@ -10,7 +10,6 @@ the templates are:
 *a thing* followed by *a list* is *an other list*,
 the concatenation of *a first list* then *a second list* is *a third list*.
 
-
 the knowledge base subset includes:
 
 a set A is a subset of a set B
@@ -20,6 +19,13 @@ a set A is a subset of a set B
 	a thing belongs to set A
 	it is the case that 
 	the thing belongs to set B.
+ 
+the concatenation of [] then a list is the list.
+the concatenation of [a thing|a first list] then a second list is [the thing|a third list]
+    if the concatenation of the first list then the second list is the third list.
+
+a thing followed by a list is an other list 
+    if the other list has the thing as head before the list.
 
 scenario one is:
 family one is a set.
@@ -27,15 +33,6 @@ family two is a set.
 Bob belongs to family one.
 Alice belongs to family one.
 Alice belongs to family two.
-    
-the concatenation of [] then a list is the list.
-the concatenation of a first list then a second list is a third list
-    if a first thing followed by a fourth list is the first list
-    and the first thing followed by a fifth list is the third list
-    and the concatenation of the fourth list then the second list is the fifth list.
-    
-a thing followed by a list is an other list 
-    if the other list  has the first thing as head before the new list.
     
 query one is:
 family one is a subset of family two.
@@ -52,19 +49,18 @@ family two is a subset of which family.
 query five is:
  which  family is a subset of which family.
     
-    
 query 6 is:
  which list has a as head before [b, c].
 
 query 7 is:
  which thing followed by which other thing is [b, c].
     
- query 8 is:
-the concatenation of which first list then which second list is [b, c].
+query 8 is:
+the concatenation of which first list then which second list is [a, b, c].
    
 ").
 
 /** <examples>
-?- answer("query 8 with scenario one"). 
+?- answer("query 8"). 
 ?- answer("query 7 with scenario one"). 
 */

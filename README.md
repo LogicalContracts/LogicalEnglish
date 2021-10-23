@@ -365,4 +365,7 @@ The SWISH editor was slightly customised:
 	- Correcting misspelling in 014_escrow.pl
 - [2021-10-20] Alfa testing. Previous version: [02010de1abaecb801075454ea5afe06e170356fb](https://github.com/mcalejo/TaxKB/commit/02010de1abaecb801075454ea5afe06e170356fb)
 	- Fixing mayor bug in parsing of assumptions in scenarios. 
-
+- [2021-10-21] Alfa testing.
+	- Adding "every" to expressions with "the sum of". 
+- [2021-10-22] Alfa testing. Previos version: [75dcb4fadb11ac9415d046c1cf15202532ed93f8](https://github.com/mcalejo/TaxKB/commit/75dcb4fadb11ac9415d046c1cf15202532ed93f8)
+	- Adding support for Head|Tail list notation in LE. 

@@ -427,8 +427,8 @@ literal_(Map1, MapN, FinalLiteral) --> % { print_message(informational, 'literal
       ; (lists:member(Literal, Fluents) -> FinalLiteral = holds(Literal, T)
         ; FinalLiteral = Literal))}, !. % by default (including builtins) they are timeless!
 
-literal_(Map1, MapN, FinalLiteral) --> % { print_message(informational, 'just literal') },
-    possible_instance(PossibleTemplate),
+literal_(Map1, MapN, FinalLiteral) -->  
+    possible_instance(PossibleTemplate), %{ print_message(informational, "~w"-[PossibleTemplate]) },
     {match_template(PossibleTemplate, Map1, MapN, Literal),
      (fluents(Fluents) -> true; Fluents = []),
      (events(Events) -> true; Events = []),
@@ -594,6 +594,7 @@ or_ --> [or].
 not_ --> [it], spaces(_), [is], spaces(_), [not], spaces(_), [the], spaces(_), [case], spaces(_), [that], spaces(_). 
 
 is_the_sum_of_each_ --> [is], spaces(_), [the], spaces(_), [sum], spaces(_), [of], spaces(_), [each], spaces(_) .
+is_the_sum_of_each_ --> [is], spaces(_), [the], spaces(_), [every], spaces(_), [of], spaces(_), [each], spaces(_) .
 
 such_that_ --> [such], spaces(_), [that], spaces(_). 
 
@@ -956,9 +957,11 @@ match([Element|RestElements], PossibleLiteral, Map1, MapN, [Var|RestSelected]) :
     name_predicate(NameWords, Name), 
     consult_map(Var, Name, Map1, Map2), !, % <-- CUT!  % if the variables has been previously registered
     match(RestElements, NextWords, Map2, MapN, RestSelected).
-match([Element|RestElements], ['['|PossibleLiteral], Map1, MapN, [List|RestSelected]) :-
+match([Element|RestElements], ['['|PossibleLiteral], Map1, MapN, [Term|RestSelected]) :-
     var(Element), stop_words(RestElements, StopWords),
-    extract_list([']'|StopWords], List, Map1, Map2, PossibleLiteral, [']'|NextWords]), !, % matching brackets verified
+    extract_list([']'|StopWords], List, Map1, Map2, PossibleLiteral, [']'|NextWords]),  % matching brackets verified
+    %print_message(informational, "List ~w"-[List]),  
+    correct_list(List, Term), 
     match(RestElements, NextWords, Map2, MapN, RestSelected).
 % enabling expressions and constants
 match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, [Expression|RestSelected]) :-
@@ -970,6 +973,11 @@ match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, [Expression|Re
     ( phrase(expression_(Expression, Map1, Map1), NameWords) -> true ; ( name_predicate(NameWords, Expression) ) ),
     %print_message(informational, 'found a constant or an expression '), print_message(informational, Expression),
     match(RestElements, NextWords, Map1, MapN, RestSelected). 
+
+correct_list([], []) :- !. 
+correct_list([A,B], [A,B]) :- atom(B), !. % not(is_list(B)), !. 
+correct_list([A,B], [A|B] ) :- !. 
+correct_list([A|B], [A|NB]) :- correct_list(B, NB). 
 
 % expression/3 or /5
 %expression_(List, MapIn, MapOut) --> list_(List, MapIn, MapOut), !. 
@@ -1195,32 +1203,45 @@ extract_list(SW, [], Map, Map, [Word|Rest], [Word|Rest]) :-
 %extract_list(_, [], Map, Map, [')'|Rest], [')'|Rest]) :- !. 
 extract_list(SW, RestList, Map1, MapN, [' '|RestOfWords],  NextWords) :- !, % skipping spaces
     extract_list(SW, RestList, Map1, MapN, RestOfWords, NextWords).
+extract_list(SW, RestList, Map1, MapN, [' '|RestOfWords],  NextWords) :- !, % skipping spaces
+    extract_list(SW, RestList, Map1, MapN, RestOfWords, NextWords).
 extract_list(SW, RestList, Map1, MapN, ['\t'|RestOfWords],  NextWords) :- !, 
     extract_list(SW, RestList, Map1, MapN, RestOfWords, NextWords).
 extract_list(SW, RestList, Map1, MapN, [','|RestOfWords],  NextWords) :- !, % skip over commas
     extract_list(SW, RestList, Map1, MapN, RestOfWords, NextWords).
-extract_list(StopWords, [Var|RestList], Map1, MapN, [Det|InWords], LeftWords) :-
+extract_list(SW, RestList, Map1, MapN, ['|'|RestOfWords],  NextWords) :- !, % skip over commas
+    extract_list(SW, RestList, Map1, MapN, RestOfWords, NextWords).
+extract_list(StopWords, List, Map1, MapN, [Det|InWords], LeftWords) :-
     indef_determiner(Det), 
-    extract_variable(StopWords, Var, [], NameWords, _, InWords, NextWords), NameWords \= [], % <- leave that _ unbound!
+    extract_variable(['|'|StopWords], Var, [], NameWords, _, InWords, NextWords), NameWords \= [], % <- leave that _ unbound!
     name_predicate(NameWords, Name),  
-    update_map(Var, Name, Map1, Map2), 
-    extract_list(StopWords, RestList, Map2, MapN, NextWords, LeftWords).
-extract_list(StopWords, [Var|RestList], Map1, MapN, [Det|InWords], LeftWords) :-
+    update_map(Var, Name, Map1, Map2),
+    (NextWords = [']'|_] -> (RestList = [], LeftWords=NextWords, MapN=Map2 ) ; 
+    extract_list(StopWords, RestList, Map2, MapN, NextWords, LeftWords) ), 
+    (RestList=[] -> List=[Var|[]]; List=[Var|RestList]), 
+    !.
+extract_list(StopWords, List, Map1, MapN, [Det|InWords], LeftWords) :-
     def_determiner(Det), 
-    extract_variable(StopWords, Var, [], NameWords, _, InWords, NextWords), NameWords \= [], % <- leave that _ unbound!
+    extract_variable(['|'|StopWords], Var, [], NameWords, _, InWords, NextWords), NameWords \= [], % <- leave that _ unbound!
     name_predicate(NameWords, Name),  
     consult_map(Var, Name, Map1, Map2), 
-    extract_list(StopWords, RestList, Map2, MapN, NextWords, LeftWords).
-extract_list(StopWords, [Var|RestList], Map1, MapN, InWords, LeftWords) :- % symbolic variables without determiner
-    extract_variable(StopWords, Var,[], NameWords, _, InWords, NextWords), NameWords \= [],  % <- leave that _ unbound!
+    (NextWords = [']'|_] -> (RestList = [], LeftWords=NextWords, MapN=Map2 ) ;
+    extract_list(StopWords, RestList, Map2, MapN, NextWords, LeftWords) ), 
+    (RestList=[] -> List=[Var|[]]; List=[Var|RestList]), !.
+extract_list(StopWords, List, Map1, MapN, InWords, LeftWords) :- % symbolic variables without determiner
+    extract_variable(['|'|StopWords], Var,[], NameWords, _, InWords, NextWords), NameWords \= [],  % <- leave that _ unbound!
     name_predicate(NameWords, Name),  
     consult_map(Var, Name, Map1, Map2), 
-    extract_list(StopWords, RestList, Map2, MapN, NextWords, LeftWords).
-extract_list(StopWords, [Expression|RestList], Map1, MapN, InWords, LeftWords) :-
-    extract_expression([','|StopWords], NameWords, InWords, NextWords), NameWords \= [], 
+    (NextWords = [']'|_] -> (RestList = [], LeftWords=NextWords, MapN=Map2 ) ; 
+    extract_list(StopWords, RestList, Map2, MapN, NextWords, LeftWords) ), 
+    (RestList=[] -> List=[Var|[]]; List=[Var|RestList]), !.
+extract_list(StopWords, List, Map1, MapN, InWords, LeftWords) :-
+    extract_expression(['|',','|StopWords], NameWords, InWords, NextWords), NameWords \= [], 
     ( phrase(expression_(Expression, Map1, Map2), NameWords) -> true 
     ; ( Map1 = Map2, name_predicate(NameWords, Expression) ) ),
-    extract_list(StopWords, RestList, Map2, MapN, NextWords, LeftWords).
+    ( NextWords = [']'|_] -> ( RestList = [], LeftWords=NextWords, MapN=Map2 ) 
+    ;    extract_list(StopWords, RestList, Map2, MapN, NextWords, LeftWords) ), 
+    (RestList=[] -> List=[Expression|[]]; List=[Expression|RestList]), !.
 
 determiner(Det) :-
     (ind_det(Det); ind_det_C(Det); def_det(Det); def_det_C(Det)), !. 
