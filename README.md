@@ -367,5 +367,10 @@ The SWISH editor was slightly customised:
 	- Fixing mayor bug in parsing of assumptions in scenarios. 
 - [2021-10-21] Alfa testing.
 	- Adding "every" to expressions with "the sum of". 
-- [2021-10-22] Alfa testing. Previos version: [75dcb4fadb11ac9415d046c1cf15202532ed93f8](https://github.com/mcalejo/TaxKB/commit/75dcb4fadb11ac9415d046c1cf15202532ed93f8)
+- [2021-10-22] Alfa testing. Previous version: [75dcb4fadb11ac9415d046c1cf15202532ed93f8](https://github.com/mcalejo/TaxKB/commit/75dcb4fadb11ac9415d046c1cf15202532ed93f8)
 	- Adding support for Head|Tail list notation in LE. 
+- [2021-10-26] Alfa testing. Previous version: [22db8d0a1e80c4254755f869963a8c3a95b9f739](https://github.com/mcalejo/TaxKB/commit/22db8d0a1e80c4254755f869963a8c3a95b9f739).
+	- Supressing messages from the translator. 
+	- Extending the querying machine to allow direct queries in answer/1. 
+	- Adding a second argument to identify the scenario in answer(Query, with(Scenario))
+	- Adjusting answer/3 with the same purpose (third argument returns the result)

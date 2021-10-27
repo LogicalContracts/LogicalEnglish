@@ -253,9 +253,9 @@ user:term_expansion(NiceTerm, ExpandedTerms) :-  % hook for LE extension
 			(member(target(prolog),TaxlogTerms) -> semantics2prolog(TT,_,PrologTerm) ; taxlog2prolog(TT,_,PrologTerm))
 			), ExpandedTerms) 
 		)
-	; ExpandedTerms = []),  
+	; ExpandedTerms = []).  
 	%print_message(informational,"File: ~w"-[File]),
-	print_message(informational,"expanded LE to ~w"-[ExpandedTerms]).
+	%print_message(informational,"expanded LE to ~w"-[ExpandedTerms]).
 % This at the end, as it activates the term expansion (no harm done otherwise, just some performance..):
 %user:term_expansion(T,NT) :- taxlog2prolog(T,_,NT).
 %user:term_expansion(T,NT) :- (member(target(prolog),T) -> semantics2prolog(T,_,NT) ; taxlog2prolog(T,_,NT)).

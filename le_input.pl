@@ -92,7 +92,7 @@ text_to_logic(String_, Translation) :-
 % document/3 (or document/1 in dcg)
 document(Translation, In, Rest) :- 
     (parsed -> retract(parsed); true), 
-    phrase(header(Settings), In, AfterHeader), !, print_message(informational, "Declarations completed: ~w"-[Settings]), 
+    phrase(header(Settings), In, AfterHeader), !, %print_message(informational, "Declarations completed: ~w"-[Settings]), 
     phrase(content(Content), AfterHeader, Rest), 
     append(Settings, Content, Translation), !,  
     assertz(parsed). 
@@ -510,7 +510,7 @@ condition(FinalExpression, _, Map1, MapN) -->
     
 % it is not the case that 
 %condition((pengine_self(M), not(M:Conds)), _, Map1, MapN) --> 
-condition((trace, not(Conds)), _, Map1, MapN) --> 
+condition((true, not(Conds)), _, Map1, MapN) --> 
 %condition(not(Conds), _, Map1, MapN) --> 
     spaces(_), not_, newline,  % forget other choices. We know it is a not case
     spaces(Ind), conditions(Ind, Map1, MapN, Conds), !.
@@ -714,8 +714,10 @@ build_template_elements(['*', Word|RestOfWords], _Previous, [Var|RestVars], [Nam
     has_pairing_asteriks([Word|RestOfWords]), 
     %(ind_det(Word); ind_det_C(Word)), % Previous \= [is|_], % removing this requirement when * is used
     determiner(Word), % allows the for variables in templates declarations only
-    extract_variable(['*'], Var, [], NameWords, TypeWords, RestOfWords, ['*'|NextWords]), !, % <-- it must end with * too
-    name_predicate(NameWords, Name), 
+    extract_variable(['*'], Var, [], RNameWords, RTypeWords, RestOfWords, ['*'|NextWords]), !, % <-- it must end with * too
+    reverse(RNameWords, NameWords), 
+    name_predicate(NameWords, Name),
+    reverse(RTypeWords, TypeWords),  
     name_predicate(TypeWords, Type), 
     build_template_elements(NextWords, [], RestVars, RestTypes, Others, RestTemplate). 
 build_template_elements(['*', Word|RestOfWords], _Previous,_, _, _, _) :-
@@ -1604,17 +1606,17 @@ get_assumptions_from_scenario(noscenario, _, []) :- !.
 get_assumptions_from_scenario(Scenario, SwishModule, Assumptions) :-
     SwishModule:example(Scenario, [scenario(Assumptions, _)]).
 
-translate_query(English_String, Goal) :-
+translate_query(English_String, Goals) :-
     tokenize(English_String, Tokens, [cased(true), spaces(true), numbers(false)]),
     unpack_tokens(Tokens, UTokens), 
     clean_comments(UTokens, CTokens), 
-    phrase(literal_([], _, Goal), CTokens) -> true 
-    ; ( error_notice(error, Me,Pos, ContextTokens), print_message(error, [Me,Pos,ContextTokens]) ). 
+    phrase(conditions(0, [], _, Goals), CTokens) -> true 
+    ; ( error_notice(error, Me,Pos, ContextTokens), print_message(error, [Me,Pos,ContextTokens]), fail ). 
 
 /* ----------------------------------------------------------------- Event Calculus  */
 % holds/2
 holds(Fluent, T) :-
-    pengine_self(SwishModule), trace, 
+    pengine_self(SwishModule), %trace, 
     SwishModule:happens(Event, T1), 
     rbefore(T1,T),  
     SwishModule:initiates(Event, Fluent, T1), 
@@ -1629,7 +1631,7 @@ rbefore(T1, T) :-
 %    nonvar(T1), nonvar(T2), before(T1, T2).
 
 % interrupted/3
-interrupted(T1, Fluent, T2) :- trace, 
+interrupted(T1, Fluent, T2) :- %trace, 
     pengine_self(SwishModule),
     SwishModule:happens(Event, T), 
     rbefore(T, T2), 
@@ -1640,13 +1642,12 @@ interrupted(T1, Fluent, T2) :- trace,
 
 /* ----------------------------------------------------------------- CLI English */
 % answer/1
+% answer(+Query or Query Expression)
 answer(English) :- %trace, 
     (parsed -> true; fail), !, 
-    translate_command(English, GoalName, Scenario), % later -->, Kbs),
-    %print_message(informational, "Goal Name: ~w"-[GoalName]),
     pengine_self(SwishModule), 
-    (SwishModule:query(GoalName, Goal)-> 
-        true;  (print_message(error, "No goal named: ~w"-[GoalName])), fail ), !, 
+    (translate_command(SwishModule, English, GoalName, Goal, Scenario) -> true 
+    ; ( print_message(error, "Don't understand this question: ~w "-[English]), !, fail ) ), % later -->, Kbs),
     copy_term(Goal, CopyOfGoal),  
     get_answer_from_goal(CopyOfGoal, RawGoal), name_as_atom(RawGoal, EnglishQuestion), 
     print_message(informational, "Query ~w with ~w: ~w"-[GoalName, Scenario, EnglishQuestion]),
@@ -1659,25 +1660,46 @@ answer(English) :- %trace,
     extract_goal_command(Goal, SwishModule, _InnerGoal, Command), 
     %print_message(informational, "Command: ~w"-[Command]),
     setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
-            catch((trace, Command), Error, ( print_message(error, Error), fail ) ), 
+            catch((true, Command), Error, ( print_message(error, Error), fail ) ), 
             _Result, 
             retract_facts(SwishModule, Facts)),
-    %reasoner:query_once_with_facts(Goal,Scenario,_,E,Result),
-    %reasoner:query_once_with_facts(at(Goal,'http://tests.com'),Scenario,_,E,Result),
-    %query_with_facts(at(Goal,'http://tests.com'),Scenario,_,_,Result),
     get_answer_from_goal(Goal, RawAnswer), name_as_atom(RawAnswer, EnglishAnswer),  
     print_message(informational, "Answer: ~w"-[EnglishAnswer]).
-    %print_message(informational, "Result: ~w"-[Result]).
-    %print_message(informational, "Explanation: ~w"-[E]).
+
+% answer/2
+% answer(+Query, with(+Scenario))
+answer(English, Arg) :- %trace, 
+    (parsed -> true; fail), !, 
+    pengine_self(SwishModule), 
+    (translate_command(SwishModule, English, GoalName, Goal, PreScenario) -> true 
+    ; ( print_message(error, "Don't understand this question: ~w "-[English]), !, fail ) ), % later -->, Kbs),
+    copy_term(Goal, CopyOfGoal),  
+    get_answer_from_goal(CopyOfGoal, RawGoal), name_as_atom(RawGoal, EnglishQuestion), 
+    ((Arg = with(ScenarioName), PreScenario=noscenario) -> Scenario=ScenarioName; Scenario=PreScenario),   
+    print_message(informational, "Query ~w with ~w: ~w"-[GoalName, Scenario, EnglishQuestion]),
+    %print_message(informational, "Scenario: ~w"-[Scenario]),
+    % assert facts in scenario
+    (Scenario==noscenario -> Facts = [] ; 
+        (SwishModule:example(Scenario, [scenario(Facts, _)]) -> 
+            true;  print_message(error, "Scenario: ~w does not exist"-[Scenario]))), !,  
+    %print_message(informational, "Facts: ~w"-[Facts]), 
+    extract_goal_command(Goal, SwishModule, _InnerGoal, Command), 
+    %print_message(informational, "Command: ~w"-[Command]),
+    setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
+            catch((true, Command), Error, ( print_message(error, Error), fail ) ), 
+            _Result, 
+            retract_facts(SwishModule, Facts)),
+    get_answer_from_goal(Goal, RawAnswer), name_as_atom(RawAnswer, EnglishAnswer),  
+    print_message(informational, "Answer: ~w"-[EnglishAnswer]).
 
 % answer/3
-% answer(+English, -Goal, -Result)
-answer(English, EnglishQuestion, Answers) :-
-    (parsed -> true; fail), !, 
-    translate_command(English, GoalName, Scenario), % later -->, Kbs),
-    pengine_self(SwishModule), SwishModule:query(GoalName, Goal),
-    copy_term(Goal, CopyOfGoal), 
-    get_answer_from_goal(CopyOfGoal, RawGoal), name_as_atom(RawGoal, EnglishQuestion), 
+% answer(+English, with(+Scenario), -Result)
+answer(English, Arg, Answers) :-
+    (parsed -> true; fail), !, pengine_self(SwishModule), 
+    translate_command(SwishModule, English, _, Goal, PreScenario), % later -->, Kbs),
+    %copy_term(Goal, CopyOfGoal), 
+    %get_answer_from_goal(CopyOfGoal, RawGoal), name_as_atom(RawGoal, EnglishQuestion), 
+    ((Arg = with(ScenarioName), PreScenario=noscenario) -> Scenario=ScenarioName; Scenario=PreScenario), 
     extract_goal_command(Goal, SwishModule, _InnerGoal, Command),
     (Scenario==noscenario -> Facts = [] ; SwishModule:example(Scenario, [scenario(Facts, _)])), 
     setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
@@ -1730,8 +1752,8 @@ process_types_or_names([Word|RestWords], Elements, Types, PrintExpression ) :-
 process_types_or_names([Word|RestWords], Elements, Types, PrintExpression ) :- 
     var(Word), matches_name(Word, Elements, Types, Name), !, 
     process_types_or_names(RestWords,  Elements, Types, RestPrintWords),
-    tokenize_atom(Name, NameWords), add_determiner(NameWords, PrintName),
-    append(PrintName, RestPrintWords, PrintExpression).
+    tokenize_atom(Name, NameWords), delete_underscore(NameWords, CNameWords), 
+    add_determiner(CNameWords, PrintName), append(PrintName, RestPrintWords, PrintExpression).
 process_types_or_names([Word|RestWords], Elements, Types, [PrintWord|RestPrintWords] ) :- 
     matches_type(Word, Elements, Types, date), 
     ((nonvar(Word), number(Word)) -> unparse_time(Word, PrintWord); PrintWord = Word), !, 
@@ -1750,6 +1772,10 @@ process_types_or_names([Word|RestWords],  Elements, Types, [Word|RestPrintWords]
 
 add_determiner([Word|RestWords], [Det, Word|RestWords]) :-
     name(Word,[First|_]), proper_det(First, Det).
+
+delete_underscore([], []) :- !. 
+delete_underscore(['_'|Rest], Final) :- delete_underscore(Rest, Final), !.  
+delete_underscore([W|Rest], [W|Final]) :- delete_underscore(Rest, Final). 
 
 proper_det(97, an) :- !.
 proper_det(101, an) :- !.
@@ -1774,12 +1800,20 @@ retract_facts(_, []) :- !.
 retract_facts(SwishModule, [F|R]) :- nonvar(F), % print_message(informational, "retracting: ~w"-[SwishModule:F]),
     retract(SwishModule:F), retract_facts(SwishModule, R). 
 
-translate_command(English_String, Goal, Scenario) :-
+translate_command(SwishModule, English_String, GoalName, Goals, Scenario) :-
     tokenize(English_String, Tokens, [cased(true), spaces(true), numbers(false)]),
     unpack_tokens(Tokens, UTokens), 
-    clean_comments(UTokens, CTokens), 
-    phrase(command_(Goal, Scenario), CTokens) -> true 
-    ; ( error_notice(error, Me,Pos, ContextTokens), print_message(error, [Me,Pos,ContextTokens]) ). 
+    clean_comments(UTokens, CTokens),
+    phrase(command_(GoalName, Scenario), CTokens),
+    ( SwishModule:query(GoalName, Goals) -> true; (print_message(informational, "No goal named: ~w"-[GoalName]), fail) ), !. 
+
+translate_command(_, English_String, GoalName, Goals, Scenario) :-
+    tokenize(English_String, Tokens, [cased(true), spaces(true), numbers(false)]),
+    unpack_tokens(Tokens, UTokens), 
+    clean_comments(UTokens, CTokens), Scenario=noscenario, GoalName=nonamed, 
+    (phrase(conditions(0, [], _, Goals), CTokens) ->  true  ;
+        ( error_notice(error, Me,Pos, ContextTokens), print_message(informational, "~w ~w ~w"-[Me,Pos,ContextTokens]), CTokens=[], fail )
+    ). 
 
 command_(Goal, Scenario) --> 
     %order_, goal_(Goal), with_, scenario_name_(Scenario). 
@@ -1815,8 +1849,10 @@ prolog_colour:term_colours(en_decl(_Text),lps_delimiter-[classify]). % let 'en_d
 
 user:resolve(Command) :- answer(Command). 
 user:resolve(Command, Question, Answers) :- resolve(Command, Question, Answers). 
+
 user:answer( EnText) :- answer( EnText).
-user:answer( EnText, Goal, Result) :- answer( EnText, Goal, Result).
+user:answer( EnText, Scenario) :- answer( EnText, Scenario).
+user:answer( EnText, Scenario, Result) :- answer( EnText, Scenario, Result).
 
 user:is_it_illegal( EnText, Scenario) :- is_it_illegal( EnText, Scenario).
 
