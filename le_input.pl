@@ -65,7 +65,15 @@ query three is:
 
 */
 
-:- module(le_input, [document/3, le_taxlog_translate/4, op(1195,fx, user:(++))]).
+:- module(le_input, 
+    [document/3, le_taxlog_translate/4, 
+    op(1000,xfx,user:and),  % to support querying
+    op(800,fx,user:resolve), % to support querying
+    op(800,fx,user:answer), % to support querying
+    op(850,xfx,user:with), % to support querying
+    op(800,fx,user:show), % to support querying
+    op(850,xfx,user:of) % to support querying
+    ]).
 :- use_module('./tokenize/prolog/tokenize.pl').
 :- use_module(library(pengines)).
 :- use_module('reasoner.pl').
@@ -1523,9 +1531,9 @@ predef_dict([myDB_entities:is_individual_or_company_on, A, B],
                     [affiliate-affiliate, date-date],
                     [A, is, an, individual, or, is, a, company, at, B]).
 % Prolog
-predef_dict([has_as_head_before, A, B, C], [list-list, symbol-term, list_the_of_rest-list], [A, has, B, as, head, before, C]).
-predef_dict([append, A, B, C],[list_first-list, list_second-list, list_third_the-list], [one, appends, A, to, B, to, obtain, C]).
-predef_dict([reverse, A, B], [list1-list, list_other-list], [A, is, the, reverse, of, B]).
+predef_dict([has_as_head_before, A, B, C], [list-list, symbol-term, rest_of_list-list], [A, has, B, as, head, before, C]).
+predef_dict([append, A, B, C],[first_list-list, second_list-list, third_list-list], [one, appends, A, to, B, to, obtain, C]).
+predef_dict([reverse, A, B], [list1-list, other_list-list], [A, is, the, reverse, of, B]).
 predef_dict([same_date, T1, T2], [time1-time, time2-time], [T1, is, the, same, date, as, T2]). % see reasoner.pl before/2
 predef_dict([between,Minimum,Maximum,Middle], [min-date, max-date, middle-date], 
                 [Middle, is, between, Minimum, &, Maximum]).
@@ -1839,6 +1847,20 @@ scenario_name_(Scenario) -->  scenario_or_empty_, extract_constant([], ScenarioW
 
 scenario_or_empty_ --> [scenario], spaces(_). 
 scenario_or_empty_ --> spaces(_). 
+ 
+% show/1
+show(prolog) :- % trace, 
+    pengine_self(SwishModule), 
+    findall((Pred :- Body), 
+        (dict(PredicateElements, _, _), Pred=..PredicateElements, clause(SwishModule:Pred, Body)), Predicates),
+    forall(member(Clause, Predicates), portray_clause(Clause)).
+
+show(instances) :-
+    findall(EnglishAnswer, 
+        ( dictionary([_|GoalElements], Types, WordsAnswer),
+        process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers),
+        name_as_atom(ProcessedWordsAnswers, EnglishAnswer)), Templates), 
+    forall(member(T, Templates), print_message(informational, "~w"-[T])). 
 
 %%% ------------------------------------------------ Swish Interface to logical english
 %% based on logicalcontracts' lc_server.pl
@@ -1847,12 +1869,15 @@ scenario_or_empty_ --> spaces(_).
 prolog_colour:term_colours(en(_Text),lps_delimiter-[classify]). % let 'en' stand out with other taxlog keywords
 prolog_colour:term_colours(en_decl(_Text),lps_delimiter-[classify]). % let 'en_decl' stand out with other taxlog keywords
 
-user:resolve(Command) :- answer(Command). 
-user:resolve(Command, Question, Answers) :- resolve(Command, Question, Answers). 
-
+user:(Command1 and Command2) :-
+    call(Command1), call(Command2). 
+user:(answer Query with Scenario):-
+    answer(Query,with(Scenario)). 
 user:answer( EnText) :- answer( EnText).
 user:answer( EnText, Scenario) :- answer( EnText, Scenario).
 user:answer( EnText, Scenario, Result) :- answer( EnText, Scenario, Result).
+user:(show Something) :- 
+    show(Something). 
 
 user:is_it_illegal( EnText, Scenario) :- is_it_illegal( EnText, Scenario).
 
@@ -1899,5 +1924,7 @@ showtaxlog.
 
 sandbox:safe_primitive(le_input:showtaxlog).
 sandbox:safe_primitive(le_input:answer( _EnText)).
-sandbox:safe_primitive(le_input:answer( _EnText, _Goal, _Result)).
+sandbox:safe_primitive(le_input:show( _Something)).
+sandbox:safe_primitive(le_input:answer( _EnText, _Scenario)).
+sandbox:safe_primitive(le_input:answer( _EnText, _Scenario, _Result)).
 sandbox:safe_primitive(le_input:le_taxlog_translate( _EnText, _Terms)).

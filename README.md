@@ -374,3 +374,9 @@ The SWISH editor was slightly customised:
 	- Extending the querying machine to allow direct queries in answer/1. 
 	- Adding a second argument to identify the scenario in answer(Query, with(Scenario))
 	- Adjusting answer/3 with the same purpose (third argument returns the result)
+- [2021-10-28] Alfa testing.
+	- Adding commands for querying and showing:
+		- `query <query>`
+		- `query <query name> with <scenario>`
+		- `show prolog`
+		- `show instances`
