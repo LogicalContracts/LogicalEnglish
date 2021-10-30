@@ -379,4 +379,11 @@ The SWISH editor was slightly customised:
 		- `query <query>`
 		- `query <query name> with <scenario>`
 		- `show prolog`
-		- `show instances`
+- [2021-10-29] Alfa testing. [65b8ebb253312c3f4f6f59e2bb41d88d2d49366c](https://github.com/mcalejo/TaxKB/commit/65b8ebb253312c3f4f6f59e2bb41d88d2d49366c)
+	- Adding commands for querying and showing:
+		- `show templates`: shows the all the available templates (including predef).
+		- `show rules`: shows the prolog code corresponding to rules in the kb.
+		- `show queries`: shows the prolog code for queries.
+		- `show scenarios`: shows the prolo code for scenarios. 
+	- Fixing entries in the dictionary (predef).
+	- Fixing details in the display of asteriks in templates.  

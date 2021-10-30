@@ -77,7 +77,7 @@ query three is:
 :- use_module('./tokenize/prolog/tokenize.pl').
 :- use_module(library(pengines)).
 :- use_module('reasoner.pl').
-:- thread_local literal/5, text_size/1, error_notice/4, dict/3, meta_dict/3, 
+:- thread_local text_size/1, error_notice/4, dict/3, meta_dict/3, 
                 last_nl_parsed/1, kbname/1, happens/2, initiates/3, terminates/3, 
                 predicates/1, events/1, fluents/1, metapredicates/1, parsed/0.  
 :- discontiguous statement/3, declaration/4.
@@ -518,7 +518,8 @@ condition(FinalExpression, _, Map1, MapN) -->
     
 % it is not the case that 
 %condition((pengine_self(M), not(M:Conds)), _, Map1, MapN) --> 
-condition((true, not(Conds)), _, Map1, MapN) --> 
+%condition((true, not(Conds)), _, Map1, MapN) -->
+condition(not(Conds), _, Map1, MapN) --> 
 %condition(not(Conds), _, Map1, MapN) --> 
     spaces(_), not_, newline,  % forget other choices. We know it is a not case
     spaces(Ind), conditions(Ind, Map1, MapN, Conds), !.
@@ -755,16 +756,30 @@ name_as_atom(Words, Name) :-
     numbervars(Words, 1, _, [functor_name('unknown')]),
     replace_vars(Words, Atoms), 
     list_words_to_codes(Atoms, Codes),
-    atom_codes(Name, Codes).  
+    replace_ast_a(Codes, CCodes), 
+    atom_codes(Name, CCodes).  
+
+replace_ast_a([], []) :- !. 
+replace_ast_a([42,32,97|Rest], [42,97|Out]) :- !, 
+    replace_final_ast(Rest, Out). 
+replace_ast_a([C|Rest], [C|Out]) :-
+    replace_ast_a(Rest, Out).
+
+replace_final_ast([], []) :- !. 
+replace_final_ast([32,42|Rest], [42|Out]) :- !, 
+    replace_ast_a(Rest, Out).
+replace_final_ast([C|Rest], [C|Out]) :-
+    replace_final_ast(Rest, Out).
 
 % maps a list of words to a list of corresponding codes
 % adding an space between words-codes (32). 
+% list_word_to_codes/2
 list_words_to_codes([], []).
 list_words_to_codes([Word|RestW], Out) :-
     atom_codes(Word, Codes),
     remove_quotes(Codes, CleanCodes), 
     list_words_to_codes(RestW, Next),
-    append(CleanCodes, [32|Next], Out). 
+    (Next=[]-> Out=CleanCodes; append(CleanCodes, [32|Next], Out)), !. 
 
 remove_quotes([], []) :-!.
 remove_quotes([39|RestI], RestC) :- remove_quotes(RestI, RestC), !.
@@ -1523,47 +1538,47 @@ dictionary(Predicate, VariablesNames, Template) :- % dict(Predicate, VariablesNa
 % predef_dict/3 is a database with predefined templates for LE
 % it must be ordered by the side of the third argument, to allow the system to check first the longer template
 % with the corresponding starting words. 
-predef_dict([days_spent_in_uk,Individual,Start,End,TotalDays], [who-person,start-date,end-date,total-number], 
-                    [Individual, spent, TotalDays, in, the, 'UK', starting, at, Start, &, ending, at, End]). 
-predef_dict([uk_tax_year_for_date,Date,Year,Start,End], [first_date-date, year-year, second_date-date, third_date-date], 
-                    [in, the, 'UK', Date, falls, in, Year, beginning, at, Start, &, ending, at, End]).
-predef_dict([myDB_entities:is_individual_or_company_on, A, B],
-                    [affiliate-affiliate, date-date],
-                    [A, is, an, individual, or, is, a, company, at, B]).
+%predef_dict([days_spent_in_uk,Individual,Start,End,TotalDays], [who-person,start-date,end-date,total-number], 
+%                    [Individual, spent, TotalDays, in, the, 'UK', starting, at, Start, &, ending, at, End]). 
+%predef_dict([uk_tax_year_for_date,Date,Year,Start,End], [first_date-date, year-year, second_date-date, third_date-date], 
+%                    [in, the, 'UK', Date, falls, in, Year, beginning, at, Start, &, ending, at, End]).
+%predef_dict([myDB_entities:is_individual_or_company_on, A, B],
+%                    [affiliate-affiliate, date-date],
+%                    [A, is, an, individual, or, is, a, company, at, B]).
 % Prolog
 predef_dict([has_as_head_before, A, B, C], [list-list, symbol-term, rest_of_list-list], [A, has, B, as, head, before, C]).
-predef_dict([append, A, B, C],[first_list-list, second_list-list, third_list-list], [one, appends, A, to, B, to, obtain, C]).
-predef_dict([reverse, A, B], [list1-list, other_list-list], [A, is, the, reverse, of, B]).
-predef_dict([same_date, T1, T2], [time1-time, time2-time], [T1, is, the, same, date, as, T2]). % see reasoner.pl before/2
+predef_dict([append, A, B, C],[first_list-list, second_list-list, third_list-list], [the, concatenation, of, A, then, B, becomes, C]).
+predef_dict([reverse, A, B], [list-list, other_list-list], [A, is, the, reverse, of, B]).
+predef_dict([same_date, T1, T2], [time_1-time, time_2-time], [T1, is, the, same, date, as, T2]). % see reasoner.pl before/2
 predef_dict([between,Minimum,Maximum,Middle], [min-date, max-date, middle-date], 
                 [Middle, is, between, Minimum, &, Maximum]).
 predef_dict([is_1_day_after, A, B], [date-date, second_date-date],
                 [A, is, '1', day, after, B]).
 predef_dict([is_days_after, A, B, C], [date-date, number-number, second_date-date],
                   [A, is, B, days, after, C]).
-predef_dict([immediately_before, T1, T2], [time1-time, time2-time], [T1, is, immediately, before, T2]). % see reasoner.pl before/2
-predef_dict([\=, T1, T2], [thing1-thing, thing2-thing], [T1, is, different, from, T2]).
-predef_dict([==, T1, T2], [thing1-thing, thing2-thing], [T1, is, equivalent, to, T2]).
+predef_dict([immediately_before, T1, T2], [time_1-time, time_2-time], [T1, is, immediately, before, T2]). % see reasoner.pl before/2
+predef_dict([\=, T1, T2], [thing_1-thing, thing_2-thing], [T1, is, different, from, T2]).
+predef_dict([==, T1, T2], [thing_1-thing, thing_2-thing], [T1, is, equivalent, to, T2]).
 predef_dict([is_a, Object, Type], [object-object, type-type], [Object, is, of, type, Type]).
 predef_dict([is_not_before, T1, T2], [time1-time, time2-time], [T1, is, not, before, T2]). % see reasoner.pl before/2
-predef_dict([=, T1, T2], [thing1-thing, thing2-thing], [T1, is, equal, to, T2]).
+predef_dict([=, T1, T2], [thing_1-thing, thing_2-thing], [T1, is, equal, to, T2]).
 predef_dict([before, T1, T2], [time1-time, time2-time], [T1, is, before, T2]). % see reasoner.pl before/2
 predef_dict([after, T1, T2], [time1-time, time2-time], [T1, is, after, T2]).  % see reasoner.pl before/2
 predef_dict([member, Member, List], [member-object, list-list], [Member, is, in, List]).
 predef_dict([is, A, B], [member-object, list-list], [A, is, B]). % builtin Prolog assignment
 % predefined entries:
 %predef_dict([assert,Information], [info-clause], [this, information, Information, ' has', been, recorded]).
-predef_dict([\=@=, T1, T2], [thing1-thing, thing2-thing], [T1, \,=,@,=, T2]).
-predef_dict([\==, T1, T2], [thing1-thing, thing2-thing], [T1, \,=,=, T2]).
-predef_dict([=\=, T1, T2], [thing1-thing, thing2-thing], [T1, =,\,=, T2]).
-predef_dict([=@=, T1, T2], [thing1-thing, thing2-thing], [T1, =,@,=, T2]).
-predef_dict([==, T1, T2], [thing1-thing, thing2-thing], [T1, =,=, T2]).
-predef_dict([=<, T1, T2], [thing1-thing, thing2-thing], [T1, =,<, T2]).
-predef_dict([=<, T1, T2], [thing1-thing, thing2-thing], [T1, =,<, T2]).
-predef_dict([>=, T1, T2], [thing1-thing, thing2-thing], [T1, >,=, T2]).
-predef_dict([=, T1, T2], [thing1-thing, thing2-thing], [T1, =, T2]).
-predef_dict([<, T1, T2], [thing1-thing, thing2-thing], [T1, <, T2]).
-predef_dict([>, T1, T2], [thing1-thing, thing2-thing], [T1, >, T2]).
+predef_dict([\=@=, T1, T2], [thing_1-thing, thing_2-thing], [T1, \,=,@,=, T2]).
+predef_dict([\==, T1, T2], [thing_1-thing, thing_2-thing], [T1, \,=,=, T2]).
+predef_dict([=\=, T1, T2], [thing_1-thing, thing_2-thing], [T1, =,\,=, T2]).
+predef_dict([=@=, T1, T2], [thing_1-thing, thing_2-thing], [T1, =,@,=, T2]).
+predef_dict([==, T1, T2], [thing_1-thing, thing_2-thing], [T1, =,=, T2]).
+predef_dict([=<, T1, T2], [thing_1-thing, thing_2-thing], [T1, =,<, T2]).
+predef_dict([=<, T1, T2], [thing_1-thing, thing_2-thing], [T1, =,<, T2]).
+predef_dict([>=, T1, T2], [thing_1-thing, thing_2-thing], [T1, >,=, T2]).
+predef_dict([=, T1, T2], [thing_1-thing, thing_2-thing], [T1, =, T2]).
+predef_dict([<, T1, T2], [thing_1-thing, thing_2-thing], [T1, <, T2]).
+predef_dict([>, T1, T2], [thing_1-thing, thing_2-thing], [T1, >, T2]).
 predef_dict([unparse_time, Secs, Date], [secs-seconds, date-date], [Secs, corresponds, to, date, Date]).
 predef_dict([must_be, Type, Term], [type-type, term-term], [Term, must, be, Type]).
 predef_dict([must_not_be, A, B], [term-term, variable-variable], [A, must, not, be, B]). 
@@ -1676,7 +1691,7 @@ answer(English) :- %trace,
 
 % answer/2
 % answer(+Query, with(+Scenario))
-answer(English, Arg) :- %trace, 
+answer(English, Arg) :- trace, 
     (parsed -> true; fail), !, 
     pengine_self(SwishModule), 
     (translate_command(SwishModule, English, GoalName, Goal, PreScenario) -> true 
@@ -1760,8 +1775,8 @@ process_types_or_names([Word|RestWords], Elements, Types, PrintExpression ) :-
 process_types_or_names([Word|RestWords], Elements, Types, PrintExpression ) :- 
     var(Word), matches_name(Word, Elements, Types, Name), !, 
     process_types_or_names(RestWords,  Elements, Types, RestPrintWords),
-    tokenize_atom(Name, NameWords), delete_underscore(NameWords, CNameWords), 
-    add_determiner(CNameWords, PrintName), append(PrintName, RestPrintWords, PrintExpression).
+    tokenize_atom(Name, NameWords), delete_underscore(NameWords, CNameWords),
+    add_determiner(CNameWords, PrintName), append(['*'|PrintName], ['*'|RestPrintWords], PrintExpression).
 process_types_or_names([Word|RestWords], Elements, Types, [PrintWord|RestPrintWords] ) :- 
     matches_type(Word, Elements, Types, date), 
     ((nonvar(Word), number(Word)) -> unparse_time(Word, PrintWord); PrintWord = Word), !, 
@@ -1849,13 +1864,30 @@ scenario_or_empty_ --> [scenario], spaces(_).
 scenario_or_empty_ --> spaces(_). 
  
 % show/1
-show(prolog) :- % trace, 
+show(prolog) :-
+    show(rules),
+    show(queries),
+    show(scenarios). 
+
+show(rules) :- % trace, 
     pengine_self(SwishModule), 
     findall((Pred :- Body), 
         (dict(PredicateElements, _, _), Pred=..PredicateElements, clause(SwishModule:Pred, Body)), Predicates),
     forall(member(Clause, Predicates), portray_clause(Clause)).
 
-show(instances) :-
+show(queries) :- % trace, 
+    pengine_self(SwishModule), 
+    findall((query(A,B) :- true), 
+        (clause(SwishModule:query(A,B), _)), Predicates),
+    forall(member(Clause, Predicates), portray_clause(Clause)).
+
+show(scenarios) :- % trace, 
+    pengine_self(SwishModule), 
+    findall((example(A,B) :- true), 
+        (clause(SwishModule:example(A,B), _)), Predicates),
+    forall(member(Clause, Predicates), portray_clause(Clause)).
+
+show(templates) :-
     findall(EnglishAnswer, 
         ( dictionary([_|GoalElements], Types, WordsAnswer),
         process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers),
