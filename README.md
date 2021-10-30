@@ -374,3 +374,16 @@ The SWISH editor was slightly customised:
 	- Extending the querying machine to allow direct queries in answer/1. 
 	- Adding a second argument to identify the scenario in answer(Query, with(Scenario))
 	- Adjusting answer/3 with the same purpose (third argument returns the result)
+- [2021-10-28] Alfa testing.
+	- Adding commands for querying and showing:
+		- `query <query>`
+		- `query <query name> with <scenario>`
+		- `show prolog`
+- [2021-10-29] Alfa testing. [65b8ebb253312c3f4f6f59e2bb41d88d2d49366c](https://github.com/mcalejo/TaxKB/commit/65b8ebb253312c3f4f6f59e2bb41d88d2d49366c)
+	- Adding commands for querying and showing:
+		- `show templates`: shows the all the available templates (including predef).
+		- `show rules`: shows the prolog code corresponding to rules in the kb.
+		- `show queries`: shows the prolog code for queries.
+		- `show scenarios`: shows the prolo code for scenarios. 
+	- Fixing entries in the dictionary (predef).
+	- Fixing details in the display of asteriks in templates.  
