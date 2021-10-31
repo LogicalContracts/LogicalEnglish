@@ -1,3 +1,7 @@
+/* le_output: a prolog module with predicates to translate from 
+the Taxlog programming language, a sugared form of Prolog, into Logical English. 
+*/
+
 :- module(_,[print_kp_le/1, le/2, le/1, test_kp_le/2, test_kp_le/1]).
 
 :- use_module(reasoner).
@@ -5,6 +9,7 @@
 :- use_module(drafter).
 :- use_module('spacy/spacy.pl').
 :- use_module(library(prolog_clause)).
+:- use_module(le_input). % for dictionary/3 and meta_dictionary/3
 
 /*
 sketch of a DCG; inadequate for an actual implementation, because we need dynamic (multiple length) terminals
@@ -183,8 +188,8 @@ le_html(le_predicate(Functor,[A1|Args]), Tab, Words, [span([title=Tip,style=S],H
     append([PH,[" ( "],A1H,ArgsH,[")"]],HTML),
     append([Functor,["("],A1W,ArgsW,[")"]],Words),
     atomicSentenceStyle(le_predicate(Functor,[A1|Args]),Words,S,Tip).
-le_html(le_template(Template, Args), Tab, Words, [span([title=Tip,style=S],HTML)]) :- ! , 
-    dict([_|OriginalArgs], _, Template), 
+le_html(le_template(Template, Args), Tab, Words, [span([title=Tip,style=S],HTML)]) :-  
+    meta_dictionary([_|OriginalArgs], _, Template); dictionary([_|OriginalArgs], _, Template), !, 
     le_fill_template(Template, Template, OriginalArgs, Args, Tab, Words, HTML),
     atomicSentenceStyle(le_predicate(Template, Args), Words, S, Tip).
 le_html(le_argument(X),Tab,Words,HTML) :- !,
@@ -459,42 +464,42 @@ handle_le(Request) :-
 % NamesAndTypes contains the external name and type (name-type) of each variable just in the other in 
 % which the variables appear in LiteralElement. 
 % general purpose entries:
-dict([in, Member, List], [member-object, list-list], [Member, is, in, List]).
-dict([assert,Information], [info-clause], [this, information, Information, ' has', been, recorded]).
-dict([is_a, Object, Type], [object-object, type-type], [Object, is, of, type, Type]).
-dict([before, T1, T2], [time1-time, time2-time], [T1, is, before, T2]).
-dict([between,Minimum,Maximum,Middle], [min-date, max-date, middle-date], 
-    [Middle, is, between, Minimum, '&', Maximum]).
-dict([must_be, Type, Term], [type-type, term-term], [Term, must, be, Type]).
+%dict([in, Member, List], [member-object, list-list], [Member, is, in, List]).
+%dict([assert,Information], [info-clause], [this, information, Information, ' has', been, recorded]).
+%dict([is_a, Object, Type], [object-object, type-type], [Object, is, of, type, Type]).
+%dict([before, T1, T2], [time1-time, time2-time], [T1, is, before, T2]).
+%dict([between,Minimum,Maximum,Middle], [min-date, max-date, middle-date], 
+%    [Middle, is, between, Minimum, '&', Maximum]).
+%dict([must_be, Type, Term], [type-type, term-term], [Term, must, be, Type]).
 
 % domain-specific entries: to be relocated or automatically generated from declarations. 
-dict(['\'s_R&D_expense_credit_is', Project, ExtraDeduction, TaxCredit], 
-                                  [project-projectid, extra-amount, credit-amount],
-    [Project, '\'s', 'R&D', expense, credit, is, TaxCredit, plus, ExtraDeduction]).
-dict(['can_request_R&D_relief_such_as', Project, ExtraDeduction, TaxCredit], 
-                                  [project-projectid, extra-amount, credit-amount],
-    [Project, can, request,'R&D', relief, for, a, credit, of, TaxCredit, with, a, deduction, of, ExtraDeduction]).
-dict(['\'s_sme_R&D_relief_is', Project, ExtraDeduction, TaxCredit], 
-                                  [project-projectid, extra-amount, credit-amount],
-    [the, 'SME', 'R&D', relief, for, Project, is, estimated, at, TaxCredit, with, an, extra, of, ExtraDeduction]).
-dict([project_subject_experts_list_is,Project,Experts], [project-object, experts_list-list],
-    [Project, has, an, Experts, list]).
-dict([rollover_applies,EventID,Asset,Time,Transferor,TransfereesList], [id-event,asset-asset,when-time,from-person,to-list], 
-    [EventID, rollover, of, the, transfer, of, Asset, from, Transferor, to, TransfereesList, at, Time, applies]).
-dict([transfer_event,ID,Asset,Time,Transferor,TransfereesList],[id-id,asset-asset,time-time,from-person,to-list],
-    [event, ID, of, transfering, Asset, from, Transferor, to, TransfereesList, at, Time, occurs]).
-dict([s_type_and_liability_are(Asset,Type,Liability), [asset-asset, assettype-type, liabilty-amount],
-    [the, type, of, asset, Asset, is, Type, its, liability, is, Liability]]).
-dict([exempt_transfer,From,To,SecurityIdentifier,Time],[from-taxpayer,to-taxpayer,secID-number, time-time],
-    [a, transfer, from, From, to, To, with, SecurityIdentifier, at, Time, is, exempt]).
-dict([shares_transfer,Sender,Recipient,SecurityID,Time], [from-person, to-person, id-number, time-time], 
-    [Sender, transfers, shares, to, Recipient, at, Time, with, id, SecurityID]).
-dict([trading_in_market,SecurityID,MarketID,Time], [id-number,market-number,time-time], 
-    [whoever, is, identified,by, SecurityID, is, trading, in, market, MarketID, at, Time]).
-dict([uk_tax_year_for_date,Date,Year,Start,End], [date-date,year-year,start-date,end-date], 
-    [date, Date, falls, in, the, 'UK', tax, year, Year, that, starts, at, Start, ends, at, End]).
-dict([days_spent_in_uk,Individual,Start,End,TotalDays], [who-person,start-date,end-date,total-number], 
-    [Individual, spent, TotalDays, days, in, the, 'UK', starting, at, Start, ending, at, End]).
+%dict(['\'s_R&D_expense_credit_is', Project, ExtraDeduction, TaxCredit], 
+%                                  [project-projectid, extra-amount, credit-amount],
+%    [Project, '\'s', 'R&D', expense, credit, is, TaxCredit, plus, ExtraDeduction]).
+%dict(['can_request_R&D_relief_such_as', Project, ExtraDeduction, TaxCredit], 
+%                                  [project-projectid, extra-amount, credit-amount],
+%    [Project, can, request,'R&D', relief, for, a, credit, of, TaxCredit, with, a, deduction, of, ExtraDeduction]).
+%dict(['\'s_sme_R&D_relief_is', Project, ExtraDeduction, TaxCredit], 
+%                                  [project-projectid, extra-amount, credit-amount],
+%    [the, 'SME', 'R&D', relief, for, Project, is, estimated, at, TaxCredit, with, an, extra, of, ExtraDeduction]).
+%dict([project_subject_experts_list_is,Project,Experts], [project-object, experts_list-list],
+%    [Project, has, an, Experts, list]).
+%dict([rollover_applies,EventID,Asset,Time,Transferor,TransfereesList], [id-event,asset-asset,when-time,from-person,to-list], 
+%    [EventID, rollover, of, the, transfer, of, Asset, from, Transferor, to, TransfereesList, at, Time, applies]).
+%dict([transfer_event,ID,Asset,Time,Transferor,TransfereesList],[id-id,asset-asset,time-time,from-person,to-list],
+%    [event, ID, of, transfering, Asset, from, Transferor, to, TransfereesList, at, Time, occurs]).
+%dict([s_type_and_liability_are(Asset,Type,Liability), [asset-asset, assettype-type, liabilty-amount],
+%    [the, type, of, asset, Asset, is, Type, its, liability, is, Liability]]).
+%dict([exempt_transfer,From,To,SecurityIdentifier,Time],[from-taxpayer,to-taxpayer,secID-number, time-time],
+%    [a, transfer, from, From, to, To, with, SecurityIdentifier, at, Time, is, exempt]).
+%dict([shares_transfer,Sender,Recipient,SecurityID,Time], [from-person, to-person, id-number, time-time], 
+%    [Sender, transfers, shares, to, Recipient, at, Time, with, id, SecurityID]).
+%dict([trading_in_market,SecurityID,MarketID,Time], [id-number,market-number,time-time], 
+%    [whoever, is, identified,by, SecurityID, is, trading, in, market, MarketID, at, Time]).
+%dict([uk_tax_year_for_date,Date,Year,Start,End], [date-date,year-year,start-date,end-date], 
+%    [date, Date, falls, in, the, 'UK', tax, year, Year, that, starts, at, Start, ends, at, End]).
+%dict([days_spent_in_uk,Individual,Start,End,TotalDays], [who-person,start-date,end-date,total-number], 
+%    [Individual, spent, TotalDays, days, in, the, 'UK', starting, at, Start, ending, at, End]).
 
 
 :- if(current_module(swish)). %%%%% On SWISH:

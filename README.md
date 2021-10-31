@@ -387,3 +387,6 @@ The SWISH editor was slightly customised:
 		- `show scenarios`: shows the prolo code for scenarios. 
 	- Fixing entries in the dictionary (predef).
 	- Fixing details in the display of asteriks in templates.  
+- [2021-10-31] Alfa testing. [1a5e269d5f34a54e83d51a7fa3a7bab2863db6a4](https://github.com/mcalejo/TaxKB/commit/1a5e269d5f34a54e83d51a7fa3a7bab2863db6a4)
+	- Restoring trace for queries
+	- Importing dictionary/3 and meta_dictionary/3 from le_input into le_output to share templates. 
