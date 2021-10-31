@@ -1,5 +1,6 @@
 /* le_input: a prolog module with predicates to translate from an 
-extended version of Logical English into the Taxlog programming language. 
+extended version of Logical English into the Prolog or Taxlog
+programming languages.   
 
 Main predicate: text_to_logic(String to be translated, Translation)
 
@@ -72,15 +73,16 @@ query three is:
     op(800,fx,user:answer), % to support querying
     op(850,xfx,user:with), % to support querying
     op(800,fx,user:show), % to support querying
-    op(850,xfx,user:of) % to support querying
+    op(850,xfx,user:of), % to support querying
+    dictionary/3, meta_dictionary/3
     ]).
 :- use_module('./tokenize/prolog/tokenize.pl').
 :- use_module(library(pengines)).
 :- use_module('reasoner.pl').
-:- thread_local text_size/1, error_notice/4, dict/3, meta_dict/3, 
+:- thread_local text_size/1, error_notice/4, dict/3, meta_dict/3, example/2, 
                 last_nl_parsed/1, kbname/1, happens/2, initiates/3, terminates/3, 
                 predicates/1, events/1, fluents/1, metapredicates/1, parsed/0.  
-:- discontiguous statement/3, declaration/4.
+:- discontiguous statement/3, declaration/4, example/2. 
 
 % Main clause: text_to_logic(+String,-Clauses) is det
 % Errors are added to error_notice 
@@ -1518,6 +1520,7 @@ spypoint(A,A). % for debugging
 
 % meta_dictionary(?LiteralElements, ?NamesAndTypes, ?Template)
 % for meta templates. See below
+% meta_dictionary/1
 meta_dictionary(Predicate, VariablesNames, Template) :- 
     meta_dict(Predicate, VariablesNames, Template) ; predef_meta_dict(Predicate, VariablesNames, Template).
 
@@ -1530,6 +1533,7 @@ predef_meta_dict([\=, T1, T2], [time1-time, time2-time], [T1, is, different, fro
 % with the Prolog expression of that relation in LiteralElements (not yet a predicate, =.. is done elsewhere).
 % NamesAndTypes contains the external name and type (name-type) of each variable just in the other in 
 % which the variables appear in LiteralElement. 
+% dictionary/1
 dictionary(Predicate, VariablesNames, Template) :- % dict(Predicate, VariablesNames, Template).
     dict(Predicate, VariablesNames, Template) ; predef_dict(Predicate, VariablesNames, Template).
 %    predef_dict(Predicate, VariablesNames, Template); dict(Predicate, VariablesNames, Template).
@@ -1683,7 +1687,7 @@ answer(English) :- %trace,
     extract_goal_command(Goal, SwishModule, _InnerGoal, Command), 
     %print_message(informational, "Command: ~w"-[Command]),
     setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
-            catch((true, Command), Error, ( print_message(error, Error), fail ) ), 
+            catch((trace, Command), Error, ( print_message(error, Error), fail ) ), 
             _Result, 
             retract_facts(SwishModule, Facts)),
     get_answer_from_goal(Goal, RawAnswer), name_as_atom(RawAnswer, EnglishAnswer),  
@@ -1691,7 +1695,7 @@ answer(English) :- %trace,
 
 % answer/2
 % answer(+Query, with(+Scenario))
-answer(English, Arg) :- trace, 
+answer(English, Arg) :- %trace, 
     (parsed -> true; fail), !, 
     pengine_self(SwishModule), 
     (translate_command(SwishModule, English, GoalName, Goal, PreScenario) -> true 
