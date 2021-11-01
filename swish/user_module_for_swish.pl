@@ -258,15 +258,16 @@ user:term_expansion(NiceTerm, ExpandedTerms) :-  % hook for LE extension
 	prolog_load_context(term_position,TP), stream_position_data(line_count,TP,Line),
 	%catch(le_taxlog_translate(NiceTerm,File,Line,TaxlogTerms),E,	
 	%	(print_message(error,"Translation Error: ~w"-[E]),fail)), 
-	le_taxlog_translate(NiceTerm,File,Line,TaxlogTerms), 
-	(TaxlogTerms\=[]-> 
-		( findall(PrologTerm, (
-			member(TT_,TaxlogTerms), 
-			(is_list(TT_)->member(TT,TT_);TT=TT_), % the LE translator generates a list of lists... and non lists
-			(member(target(prolog),TaxlogTerms) -> semantics2prolog(TT,_,PrologTerm) ; taxlog2prolog(TT,_,PrologTerm))
-			), ExpandedTerms) 
-		)
-	; ExpandedTerms = []).  
+	( le_taxlog_translate(NiceTerm,File,Line,TaxlogTerms) ->
+		(TaxlogTerms\=[]-> 
+			( findall(PrologTerm, (
+				member(TT_,TaxlogTerms), 
+				(is_list(TT_)->member(TT,TT_);TT=TT_), % the LE translator generates a list of lists... and non lists
+				(member(target(prolog),TaxlogTerms) -> semantics2prolog(TT,_,PrologTerm) ; taxlog2prolog(TT,_,PrologTerm))
+				), ExpandedTerms) 
+			)
+			; ExpandedTerms = [])
+		; taxlog2prolog(NiceTerm,_,ExpandedTerms)).
 	%print_message(informational,"File: ~w"-[File]),
 	%print_message(informational,"expanded LE to ~w"-[ExpandedTerms]).
 % This at the end, as it activates the term expansion (no harm done otherwise, just some performance..):

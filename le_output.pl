@@ -189,7 +189,8 @@ le_html(le_predicate(Functor,[A1|Args]), Tab, Words, [span([title=Tip,style=S],H
     append([Functor,["("],A1W,ArgsW,[")"]],Words),
     atomicSentenceStyle(le_predicate(Functor,[A1|Args]),Words,S,Tip).
 le_html(le_template(Template, Args), Tab, Words, [span([title=Tip,style=S],HTML)]) :-  
-    meta_dictionary([_|OriginalArgs], _, Template); dictionary([_|OriginalArgs], _, Template), !, 
+    (meta_dictionary([_|OriginalArgs], _, Template); dictionary([_|OriginalArgs], _, Template)), 
+    !, 
     le_fill_template(Template, Template, OriginalArgs, Args, Tab, Words, HTML),
     atomicSentenceStyle(le_predicate(Template, Args), Words, S, Tip).
 le_html(le_argument(X),Tab,Words,HTML) :- !,
