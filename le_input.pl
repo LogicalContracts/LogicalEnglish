@@ -1667,6 +1667,34 @@ interrupted(T1, Fluent, T2) :- %trace,
     %(nonvar(T2) -> rbefore(T, T2) ; true ), !.  
     %(T2=(after(T1)-_)->T2=(after(T1)-before(T)); rbefore(T,T2)). 
 
+% experimental; BUG: apparently LE-originated clauses are not being asserted as in TaxLog; 
+% TODO: cleanup, refactor with answer(...)
+explainedAnswer(English,Unknowns,Explanation,Result) :- %trace, 
+    (parsed -> true; fail), !, 
+    pengine_self(SwishModule), 
+    (translate_command(SwishModule, English, GoalName, Goal, Scenario) -> true 
+    ; ( print_message(error, "Don't understand this question: ~w "-[English]), !, fail ) ), % later -->, Kbs),
+    copy_term(Goal, CopyOfGoal),  
+    get_answer_from_goal(CopyOfGoal, RawGoal), name_as_atom(RawGoal, EnglishQuestion), 
+    print_message(informational, "Query ~w with ~w: ~w"-[GoalName, Scenario, EnglishQuestion]),
+    print_message(informational, "Scenario: ~w"-[Scenario]),
+    % assert facts in scenario
+    (Scenario==noscenario -> Facts = [] ; 
+        (SwishModule:example(Scenario, [scenario(Facts, _)]) -> 
+            true;  print_message(error, "Scenario: ~w does not exist"-[Scenario]))), !,  
+    %print_message(informational, "Facts: ~w"-[Facts]), 
+    extract_goal_command(Goal, SwishModule, _InnerGoal, Command), 
+    print_message(informational, "Command: ~w"-[Command]),
+    query_with_facts(at(Command,SwishModule),Scenario,Unknowns,Explanation,Result),
+    print_message(informational,"Result:~w, Explanation: ~w"-[Result,Explanation]),
+    print_message(informational,"Unknowns: ~w"-[Unknowns]),
+    % setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
+    %         catch((Command), Error, ( print_message(error, Error), fail ) ), 
+    %         _Result, 
+    %         retract_facts(SwishModule, Facts)), % probably not necessary, the SWISH module is transient
+    get_answer_from_goal(Goal, RawAnswer), name_as_atom(RawAnswer, EnglishAnswer),  
+    print_message(informational, "Answer: ~w"-[EnglishAnswer]).
+
 /* ----------------------------------------------------------------- CLI English */
 % answer/1
 % answer(+Query or Query Expression)
@@ -1912,6 +1940,8 @@ user:(answer Query with Scenario):-
 user:answer( EnText) :- answer( EnText).
 user:answer( EnText, Scenario) :- answer( EnText, Scenario).
 user:answer( EnText, Scenario, Result) :- answer( EnText, Scenario, Result).
+user:explainedAnswer(Query,Unknowns,Explanation,Result) :- explainedAnswer(Query,Unknowns,Explanation,Result).
+
 user:(show Something) :- 
     show(Something). 
 
@@ -1963,4 +1993,5 @@ sandbox:safe_primitive(le_input:answer( _EnText)).
 sandbox:safe_primitive(le_input:show( _Something)).
 sandbox:safe_primitive(le_input:answer( _EnText, _Scenario)).
 sandbox:safe_primitive(le_input:answer( _EnText, _Scenario, _Result)).
+sandbox:safe_primitive(le_input:explainedAnswer(_,_,_,_)).
 sandbox:safe_primitive(le_input:le_taxlog_translate( _EnText, _Terms)).
