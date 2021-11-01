@@ -2,6 +2,21 @@
 extended version of Logical English into the Prolog or Taxlog
 programming languages.   
 
+Copyright [2021] Initial copyright holders by country: 
+LodgeIT (AU), AORA Law (UK), Bob Kowalski (UK), Miguel Calejo (PT), Jacinto Dávila (VE)
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
 Main predicate: text_to_logic(String to be translated, Translation)
 
 Main DCG nonterminal: document(Translation)
@@ -1671,7 +1686,7 @@ interrupted(T1, Fluent, T2) :- %trace,
 % answer/1
 % answer(+Query or Query Expression)
 answer(English) :- %trace, 
-    (parsed -> true; fail), !, 
+    parsed, 
     pengine_self(SwishModule), 
     (translate_command(SwishModule, English, GoalName, Goal, Scenario) -> true 
     ; ( print_message(error, "Don't understand this question: ~w "-[English]), !, fail ) ), % later -->, Kbs),
@@ -1696,7 +1711,7 @@ answer(English) :- %trace,
 % answer/2
 % answer(+Query, with(+Scenario))
 answer(English, Arg) :- %trace, 
-    (parsed -> true; fail), !, 
+    parsed,
     pengine_self(SwishModule), 
     (translate_command(SwishModule, English, GoalName, Goal, PreScenario) -> true 
     ; ( print_message(error, "Don't understand this question: ~w "-[English]), !, fail ) ), % later -->, Kbs),
@@ -1710,7 +1725,7 @@ answer(English, Arg) :- %trace,
         (SwishModule:example(Scenario, [scenario(Facts, _)]) -> 
             true;  print_message(error, "Scenario: ~w does not exist"-[Scenario]))), !,  
     %print_message(informational, "Facts: ~w"-[Facts]), 
-    extract_goal_command(Goal, SwishModule, _InnerGoal, Command), 
+    extract_goal_command((trace, Goal), SwishModule, _InnerGoal, Command), 
     %print_message(informational, "Command: ~w"-[Command]),
     setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
             catch((true, Command), Error, ( print_message(error, Error), fail ) ), 
@@ -1722,12 +1737,13 @@ answer(English, Arg) :- %trace,
 % answer/3
 % answer(+English, with(+Scenario), -Result)
 answer(English, Arg, Answers) :-
-    (parsed -> true; fail), !, pengine_self(SwishModule), 
+    parsed, 
+    pengine_self(SwishModule), 
     translate_command(SwishModule, English, _, Goal, PreScenario), % later -->, Kbs),
     %copy_term(Goal, CopyOfGoal), 
     %get_answer_from_goal(CopyOfGoal, RawGoal), name_as_atom(RawGoal, EnglishQuestion), 
     ((Arg = with(ScenarioName), PreScenario=noscenario) -> Scenario=ScenarioName; Scenario=PreScenario), 
-    extract_goal_command(Goal, SwishModule, _InnerGoal, Command),
+    extract_goal_command((trace, Goal), SwishModule, _InnerGoal, Command),
     (Scenario==noscenario -> Facts = [] ; SwishModule:example(Scenario, [scenario(Facts, _)])), 
     setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
             catch(Command, Error, ( print_message(error, Error), fail ) ), 
@@ -1735,6 +1751,19 @@ answer(English, Arg, Answers) :-
             retract_facts(SwishModule, Facts)),
     get_answer_from_goal(Goal, Answers). 
     %reasoner:query_once_with_facts(Goal,Scenario,_,_E,Result).
+
+% answer/4
+% answer(+English, with(+Scenario), -Explanations, -Result) :-
+answer(English, Arg, E, Result) :-
+    parsed, !, pengine_self(SwishModule), 
+    translate_command(SwishModule, English, _, Goal, PreScenario), 
+    ((Arg = with(ScenarioName), PreScenario=noscenario) -> Scenario=ScenarioName; Scenario=PreScenario), 
+    extract_goal_command(Goal, SwishModule, _InnerGoal, Command),
+    (Scenario==noscenario -> Facts = [] ; SwishModule:example(Scenario, [scenario(Facts, _)])), 
+    setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
+            catch(query(Command,_,E,Result), Error, ( print_message(error, Error), fail ) ), 
+            _Result, 
+            retract_facts(SwishModule, Facts)). 
 
 % get_answer_from_goal/2
 get_answer_from_goal((G,R), WholeAnswer) :- 
@@ -1827,6 +1856,7 @@ retract_facts(_, []) :- !.
 retract_facts(SwishModule, [F|R]) :- nonvar(F), % print_message(informational, "retracting: ~w"-[SwishModule:F]),
     retract(SwishModule:F), retract_facts(SwishModule, R). 
 
+% translate_command/1
 translate_command(SwishModule, English_String, GoalName, Goals, Scenario) :-
     tokenize(English_String, Tokens, [cased(true), spaces(true), numbers(false)]),
     unpack_tokens(Tokens, UTokens), 
@@ -1839,7 +1869,7 @@ translate_command(_, English_String, GoalName, Goals, Scenario) :-
     unpack_tokens(Tokens, UTokens), 
     clean_comments(UTokens, CTokens), Scenario=noscenario, GoalName=nonamed, 
     (phrase(conditions(0, [], _, Goals), CTokens) ->  true  ;
-        ( error_notice(error, Me,Pos, ContextTokens), print_message(informational, "~w ~w ~w"-[Me,Pos,ContextTokens]), CTokens=[], fail )
+        ( once(error_notice(error, Me,_, ContextTokens)), print_message(informational, "~w ~w"-[Me,ContextTokens]), CTokens=[], fail )
     ). 
 
 command_(Goal, Scenario) --> 

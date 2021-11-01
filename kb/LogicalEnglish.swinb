@@ -6,4 +6,68 @@
 Once upon a time...
 </div>
 
+<div>
+<H2>Introduction to Logical English, LE</H2>
+
+<p>The parser of LE assumes a document with the following structure. One declaration title like:</p>
+
+<pre>
+the templates are:
+</pre>
+
+<p>followed by the declarations of all the corresponding predicates mentioned in the knowledge base.</p>
+
+<p>Each declarations define a template with the variables and other words required to describe a relevant relation. 
+  It is a comma separated list of templates which ends
+  with a period.</p>
+
+<p>After that period, one of the following statement introduces the knowledge base:</p>
+
+<pre>
+the knowledge base includes:
+</pre>
+
+<p>or</p>
+
+<pre>
+the knowledge base KBName includes:
+</pre>
+
+<p>And it is followed by the rules and facts written in Logical English syntax.</p>
+
+<p>Each rule must end with a period.</p>
+
+<p>Indentation is used to organize the and/or list of conditions by strict observance 
+of one condition per line with a level of indentation that corresponds to each operator and corresponding conditions.</p>
+
+<p>Similarly, there may be sections for scenarios and queries, like:</p>
+
+<pre>
+scenario test is:
+   borrower pays an amount to lender on 2015-06-01.
+</pre>
+
+and
+
+<pre>
+query one is:
+for which event:
+ the small business restructure rollover applies to the event.
+
+query two is:
+ which tax payer is a party of which event.
+
+query three is:
+ A first time is after a second time
+ and the second time is immediately before the first time.
+</pre>
+
+<p>which can then be used on the new command interface of LE on SWISH (e.g. answer/1 and others querying predicates)</p>
+
+<pre>
+? answer 'query one with scenario test'.
+</pre>
+
+</div>
+
 </div>

@@ -1,5 +1,21 @@
 /* le_output: a prolog module with predicates to translate from 
 the Taxlog programming language, a sugared form of Prolog, into Logical English. 
+
+Copyright [2021] Initial copyright holders by country: 
+LodgeIT (AU), AORA Law (UK), Bob Kowalski (UK), Miguel Calejo (PT), Jacinto Dávila (VE)
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
 */
 
 :- module(_,[print_kp_le/1, le/2, le/1, test_kp_le/2, test_kp_le/1]).

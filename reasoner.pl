@@ -1,3 +1,19 @@
+/* Copyright [2021] Initial copyright holders by country: 
+LodgeIT (AU), AORA Law (UK), Bob Kowalski (UK), Miguel Calejo (PT), Jacinto Dávila (VE)
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 :- module(_ThisFileName,[query/4, query_with_facts/5, query_once_with_facts/5, explanation_node_type/2, render_questions/2,
     run_examples/0, run_examples/1, myClause2/8, myClause/4, taxlogWrapper/9, niceModule/2, refToOrigin/2,
     after/2, is_not_before/2, before/2, immediately_before/2, same_date/2, subtract_days/3, this_year/1, uk_tax_year/4, in/2,
