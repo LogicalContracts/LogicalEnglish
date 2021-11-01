@@ -47,8 +47,8 @@ swish_config:config(include_alias,	example).
 :- use_module(library(http/html_write)).
 :- use_module(swish(lib/page)).
 
-:- prolog_load_context(directory, D), atomic_list_concat([D,/,passwd],F), set_setting(swish_http_authenticate:password_file,F), format("Password file at ~a~n",[F]).
-:- use_module(swish(lib/authenticate)).
+% :- prolog_load_context(directory, D), atomic_list_concat([D,/,passwd],F), set_setting(swish_http_authenticate:password_file,F), format("Password file at ~a~n",[F]).
+% :- use_module(swish(lib/authenticate)).
 
 :- use_module('../syntax.pl').
 :- use_module('../kp_loader.pl').

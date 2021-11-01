@@ -1,9 +1,9 @@
 { "comment": "Examples ...; an empty file list can make sure they do NOT appear in the Examples menu",
-    "menu":[ {"group":"cgt","rank":30000} ],
+    "menu":[ {"group":"le","rank":30000} ],
     "files":[
-      { "file":"basicConditions.swinb",
-        "title":"CGT basic conditions notebook",
-        "group":"cgt"
+      { "file":"LogicalEnglish.swinb",
+        "title":"Logical English notebook",
+        "group":"le"
       }
       ]
     }

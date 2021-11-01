@@ -1,10 +1,10 @@
 # Build a SWISH image based on a recent SWISH+SWI-Prolog, plus an editor patch, using (always) http authentication, and preloading a Prolog file defining an "app":
-#	docker build  -t logicalcontracts/patchedprivateswish .
+#	docker build  -t logicalcontracts/patchedswish .
 # Run for simple testing with (for example):
-#	docker run -it -p 3051:3050 -v /Users/mc/git/TaxKB/swish/data:/data -v /Users/mc/git/TaxKB:/app -e LOAD='/app/swish/user_module_for_swish.pl' logicalcontracts/patchedprivateswish 
+#	docker run -it -p 3051:3050 -v /Users/mc/git/TaxKB/swish/data:/data -v /Users/mc/git/TaxKB:/app -e LOAD='/app/swish/user_module_for_swish.pl' logicalcontracts/patchedswish 
 #
 # For typical server configuration on Ubuntu:
-#   docker run -d --restart always -p 8082:3050 -v /home/ubuntu/TaxKB_swish_data:/data -v /home/ubuntu/TaxKB:/TaxKB -e LOAD='/TaxKB/swish/user_module_for_swish.pl' -e SPACY_HOST=demo.logicalcontracts.com:8080 -e LOAD_KB=true -e SUDO=true logicalcontracts/patchedprivateswish
+#   docker run -d --restart always -p 8082:3050 -v /home/ubuntu/TaxKB_swish_data:/data -v /home/ubuntu/TaxKB:/TaxKB -e LOAD='/TaxKB/swish/user_module_for_swish.pl' -e SPACY_HOST=demo.logicalcontracts.com:8080 -e LOAD_KB=true -e SUDO=true logicalcontracts/patchedswish
 
 FROM logicalcontracts/swish-june2020
 LABEL maintainer = "mc@interprolog.com"
@@ -16,8 +16,9 @@ ENV MY_USER swishpersona
 RUN useradd -m -s /bin/bash $MY_USER
 COPY --chown=swishpersona ./patches/prolog_server.js ${SWISH_DIR}/web/js/codemirror/mode/prolog/
 
-RUN mkdir -p ${SWISH_DIR}/config-enabled && \
-	cp ${SWISH_DIR}/config-available/auth_http_always.pl ${SWISH_DIR}/config-enabled/
+# Now open to the public
+# RUN mkdir -p ${SWISH_DIR}/config-enabled && \
+# 	cp ${SWISH_DIR}/config-available/auth_http_always.pl ${SWISH_DIR}/config-enabled/
 
 # Swish likes to check existence of a /data directory:
 WORKDIR ${SWISH_DATA}
