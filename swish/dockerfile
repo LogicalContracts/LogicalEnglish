@@ -5,7 +5,8 @@
 #
 # For typical server configuration on Ubuntu:
 #   docker run -d --restart always -p 8082:3050 -v /home/ubuntu/TaxKB_swish_data:/data -v /home/ubuntu/TaxKB:/TaxKB -e LOAD='/TaxKB/swish/user_module_for_swish.pl' -e SPACY_HOST=demo.logicalcontracts.com:8080 -e LOAD_KB=true -e SUDO=true logicalcontracts/patchedswish
-
+#       make sure TaxKB_swish_data has permissions for group id 1024, e.g. something like:
+#       sudo chown -R :1024 TaxKB_swish_data ; sudo chmod -R 775 TaxKB_swish_data ; sudo chmod -R g+s TaxKB_swish_data
 FROM logicalcontracts/swish-june2020
 LABEL maintainer = "mc@interprolog.com"
 ENV SWISH_DIR /swish
@@ -13,7 +14,8 @@ ENV SWISH_DATA /data
 
 
 ENV MY_USER swishpersona
-RUN useradd -m -s /bin/bash $MY_USER
+RUN addgroup --gid 1024 mygroup
+RUN useradd -m -g mygroup -s /bin/bash $MY_USER
 COPY --chown=swishpersona ./patches/prolog_server.js ${SWISH_DIR}/web/js/codemirror/mode/prolog/
 
 # Now open to the public
