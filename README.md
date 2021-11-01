@@ -1,6 +1,6 @@
 # TaxLog and Logical English projects
 
-For more about TaxLog see TaxLog.md file.
+For more about TaxLog see [TaxLog.md](TaxLog.md) file.
 
 For more about Logical English visit <https://logicalenglish.logicalcontracts.com/example/LogicalEnglish.swinb
 
