@@ -223,6 +223,19 @@ html_post_resources([]) --> {true}.
 % extra_swish_resource(link([ type('text/css'),rel('stylesheet'),href('/lps/lps.css') ])).
 % extra_swish_resource(script(JS)) :- google_analytics_script(JS).
 
+% The Google Analytics key file must be placed in the SWISH data directory:
+% :- catch(read_file_to_string('data/googleAnalyticsKey',Key,[]),_,Key=''), 
+% 	format(atom(JS),'
+%   (function(i,s,o,g,r,a,m){i[\'GoogleAnalyticsObject\']=r;i[r]=i[r]||function(){
+%   (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+%   m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+%   })(window,document,\'script\',\'https://www.google-analytics.com/analytics.js\',\'ga\');
+
+%   ga(\'create\', \'~w\', \'auto\');
+%   ga(\'send\', \'pageview\');
+% ',[Key]), assert(google_analytics_script(JS)).
+
+
 :- multifile user:file_search_path/2.
 user:file_search_path(taxkb_resources, D) :- taxkb_dir(XD), concat_atom([XD,"/swish/web"],D).
 
