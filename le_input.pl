@@ -1684,7 +1684,7 @@ interrupted(T1, Fluent, T2) :- %trace,
 
 % experimental; BUG: apparently LE-originated clauses are not being asserted as in TaxLog; 
 % TODO: cleanup, refactor with answer(...)
-explainedAnswer(English,Unknowns,Explanation,Result) :- %trace, 
+explainedAnswer(English,Unknowns,Explanation,Result) :- trace, 
     (parsed -> true; fail), !, 
     pengine_self(SwishModule), 
     (translate_command(SwishModule, English, GoalName, Goal, Scenario) -> true 
@@ -1700,7 +1700,7 @@ explainedAnswer(English,Unknowns,Explanation,Result) :- %trace,
     %print_message(informational, "Facts: ~w"-[Facts]), 
     extract_goal_command(Goal, SwishModule, InnerGoal, Command), 
     print_message(informational, "Command: ~w"-[Command]), trace, 
-    query_with_facts(at(Command,SwishModule),Scenario,Unknowns,Explanation,Result),
+    query_with_facts(at(InnerGoal,SwishModule),Scenario,Unknowns,Explanation,Result),
     print_message(informational,"Result:~w, Explanation: ~w"-[Result,Explanation]),
     print_message(informational,"Unknowns: ~w"-[Unknowns]),
     % setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
@@ -1782,14 +1782,14 @@ answer(English, Arg, Answers) :-
 
 % answer/4
 % answer(+English, with(+Scenario), -Explanations, -Result) :-
-answer(English, Arg, E, Result) :- trace,
+answer(English, Arg, E, Result) :- %trace,
     parsed, !, pengine_self(SwishModule), 
     translate_command(SwishModule, English, _, Goal, PreScenario), 
     ((Arg = with(ScenarioName), PreScenario=noscenario) -> Scenario=ScenarioName; Scenario=PreScenario), 
-    extract_goal_command(Goal, SwishModule, _InnerGoal, Command),
+    extract_goal_command(Goal, SwishModule, InnerGoal, Command),
     (Scenario==noscenario -> Facts = [] ; SwishModule:example(Scenario, [scenario(Facts, _)])), !, 
     setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
-            catch(query(Command,_,E,Result), Error, ( print_message(error, Error), fail ) ), 
+            catch((trace, query(at(InnerGoal, SwishModule),_,E,Result)), Error, ( print_message(error, Error), fail ) ), 
             _Result, 
             retract_facts(SwishModule, Facts)). 
 

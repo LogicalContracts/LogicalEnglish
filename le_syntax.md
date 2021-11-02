@@ -121,6 +121,8 @@ or
 
 ### Scenario
 
+a scenario is is an expression starting with "scenario", followed in order by a name, the word  "is", a ":", a new line, an indentation, a list of assumptions separated by a full stop. Assumptions are facts or rules, as described above. 
+
 
 ### Types
 
