@@ -1,19 +1,15 @@
 <div class="notebook">
 
 <div class="nb-cell markdown" name="md1">
-# Logical English
+# Logical English, [LE](https://github.com/mcalejo/TaxKB/blob/main/le_handbook.pdf)
 
-Once upon a time...
 </div>
 
-<div>
-<H2>Introduction to Logical English, LE</H2>
+<div class="nb-cell markdown" name="md2">
 
 <p>The parser of LE assumes a document with the following structure. One declaration title like:</p>
 
-<pre>
-the templates are:
-</pre>
+    the templates are:
 
 <p>followed by the declarations of all the corresponding predicates mentioned in the knowledge base.</p>
 
@@ -23,15 +19,11 @@ the templates are:
 
 <p>After that period, one of the following statement introduces the knowledge base:</p>
 
-<pre>
-the knowledge base includes:
-</pre>
+    the knowledge base includes:
 
 <p>or</p>
 
-<pre>
-the knowledge base KBName includes:
-</pre>
+    the knowledge base [name of the kb] includes:
 
 <p>And it is followed by the rules and facts written in Logical English syntax.</p>
 
@@ -42,32 +34,85 @@ of one condition per line with a level of indentation that corresponds to each o
 
 <p>Similarly, there may be sections for scenarios and queries, like:</p>
 
-<pre>
-scenario test is:
-   borrower pays an amount to lender on 2015-06-01.
-</pre>
+    scenario test is:
+        borrower pays an amount to lender on 2015-06-01.
 
-and
+<p>and</p>
 
-<pre>
-query one is:
-for which event:
- the small business restructure rollover applies to the event.
+    query one is:
+      for which event:
+          the small business restructure rollover applies to the event.
 
-query two is:
- which tax payer is a party of which event.
+    query two is:
+      which tax payer is a party of which event.
 
-query three is:
- A first time is after a second time
- and the second time is immediately before the first time.
-</pre>
+    query three is:
+        A first time is after a second time
+        and the second time is immediately before the first time.
 
 <p>which can then be used on the new command interface of LE on SWISH (e.g. answer/1 and others querying predicates)</p>
 
-<pre>
-? answer 'query one with scenario test'.
-</pre>
+      ? answer 'query one with scenario test'.
 
+<p>A first example is shown below, as part of this notebook. It could be used a separated program as well</p>
+
+</div>
+
+<div class="nb-cell program" name="citizenship">
+:- module('010+http://tests.com',[]).
+
+en("the target language is: prolog.
+
+the templates are:
+*a person* acquires British citizenship on *a date*.
+*a person* is born in *a place* on *a date*,
+*a date* is after commencement,
+*a person* is the mother of *a person*,
+*a person* is the father of *a person*,
+*a person* is a British citizen on *a date*,
+*a person* is settled in the UK on *a date*,
+*a person* says that *a sentence*,
+*a person* is authorised to determine fatherhood.
+
+the knowledge base citizenship includes:
+a person acquires British citizenship on a date
+if the person is born in the UK on the date
+and the date is after commencement
+and an other person is the mother of the person
+    or an other person is the father of the person
+and the other person is a British citizen on the date
+    or the other person is settled in the UK on the date.
+
+scenario alice is:
+John is born in the UK on 2021-10-09.
+2021-10-09 is after commencement.
+Alice is the mother of John.
+Alice is a British citizen on 2021-10-09.
+        
+query one is:
+    
+which person acquires British citizenship on which date.
+").
+</div>
+
+<div class="nb-cell markdown" name="md3">
+This program can queried like this:
+</div>
+
+<div class="nb-cell query" name="one_with_alice">
+answer one with alice. 
+</div>
+
+<div class="nb-cell markdown" name="md4">
+But it can also be queried directly, like this:
+</div>
+
+<div class="nb-cell query" name="one_direct">
+answer('which person acquires British citizenship on which date', with(alice)). 
+</div>
+
+<div class="nb-cell markdown" name="md5">
+For more information on Logical English, see [the Handbook](https://github.com/mcalejo/TaxKB/blob/main/le_handbook.pdf)
 </div>
 
 </div>
