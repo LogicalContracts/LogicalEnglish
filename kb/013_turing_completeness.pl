@@ -17,7 +17,7 @@ the knowledge base turing complete includes:
 some tm goes from a tape one to a tape two
 	if it changes q0 from [] to a left list and from the tape one to a right list
 	and the left list is the reverse of a second left list
-	and one appends the second left list to the right list to obtain the tape two.
+	and appending the second left list then the right list gives the tape two.
 
 %turing(Tape0, Tape) :-
 %    perform(q0, [], Ls, Tape0, Rs),
@@ -76,7 +76,7 @@ scenario machine one is:
 	rule2 says that q0 and b lead to qf and 1 after performing stay.
 
 query run is:
-	some tm goes from [1,1,1] to which tape.
+	some tm goes from [1,1,1,b] to which tape.
 
 
 ").

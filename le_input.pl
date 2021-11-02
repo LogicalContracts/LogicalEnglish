@@ -1566,7 +1566,7 @@ dictionary(Predicate, VariablesNames, Template) :- % dict(Predicate, VariablesNa
 %                    [A, is, an, individual, or, is, a, company, at, B]).
 % Prolog
 predef_dict([has_as_head_before, A, B, C], [list-list, symbol-term, rest_of_list-list], [A, has, B, as, head, before, C]).
-predef_dict([append, A, B, C],[first_list-list, second_list-list, third_list-list], [the, concatenation, of, A, then, B, becomes, C]).
+predef_dict([append, A, B, C],[first_list-list, second_list-list, third_list-list], [appending, A, then, B, gives, C]).
 predef_dict([reverse, A, B], [list-list, other_list-list], [A, is, the, reverse, of, B]).
 predef_dict([same_date, T1, T2], [time_1-time, time_2-time], [T1, is, the, same, date, as, T2]). % see reasoner.pl before/2
 predef_dict([between,Minimum,Maximum,Middle], [min-date, max-date, middle-date], 
@@ -1698,8 +1698,8 @@ explainedAnswer(English,Unknowns,Explanation,Result) :- %trace,
         (SwishModule:example(Scenario, [scenario(Facts, _)]) -> 
             true;  print_message(error, "Scenario: ~w does not exist"-[Scenario]))), !,  
     %print_message(informational, "Facts: ~w"-[Facts]), 
-    extract_goal_command(Goal, SwishModule, _InnerGoal, Command), 
-    print_message(informational, "Command: ~w"-[Command]),
+    extract_goal_command(Goal, SwishModule, InnerGoal, Command), 
+    print_message(informational, "Command: ~w"-[Command]), trace, 
     query_with_facts(at(Command,SwishModule),Scenario,Unknowns,Explanation,Result),
     print_message(informational,"Result:~w, Explanation: ~w"-[Result,Explanation]),
     print_message(informational,"Unknowns: ~w"-[Unknowns]),
@@ -1782,12 +1782,12 @@ answer(English, Arg, Answers) :-
 
 % answer/4
 % answer(+English, with(+Scenario), -Explanations, -Result) :-
-answer(English, Arg, E, Result) :-
+answer(English, Arg, E, Result) :- trace,
     parsed, !, pengine_self(SwishModule), 
     translate_command(SwishModule, English, _, Goal, PreScenario), 
     ((Arg = with(ScenarioName), PreScenario=noscenario) -> Scenario=ScenarioName; Scenario=PreScenario), 
     extract_goal_command(Goal, SwishModule, _InnerGoal, Command),
-    (Scenario==noscenario -> Facts = [] ; SwishModule:example(Scenario, [scenario(Facts, _)])), 
+    (Scenario==noscenario -> Facts = [] ; SwishModule:example(Scenario, [scenario(Facts, _)])), !, 
     setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
             catch(query(Command,_,E,Result), Error, ( print_message(error, Error), fail ) ), 
             _Result, 
@@ -1970,6 +1970,7 @@ user:(answer Query with Scenario):-
 user:answer( EnText) :- answer( EnText).
 user:answer( EnText, Scenario) :- answer( EnText, Scenario).
 user:answer( EnText, Scenario, Result) :- answer( EnText, Scenario, Result).
+user:answer( EnText, Scenario, E, Result) :- answer( EnText, Scenario, E, Result).
 user:explainedAnswer(Query,Unknowns,Explanation,Result) :- explainedAnswer(Query,Unknowns,Explanation,Result).
 
 user:(show Something) :- 
@@ -2023,5 +2024,6 @@ sandbox:safe_primitive(le_input:answer( _EnText)).
 sandbox:safe_primitive(le_input:show( _Something)).
 sandbox:safe_primitive(le_input:answer( _EnText, _Scenario)).
 sandbox:safe_primitive(le_input:answer( _EnText, _Scenario, _Result)).
+sandbox:safe_primitive(le_input:answer( _EnText, _Scenario, _Explanation, _Result)).
 sandbox:safe_primitive(le_input:explainedAnswer(_,_,_,_)).
 sandbox:safe_primitive(le_input:le_taxlog_translate( _EnText, _Terms)).
