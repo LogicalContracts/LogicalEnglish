@@ -1,4 +1,4 @@
-# TaxLog and Logical English projects
+# TaxLog and Logical English projects . PRELIMINARY
 
 For more about TaxLog see [TaxLog.md](TaxLog.md) file.
 
