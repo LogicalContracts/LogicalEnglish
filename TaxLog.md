@@ -1,6 +1,8 @@
 # TaxKB
 Prolog based generic knowledge base for tax regulations, including reasoner, editor and other tools.
 
+The current demo site is at <https://taxlog.logicalcontracts.com>
+
 
 
 <!-- vscode-markdown-toc -->
@@ -19,7 +21,6 @@ Prolog based generic knowledge base for tax regulations, including reasoner, edi
 	* 4.1. [Language processing](#Languageprocessing)
 	* 4.2. [Perspective on existing (encoded) Knowledge Pages](#PerspectiveonexistingencodedKnowledgePages)
 	* 4.3. [Querying](#Querying)
-	* 4.4. [Parsing Logical English](#LEParsing)
 * 5. [Installation and deployment](#Installationanddeployment)
 	* 5.1. [Quick recipe for a development server](#Quickrecipeforadevelopmentserver)
 	* 5.2. [More details](#Moredetails)
@@ -43,16 +44,16 @@ The following tax regulation fragments were indicated by each project sponsor; o
 
 Provided via Andrew Noble email Nov 28, 2020, and earlier:
 -  <https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/>
-	- Tax-KB [editor](http://demo.logicalcontracts.com:8082/p/cgt_concessions_basic_conditions_sb.pl)
+	- Tax-KB [editor](https://taxlog.logicalcontracts.com/p/cgt_concessions_basic_conditions_sb.pl)
 
 - <https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/small-business-restructure-rollover/>
 	- Bob's [GoogleDoc](https://docs.google.com/document/d/1fj8Cjp_FNKAIXvrUYD52Zpfgo6Ftqbypd8s36mC7CdA/edit?ts=5fc7e58b) analyzing it.
-	- Tax-KB [editor](http://demo.logicalcontracts.com:8082/p/cgt_concessions_sb_restructure_rollover.pl)
+	- Tax-KB [editor](https://taxlog.logicalcontracts.com/p/cgt_concessions_sb_restructure_rollover.pl)
 - <https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/maximum-net-asset-value-test/>
 	- Bob's [GoogleDoc](https://docs.google.com/document/d/1wJl_JzZ7tkMMyia3eKdz1XlX6JBhYIcngJTESZQjz6E/edit?ts=5fd3aafc&skip_itp2_check=true)
-	- Tax-KB [editor](http://demo.logicalcontracts.com:8082/p/cgt_maximum_net_asset_value.pl)
+	- Tax-KB [editor](https://taxlog.logicalcontracts.com/p/cgt_maximum_net_asset_value.pl)
 - <https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/affiliates/>
-	- Tax-KB [editor](http://demo.logicalcontracts.com:8082/p/cgt_affiliates.pl)
+	- Tax-KB [editor](https://taxlog.logicalcontracts.com/p/cgt_affiliates.pl)
 	- Further references (ignored in the first encoding): <https://pointonpartners.com.au/small-business-cgt-passing-the-threshold-tests/>
 
 This was indicated (Dec 10 AN email) for later analysis: <https://www.taxtalks.com.au/small-business-participation-percentage/>
@@ -62,12 +63,12 @@ This was indicated (Dec 10 AN email) for later analysis: <https://www.taxtalks.c
 _Some suggestions for simplification and more info in first and second Chris emails, Dec 2, 2020_
 
 - <https://www.gov.uk/guidance/stamp-duty-reserve-tax-reliefs-and-exemptions>
-	- Tax-KB [editor](http://demo.logicalcontracts.com:8082/p/stamp_duty_reserve_tax_reliefs.pl)
+	- Tax-KB [editor](https://taxlog.logicalcontracts.com/p/stamp_duty_reserve_tax_reliefs.pl)
 - <https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis/rdrm11040>
-	- Tax-KB [editor](http://demo.logicalcontracts.com:8082/p/statutory_residence_test_guidance.pl)
+	- Tax-KB [editor](https://taxlog.logicalcontracts.com/p/statutory_residence_test_guidance.pl)
 	- Bob's [GoogleDoc](https://docs.google.com/document/d/1nzoGuzPKI375jxtxT38jCEYwuhuZvjSBSHmvxusW0Lg/edit?ts=5fc92d43#heading=h.pzozuu8bp8r0)
 - <https://www.gov.uk/guidance/corporation-tax-research-and-development-rd-relief>
-	- Tax-KB [editor](http://demo.logicalcontracts.com:8082/p/research_and_development_tax_reliefs.pl)
+	- Tax-KB [editor](https://taxlog.logicalcontracts.com/p/research_and_development_tax_reliefs.pl)
 
 ##  2. <a name='TaxLogtheTax-KBlanguage'></a>TaxLog, the Tax-KB language
 
@@ -164,6 +165,9 @@ The ```is_sme``` Taxlog predicate (which is interpreted) calls the ```call_my_DB
 (TODO: fix this hack) SomeExplanation MUST be textually different from '[]'.
 
 ##  3. <a name='TowardsLogicalEnglish'></a>Towards Logical English
+
+*NOTE: the simplified "dialect" of Logical English generated below is unrelated to the [latest](le_syntax.pl) version; please see [README.md](README.md) for more information.*
+
 **"Logical English"** (LE) is an attempt at a design "sweet spot" in the continuum from natural to constrained to formal languages - closer to the latter, but retaining most of the legibility of clear, natural English. For more about it see references at the top of Bob Kowalski's [home page](https://www.doc.ic.ac.uk/~rak/).
 
 Tax-KB includes a preliminary **Logical English generator**, based on introspection of the Taxlog/Prolog clauses and its variable names, dispensing, for the moment, any additional linguistic information. This is intended as a first step towards a future full blown LE module, to include LE parsing; by exposing prospect users to the present LE representantions these can be validated, commented upon, and a precise specification can be established for the future parser. 
@@ -172,11 +176,11 @@ From a practical perspective, the LE generator gives an incentive to Taxlog code
 
 ###  3.1. <a name='DirectaccesstoLogicalEnglishrendering'></a>Direct access to Logical English rendering
 
-To see it at work, take the module name **KP** of any knowledge page (*the argument in the :-module(KP) directive at its top*), and open the URL "http://demo.logicalcontracts.com:8082/logicalEnglish?kp=**KP**". 
+To see it at work, take the module name **KP** of any knowledge page (*the argument in the :-module(KP) directive at its top*), and open the URL "https://taxlog.logicalcontracts.com/logicalEnglish?kp=**KP**". 
 
 For example, for the KP regarding affiliates in Australian CGT regulations, open:
 
- > <http://demo.logicalcontracts.com:8082/logicalEnglish?kp=https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/affiliates/>
+ > <https://taxlog.logicalcontracts.com/logicalEnglish?kp=https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/affiliates/>
 
 Predicates remote to that page have *other legislation* links, which lead to either other "Logical English" pages (if a knowledge page already exists for it) or to the original legislation website. There is always also a link to the Taxlog (executable) representation, in the Tax-KB editor.
 
@@ -185,7 +189,7 @@ The resulting web page can be copied and pasted into Microsoft Word or similar t
 ###  3.2. <a name='ToimprovetheLogicalEnglishrepresentation'></a>To improve the Logical English representation
 LE is rendered dynamically from a current knowledge page:
 
-- Open a knowledge page, for example <http://demo.logicalcontracts.com:8082/p/cgt_affiliates.pl>
+- Open a knowledge page, for example <https://taxlog.logicalcontracts.com/p/cgt_affiliates.pl>
 - Run the goal le(Link). 
 - Click the "Show Logical English" button in the Link variable result
 
@@ -222,7 +226,7 @@ Standard Prolog clause introspection is used, plus some SWI-Prolog extensions fo
 	- The result will be a:
 		- {pageURL: MyPageURL, draft: StringWithNewPrologModuleSourceCode}
 	- Example
-		- curl --header "Content-Type: application/json" --request POST --data '{"operation":"draft", "pageURL":"http://mysite/page1#section2",  "content":[{"url":"http://mysite/page1#section2!chunk1", "text":"john flies by instruments"}, {"url":"http://mysite/page1#section2!chunk2", "text":"miguel drives with gusto"}]}' http://demo.logicalcontracts.com:8082/taxkbapi
+		- curl --header "Content-Type: application/json" --request POST --data '{"operation":"draft", "pageURL":"http://mysite/page1#section2",  "content":[{"url":"http://mysite/page1#section2!chunk1", "text":"john flies by instruments"}, {"url":"http://mysite/page1#section2!chunk2", "text":"miguel drives with gusto"}]}' https://taxlog.logicalcontracts.com/taxkbapi
 
 ###  4.2. <a name='PerspectiveonexistingencodedKnowledgePages'></a>Perspective on existing (encoded) Knowledge Pages
 *Note: in the following predicates, leaving KP unbound will show not one, but all knowledge pages*
@@ -234,7 +238,7 @@ Standard Prolog clause introspection is used, plus some SWI-Prolog extensions fo
 - ```le(Link)``` generate Logical English web page and bind Link to a navigation button
 	- ```le([no_indefinites],Link)``` same but omitting a/an articles
 - Web API (GET) for preliminary Logical English
-	- http://demo.logicalcontracts.com:8082/logicalEnglish?kp=**KP**"
+	- https://taxlog.logicalcontracts.com/logicalEnglish?kp=**KP**"
 
 ###  4.3. <a name='Querying'></a>Querying
 - ```query_with_facts(Goal,FactsSource,Unknowns,Explanation,Result)```
@@ -255,38 +259,9 @@ Standard Prolog clause introspection is used, plus some SWI-Prolog extensions fo
 	- The result will be an array of (for each solution):
 		- {result:true/false/unknown, bindings:VarsValues, unknowns:Array, why: Tree}
 	- Example
-		- curl --header "Content-Type: application/json" --request POST --data '{"operation":"query", "theQuery":"a(13,Y)", "facts":["d(13)"], "module":"http://tests.com"}' http://demo.logicalcontracts.com:8082/taxkbapi
+		- curl --header "Content-Type: application/json" --request POST --data '{"operation":"query", "theQuery":"a(13,Y)", "facts":["d(13)"], "module":"http://tests.com"}' https://taxlog.logicalcontracts.com/taxkbapi
 - ```render_questions(Unknown,Questions)``` uses question(…) fact annotations to obtain more readable "questions"
 
-###  4.4. <a name='LEParsing'></a>Parsing Logical English
-- ```text_to_logic(LogicalEnglishString, Error, TaxlogTranslation)```
-	- LogicalEnglishString is a regular string with with the following structure. The expression:
-
-		the predicates are:
-
-		followed by the declarations of all the predicates involved in the knowledge base.
-		Each declarations define a template with the variables and other words required to
-		describe a relevant relation. It is a comma separated list of templates which ends
-		with a period. 
-
-		After that period, the following statement introduces the knowledge base:
-
-		the knowledge base includes: 
-
-		This is followed by the rules and facts written in Logical English syntax. Each rule must end with a period. 
-
-		Indentation is used to organize the and/or list of conditions by strict
-		observance of one condition per line with a level of indentation that 
-		correspond to each operator and corresponding conditions. 
-
-		Commentaries can be added with the usual % symbol like in Prolog. 
-	- Error contains a report of the last parsed positions inside the file (after removing commentaries) 
-		a fragment of the text that contains the error. This variable contains a [] if no error was a found. 
-	- TaxlogTranslation contains a list with the terms and predicates obtained from the Logical English text.
-
-- ```le_taxlog_translate(en(LogicalEnglishString), TaxlogTranslation)``` to be used inside the SWISH querying interface
-	- LogicalEnglishString as explained above. 
-	- TaxlogTranslation as explained above. 
 
 ##  5. <a name='Installationanddeployment'></a>Installation and deployment
 
@@ -335,7 +310,7 @@ To update the tokenize/ package: ```git submodule update --init --recursive```
 ###  6.1. <a name='Rendering'></a>Rendering
 SWISH includes a powerful Prolog term renderer mechanism, allowing the generation of arbitrary HTML (including possibly the reeling in of Javascript components). Tax-KB includes several specific renderers, for:
 - [Parse trees](https://github.com/mcalejo/TaxKB/blob/main/spacy/hierplane_renderer.pl); this embeds AllenAI's powerful [hierplane](https://allenai.github.io/hierplane)
-	- Token lists are rendered with SWISH's standard [table renderer](http://demo.logicalcontracts.com:8082/example/render_table.swinb)
+	- Token lists are rendered with SWISH's standard [table renderer](https://taxlog.logicalcontracts.com/example/render_table.swinb)
 - Logical English [navigation links](https://github.com/mcalejo/TaxKB/blob/main/swish/le_link_renderer.pl), effectively embedding a hidden form containing the generated HTML with the LE representation
 	- this is articulated with the le(..) predicate; for direct URL access to LE this renderer is not used
 - [Explanation trees](https://github.com/mcalejo/TaxKB/blob/main/swish/explanation_renderer.pl)

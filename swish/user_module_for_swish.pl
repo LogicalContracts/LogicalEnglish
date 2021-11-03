@@ -249,6 +249,7 @@ serve_taxkb_resources(Request) :-
 % Wire our colouring logic into SWI's:
 prolog_colour:term_colours(T,C) :- taxlog2prolog(T,C,_).
 
+% This at the end, as it activates the term expansion (no harm done otherwise, just some performance..):
 % first term expansion to support en/1 
 %user:term_expansion(NiceTerm,'$source_location'(File, Line):ExpandedTerms) :- 
 user:term_expansion(NiceTerm, ExpandedTerms) :-  % hook for LE extension
@@ -256,20 +257,13 @@ user:term_expansion(NiceTerm, ExpandedTerms) :-  % hook for LE extension
 	context_module(user), % LPS programs are in the user module
 	prolog_load_context(source,File), % atom_prefix(File,'pengine://'), % process only SWISH windows
 	prolog_load_context(term_position,TP), stream_position_data(line_count,TP,Line),
-	%catch(le_taxlog_translate(NiceTerm,File,Line,TaxlogTerms),E,	
-	%	(print_message(error,"Translation Error: ~w"-[E]),fail)), 
-	( le_taxlog_translate(NiceTerm,File,Line,TaxlogTerms) ->
-		(TaxlogTerms\=[]-> 
-			( findall(PrologTerm, (
-				member(TT_,TaxlogTerms), 
-				(is_list(TT_)->member(TT,TT_);TT=TT_), % the LE translator generates a list of lists... and non lists
-				(member(target(prolog),TaxlogTerms) -> semantics2prolog(TT,_,PrologTerm) ; taxlog2prolog(TT,_,PrologTerm))
-				), ExpandedTerms) 
-			)
-			; ExpandedTerms = [])
-		; taxlog2prolog(NiceTerm,_,ExpandedTerms)).
-	%print_message(informational,"File: ~w"-[File]),
-	%print_message(informational,"expanded LE to ~w"-[ExpandedTerms]).
-% This at the end, as it activates the term expansion (no harm done otherwise, just some performance..):
-%user:term_expansion(T,NT) :- taxlog2prolog(T,_,NT).
+	le_taxlog_translate(NiceTerm,File,Line,TaxlogTerms),
+	(TaxlogTerms\=[]-> 
+			findall(PrologTerm, (
+			member(TT_,TaxlogTerms), 
+			(is_list(TT_)->member(TT,TT_);TT=TT_), % the LE translator generates a list of lists... and non lists
+			(member(target(prolog),TaxlogTerms) -> semantics2prolog(TT,_,PrologTerm) ; taxlog2prolog(TT,_,PrologTerm))
+			), ExpandedTerms) 
+		; ExpandedTerms = []).
+user:term_expansion(T,NT) :- taxlog2prolog(T,_,NT).
 %user:term_expansion(T,NT) :- (member(target(prolog),T) -> semantics2prolog(T,_,NT) ; taxlog2prolog(T,_,NT)).
