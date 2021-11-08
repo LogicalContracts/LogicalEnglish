@@ -143,7 +143,7 @@ header(_, Rest, _) :-
     fail.
 
 % Experimental rules for processing types:
-process_types_dict(Dictionary, Type_entries) :- trace, 
+process_types_dict(Dictionary, Type_entries) :- 
     findall(Word, 
     (   (member(dict([_|GoalElements], Types, _), Dictionary);
         member(meta_dict([_|GoalElements], Types, _), Dictionary)), 
@@ -753,10 +753,8 @@ build_template_elements(['*', Word|RestOfWords], _Previous, [Var|RestVars], [Nam
     has_pairing_asteriks([Word|RestOfWords]), 
     %(ind_det(Word); ind_det_C(Word)), % Previous \= [is|_], % removing this requirement when * is used
     determiner(Word), % allows the for variables in templates declarations only
-    extract_variable(['*'], [], NameWords, [], TypeWords, RestOfWords, ['*'|NextWords]), !, % <-- it must end with * too
-    %reverse(RNameWords, NameWords), 
+    extract_variable_template(['*'], [], NameWords, [], TypeWords, RestOfWords, ['*'|NextWords]), !, % <-- it must end with * too
     name_predicate(NameWords, Name),
-    %reverse(RTypeWords, TypeWords),  
     name_predicate(TypeWords, Type), 
     build_template_elements(NextWords, [], RestVars, RestTypes, Others, RestTemplate). 
 build_template_elements(['*', Word|RestOfWords], _Previous,_, _, _, _) :-
@@ -1193,6 +1191,27 @@ extract_literal(SW, RestName, ['\t'|RestOfWords],  NextWords) :- !,
     extract_literal(SW, RestName, RestOfWords, NextWords).
 extract_literal(SW, [Word|RestName], [Word|RestOfWords],  NextWords) :-
     extract_literal(SW, RestName, RestOfWords, NextWords).
+
+% extract_variable_template/7
+% extract_variable_template(+StopWords, +InitialNameWords, -FinalNameWords, +InitialTypeWords, -FinalTypeWords, +ListOfWords, -NextWordsInText)
+% refactored as a dcg predicate
+extract_variable_template(_, Names, Names, Types, Types, [], []) :- !.                                % stop at when words run out
+extract_variable_template(StopWords, Names, Names, Types, Types, [Word|RestOfWords], [Word|RestOfWords]) :-   % stop at reserved words, verbs or prepositions. 
+    %(member(Word, StopWords); reserved_word(Word); verb(Word); preposition(Word); punctuation(Word); phrase(newline, [Word])), !.  % or punctuation
+    (member(Word, StopWords); that_(Word); list_symbol(Word); punctuation(Word); phrase(newline, [Word])), !.
+extract_variable_template(SW, InName, OutName, InType, OutType, [' '|RestOfWords], NextWords) :- !, % skipping spaces
+    extract_variable_template(SW, InName, OutName, InType, OutType, RestOfWords, NextWords).
+extract_variable_template(SW, InName, OutName, InType, OutType, ['\t'|RestOfWords], NextWords) :- !, % skipping spaces
+    extract_variable_template(SW, InName, OutName, InType, OutType, RestOfWords, NextWords).  
+extract_variable_template(SW, InName, OutName, InType, OutType, [Word|RestOfWords], NextWords) :- % ordinals are not part of the type
+    ordinal(Word), !, 
+    extract_variable_template(SW, [Word|InName], OutName, InType, OutType, RestOfWords, NextWords).
+%extract_variable_template(SW, InName, OutName, InType, OutType, [Word|RestOfWords], NextWords) :- % types are not part of the name
+%    is_a_type(Word),
+%    extract_variable(SW, InName, NextName, InType, OutType, RestOfWords, NextWords),
+%    (NextName = [] -> OutName = [Word]; OutName = NextName), !.
+extract_variable_template(SW, InName, [Word|OutName], InType, [Word|OutType], [Word|RestOfWords], NextWords) :- % everything else is part of the name (for instances) and the type (for templates)
+    extract_variable_template(SW, InName, OutName, InType, OutType, RestOfWords, NextWords).
 
 % extract_variable/7
 % extract_variable(+StopWords, +InitialNameWords, -FinalNameWords, +InitialTypeWords, -FinalTypeWords, +ListOfWords, -NextWordsInText)
@@ -1759,7 +1778,7 @@ answer(English) :- %trace,
     setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
             catch((trace, Command), Error, ( print_message(error, Error), fail ) ), 
             _Result, 
-            retract_facts(SwishModule, Facts)),
+            retract_facts(SwishModule, Facts)), trace, 
     get_answer_from_goal(Goal, RawAnswer), name_as_atom(RawAnswer, EnglishAnswer),  
     print_message(informational, "Answer: ~w"-[EnglishAnswer]).
 

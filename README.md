@@ -32,3 +32,5 @@ Soon to be published
 	- Templates are therefore formally used to capture type informmation for variables. Any combination of words between the asteriks identifies a type, except for ordinal. 
 	- Added is_type/1 (dynamic predicate) and pre_is_type/1 (for predefined templates) to record that information in memory. 
 	- Correcting the use of dictionary/3 in le_output
+- [2021-11-08] Beta testing. 
+	- Adding extract_variable_template/7 as specific predicates for templates. Fixing bug in output of answers with dates. 
