@@ -27,3 +27,8 @@ Soon to be published
 
 - [2021-11-02] Alfa testing. Last version: [eb0039077d068dd718ef47fd81af95554faeaef3](https://github.com/mcalejo/TaxKB/commit/eb0039077d068dd718ef47fd81af95554faeaef3)
 	- Updates to documentation, README.md, licensing and querying machinery.
+- [2021-11-07] Beta testing. Previous version: [92d90631853812384463c1cb2c2f1607e0a3fd64](https://github.com/mcalejo/TaxKB/commit/92d90631853812384463c1cb2c2f1607e0a3fd64)
+	- Adding the command show types, to display the list of type identifier available in predefined templates and in the current document. 
+	- Templates are therefore formally used to capture type informmation for variables. Any combination of words between the asteriks identifies a type, except for ordinal. 
+	- Added is_type/1 (dynamic predicate) and pre_is_type/1 (for predefined templates) to record that information in memory. 
+	- Correcting the use of dictionary/3 in le_output
