@@ -1614,7 +1614,7 @@ predef_dict([>=, T1, T2], [thing_1-thing, thing_2-thing], [T1, >,=, T2]).
 predef_dict([=, T1, T2], [thing_1-thing, thing_2-thing], [T1, =, T2]).
 predef_dict([<, T1, T2], [thing_1-thing, thing_2-thing], [T1, <, T2]).
 predef_dict([>, T1, T2], [thing_1-thing, thing_2-thing], [T1, >, T2]).
-predef_dict([unparse_time, Secs, Date], [secs-seconds, date-date], [Secs, corresponds, to, date, Date]).
+predef_dict([unparse_time, Secs, Date], [secs-time, date-date], [Secs, corresponds, to, date, Date]).
 predef_dict([must_be, Type, Term], [type-type, term-term], [Term, must, be, Type]).
 predef_dict([must_not_be, A, B], [term-term, variable-variable], [A, must, not, be, B]). 
 
@@ -1626,8 +1626,7 @@ pre_is_type(object).
 pre_is_type(date).
 pre_is_type(day).
 pre_is_type(person).
-pre_is_type(list).
-pre_is_type(seconds). 
+pre_is_type(list). 
 pre_is_type(number). 
 
 % support predicates
