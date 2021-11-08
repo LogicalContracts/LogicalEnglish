@@ -20,6 +20,7 @@ limitations under the License.
 
 :- module(_,[print_kp_le/1, le/2, le/1, test_kp_le/2, test_kp_le/1]).
 
+:- use_module(syntax). 
 :- use_module(reasoner).
 :- use_module(kp_loader).
 :- use_module(drafter).
@@ -75,7 +76,7 @@ test_kp_le(KP,Options) :-
 test_kp_le(KP) :- test_kp_le(KP,[]).
 
 % "invokes" our SWISH renderer
-le(LE) :-
+le(LE) :- 
     le([],LE).
 
 % Obtain navigation link to Logical English for the current SWISH editor
@@ -96,7 +97,7 @@ le_kp_html(KP, Options, div(style='font-family: "Century Schoolbook", Times, ser
         a([href=EditURL,target='_blank'],"Taxlog/Prolog"), 
         " from the legislation at",br([]),
         a([href=KP,target='_blank'],KP)
-        ]))| PredsHTML ]) ) :-
+        ]))| PredsHTML ]) ) :- 
     retractall(option(_)), OL=[no_indefinites],
     must_succeed( forall(member(O,Options), (member(O,OL), assert(option(O)))), "Bad Logical English option, admissibles are in ~w"-[OL] ),
     retractall(reported_predicate_error(_)),
@@ -105,6 +106,7 @@ le_kp_html(KP, Options, div(style='font-family: "Century Schoolbook", Times, ser
     findall([\["&nbsp;"],div(style='border-style: inset',PredHTML)], (
         kp_predicate_mention(KP,Pred,defined), 
         \+ \+ le_clause(Pred,KP_,_,_), % we have more than, say, a thread_local declaration...
+        %print_message(informational, "~w ~w"-[KP, Pred]), 
         findall(div(style='padding:5px;',ClauseHTML), (le_clause(Pred,KP_,_Ref,LE), le_html(LE,0,_,ClauseHTML)), PredHTML)
         ),PredsHTML_),
     append(PredsHTML_,PredsHTML).
@@ -349,8 +351,8 @@ atomicSentenceStyle(le_predicate(Functor,_),Words,S,Tip) :-
 %   at(Predicate,KP)  ...Predicate (cf. RefLink)...
 %   on(Predicate,TimeExpression) ...Predicate at time ...
 %TODO: return explicit time on the head
-le_clause(H,M,Ref,LE) :-
-    must_be(nonvar,H),
+le_clause(H,M,Ref,LE) :- 
+    must_be(nonvar,H), 
     myClause(H,M,_,Ref), 
     % hacky code extracted from clause_info/2, to make sure we do not get confused with anonymous variables 
     % (which are ommited from the variable names list)
@@ -387,7 +389,7 @@ atomicSentence(on(Cond,Time),VarNames,V1,Vn,on(Conditions,Moment)) :- !,
 atomicSentence(true,_,V,V,true) :- !.
 atomicSentence(false,_,V,V,false) :- !.
 atomicSentence(Literal,VarNames,V1,Vn,le_template(Template,Arguments)) :-  Literal=..[F|Args], 
-    dict([F|Args],_,Template), !, 
+    (dictionary([F|Args],_,Template);meta_dictionary([F|Args],_,Template)), !, 
     arguments(Args,VarNames,V1,Vn,Arguments).
 atomicSentence(Literal,VarNames,V1,Vn,le_predicate(Functor,Arguments)) :- Literal=..[F|Args],
     nameToWords(F,Functor), arguments(Args,VarNames,V1,Vn,Arguments).
@@ -474,7 +476,8 @@ handle_le(Request) :-
         |TheHTML
     ]).
 
-:- discontiguous le_output:dict/3.
+% this is no longer used. It uses le_input:dictionary and le_input:meta_dictionary instead. 
+%:- discontiguous le_output:dict/3.
 % dict(?LiteralElements, ?NamesAndTypes, ?Template)
 % this is a multimodal predicate used to associate a Template with its particular other of the words for LE
 % with the Prolog expression of that relation in LiteralElements (not yet a predicate =.. is done outside).

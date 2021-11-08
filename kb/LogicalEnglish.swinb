@@ -112,7 +112,8 @@ answer('which person acquires British citizenship on which date', with(alice)).
 </div>
 
 <div class="nb-cell markdown" name="md5">
-For more information on Logical English, see [the Handbook](https://github.com/mcalejo/TaxKB/blob/main/le_handbook.pdf)
+<p>For more information on Logical English, see [the Handbook](https://github.com/mcalejo/TaxKB/blob/main/le_handbook.pdf). </p>
+<p>The open source code is at [https://github.com/mcalejo/TaxKB](https://github.com/mcalejo/TaxKB)</p>
 </div>
 
 </div>

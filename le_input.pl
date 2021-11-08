@@ -83,7 +83,7 @@ query three is:
 
 :- module(le_input, 
     [document/3, le_taxlog_translate/4, 
-    op(1000,xfx,user:and),  % to support querying
+    %op(1000,xfx,user:and),  % to support querying
     op(800,fx,user:resolve), % to support querying
     op(800,fx,user:answer), % to support querying
     op(850,xfx,user:with), % to support querying
@@ -95,7 +95,7 @@ query three is:
 :- use_module(library(pengines)).
 :- use_module('reasoner.pl').
 :- thread_local text_size/1, error_notice/4, dict/3, meta_dict/3, example/2, 
-                last_nl_parsed/1, kbname/1, happens/2, initiates/3, terminates/3, 
+                last_nl_parsed/1, kbname/1, happens/2, initiates/3, terminates/3, is_type/1,
                 predicates/1, events/1, fluents/1, metapredicates/1, parsed/0.  
 :- discontiguous statement/3, declaration/4, example/2. 
 
@@ -133,11 +133,24 @@ header(Settings, In, Next) :-
     RulesforErrors = % rules for errors that have been statically added
       [(text_size(TextSize))|Settings], % is text_size being used? % asserting the Settings too! predicates, events and fluents
     order_templates(DictEntries, OrderedEntries), 
-    append(OrderedEntries, RulesforErrors, MRules),
+    process_types_dict(OrderedEntries, Types), 
+    %print_message(informational, Types),
+    append(OrderedEntries, RulesforErrors, SomeRules),
+    append(SomeRules, Types, MRules), 
     assertall(MRules), !. % asserting contextual information
 header(_, Rest, _) :- 
     asserterror('LE error in the header ', Rest), 
     fail.
+
+% Experimental rules for processing types:
+process_types_dict(Dictionary, Type_entries) :- trace, 
+    findall(Word, 
+    (   (member(dict([_|GoalElements], Types, _), Dictionary);
+        member(meta_dict([_|GoalElements], Types, _), Dictionary)), 
+        member((_Name-Type), Types), 
+        process_types_or_names([Type], GoalElements, Types, TypeWords),
+        concat_atom(TypeWords, '_', Word), Word\=''), Templates), 
+    setof(is_type(Ty), member(Ty, Templates), Type_entries).
 
 % Experimental rules for reordering of templates
 % order_templates/2
@@ -528,7 +541,7 @@ condition(FinalExpression, _, Map1, MapN) -->
 
 % the Value is the sum of each Asset Net such that
 condition(FinalExpression, _, Map1, MapN) --> 
-    variable([is], Value, Map1, Map2), is_the_sum_of_each_, extract_variable([such], Each, [], NameWords, _), such_that_, !, 
+    variable([is], Value, Map1, Map2), is_the_sum_of_each_, extract_variable([such], [], NameWords, [], _), such_that_, !, 
     { name_predicate(NameWords, Name), update_map(Each, Name, Map2, Map3) }, newline, 
     spaces(Ind), conditions(Ind, Map3, Map4, Conds), 
     modifiers(aggregate_all(sum(Each),Conds,Value), Map4, MapN, FinalExpression).
@@ -565,14 +578,14 @@ modifiers(MainExpression, Map, Map, MainExpression) --> [].
 
 % variable/4 or /6
 variable(StopWords, Var, Map1, MapN) --> 
-    spaces(_), [Det], {indef_determiner(Det)}, extract_variable(StopWords, Var, [], NameWords, _), % <-- CUT!
+    spaces(_), [Det], {indef_determiner(Det)}, extract_variable(StopWords, [], NameWords, [], _), % <-- CUT!
     {  NameWords\=[], name_predicate(NameWords, Name), update_map(Var, Name, Map1, MapN) }. 
 variable(StopWords, Var, Map1, MapN) --> 
-    spaces(_), [Det], {def_determiner(Det)}, extract_variable(StopWords, Var, [], NameWords, _), % <-- CUT!
+    spaces(_), [Det], {def_determiner(Det)}, extract_variable(StopWords, [], NameWords, [], _), % <-- CUT!
     {  NameWords\=[], name_predicate(NameWords, Name), consult_map(Var, Name, Map1, MapN) }. 
 % allowing for symbolic variables: 
 variable(StopWords, Var, Map1, MapN) --> 
-    spaces(_), extract_variable(StopWords, Var, [], NameWords, _),
+    spaces(_), extract_variable(StopWords, [], NameWords, [], _),
     {  NameWords\=[], name_predicate(NameWords, Name), consult_map(Var, Name, Map1, MapN) }. 
 
 % constant/4 or /6
@@ -667,8 +680,8 @@ query_header(Ind, Map) --> spaces(Ind), for_which_, list_of_vars([], Map), colon
 query_header(0, []) --> []. 
 
 list_of_vars(Map1, MapN) --> 
-    extract_variable([',', and, ':'], Var, [], NameWords, _), 
-    { name_predicate(NameWords, Name), update_map(Var, Name, Map1, Map2) },
+    extract_variable([',', and, ':'], [], NameWords, [], _), 
+    { name_predicate(NameWords, Name), update_map(_Var, Name, Map1, Map2) },
     rest_of_list_of_vars(Map2, MapN).
 
 rest_of_list_of_vars(Map1, MapN) --> and_or_comma_, list_of_vars(Map1, MapN).
@@ -740,10 +753,10 @@ build_template_elements(['*', Word|RestOfWords], _Previous, [Var|RestVars], [Nam
     has_pairing_asteriks([Word|RestOfWords]), 
     %(ind_det(Word); ind_det_C(Word)), % Previous \= [is|_], % removing this requirement when * is used
     determiner(Word), % allows the for variables in templates declarations only
-    extract_variable(['*'], Var, [], RNameWords, RTypeWords, RestOfWords, ['*'|NextWords]), !, % <-- it must end with * too
-    reverse(RNameWords, NameWords), 
+    extract_variable(['*'], [], NameWords, [], TypeWords, RestOfWords, ['*'|NextWords]), !, % <-- it must end with * too
+    %reverse(RNameWords, NameWords), 
     name_predicate(NameWords, Name),
-    reverse(RTypeWords, TypeWords),  
+    %reverse(RTypeWords, TypeWords),  
     name_predicate(TypeWords, Type), 
     build_template_elements(NextWords, [], RestVars, RestTypes, Others, RestTemplate). 
 build_template_elements(['*', Word|RestOfWords], _Previous,_, _, _, _) :-
@@ -934,21 +947,21 @@ meta_match([MetaElement|RestMetaElements], PossibleLiteral, Map1, MapN, [Literal
 meta_match([Element|RestElements], [Det|PossibleLiteral], Map1, MapN, [Var|RestSelected]) :-
     var(Element), 
     indef_determiner(Det), stop_words(RestElements, StopWords), 
-    extract_variable(StopWords, Var, [], NameWords, _, PossibleLiteral, NextWords),  NameWords \= [], % <- leave that _ unbound!
+    extract_variable(StopWords, [], NameWords, [], _, PossibleLiteral, NextWords),  NameWords \= [], % <- leave that _ unbound!
     name_predicate(NameWords, Name), 
     update_map(Var, Name, Map1, Map2), !,  % <-- CUT!  
     meta_match(RestElements, NextWords, Map2, MapN, RestSelected). 
 meta_match([Element|RestElements], [Det|PossibleLiteral], Map1, MapN, [Var|RestSelected]) :-
     var(Element), 
     def_determiner(Det), stop_words(RestElements, StopWords), 
-    extract_variable(StopWords, Var, [], NameWords, _, PossibleLiteral, NextWords),  NameWords \= [], % <- leave that _ unbound!
+    extract_variable(StopWords, [], NameWords, [], _, PossibleLiteral, NextWords),  NameWords \= [], % <- leave that _ unbound!
     name_predicate(NameWords, Name), 
     consult_map(Var, Name, Map1, Map2), !,  % <-- CUT!  
     meta_match(RestElements, NextWords, Map2, MapN, RestSelected). 
 % handling symbolic variables (as long as they have been previously defined and included in the map!) 
 meta_match([Element|RestElements], PossibleLiteral, Map1, MapN, [Var|RestSelected]) :-
     var(Element), stop_words(RestElements, StopWords), 
-    extract_variable(StopWords, Var, [], NameWords, _, PossibleLiteral, NextWords),  NameWords \= [], % <- leave that _ unbound!
+    extract_variable(StopWords, [], NameWords, [], _, PossibleLiteral, NextWords),  NameWords \= [], % <- leave that _ unbound!
     name_predicate(NameWords, Name), 
     consult_map(Var, Name, Map1, Map2), !, % <-- CUT!  % if the variables has been previously registered
     meta_match(RestElements, NextWords, Map2, MapN, RestSelected).
@@ -981,21 +994,21 @@ match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, [Element|RestS
 match([Element|RestElements], [Det|PossibleLiteral], Map1, MapN, [Var|RestSelected]) :-
     var(Element), 
     indef_determiner(Det), stop_words(RestElements, StopWords), 
-    extract_variable(StopWords, Var, [], NameWords, _, PossibleLiteral, NextWords),  NameWords \= [], % <- leave that _ unbound!
+    extract_variable(StopWords, [], NameWords, [], _, PossibleLiteral, NextWords),  NameWords \= [], % <- leave that _ unbound!
     name_predicate(NameWords, Name), 
     update_map(Var, Name, Map1, Map2), !,  % <-- CUT!  
     match(RestElements, NextWords, Map2, MapN, RestSelected). 
 match([Element|RestElements], [Det|PossibleLiteral], Map1, MapN, [Var|RestSelected]) :-
     var(Element), 
     def_determiner(Det), stop_words(RestElements, StopWords), 
-    extract_variable(StopWords, Var, [], NameWords, _, PossibleLiteral, NextWords),  NameWords \= [], % <- leave that _ unbound!
+    extract_variable(StopWords, [], NameWords, [], _, PossibleLiteral, NextWords),  NameWords \= [], % <- leave that _ unbound!
     name_predicate(NameWords, Name), 
     consult_map(Var, Name, Map1, Map2), !,  % <-- CUT!  
     match(RestElements, NextWords, Map2, MapN, RestSelected). 
 % handling symbolic variables (as long as they have been previously defined and included in the map!) 
 match([Element|RestElements], PossibleLiteral, Map1, MapN, [Var|RestSelected]) :-
     var(Element), stop_words(RestElements, StopWords), 
-    extract_variable(StopWords, Var, [], NameWords, _, PossibleLiteral, NextWords),  NameWords \= [], % <- leave that _ unbound!
+    extract_variable(StopWords, [], NameWords, [], _, PossibleLiteral, NextWords),  NameWords \= [], % <- leave that _ unbound!
     name_predicate(NameWords, Name), 
     consult_map(Var, Name, Map1, Map2), !, % <-- CUT!  % if the variables has been previously registered
     match(RestElements, NextWords, Map2, MapN, RestSelected).
@@ -1182,25 +1195,25 @@ extract_literal(SW, [Word|RestName], [Word|RestOfWords],  NextWords) :-
     extract_literal(SW, RestName, RestOfWords, NextWords).
 
 % extract_variable/7
-% extract_variable(+StopWords, -Var, +InitListOfNameWords, -ListOfNameWords, -ListOfTypeWords, +ListOfWords, -NextWordsInText)
+% extract_variable(+StopWords, +InitialNameWords, -FinalNameWords, +InitialTypeWords, -FinalTypeWords, +ListOfWords, -NextWordsInText)
 % refactored as a dcg predicate
-extract_variable(_, _, Names, Names, [], [], []) :- !.                                % stop at when words run out
-extract_variable(StopWords, _, Names, Names, [], [Word|RestOfWords], [Word|RestOfWords]) :-   % stop at reserved words, verbs or prepositions. 
+extract_variable(_, Names, Names, Types, Types, [], []) :- !.                                % stop at when words run out
+extract_variable(StopWords, Names, Names, Types, Types, [Word|RestOfWords], [Word|RestOfWords]) :-   % stop at reserved words, verbs or prepositions. 
     %(member(Word, StopWords); reserved_word(Word); verb(Word); preposition(Word); punctuation(Word); phrase(newline, [Word])), !.  % or punctuation
     (member(Word, StopWords); that_(Word); list_symbol(Word); punctuation(Word); phrase(newline, [Word])), !.
-extract_variable(SW, Var, InName, OutName, RestType, [' '|RestOfWords], NextWords) :- !, % skipping spaces
-    extract_variable(SW, Var, InName, OutName, RestType, RestOfWords, NextWords).
-extract_variable(SW, Var, InName, OutName, RestType, ['\t'|RestOfWords], NextWords) :- !,  % skipping spaces
-    extract_variable(SW, Var, InName, OutName, RestType, RestOfWords, NextWords).  
-extract_variable(SW, Var, InName, OutName, Type, [Word|RestOfWords], NextWords) :- % ordinals are not part of the type
+extract_variable(SW, InName, OutName, InType, OutType, [' '|RestOfWords], NextWords) :- !, % skipping spaces
+    extract_variable(SW, InName, OutName, InType, OutType, RestOfWords, NextWords).
+extract_variable(SW, InName, OutName, InType, OutType, ['\t'|RestOfWords], NextWords) :- !, % skipping spaces
+    extract_variable(SW, InName, OutName, InType, OutType, RestOfWords, NextWords).  
+extract_variable(SW, InName, OutName, InType, OutType, [Word|RestOfWords], NextWords) :- % ordinals are not part of the type
     ordinal(Word), !, 
-    extract_variable(SW, Var, [Word|InName], OutName, Type, RestOfWords, NextWords).
-extract_variable(SW, Var, InName, OutName, [Word|RestType], [Word|RestOfWords], NextWords) :- % types are not part of the name
+    extract_variable(SW, [Word|InName], OutName, InType, OutType, RestOfWords, NextWords).
+extract_variable(SW, InName, OutName, InType, OutType, [Word|RestOfWords], NextWords) :- % types are not part of the name
     is_a_type(Word),
-    extract_variable(SW, Var, InName, NextName, RestType, RestOfWords, NextWords),
-    (NextName = [] -> OutName = [Word]; OutName = NextName).
-extract_variable(SW, Var, InName, OutName, RestType, [Word|RestOfWords], NextWords) :- % everything else is part of the name
-    extract_variable(SW, Var, [Word|InName], OutName, RestType, RestOfWords, NextWords).
+    extract_variable(SW, InName, NextName, InType, OutType, RestOfWords, NextWords),
+    (NextName = [] -> OutName = [Word]; OutName = NextName), !.
+extract_variable(SW, InName, [Word|OutName], InType, [Word|OutType], [Word|RestOfWords], NextWords) :- % everything else is part of the name (for instances) and the type (for templates)
+    extract_variable(SW, InName, OutName, InType, OutType, RestOfWords, NextWords).
 
 % extract_expression/4
 % extract_expression(+StopWords, ListOfNameWords, +ListOfWords, NextWordsInText)
@@ -1255,7 +1268,7 @@ extract_list(SW, RestList, Map1, MapN, ['|'|RestOfWords],  NextWords) :- !, % sk
     extract_list(SW, RestList, Map1, MapN, RestOfWords, NextWords).
 extract_list(StopWords, List, Map1, MapN, [Det|InWords], LeftWords) :-
     indef_determiner(Det), 
-    extract_variable(['|'|StopWords], Var, [], NameWords, _, InWords, NextWords), NameWords \= [], % <- leave that _ unbound!
+    extract_variable(['|'|StopWords], [], NameWords, [], _, InWords, NextWords), NameWords \= [], % <- leave that _ unbound!
     name_predicate(NameWords, Name),  
     update_map(Var, Name, Map1, Map2),
     (NextWords = [']'|_] -> (RestList = [], LeftWords=NextWords, MapN=Map2 ) ; 
@@ -1264,14 +1277,14 @@ extract_list(StopWords, List, Map1, MapN, [Det|InWords], LeftWords) :-
     !.
 extract_list(StopWords, List, Map1, MapN, [Det|InWords], LeftWords) :-
     def_determiner(Det), 
-    extract_variable(['|'|StopWords], Var, [], NameWords, _, InWords, NextWords), NameWords \= [], % <- leave that _ unbound!
+    extract_variable(['|'|StopWords], [], NameWords, [], _, InWords, NextWords), NameWords \= [], % <- leave that _ unbound!
     name_predicate(NameWords, Name),  
     consult_map(Var, Name, Map1, Map2), 
     (NextWords = [']'|_] -> (RestList = [], LeftWords=NextWords, MapN=Map2 ) ;
     extract_list(StopWords, RestList, Map2, MapN, NextWords, LeftWords) ), 
     (RestList=[] -> List=[Var|[]]; List=[Var|RestList]), !.
 extract_list(StopWords, List, Map1, MapN, InWords, LeftWords) :- % symbolic variables without determiner
-    extract_variable(['|'|StopWords], Var,[], NameWords, _, InWords, NextWords), NameWords \= [],  % <- leave that _ unbound!
+    extract_variable(['|'|StopWords], [], NameWords, [], _, InWords, NextWords), NameWords \= [],  % <- leave that _ unbound!
     name_predicate(NameWords, Name),  
     consult_map(Var, Name, Map1, Map2), 
     (NextWords = [']'|_] -> (RestList = [], LeftWords=NextWords, MapN=Map2 ) ; 
@@ -1301,13 +1314,13 @@ rebuild_template(RawTemplate, Map1, MapN, Template) :-
 template_elements([], Map1, Map1, _, []).     
 template_elements([Word|RestOfWords], Map1, MapN, Previous, [Var|RestTemplate]) :-
     (ind_det(Word); ind_det_C(Word)), Previous \= [is|_], 
-    extract_variable([], Var, [], NameWords, _, RestOfWords, NextWords), !, % <-- CUT!
+    extract_variable([], [], NameWords, [], _, RestOfWords, NextWords), !, % <-- CUT!
     name_predicate(NameWords, Name), 
     update_map(Var, Name, Map1, Map2), 
     template_elements(NextWords, Map2, MapN, [], RestTemplate).
 template_elements([Word|RestOfWords], Map1, MapN, Previous, [Var|RestTemplate]) :-
     (def_det_C(Word); def_det(Word)), Previous \= [is|_], 
-    extract_variable([], Var, [], NameWords, _, RestOfWords, NextWords), !, % <-- CUT!
+    extract_variable([], [], NameWords, [], _, RestOfWords, NextWords), !, % <-- CUT!
     name_predicate(NameWords, Name), 
     member(map(Var,Name), Map1),  % confirming it is an existing variable and unifying
     template_elements(NextWords, Map1, MapN, [], RestTemplate).
@@ -1370,9 +1383,11 @@ ordinal(8,  'eighth').
 ordinal(9,  'ninth').
 ordinal(10, 'tenth').
 
+%is_a_type/1
 is_a_type(T) :- % pending integration with wei2nlen:is_a_type/1
-   ground(T),
-   (T=time; T=date; T=number; T=person; T=day). % primitive types to start with
+   %ground(T),
+   (is_type(T); pre_is_type(T)), !. 
+   %(T=time; T=date; T=number; T=person; T=day). % primitive types to start with
    %not(number(T)), not(punctuation(T)),
    %not(reserved_word(T)),
    %not(verb(T)),
@@ -1470,6 +1485,7 @@ preposition(by).
 assertall([]).
 assertall([F|R]) :-
     not(asserted(F)),
+    %print_message(informational, "Asserting"-[F]),
     assertz(F), !,
     assertall(R).
 assertall([_F|R]) :-
@@ -1540,8 +1556,8 @@ meta_dictionary(Predicate, VariablesNames, Template) :-
     meta_dict(Predicate, VariablesNames, Template) ; predef_meta_dict(Predicate, VariablesNames, Template).
 
 :- discontiguous predef_meta_dict/3.
-predef_meta_dict([=, T1, T2], [time1-time, time2-time], [T1, is, equal, to, T2]).
-predef_meta_dict([\=, T1, T2], [time1-time, time2-time], [T1, is, different, from, T2]).
+predef_meta_dict([\=, T1, T2], [first_thing-time, second_thing-time], [T1, is, different, from, T2]).
+predef_meta_dict([=, T1, T2], [first_thing-time, second_thing-time], [T1, is, equal, to, T2]).
 
 % dictionary(?LiteralElements, ?NamesAndTypes, ?Template)
 % this is a multimodal predicate used to associate a Template with its particular other of the words for LE
@@ -1601,6 +1617,18 @@ predef_dict([>, T1, T2], [thing_1-thing, thing_2-thing], [T1, >, T2]).
 predef_dict([unparse_time, Secs, Date], [secs-seconds, date-date], [Secs, corresponds, to, date, Date]).
 predef_dict([must_be, Type, Term], [type-type, term-term], [Term, must, be, Type]).
 predef_dict([must_not_be, A, B], [term-term, variable-variable], [A, must, not, be, B]). 
+
+% pre_is_type/1
+pre_is_type(thing).
+pre_is_type(time).
+pre_is_type(type).
+pre_is_type(object).
+pre_is_type(date).
+pre_is_type(day).
+pre_is_type(person).
+pre_is_type(list).
+pre_is_type(seconds). 
+pre_is_type(number). 
 
 % support predicates
 must_be(A, var) :- var(A).
@@ -1694,8 +1722,8 @@ explainedAnswer(English,Unknowns,Explanation,Result) :- trace,
     print_message(informational, "Query ~w with ~w: ~w"-[GoalName, Scenario, EnglishQuestion]),
     print_message(informational, "Scenario: ~w"-[Scenario]),
     % assert facts in scenario
-    (Scenario==noscenario -> Facts = [] ; 
-        (SwishModule:example(Scenario, [scenario(Facts, _)]) -> 
+    (Scenario==noscenario -> true ; %Facts = [] ; 
+        (SwishModule:example(Scenario, [scenario(_Facts, _)]) -> 
             true;  print_message(error, "Scenario: ~w does not exist"-[Scenario]))), !,  
     %print_message(informational, "Facts: ~w"-[Facts]), 
     extract_goal_command(Goal, SwishModule, InnerGoal, Command), 
@@ -1955,6 +1983,19 @@ show(templates) :-
         process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers),
         name_as_atom(ProcessedWordsAnswers, EnglishAnswer)), Templates), 
     forall(member(T, Templates), print_message(informational, "~w"-[T])). 
+
+show(types) :-
+    %findall(EnglishAnswer, 
+    %    ( dictionary([_|GoalElements], Types, _), 
+    %      member((Name-Type), Types), 
+    %    process_types_or_names([Type], GoalElements, Types, ProcessedWordsAnswers),
+    %    name_as_atom(ProcessedWordsAnswers, EnglishAnswer)), Templates), 
+    print_message(information, "Pre-defined Types:"-[]),
+    setof(Tpy, pre_is_type(Tpy), PreSet), 
+    forall(member(Tp, PreSet),print_message(informational, '~a'-[Tp])), 
+    print_message(informational, "Types defined in the current document:"-[]), 
+    setof(Ty, is_type(Ty), Set), 
+    forall(member(T, Set), print_message(informational, '~a'-[T])).
 
 %%% ------------------------------------------------ Swish Interface to logical english
 %% based on logicalcontracts' lc_server.pl

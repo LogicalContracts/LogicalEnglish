@@ -2,7 +2,7 @@
 
 Version 1.0
 
-## Introduction to Logical English, LE
+## Logical English, LE, in brief
 
 The parser of LE assumes a document with the following structure. One declaration title like:
 
