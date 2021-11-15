@@ -4,6 +4,8 @@ For more about TaxLog see [TaxLog.md](TaxLog.md) file.
 
 For a general Introduction to Logical English, LE, (in PDF): [Handbook](le_handbook.pdf). 
 
+See this [video](https://vimeo.com/643589682) introducing Logical English
+
 For a more formal description of LE: [le_syntax.md](le_syntax.md)
 
 For more about Logical English visit [the testing site at LogicalContracts.com](https://logicalenglish.logicalcontracts.com/example/LogicalEnglish.swinb) and [the paper "Logical English for Legal Applications"](http://www.doc.ic.ac.uk/~rak/papers/LE_for_LA.pdf)
