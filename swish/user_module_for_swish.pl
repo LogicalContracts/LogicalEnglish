@@ -95,7 +95,7 @@ clauseNavigator(C,H) :- clauseNavigator_(C,H,_).
 clauseNavigator(C,H,AP) :- clauseNavigator_(C,H,AP).
 
 % returns an element, as well as an anchor property
-clauseNavigator_(Ref,span([a([onclick=Handler]," TaxLog")|Origin]), onclick=Handler) :- 
+clauseNavigator_(Ref,span([a([onclick=Handler]," Target ")|Origin]), onclick=Handler) :- 
     blob(Ref,clause), clause_property(Ref,file(F_)), clause_property(Ref,line_count(L)),
     myClause2(_H,_Time,Module_,_Body,Ref,_IsProlog,_URL,_E), 
     !,
