@@ -89,11 +89,14 @@ query three is:
     op(850,xfx,user:with), % to support querying
     op(800,fx,user:show), % to support querying
     op(850,xfx,user:of), % to support querying
-    dictionary/3, meta_dictionary/3
+    dictionary/3, meta_dictionary/3,
+    get_answer_from_goal/2, name_as_atom/2
     ]).
 :- use_module('./tokenize/prolog/tokenize.pl').
 :- use_module(library(pengines)).
 :- use_module('reasoner.pl').
+:- use_module(kp_loader).
+%:- use_module(kp_loader).
 :- thread_local text_size/1, error_notice/4, dict/3, meta_dict/3, example/2, 
                 last_nl_parsed/1, kbname/1, happens/2, initiates/3, terminates/3, is_type/1,
                 predicates/1, events/1, fluents/1, metapredicates/1, parsed/0.  
@@ -1592,13 +1595,41 @@ dictionary(Predicate, VariablesNames, Template) :- % dict(Predicate, VariablesNa
 % predef_dict/3 is a database with predefined templates for LE
 % it must be ordered by the side of the third argument, to allow the system to check first the longer template
 % with the corresponding starting words. 
-%predef_dict([days_spent_in_uk,Individual,Start,End,TotalDays], [who-person,start-date,end-date,total-number], 
-%                    [Individual, spent, TotalDays, in, the, 'UK', starting, at, Start, &, ending, at, End]). 
-%predef_dict([uk_tax_year_for_date,Date,Year,Start,End], [first_date-date, year-year, second_date-date, third_date-date], 
-%                    [in, the, 'UK', Date, falls, in, Year, beginning, at, Start, &, ending, at, End]).
-%predef_dict([myDB_entities:is_individual_or_company_on, A, B],
-%                    [affiliate-affiliate, date-date],
-%                    [A, is, an, individual, or, is, a, company, at, B]).
+% for Taxlog examples
+predef_dict(['\'s_R&D_expense_credit_is', Project, ExtraDeduction, TaxCredit], 
+                                 [project-projectid, extra-amount, credit-amount],
+   [Project, '\'s', 'R&D', expense, credit, is, TaxCredit, plus, ExtraDeduction]).
+predef_dict(['can_request_R&D_relief_such_as', Project, ExtraDeduction, TaxCredit], 
+                                 [project-projectid, extra-amount, credit-amount],
+   [Project, can, request,'R&D', relief, for, a, credit, of, TaxCredit, with, a, deduction, of, ExtraDeduction]).
+predef_dict(['\'s_sme_R&D_relief_is', Project, ExtraDeduction, TaxCredit], 
+                                 [project-projectid, extra-amount, credit-amount],
+   [the, 'SME', 'R&D', relief, for, Project, is, estimated, at, TaxCredit, with, an, extra, of, ExtraDeduction]).
+predef_dict([project_subject_experts_list_is,Project,Experts], [project-object, experts_list-list],
+   [Project, has, an, Experts, list]).
+predef_dict([rollover_applies,EventID,Asset,Time,Transferor,TransfereesList], [id-event,asset-asset,when-time,from-person,to-list], 
+   [EventID, rollover, of, the, transfer, of, Asset, from, Transferor, to, TransfereesList, at, Time, applies]).
+predef_dict([transfer_event,ID,Asset,Time,Transferor,TransfereesList],[id-id,asset-asset,time-time,from-person,to-list],
+   [event, ID, of, transfering, Asset, from, Transferor, to, TransfereesList, at, Time, occurs]).
+predef_dict([s_type_and_liability_are(Asset,Type,Liability), [asset-asset, assettype-type, liabilty-amount],
+   [the, type, of, asset, Asset, is, Type, its, liability, is, Liability]]).
+predef_dict([exempt_transfer,From,To,SecurityIdentifier,Time],[from-taxpayer,to-taxpayer,secID-number, time-time],
+   [a, transfer, from, From, to, To, with, SecurityIdentifier, at, Time, is, exempt]).
+predef_dict([shares_transfer,Sender,Recipient,SecurityID,Time], [from-person, to-person, id-number, time-time], 
+   [Sender, transfers, shares, to, Recipient, at, Time, with, id, SecurityID]).
+predef_dict([trading_in_market,SecurityID,MarketID,Time], [id-number,market-number,time-time], 
+   [whoever, is, identified,by, SecurityID, is, trading, in, market, MarketID, at, Time]).
+predef_dict([uk_tax_year_for_date,Date,Year,Start,End], [date-date,year-year,start-date,end-date], 
+   [date, Date, falls, in, the, 'UK', tax, year, Year, that, starts, at, Start, ends, at, End]).
+predef_dict([days_spent_in_uk,Individual,Start,End,TotalDays], [who-person,start-date,end-date,total-number], 
+   [Individual, spent, TotalDays, days, in, the, 'UK', starting, at, Start, ending, at, End]).
+predef_dict([days_spent_in_uk,Individual,Start,End,TotalDays], [who-person,start-date,end-date,total-number], 
+                   [Individual, spent, TotalDays, in, the, 'UK', starting, at, Start, &, ending, at, End]). 
+predef_dict([uk_tax_year_for_date,Date,Year,Start,End], [first_date-date, year-year, second_date-date, third_date-date], 
+                   [in, the, 'UK', Date, falls, in, Year, beginning, at, Start, &, ending, at, End]).
+predef_dict([myDB_entities:is_individual_or_company_on, A, B],
+                   [affiliate-affiliate, date-date],
+                   [A, is, an, individual, or, is, a, company, at, B]).
 % Prolog
 predef_dict([has_as_head_before, A, B, C], [list-list, symbol-term, rest_of_list-list], [A, has, B, as, head, before, C]).
 predef_dict([append, A, B, C],[first_list-list, second_list-list, third_list-list], [appending, A, then, B, gives, C]).
@@ -1730,7 +1761,7 @@ interrupted(T1, Fluent, T2) :- %trace,
 
 % experimental; BUG: apparently LE-originated clauses are not being asserted as in TaxLog; 
 % TODO: cleanup, refactor with answer(...)
-explainedAnswer(English,Unknowns,Explanation,Result) :- trace, 
+explainedAnswer(English,Unknowns,Explanation,Result) :- %trace, 
     (parsed -> true; fail), !, 
     pengine_self(SwishModule), 
     (translate_command(SwishModule, English, GoalName, Goal, Scenario) -> true 
@@ -1745,7 +1776,7 @@ explainedAnswer(English,Unknowns,Explanation,Result) :- trace,
             true;  print_message(error, "Scenario: ~w does not exist"-[Scenario]))), !,  
     %print_message(informational, "Facts: ~w"-[Facts]), 
     extract_goal_command(Goal, SwishModule, InnerGoal, Command), 
-    print_message(informational, "Command: ~w"-[Command]), trace, 
+    print_message(informational, "Command: ~w"-[Command]),
     query_with_facts(at(InnerGoal,SwishModule),Scenario,Unknowns,Explanation,Result),
     print_message(informational,"Result:~w, Explanation: ~w"-[Result,Explanation]),
     print_message(informational,"Unknowns: ~w"-[Unknowns]),
@@ -1778,7 +1809,7 @@ answer(English) :- %trace,
     setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
             catch((trace, Command), Error, ( print_message(error, Error), fail ) ), 
             _Result, 
-            retract_facts(SwishModule, Facts)), trace, 
+            retract_facts(SwishModule, Facts)), 
     get_answer_from_goal(Goal, RawAnswer), name_as_atom(RawAnswer, EnglishAnswer),  
     print_message(informational, "Answer: ~w"-[EnglishAnswer]).
 
@@ -1810,7 +1841,7 @@ answer(English, Arg) :- %trace,
 
 % answer/3
 % answer(+English, with(+Scenario), -Result)
-answer(English, Arg, Answers) :-
+answer(English, Arg, EnglishAnswer) :-
     parsed, 
     pengine_self(SwishModule), 
     translate_command(SwishModule, English, _, Goal, PreScenario), % later -->, Kbs),
@@ -1823,19 +1854,21 @@ answer(English, Arg, Answers) :-
             catch(Command, Error, ( print_message(error, Error), fail ) ), 
             _Result, 
             retract_facts(SwishModule, Facts)),
-    get_answer_from_goal(Goal, Answers). 
+    get_answer_from_goal(Goal, RawAnswer), name_as_atom(RawAnswer, EnglishAnswer). 
     %reasoner:query_once_with_facts(Goal,Scenario,_,_E,Result).
 
 % answer/4
 % answer(+English, with(+Scenario), -Explanations, -Result) :-
-answer(English, Arg, E, Result) :- %trace,
-    parsed, !, pengine_self(SwishModule), 
+% answer(at(English, Module), Arg, E, Result) :- trace,
+answer(English, Arg, E, Result) :- 
+    parsed, !, myDeclaredModule(Module), 
+    pengine_self(SwishModule), 
     translate_command(SwishModule, English, _, Goal, PreScenario), 
     ((Arg = with(ScenarioName), PreScenario=noscenario) -> Scenario=ScenarioName; Scenario=PreScenario), 
     extract_goal_command(Goal, SwishModule, InnerGoal, _Command),
     (Scenario==noscenario -> Facts = [] ; SwishModule:example(Scenario, [scenario(Facts, _)])), !, 
     setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
-            catch((trace, query(at(InnerGoal, SwishModule),_,E,Result)), Error, ( print_message(error, Error), fail ) ), 
+            catch((true, query(at(InnerGoal, Module),_,E,Result)), Error, ( print_message(error, Error), fail ) ), 
             _Result, 
             retract_facts(SwishModule, Facts)). 
 

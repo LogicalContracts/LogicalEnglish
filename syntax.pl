@@ -33,7 +33,8 @@ limitations under the License.
     op(700,xfx,user:before),
     op(700,xfx,user:after),
     taxlog2prolog/3,
-    semantics2prolog/3
+    semantics2prolog/3,
+    current_source/1
     ]).
 
 :- use_module(kp_loader,[kp_location/3,my_xref_defined/3]).
@@ -81,8 +82,10 @@ taxlog2prolog(query(Name,Goal),delimiter-[classify,classify],query(Name,Goal)).
 
 % extending to cover new structural changes at semantical level
 
-semantics2prolog(if(H,B),neck(if)-[SpecH,SpecB],(H:-B)) :- !,
-    SpecH=classify, SpecB=classify. 
+semantics2prolog(if(H,B),neck(if)-[SpecH,SpecB],(H:-taxlogBody(B,false,_,'',[]))) :- !,
+    taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB).
+%semantics2prolog(if(H,B),neck(if)-[SpecH,SpecB],(H:-B)) :- !,
+%    SpecH=classify, SpecB=classify. 
     %taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB).
 %semantics2prolog(mainGoal(G,Description),delimiter-[Spec,classify],(mainGoal(G,Description):-(_=1->true;GG))) :- !, % hack to avoid 'unreferenced' highlight in SWISH
 %    functor(G,F,N), functor(GG,F,N), % avoid "Singleton-marked variable appears more than once"
