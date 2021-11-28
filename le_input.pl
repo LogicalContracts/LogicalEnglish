@@ -1790,7 +1790,7 @@ explainedAnswer(English,Unknowns,Explanation,Result) :- %trace,
 /* ----------------------------------------------------------------- CLI English */
 % answer/1
 % answer(+Query or Query Expression)
-answer(English) :- %trace, 
+answer(English) :- trace, 
     parsed, 
     pengine_self(SwishModule), 
     (translate_command(SwishModule, English, GoalName, Goal, Scenario) -> true 
@@ -1807,7 +1807,7 @@ answer(English) :- %trace,
     extract_goal_command(Goal, SwishModule, _InnerGoal, Command), 
     %print_message(informational, "Command: ~w"-[Command]),
     setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
-            catch((trace, Command), Error, ( print_message(error, Error), fail ) ), 
+            catch((true, Command), Error, ( print_message(error, Error), fail ) ), 
             _Result, 
             retract_facts(SwishModule, Facts)), 
     get_answer_from_goal(Goal, RawAnswer), name_as_atom(RawAnswer, EnglishAnswer),  
@@ -1830,7 +1830,7 @@ answer(English, Arg) :- %trace,
         (SwishModule:example(Scenario, [scenario(Facts, _)]) -> 
             true;  print_message(error, "Scenario: ~w does not exist"-[Scenario]))), !,  
     %print_message(informational, "Facts: ~w"-[Facts]), 
-    extract_goal_command((trace, Goal), SwishModule, _InnerGoal, Command), 
+    extract_goal_command((true, Goal), SwishModule, _InnerGoal, Command), 
     %print_message(informational, "Command: ~w"-[Command]),
     setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
             catch((true, Command), Error, ( print_message(error, Error), fail ) ), 
@@ -1848,7 +1848,7 @@ answer(English, Arg, EnglishAnswer) :-
     %copy_term(Goal, CopyOfGoal), 
     %get_answer_from_goal(CopyOfGoal, RawGoal), name_as_atom(RawGoal, EnglishQuestion), 
     ((Arg = with(ScenarioName), PreScenario=noscenario) -> Scenario=ScenarioName; Scenario=PreScenario), 
-    extract_goal_command((trace, Goal), SwishModule, _InnerGoal, Command),
+    extract_goal_command(Goal, SwishModule, _InnerGoal, Command),
     (Scenario==noscenario -> Facts = [] ; SwishModule:example(Scenario, [scenario(Facts, _)])), 
     setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
             catch(Command, Error, ( print_message(error, Error), fail ) ), 
@@ -1875,16 +1875,16 @@ answer(English, Arg, E, Result) :-
 % get_answer_from_goal/2
 get_answer_from_goal((G,R), WholeAnswer) :- 
     get_answer_from_goal(G, Answer), 
-    get_answer_from_goal(R, RestAnswers), 
+    get_answer_from_goal(R, RestAnswers), !, 
     append(Answer, ['\n','\t',and|RestAnswers], WholeAnswer).
 get_answer_from_goal(not(G), [it,is,not,the,case,that,'\n', '\t'|Answer]) :- 
-    get_answer_from_goal(G, Answer).
-get_answer_from_goal(happens(Goal,T), Answer) :- !,   % simple goals do not return a list, just a literal
+    get_answer_from_goal(G, Answer), !.
+get_answer_from_goal(happens(Goal,T), Answer) :-    % simple goals do not return a list, just a literal
     Goal =.. [Pred|GoalElements], dict([Pred|GoalElements], Types, WordsAnswer), 
     process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), 
-    process_time_term(T, TimeExplain),
+    process_time_term(T, TimeExplain), !, 
     Answer = ['At', TimeExplain, it, occurs, that|ProcessedWordsAnswers].
-get_answer_from_goal(holds(Goal,T), Answer) :- !, 
+get_answer_from_goal(holds(Goal,T), Answer) :- 
     Goal =.. [Pred|GoalElements], dict([Pred|GoalElements], Types, WordsAnswer), 
     process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), 
     process_time_term(T, TimeExplain),
@@ -1894,7 +1894,7 @@ get_answer_from_goal(Goal, ProcessedWordsAnswers) :-
     process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), !. 
 get_answer_from_goal(Goal, ProcessedWordsAnswers) :-  
     Goal =.. [Pred|GoalElements], dictionary([Pred|GoalElements], Types, WordsAnswer),
-    process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers). 
+    process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), !. 
 
 process_time_term(T,ExplainT) :- var(T), name_as_atom([a, time, T], ExplainT). % in case of vars
 process_time_term(T,T) :- nonvar(T), atom(T), !. 
@@ -2013,7 +2013,7 @@ show(prolog) :-
 show(rules) :- % trace, 
     pengine_self(SwishModule), 
     findall((Pred :- Body), 
-        (dict(PredicateElements, _, _), Pred=..PredicateElements, clause(SwishModule:Pred, Body)), Predicates),
+        (dict(PredicateElements, _, _), Pred=..PredicateElements, clause(SwishModule:Pred, Body_), unwrapBody(Body_, Body)), Predicates),
     forall(member(Clause, Predicates), portray_clause(Clause)).
 
 show(queries) :- % trace, 
@@ -2048,6 +2048,16 @@ show(types) :-
     setof(Ty, is_type(Ty), Set), 
     forall(member(T, Set), print_message(informational, '~a'-[T])).
 
+unwrapBody(taxlogBody(Body, _, _, _, _), Body). 
+%unwrapBody(Body, Body). 
+
+% hack to bring in the reasoner for explanations.  
+taxlogBody(G, false, _, '', []) :- 
+    nonvar(G),
+    pengine_self(SwishModule), extract_goal_command(G, SwishModule, _InnerG, Command), !, % clean extract goals
+    %print_message(informational, "Trying ~w"-[Command]), 
+    call(Command). 
+
 %%% ------------------------------------------------ Swish Interface to logical english
 %% based on logicalcontracts' lc_server.pl
 
@@ -2055,10 +2065,14 @@ show(types) :-
 prolog_colour:term_colours(en(_Text),lps_delimiter-[classify]). % let 'en' stand out with other taxlog keywords
 prolog_colour:term_colours(en_decl(_Text),lps_delimiter-[classify]). % let 'en_decl' stand out with other taxlog keywords
 
-user:(Command1 and Command2) :-
-    call(Command1), call(Command2). 
+
 user:(answer Query with Scenario):-
     answer(Query,with(Scenario)). 
+:- discontiguous (with)/2.
+user:(Query with Scenario):-
+    answer(Query,with(Scenario)). 
+%user:(Command1 and Command2) :-
+%    call(Command1), call(Command2). 
 user:answer( EnText) :- answer( EnText).
 user:answer( EnText, Scenario) :- answer( EnText, Scenario).
 user:answer( EnText, Scenario, Result) :- answer( EnText, Scenario, Result).
@@ -2079,6 +2093,8 @@ user:has_as_head_before(List, Head, Rest) :- has_as_head_before(List, Head, Rest
 user:le_taxlog_translate( en(Text), Terms) :- le_taxlog_translate( en(Text), Terms).
 
 user:op_stop(StopWords) :- op_stop(StopWords). 
+
+user:taxlogBody(G, B, X, S, L) :- taxlogBody(G, B, X, S, L). 
 
 le_taxlog_translate( EnText, Terms) :- le_taxlog_translate( EnText, someFile, 1, Terms).
 
