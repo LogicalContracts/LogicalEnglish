@@ -96,7 +96,7 @@ query three is:
 :- use_module(library(pengines)).
 :- use_module('reasoner.pl').
 :- use_module(kp_loader).
-%:- use_module(kp_loader).
+:- use_module(library(prolog_stack)).
 :- thread_local text_size/1, error_notice/4, dict/3, meta_dict/3, example/2, 
                 last_nl_parsed/1, kbname/1, happens/2, initiates/3, terminates/3, is_type/1,
                 predicates/1, events/1, fluents/1, metapredicates/1, parsed/0.  
@@ -406,9 +406,9 @@ statement(Statement) -->
       Statement = [if(it_is_illegal(Event, T), Body)])},!. 
 
 % a fact or a rule
-statement(Statement) --> 
+statement(Statement) --> currentLine(L), 
     literal_([], Map1, Head), body_(Body, Map1, _), period,  
-    {(Body = [] -> Statement = [if(Head, true)]; Statement = [if(Head, Body)])}. 
+    {(Body = [] -> Statement = [if(L, Head, true)]; Statement = [if(L, Head, Body)])}. 
 
 % error
 statement(_, Rest, _) :- 
@@ -1517,6 +1517,9 @@ asserted(F :- B) :- clause(F, B). % as a rule with a body
 asserted(F) :- clause(F,true). % as a fact
 
 /* -------------------------------------------------- error handling */
+currentLine(LineNumber, Rest, Rest) :-
+    once( nth1(_,Rest,newline(NextLine)) ), LineNumber is NextLine-2. 
+
 asserterror(Me, Rest) :-
     %print_message(error, ' Error found'), 
     %select_first_section(Rest, 40, Context), 
@@ -1713,17 +1716,20 @@ is_it_illegal(English, Scenario) :- % only event as possibly illegal for the tim
     print_message(informational, "Answers: ~w"-[EnglishAnswer]).
 
 % extract_goal_command(WrappedGoal, Module, InnerGoal, RealGoal)
-extract_goal_command((A;B), M, (IA;IB), (CA;CB)) :-
-    (extract_goal_command(A, M, IA, CA); extract_goal_command(B, M, IB, CB)), !. 
-extract_goal_command((A,B), M, (IA,IB), (CA,CB)) :-
-    extract_goal_command(A, M, IA, CA), extract_goal_command(B, M, IB, CB), !. 
-extract_goal_command(holds(Goal,T), M, Goal, (holds(Goal,T);M:holds(Goal,T))) :- !.
-extract_goal_command(happens(Goal,T), M, Goal, (happens(Goal,T);M:happens(Goal,T))) :- !.
-extract_goal_command(Goal, M, Goal, M:Goal).
+extract_goal_command(Goal, M, InnerGoal, Command) :- nonvar(Goal), 
+    extract_goal_command_(Goal, M, InnerGoal, Command). 
+
+extract_goal_command_((A;B), M, (IA;IB), (CA;CB)) :-
+    extract_goal_command_(A, M, IA, CA), extract_goal_command_(B, M, IB, CB), !. 
+extract_goal_command_((A,B), M, (IA,IB), (CA,CB)) :-
+    extract_goal_command_(A, M, IA, CA), extract_goal_command_(B, M, IB, CB), !. 
+extract_goal_command_(holds(Goal,T), M, Goal, (holds(Goal,T);M:holds(Goal,T))) :- !.
+extract_goal_command_(happens(Goal,T), M, Goal, (happens(Goal,T);M:happens(Goal,T))) :- !.
+extract_goal_command_(Goal, M, Goal, M:Goal) :- !. 
 
 get_assumptions_from_scenario(noscenario, _, []) :- !.  
 get_assumptions_from_scenario(Scenario, SwishModule, Assumptions) :-
-    SwishModule:example(Scenario, [scenario(Assumptions, _)]).
+    SwishModule:example(Scenario, [scenario(Assumptions, _)]), !.
 
 translate_query(English_String, Goals) :-
     tokenize(English_String, Tokens, [cased(true), spaces(true), numbers(false)]),
@@ -1790,7 +1796,7 @@ explainedAnswer(English,Unknowns,Explanation,Result) :- %trace,
 /* ----------------------------------------------------------------- CLI English */
 % answer/1
 % answer(+Query or Query Expression)
-answer(English) :- trace, 
+answer(English) :- %trace, 
     parsed, 
     pengine_self(SwishModule), 
     (translate_command(SwishModule, English, GoalName, Goal, Scenario) -> true 
@@ -1815,8 +1821,19 @@ answer(English) :- trace,
 
 % answer/2
 % answer(+Query, with(+Scenario))
-answer(English, Arg) :- %trace, 
+answer(English, Arg) :- % trace, 
     parsed,
+    prepare_query(English, Arg, SwishModule, Goal, Facts, Command), 
+    setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
+            Command, 
+            %call(Command), 
+            %catch_with_backtrace(Command, Error, print_message(error, Error)), 
+            %catch((true, Command), Error, ( print_message(error, Error), fail ) ), 
+            _Result, 
+            retract_facts(SwishModule, Facts)), 
+    show_answer(Goal). 
+
+prepare_query(English, Arg, SwishModule, Goal, Facts, Command) :-
     pengine_self(SwishModule), 
     (translate_command(SwishModule, English, GoalName, Goal, PreScenario) -> true 
     ; ( print_message(error, "Don't understand this question: ~w "-[English]), !, fail ) ), % later -->, Kbs),
@@ -1828,20 +1845,18 @@ answer(English, Arg) :- %trace,
     % assert facts in scenario
     (Scenario==noscenario -> Facts = [] ; 
         (SwishModule:example(Scenario, [scenario(Facts, _)]) -> 
-            true;  print_message(error, "Scenario: ~w does not exist"-[Scenario]))), !,  
+            true;  print_message(error, "Scenario: ~w does not exist"-[Scenario]))),  
     %print_message(informational, "Facts: ~w"-[Facts]), 
-    extract_goal_command((true, Goal), SwishModule, _InnerGoal, Command), 
-    %print_message(informational, "Command: ~w"-[Command]),
-    setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
-            catch((true, Command), Error, ( print_message(error, Error), fail ) ), 
-            _Result, 
-            retract_facts(SwishModule, Facts)),
-    get_answer_from_goal(Goal, RawAnswer), name_as_atom(RawAnswer, EnglishAnswer),  
-    print_message(informational, "Answer: ~w"-[EnglishAnswer]).
+    extract_goal_command(Goal, SwishModule, _InnerGoal, Command), !. 
+    %print_message(informational, "Command: ~w"-[Command])
+
+show_answer(Goal) :-
+    get_answer_from_goal(Goal, RawAnswer), name_as_atom(RawAnswer, EnglishAnswer), 
+    print_message(informational, "Answer: ~w"-[EnglishAnswer]), !. 
 
 % answer/3
 % answer(+English, with(+Scenario), -Result)
-answer(English, Arg, EnglishAnswer) :-
+answer(English, Arg, EnglishAnswer) :- 
     parsed, 
     pengine_self(SwishModule), 
     translate_command(SwishModule, English, _, Goal, PreScenario), % later -->, Kbs),
@@ -1851,7 +1866,8 @@ answer(English, Arg, EnglishAnswer) :-
     extract_goal_command(Goal, SwishModule, _InnerGoal, Command),
     (Scenario==noscenario -> Facts = [] ; SwishModule:example(Scenario, [scenario(Facts, _)])), 
     setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
-            catch(Command, Error, ( print_message(error, Error), fail ) ), 
+            catch_with_backtrace(Command, Error, print_message(error, Error)), 
+            %catch(Command, Error, ( print_message(error, Error), fail ) ), 
             _Result, 
             retract_facts(SwishModule, Facts)),
     get_answer_from_goal(Goal, RawAnswer), name_as_atom(RawAnswer, EnglishAnswer). 
@@ -1860,8 +1876,8 @@ answer(English, Arg, EnglishAnswer) :-
 % answer/4
 % answer(+English, with(+Scenario), -Explanations, -Result) :-
 % answer(at(English, Module), Arg, E, Result) :- trace,
-answer(English, Arg, E, Result) :- 
-    parsed, !, myDeclaredModule(Module), 
+answer(English, Arg, E, Result) :- %trace, 
+    parsed, myDeclaredModule(Module), 
     pengine_self(SwishModule), 
     translate_command(SwishModule, English, _, Goal, PreScenario), 
     ((Arg = with(ScenarioName), PreScenario=noscenario) -> Scenario=ScenarioName; Scenario=PreScenario), 
@@ -2052,11 +2068,15 @@ unwrapBody(taxlogBody(Body, _, _, _, _), Body).
 %unwrapBody(Body, Body). 
 
 % hack to bring in the reasoner for explanations.  
-taxlogBody(G, false, _, '', []) :- 
-    nonvar(G),
-    pengine_self(SwishModule), extract_goal_command(G, SwishModule, _InnerG, Command), !, % clean extract goals
+taxlogBody(G, false, _, '', []) :- %trace, 
+    %nonvar(G),
+    pengine_self(SwishModule), extract_goal_command(G, SwishModule, _InnerG, Command), % clean extract goals
     %print_message(informational, "Trying ~w"-[Command]), 
+    %call(Command). 
     call(Command). 
+    %Command.
+    %catch_with_backtrace(Command, Error, (print_message(error, Error))). 
+ 
 
 %%% ------------------------------------------------ Swish Interface to logical english
 %% based on logicalcontracts' lc_server.pl
@@ -2066,11 +2086,11 @@ prolog_colour:term_colours(en(_Text),lps_delimiter-[classify]). % let 'en' stand
 prolog_colour:term_colours(en_decl(_Text),lps_delimiter-[classify]). % let 'en_decl' stand out with other taxlog keywords
 
 
-user:(answer Query with Scenario):-
+user:(answer Query with Scenario):- 
     answer(Query,with(Scenario)). 
-:- discontiguous (with)/2.
-user:(Query with Scenario):-
-    answer(Query,with(Scenario)). 
+%:- discontiguous (with)/2.
+%user:(Query with Scenario):-  
+%    answer(Query,with(Scenario)). 
 %user:(Command1 and Command2) :-
 %    call(Command1), call(Command2). 
 user:answer( EnText) :- answer( EnText).

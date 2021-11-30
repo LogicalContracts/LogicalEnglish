@@ -44,7 +44,7 @@ query_with_facts(Goal,Facts,Questions,E,Outcome) :-
 %  if OnceUndo, only one solution, and time execution is limited
 %  Result will be true/false/unknown
 %  This is NOT reentrant
-query_with_facts(Goal,Facts_,OnceUndo,unknowns(Unknowns),taxlogExplanation(E),Outcome) :-
+query_with_facts(Goal,Facts_,OnceUndo,unknowns(Unknowns),taxlogExplanation(E),Outcome) :- %trace, 
     must_be(boolean,OnceUndo),
     (Goal=at(G,M__) -> atom_string(M_,M__) ; 
         myDeclaredModule(M_) -> Goal=G; 
@@ -58,7 +58,7 @@ query_with_facts(Goal,Facts_,OnceUndo,unknowns(Unknowns),taxlogExplanation(E),Ou
         expand_explanation_refs(E_,Facts,E)
         ),
     retractall(hypothetical_fact(_,_,_,_,_,_)),
-    (OnceUndo==true -> once_with_facts(Caller, M, Facts, true) ; call_with_facts(Caller, M, Facts)),
+    (OnceUndo==true -> (true, once_with_facts(Caller, M, Facts, true)) ; (true, call_with_facts(Caller, M, Facts))),
     list_without_variants(U,Unknowns_), % remove duplicates, keeping the first clause reference for each group
     mapModulesInUnknwons(Unknowns_,Unknowns).
 
@@ -548,22 +548,30 @@ simplify_explanation([],V,V,[]).
 % expand_explanation_refs(+ExpandedWhy,+ExtraFacts,-ExpandedRefLessWhy)
 % TODO: recover original variable names? seems to require either some hacking with clause_info or reparsing
 % transforms explanation: each nodetype(Literal,Module,ClauseRef,Children) --> nodetype(Literal,ClauseRef,Module,SourceString,OriginURL,Children)
-expand_explanation_refs([Node|Nodes],Facts,[NewNode|NewNodes]) :- !, 
+expand_explanation_refs([Node|Nodes],Facts, AllNodes) :-  
     Node=..[Type,X,Module,Ref,Children], 
     refToSourceAndOrigin(Ref,Source,Origin),
     %TODO: is the following test against facts necessary???:
     ((member(XX,Facts), variant(XX,X)) -> NewOrigin=userFact ; NewOrigin=Origin),
-    ( (get_answer_from_goal(X, RawAnswer), name_as_atom(RawAnswer, EnglishAnswer)) -> 
+    (translate_to_le(X, EnglishAnswer) -> 
       %print_message(informational, "Explaining ~w as ~w"-[X, EnglishAnswer])
-      Output = EnglishAnswer
+      ( Output = EnglishAnswer,            
+        NewNode=..[Type,Output,Ref,Module,Source,NewOrigin,NewChildren],
+        expand_explanation_refs(Children,Facts,NewChildren),
+        AllNodes = [NewNode|NewNodes]
+        )
     ; %print_message(informational, "Can't translate ~w"-[X])
-      Output = X
-    ),     
-    NewNode=..[Type,Output,Ref,Module,Source,NewOrigin,NewChildren],
-    expand_explanation_refs(Children,Facts,NewChildren),
+        %Output = false(X)
+        AllNodes = NewNodes
+    ),
+    %translate_to_le(X, Output),      
+    %NewNode=..[Type,Output,Ref,Module,Source,NewOrigin,NewChildren],
+    %expand_explanation_refs(Children,Facts,NewChildren),
     expand_explanation_refs(Nodes,Facts,NewNodes).
-expand_explanation_refs([],_,[]).
+expand_explanation_refs([],_,[]). 
 
+translate_to_le(X, EnglishAnswer) :-
+    le_input:get_answer_from_goal(X, RawAnswer), name_as_atom(RawAnswer, EnglishAnswer), !. 
 
 % [s(a(1,a),<clause>(0x7f95c763bc30),[s(c(1),<clause>(0x7f95c763bd90),[]),s(t(a),<clause>(0x7f95c763c000),[])])]
 explanation_node_type(s,success).

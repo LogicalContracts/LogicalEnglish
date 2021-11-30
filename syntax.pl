@@ -82,6 +82,8 @@ taxlog2prolog(query(Name,Goal),delimiter-[classify,classify],query(Name,Goal)).
 
 % extending to cover new structural changes at semantical level
 
+semantics2prolog(if(N,H,B),neck(if)-[SpecH,SpecB],(H:-taxlogBody(B,false,_,'',[]))) :- !,
+    taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB).
 semantics2prolog(if(H,B),neck(if)-[SpecH,SpecB],(H:-taxlogBody(B,false,_,'',[]))) :- !,
     taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB).
 %semantics2prolog(if(H,B),neck(if)-[SpecH,SpecB],(H:-B)) :- !,
