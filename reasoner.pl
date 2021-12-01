@@ -548,25 +548,28 @@ simplify_explanation([],V,V,[]).
 % expand_explanation_refs(+ExpandedWhy,+ExtraFacts,-ExpandedRefLessWhy)
 % TODO: recover original variable names? seems to require either some hacking with clause_info or reparsing
 % transforms explanation: each nodetype(Literal,Module,ClauseRef,Children) --> nodetype(Literal,ClauseRef,Module,SourceString,OriginURL,Children)
-expand_explanation_refs([Node|Nodes],Facts, AllNodes) :-  
+expand_explanation_refs([Node|Nodes],Facts, [NewNode|NewNodes]) :-  
     Node=..[Type,X,Module,Ref,Children], 
     refToSourceAndOrigin(Ref,Source,Origin),
     %TODO: is the following test against facts necessary???:
     ((member(XX,Facts), variant(XX,X)) -> NewOrigin=userFact ; NewOrigin=Origin),
-    (translate_to_le(X, EnglishAnswer) -> 
-      %print_message(informational, "Explaining ~w as ~w"-[X, EnglishAnswer])
-      ( Output = EnglishAnswer,            
-        NewNode=..[Type,Output,Ref,Module,Source,NewOrigin,NewChildren],
-        expand_explanation_refs(Children,Facts,NewChildren),
-        AllNodes = [NewNode|NewNodes]
+    (X\=[] -> 
+        (translate_to_le(X, EnglishAnswer) -> 
+            %print_message(informational, "Explaining ~w as ~w"-[X, EnglishAnswer])
+            ( Output = EnglishAnswer            
+            %NewNode=..[Type,Output,Ref,Module,Source,NewOrigin,NewChildren],
+            %expand_explanation_refs(Children,Facts,NewChildren),
+            %AllNodes = [NewNode|NewNodes]
+            )
+        ; %print_message(informational, "Can't translate ~w"-[X])
+            Output='it has not yet been proven'
         )
-    ; %print_message(informational, "Can't translate ~w"-[X])
-        %Output = false(X)
-        AllNodes = NewNodes
+    ;         %AllNodes = NewNodes
+        Output = 'it is a fact'
     ),
     %translate_to_le(X, Output),      
-    %NewNode=..[Type,Output,Ref,Module,Source,NewOrigin,NewChildren],
-    %expand_explanation_refs(Children,Facts,NewChildren),
+    NewNode=..[Type,Output,Ref,Module,Source,NewOrigin,NewChildren],
+    expand_explanation_refs(Children,Facts,NewChildren),
     expand_explanation_refs(Nodes,Facts,NewNodes).
 expand_explanation_refs([],_,[]). 
 
