@@ -2124,5 +2124,4 @@ sandbox:safe_primitive(le_input:show( _Something)).
 sandbox:safe_primitive(le_input:answer( _EnText, _Scenario)).
 sandbox:safe_primitive(le_input:answer( _EnText, _Scenario, _Result)).
 sandbox:safe_primitive(le_input:answer( _EnText, _Scenario, _Explanation, _Result)).
-sandbox:safe_primitive(le_input:explainedAnswer(_,_,_,_)).
 sandbox:safe_primitive(le_input:le_taxlog_translate( _EnText, _Terms)).
