@@ -495,16 +495,23 @@ conditions(Ind0, Map1, MapN, Conds) -->
     %{Ind0=<IndF}. % 
 
 % three conditions look ahead
-more_conds(Ind0, Ind1, Ind4, Map1, MapN, C1, RestMapped, In1, Out) :-
-    newline(In1, In2), spaces(Ind2, In2, In3), Ind0=<Ind2, operator(Op1, In3, In4), condition(C2, Ind1, Map1, Map2, In4, In5), 
-    newline(In5, In6), spaces(Ind3, In6, In7), Ind0=<Ind3, operator(Op2, In7, In8), condition(C3, Ind2, Map2, Map3, In8, In9), 
-    adjust_op(Ind2, Ind3, C1, Op1, C2, Op2, C3, Conditions), !, 
-    more_conds(Ind0, Ind3, Ind4, Map3, MapN, Conditions, RestMapped, In9, Out). 
-% more_conds(PreviosInd, CurrentInd, MapIn, MapOut, InCond, OutConds)
-more_conds(Ind0, Ind1, Ind, Map1, MapN, Cond, Conditions) --> 
-    newline, spaces(Ind), {Ind0 =< Ind}, % if the new indentation is deeper, it goes on as before. 
-    operator(Op), condition(Cond2, Ind, Map1, MapN), 
-    {add_cond(Op, Ind1, Ind, Cond, Cond2, Conditions)}, !.
+% more_conds(Ind0, Ind1, Ind4, Map1, MapN, C1, RestMapped, In1, Out) :-
+%     newline(In1, In2), spaces(Ind2, In2, In3), Ind0=<Ind2, operator(Op1, In3, In4), condition(C2, Ind1, Map1, Map2, In4, In5), 
+%     newline(In5, In6), spaces(Ind3, In6, In7), Ind0=<Ind3, operator(Op2, In7, In8), condition(C3, Ind2, Map2, Map3, In8, In9), 
+%     adjust_op(Ind2, Ind3, C1, Op1, C2, Op2, C3, Conditions), !, 
+%     more_conds(Ind0, Ind3, Ind4, Map3, MapN, Conditions, RestMapped, In9, Out). 
+% % more_conds(PreviosInd, CurrentInd, MapIn, MapOut, InCond, OutConds)
+% more_conds(Ind0, Ind1, Ind, Map1, MapN, Cond, Conditions) --> 
+%     newline, spaces(Ind), {Ind0 =< Ind}, % if the new indentation is deeper, it goes on as before. 
+%     operator(Op), condition(Cond2, Ind, Map1, MapN),
+%     {add_cond(Op, Ind1, Ind, Cond, Cond2, Conditions)},  
+%     {print_message(informational, "~w"-[Conditions])}, !.
+more_conds(Ind0, Ind1, Ind3, Map1, MapN, Cond, RestMapped) --> 
+    newline, spaces(Ind2), {Ind0 =< Ind2}, % if the new indentation is deeper, it goes on as before. 
+    operator(Op), condition(Cond2, Ind2, Map1, Map2),
+    {add_cond(Op, Ind1, Ind2, Cond, Cond2, Conditions)},  
+    {print_message(informational, "~w"-[Conditions])}, !,
+    more_conds(Ind0, Ind2, Ind3, Map2, MapN, Conditions, RestMapped). 
 more_conds(_, Ind, Ind, Map, Map, Cond, Cond, Rest, Rest).  
  
 % this naive definition of term is problematic
@@ -823,18 +830,28 @@ replace_vars([],[]) :- !.
 replace_vars([A|RI], [A|RO]) :- atom(A), replace_vars(RI,RO), !.
 replace_vars([W|RI], [A|RO]) :- term_to_atom(W, A), replace_vars(RI,RO).   
 
-add_cond(and, Ind1, Ind2,  (C; C3), C4, (C; (C3, C4))) :-
+add_cond(and, Ind1, Ind2, Previous, C4, (C; (C3, C4))) :-
+    last_cond(or, Previous, C, C3), % (C; C3)
     Ind1 =< Ind2, !. 
-add_cond(and, Ind1, Ind2,  (C; C3), C4, ((C; C3), C4)) :-
+add_cond(and, Ind1, Ind2, Previous, C4, ((C; C3), C4)) :-
+    last_cond(or, Previous, C, C3), % (C; C3)
     Ind1 > Ind2, !.     
 add_cond(and,_, _, (C, C3), C4, (C, (C3, C4))) :- !. 
 add_cond(and,_, _, Cond, RestC, (Cond, RestC)) :- !. 
-add_cond(or, Ind1, Ind2, (C, C3), C4, (C, (C3; C4))) :- 
+add_cond(or, Ind1, Ind2, Previous, C4, (C, (C3; C4))) :- 
+    last_cond(and, Previous, C, C3),  % (C, C3)
     Ind1 =< Ind2, !. 
-add_cond(or, Ind1, Ind2, (C, C3), C4, ((C, C3); C4)) :- 
+add_cond(or, Ind1, Ind2, Previous, C4, ((C, C3); C4)) :- 
+    last_cond(and, Previous, C, C3), % (C, C3)
     Ind1 > Ind2, !. 
 add_cond(or, _, _, (C; C3), C4, (C; (C3; C4))) :- !. 
 add_cond(or, _,_, Cond, RestC, (Cond; RestC)).
+
+last_cond(or, (A;B), A, B) :- B\=(_;_), !.
+last_cond(or, (C;D), (C;R), Last) :- last_cond(or, D, R, Last).
+
+last_cond(and, (A,B), A, B) :- B\=(_,_), !.
+last_cond(and, (C,D), (C,R), Last) :- last_cond(and, D, R, Last).
 
 % adjust_op(Ind1, Ind2, PreviousCond, Op1, Cond2, Op2, Rest, RestMapped, Conditions)
 % from and to and
