@@ -24,15 +24,15 @@ term_rendering(Explanation, _Vars, _Options) -->
 
 % explanationHTML(ExpandedExplanationTree,TermerizedHTMLlist)
 % works ok but not inside SWISH because of its style clobbering ways:
-explanationHTML(s(G,Ref,_,_,_,C),[li(title="Rule inference step",["It is the case that: ~w , as proved by"-[NG],Navigator]), Because, ul(CH)]) :- 
+explanationHTML(s(G,Ref,_,_,_,C),[li(title="Rule inference step",["~w"-[NG],Navigator]),ul(CH)]) :- 
     niceModule(G,NG),
-    clauseNavigator(Ref,Navigator), explanationHTML(C,CH), (CH\=[] -> Because = 'because'; Because=''). 
+    clauseNavigator(Ref,Navigator), explanationHTML(C,CH).
 explanationHTML(u(G,Ref,_,_,_,[]),[li(title="Unknown",["~w ?"-[NG],Navigator])]) :-
     niceModule(G,NG),
     clauseNavigator(Ref,Navigator).
 %explanationHTML(unknown(at(G,K)),[li([style="color:blue",title="Unknown"],a(href=K,"~w"-[G]))]).
 % explanationHTML(unknown(at(G,K)),[li([p("UNKNOWN: ~w"-[G]),p(i(K))])]).
-explanationHTML(f(G,Ref,_,_,_,C),[li(title="Failed goal",[span(style="color:red","It is NOT the case that: ~w ~~"-[NG]),Navigator]), ul(CH)]) :- 
+explanationHTML(f(G,Ref,_,_,_,C),[li(title="Failed goal",[span(style="color:red","~w ~~"-[NG]),Navigator]), ul(CH)]) :- 
     niceModule(G,NG),
     clauseNavigator(Ref,Navigator), explanationHTML(C,CH).
 %explanationHTML(at(G,K),[li(style="color:green",a(href=K,"~w"-[G]))]).
