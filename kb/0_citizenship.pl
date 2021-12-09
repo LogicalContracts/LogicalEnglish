@@ -1,4 +1,4 @@
-:- module('citizenship+https://www.legislation.gov.uk/ukpga/1981/61/body/',[]).
+:- module('citizenship+https://www.legislation.gov.uk/ukpga/1981/61/section/1',[]).
 
 en("the target language is: prolog.
 
@@ -18,7 +18,7 @@ a person acquires British citizenship on a date
 if the person is born in the UK on the date
 and the date is after commencement
 and an other person is the mother of the person
-    or an other person is the father of the person
+    or the other person is the father of the person
 and the other person is a British citizen on the date
     or the other person is settled in the UK on the date.
 
