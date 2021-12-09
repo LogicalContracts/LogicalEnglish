@@ -15,7 +15,7 @@ limitations under the License.
 */
 
 :- module(_ThisFileName,[query/4, query_with_facts/5, query_once_with_facts/5, explanation_node_type/2, render_questions/2,
-    run_examples/0, run_examples/1, myClause2/8, myClause/4, taxlogWrapper/9, niceModule/2, refToOrigin/2,
+    run_examples/0, run_examples/1, myClause2/9, myClause/4, taxlogWrapper/10, niceModule/2, refToOrigin/2,
     after/2, is_not_before/2, before/2, immediately_before/2, same_date/2, subtract_days/3, this_year/1, uk_tax_year/4, in/2,
     isExpressionFunctor/1, set_time_of_day/3, start_of_day/2, end_of_day/2, is_days_after/3, is_1_day_after/2, unparse_time/2
     ]).
@@ -288,7 +288,7 @@ i(G,M,CID,Cref,U,E) :-
 % unknown(+Goal,+Module) whether the knowledge source is currently unable to provide a result 
 unknown(G,M) :- var(G), !, throw(variable_unknown_call_at(M)).
 unknown(on(G,_Time),M) :- !, unknown(G,M).
-unknown(G,M) :- functor(G,F,N),functor(GG,F,N), \+ myClause2(GG,_,M,_,_,_,_,_).
+unknown(G,M) :- functor(G,F,N),functor(GG,F,N), \+ myClause2(GG,_,M,_,_,_,_,_,_).
 
 
 myCall(G) :- sandbox:safe_call(G).
@@ -340,36 +340,36 @@ squeezeTuples(Tuples,L,U,Es) :-
 myClause(H,M,Body,Ref) :- myClause(H,M,Body,Ref,_,_,_).
 
 % myClause(+Head,+Module,-Body,-Ref,-IsProlog,-OriginURL,-LocalExplanation)  IsProlog is true if the body should be called directly, without interpretation
-myClause(on(H,Time),M,Body,Ref,IsProlog,URL,E) :- !, myClause2(H,Time,M,Body,Ref,IsProlog,URL,E).
-myClause(H,M,Body,Ref,IsProlog,URL,E) :- myClause2(H,_Time,M,Body,Ref,IsProlog,URL,E).
+myClause(on(H,Time),M,Body,Ref,IsProlog,URL,E) :- !, myClause2(H,Time,M,Body,Ref,IsProlog,URL,E,_LE_line).
+myClause(H,M,Body,Ref,IsProlog,URL,E) :- myClause2(H,_Time,M,Body,Ref,IsProlog,URL,E,_LE_line).
 
 % Supports the injecting of facts for a query:
 :- thread_local hypothetical_fact/6. % Module, FactTemplate, Fact, ClauseLikeBody, FakeClauseRef, redefine/extend
 
-% myClause2(PlainHead,Time,Module,Body,Ref,IsProlog,URL,LocalExplanation)
-myClause2(H,Time,M,Body,Ref,IsProlog,URL,E) :- 
+% myClause2(PlainHead,Time,Module,Body,Ref,IsProlog,URL,LocalExplanation, LE_line)
+myClause2(H,Time,M,Body,Ref,IsProlog,URL,E, Line) :- 
     (nonvar(Ref) -> clause_property(Ref,module(M)) ; true),
     (hypothetical_fact(M,H,_,_,_,extend) -> % allow existing facts and rules to persist even with similar hypos:
         (hypothetical_fact(M,H,H,Body_,Ref,_) ; M:clause(H,Body_,Ref)) ; %... or override them:
         (hypothetical_fact(M,H,Fact,Body_,Ref,_) *-> H=Fact ; M:clause(H,Body_,Ref))
     ),
     % hypos with rules cause their bodies to become part of our resolvent via Body:
-    taxlogWrapper(Body_,_ExplicitTime,Time,M,Body,Ref,IsProlog,URL,E).
+    taxlogWrapper(Body_,_ExplicitTime,Time,M,Body,Ref,IsProlog,URL,E, Line).
 
-% taxlogWrapper(RawBody,ExplicitTime,Time,Module,Body,ClauseRef,IsProlog,URL,E)
+% taxlogWrapper(RawBody,ExplicitTime,Time,Module,Body,ClauseRef,IsProlog,URL,E,LE_Line)
 % keep this in sync with syntax.pl
-taxlogWrapper(taxlogBody(Body,Explicit,Time_,URL,E_),Explicit,Time,M,Body,Ref,IsProlog,URL,E) :- (Body=call(_);Body==true), !,
+taxlogWrapper(targetBody(Body,Explicit,Time_,URL,E_,L),Explicit,Time,M,Body,Ref,IsProlog,URL,E, L) :- (Body=call(_);Body==true), !,
     Time=Time_, IsProlog=true, E=[s(E_,M,Ref,[])].
-taxlogWrapper(taxlogBody(Body,Explicit,Time_,URL,E),Explicit,Time,_M,Body,_Ref,IsProlog,URL,E) :- !, Time=Time_, IsProlog=false.
-taxlogWrapper(Body_,false,_Time,_M,Body,_Ref,IsProlog,URL,E) :- Body_=Body,IsProlog=true,E=[],URL=''.
+taxlogWrapper(targetBody(Body,Explicit,Time_,URL,E, L),Explicit,Time,_M,Body,_Ref,IsProlog,URL,E, L) :- !, Time=Time_, IsProlog=false.
+taxlogWrapper(Body_,false,_Time,_M,Body,_Ref,IsProlog,URL,E, _) :- Body_=Body,IsProlog=true,E=[],URL=''.
 
 refToOrigin(Ref,URL) :-
     blob(Ref,clause), 
-    myClause2(_H,_Time,Module_,_Body,Ref,_IsProlog,URL_,_E),
+    myClause2(_H,_Time,Module_,_Body,Ref,_IsProlog,URL_,_E, _),
     !,
     (moduleMapping(Module,Module_)-> true ; Module=Module_),
     (is_absolute_url(URL_) -> URL=URL_; (
-        sub_atom(Module,_,_,0,'/') -> atomic_list_concat([Module,URL_],URL) ; atomic_list_concat([Module,'/',URL_],URL)
+        sub_atom(Module,_,_,0,'/') -> atomic_list_concat([Module,URL_],URL) ; URL=Module % atomic_list_concat([Module,'/',URL_],URL)
         )).
 refToOrigin(Ref_,Ref) :- term_string(Ref_,Ref).
 
@@ -386,7 +386,7 @@ refToSourceAndOrigin(Ref,Source,Origin) :-
 prolog:meta_goal(at(G,M),[M_:G]) :- (nonvar(M) -> atom_string(M_,M) ; M=M_).
 % next two handled by declare_our_metas:
 prolog:meta_goal(on(G,_Time),[G]).
-prolog:meta_goal(taxlogBody(G,_,_,_,_),[G]).
+prolog:meta_goal(targetBody(G,_,_,_,_,_),[G]).
 %prolog:meta_goal(because(G,_Why),[G]).
 prolog:meta_goal(and(A,B),[A,B]).
 prolog:meta_goal(or(A,B),[A,B]).
@@ -400,7 +400,7 @@ prolog:meta_goal(aggregate_all(_,G,_),[G]). % is this necessary...?
 :- multifile prolog:called_by/4.
 prolog:called_by(on(G,_T), M, M, [G]). % why is this needed, given meta_goal(on(..))...?
 prolog:called_by(because(G,_Why), M, M, [G]). % why is this needed, given meta_goal(on(..))...?
-prolog:called_by(taxlogBody(G,_,_,_,_), M, M, [G]). 
+prolog:called_by(targetBody(G,_,_,_,_,_), M, M, [G]). 
 %prolog:called_by(aggregate(_,G,_), M, M, [G]). % why is this needed, given meta_goal(on(..))...?
 
 % does NOT fix the "G is not called" bug: prolog:called_by(mainGoal(G,_), M, M, [G]).
@@ -494,8 +494,8 @@ assert_and_remember_(Operation,How,M:Fact,Explicit,Body,Time,Why,Undo) :-
     % this seems to require either using a variant test... or demanding facts to be ground
     % hypothetical_fact(M,H,Fact,Body_,Ref)
     functor(Fact,F,N), functor(Template,F,N), 
-    Add = assert( hypothetical_fact(M,Template,Fact,taxlogBody(Body,Explicit,Time,'',Why),hypothetical,How) ),
-    Delete = retractall( hypothetical_fact(M,Template,Fact,taxlogBody(Body,_Explicit,Time,'',Why),_,_) ),
+    Add = assert( hypothetical_fact(M,Template,Fact,targetBody(Body,Explicit,Time,'',Why,_),hypothetical,How) ),
+    Delete = retractall( hypothetical_fact(M,Template,Fact,targetBody(Body,_Explicit,Time,'',Why,_),_,_) ),
     (Operation==add ->( Undo=Delete, Add) ; ( Undo=Add, Delete )).
 
 % canonic_fact_time(+Fact,+DefaultModule,Module:Fact_,Time,-ExplicitTime)
@@ -562,7 +562,7 @@ expand_explanation_refs([Node|Nodes],Facts, [NewNode|NewNodes]) :-
             %AllNodes = [NewNode|NewNodes]
             )
         ; %print_message(informational, "Can't translate ~w"-[X])
-            Output='it has not yet been proven'
+            Output='still to be proved '(X)
         )
     ;         %AllNodes = NewNodes
         Output = 'it is a fact'

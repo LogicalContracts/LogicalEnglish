@@ -90,7 +90,7 @@ query three is:
     op(800,fx,user:show), % to support querying
     op(850,xfx,user:of), % to support querying
     dictionary/3, meta_dictionary/3,
-    get_answer_from_goal/2, name_as_atom/2
+    get_answer_from_goal/2, name_as_atom/2, parsed/0
     ]).
 :- use_module('./tokenize/prolog/tokenize.pl').
 :- use_module(library(pengines)).
@@ -509,8 +509,8 @@ conditions(Ind0, Map1, MapN, Conds) -->
 more_conds(Ind0, Ind1, Ind3, Map1, MapN, Cond, RestMapped) --> 
     newline, spaces(Ind2), {Ind0 =< Ind2}, % if the new indentation is deeper, it goes on as before. 
     operator(Op), condition(Cond2, Ind2, Map1, Map2),
-    {add_cond(Op, Ind1, Ind2, Cond, Cond2, Conditions)},  
-    {print_message(informational, "~w"-[Conditions])}, !,
+    {add_cond(Op, Ind1, Ind2, Cond, Cond2, Conditions)},  !, 
+    %{print_message(informational, "~w"-[Conditions])}, !,
     more_conds(Ind0, Ind2, Ind3, Map2, MapN, Conditions, RestMapped). 
 more_conds(_, Ind, Ind, Map, Map, Cond, Cond, Rest, Rest).  
  
@@ -1878,6 +1878,7 @@ answer(English, Arg, E, Result) :- %trace,
             retract_facts(SwishModule, Facts)). 
 
 % get_answer_from_goal/2
+% get_answer_from_goal(+Goals_after_being_queried, -Goals_translated_into_LEnglish_as_answers)
 get_answer_from_goal((G,R), WholeAnswer) :- 
     get_answer_from_goal(G, Answer), 
     get_answer_from_goal(R, RestAnswers), !, 
@@ -2053,11 +2054,11 @@ show(types) :-
     setof(Ty, is_type(Ty), Set), 
     forall(member(T, Set), print_message(informational, '~a'-[T])).
 
-unwrapBody(taxlogBody(Body, _, _, _, _), Body). 
+unwrapBody(targetBody(Body, _, _, _, _, _), Body). 
 %unwrapBody(Body, Body). 
 
 % hack to bring in the reasoner for explanations.  
-taxlogBody(G, false, _, '', []) :- %trace, 
+targetBody(G, false, _, '', [], _) :- %trace, 
     %nonvar(G),
     pengine_self(SwishModule), extract_goal_command(G, SwishModule, _InnerG, Command), % clean extract goals
     %print_message(informational, "Trying ~w"-[Command]), 
@@ -2102,7 +2103,7 @@ user:le_taxlog_translate( en(Text), Terms) :- le_taxlog_translate( en(Text), Ter
 
 user:op_stop(StopWords) :- op_stop(StopWords). 
 
-user:taxlogBody(G, B, X, S, L) :- taxlogBody(G, B, X, S, L). 
+user:targetBody(G, B, X, S, L, R) :- targetBody(G, B, X, S, L, R). 
 
 le_taxlog_translate( EnText, Terms) :- le_taxlog_translate( EnText, someFile, 1, Terms).
 
