@@ -1,7 +1,7 @@
 % Logical English document
 
 % an example of a prolog module name. Please adjust as convenient
-:- module('proof+http://tests.com',[]).
+:- module('prooftrees+http://tests.com',[]).
 
 en("the target language is: prolog. % other languages available soon
 

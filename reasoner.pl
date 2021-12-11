@@ -29,6 +29,8 @@ limitations under the License.
 :- use_module(kp_loader).
 :- use_module(le_input).
 
+:- thread_local do_not_fail_undefined_preds/0. 
+
 % query(AtGoal,Unknowns,ExplanationTerm,Result)
 %  Result will be true/false/unknown
 query(Goal,Questions,E,Result) :- 
@@ -44,7 +46,7 @@ query_with_facts(Goal,Facts,Questions,E,Outcome) :-
 %  if OnceUndo, only one solution, and time execution is limited
 %  Result will be true/false/unknown
 %  This is NOT reentrant
-query_with_facts(Goal,Facts_,OnceUndo,unknowns(Unknowns),taxlogExplanation(E),Outcome) :- %trace, 
+query_with_facts(Goal,Facts_,OnceUndo,unknowns(Unknowns),taxlog(taxlogExplanation(E)),Outcome) :- %trace, 
     must_be(boolean,OnceUndo),
     (Goal=at(G,M__) -> atom_string(M_,M__) ; 
         myDeclaredModule(M_) -> Goal=G; 
@@ -60,8 +62,25 @@ query_with_facts(Goal,Facts_,OnceUndo,unknowns(Unknowns),taxlogExplanation(E),Ou
     retractall(hypothetical_fact(_,_,_,_,_,_)),
     (OnceUndo==true -> (true, once_with_facts(Caller, M, Facts, true)) ; (true, call_with_facts(Caller, M, Facts))),
     list_without_variants(U,Unknowns_), % remove duplicates, keeping the first clause reference for each group
-    mapModulesInUnknwons(Unknowns_,Unknowns).
+    mapModulesInUnknwons(Unknowns_,Unknowns), !.
 
+query_with_facts(Goal,Facts_,OnceUndo,unknowns(Unknowns),le(le_Explanation(E)),Outcome) :- %trace, 
+    must_be(boolean,OnceUndo),
+    (Goal=at(G,M__) -> atom_string(M_,M__) ; 
+        myDeclaredModule(M_) -> Goal=G; 
+        (print_message(error,"No knowledge module specified"-[]), fail)),
+    context_module(Me),
+    (shouldMapModule(M_,M)->true;M=M_),
+    (is_list(Facts_)-> Facts=Facts_; example_fact_sequence(M,Facts_,Facts)),
+    Caller = Me:(
+        i(at(G,M),OnceUndo,U,Result_),
+        Result_=..[Outcome,E_],
+        expand_explanation_refs_le(E_,Facts,E)
+        ),
+    retractall(hypothetical_fact(_,_,_,_,_,_)),
+    (OnceUndo==true -> (true, once_with_facts(Caller, M, Facts, true)) ; (true, call_with_facts(Caller, M, Facts))),
+    list_without_variants(U,Unknowns_), % remove duplicates, keeping the first clause reference for each group
+    mapModulesInUnknwons(Unknowns_,Unknowns).
 
 %! query_once_with_facts(+Goal,?FactsListOrExampleName,-Unknowns,-Explanation,-Result)
 %  query considering the given facts (or accumulated facts of all scenarios the given example name), undoes them at the end; limited execution time
@@ -254,7 +273,7 @@ i(At,Mod,CID,Cref,U,E) :- At=at(G,M_), !,
     ( (loaded_kp(M); hypothetical_fact(M,_,_,_,_,_)) -> 
                 i(G,M,CID,Cref,U,E) ; 
                 (U=[At/c(Cref)], E=[u(At,Mod,Cref,[])] )).
-i(G,M,_CID,Cref,U,E) :- unknown(G,M), !, 
+i(G,M,_CID,Cref,U,E) :- unknown(G,M), do_not_fail_undefined_preds, !, 
     (U=[at(G,M)/c(Cref)],E=[ u(at(G,M),M,Cref,[]) ]).
 %TODO: on(G,2020) means "G true on some instant in 2020"; who matches that with '20210107' ? check for clauses and hypos
 i(G,M,CID,Cref,U,E) :- 
@@ -548,7 +567,17 @@ simplify_explanation([],V,V,[]).
 % expand_explanation_refs(+ExpandedWhy,+ExtraFacts,-ExpandedRefLessWhy)
 % TODO: recover original variable names? seems to require either some hacking with clause_info or reparsing
 % transforms explanation: each nodetype(Literal,Module,ClauseRef,Children) --> nodetype(Literal,ClauseRef,Module,SourceString,OriginURL,Children)
-expand_explanation_refs([Node|Nodes],Facts, [NewNode|NewNodes]) :-  
+expand_explanation_refs([Node|Nodes],Facts,[NewNode|NewNodes]) :- !,
+    Node=..[Type,X,Module,Ref,Children], 
+    refToSourceAndOrigin(Ref,Source,Origin),
+    %TODO: is the following test against facts necessary???:
+    ((member(XX,Facts), variant(XX,X)) -> NewOrigin=userFact ; NewOrigin=Origin),
+    NewNode=..[Type,X,Ref,Module,Source,NewOrigin,NewChildren],
+    expand_explanation_refs(Children,Facts,NewChildren),
+    expand_explanation_refs(Nodes,Facts,NewNodes).
+expand_explanation_refs([],_,[]).
+
+expand_explanation_refs_le([Node|Nodes],Facts, [NewNode|NewNodes]) :-  
     Node=..[Type,X,Module,Ref,Children], 
     refToSourceAndOrigin(Ref,Source,Origin),
     %TODO: is the following test against facts necessary???:
@@ -562,16 +591,16 @@ expand_explanation_refs([Node|Nodes],Facts, [NewNode|NewNodes]) :-
             %AllNodes = [NewNode|NewNodes]
             )
         ; %print_message(informational, "Can't translate ~w"-[X])
-            Output='still to be proved '(X)
+            Output='yet to be proved '(X)
         )
     ;         %AllNodes = NewNodes
         Output = 'it is a fact'
     ),
     %translate_to_le(X, Output),      
     NewNode=..[Type,Output,Ref,Module,Source,NewOrigin,NewChildren],
-    expand_explanation_refs(Children,Facts,NewChildren),
-    expand_explanation_refs(Nodes,Facts,NewNodes).
-expand_explanation_refs([],_,[]). 
+    expand_explanation_refs_le(Children,Facts,NewChildren),
+    expand_explanation_refs_le(Nodes,Facts,NewNodes).
+expand_explanation_refs_le([],_,[]). 
 
 translate_to_le(X, EnglishAnswer) :-
     le_input:get_answer_from_goal(X, RawAnswer), name_as_atom(RawAnswer, EnglishAnswer), !. 

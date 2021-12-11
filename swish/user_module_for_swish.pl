@@ -96,10 +96,10 @@ clauseNavigator(C,H,AP) :- clauseNavigator_(C,H,AP).
 
 % returns an element, as well as an anchor property
 clauseNavigator_(Ref,span([a([onclick=Handler]," KB ")|Origin]), onclick=Handler) :- 
-    blob(Ref,clause), clause_property(Ref,file(F_)), clause_property(Ref,line_count(_PrologLine)),
+    blob(Ref,clause), clause_property(Ref,file(F_)), clause_property(Ref,line_count(PrologLine)),
     myClause2(_H,_,Module_,_Body,Ref,_IsProlog,_URL,_E, LE_Line), 
     !,
-	%(le_input:parsed*-> Line=LE_Line;Line=PrologLine), % origin in LE or in Taxlog?
+	(LE_Line\=taxlog *-> Line=LE_Line;Line=PrologLine), % origin in LE or in Taxlog?
     % Module_ will be the temporary SWISH module with the current window's program
     % This seems to break links to source: (shouldMapModule(Module,Module_)-> kp_location(Module,F,true) ;(
     (moduleMapping(Module,Module_)-> must_succeed(kp_location(Module,F,true),one) ;(
@@ -108,7 +108,7 @@ clauseNavigator_(Ref,span([a([onclick=Handler]," KB ")|Origin]), onclick=Handler
         )),
     refToOrigin(Ref,MName), moduleName2URL(MName, URL), 
     % could probably use https://www.swi-prolog.org/pldoc/doc_for?object=js_call//1 , but having trouble embedding that as attribute above:
-    format(string(Handler),"myPlayFile('~a',~w);",[F,LE_Line]), % format(string(Handler),"myPlayFile('~a',~w);",[F,L]),
+    format(string(Handler),"myPlayFile('~a',~w);",[F,Line]), % format(string(Handler),"myPlayFile('~a',~w);",[F,L]),
     Origin = [a([href=URL, target='_self']," Text")].
 clauseNavigator_(Ref,i(" hypothesis (~w) in scenario"-[Ref]),onclick='').
 
