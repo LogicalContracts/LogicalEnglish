@@ -241,13 +241,14 @@ Standard Prolog clause introspection is used, plus some SWI-Prolog extensions fo
 	- https://taxlog.logicalcontracts.com/logicalEnglish?kp=**KP**"
 
 ###  4.3. <a name='Querying'></a>Querying
-- ```query_with_facts(Goal,FactsSource,Unknowns,Explanation,Result)```
+- ```query_with_facts(Goal,FactsSource,Unknowns,ExplanationTemplate,Result)```
 	- Goal is of the form ```G at KP```
 	- If simply G: KP is assumed to be the module in the current editor
 	- If time is relevant use ```G’ on Datetime```
 	- FactsSource is either a list of facts/rules or an example name in KP
 	- Unknowns are predicate calls assumed true and supporting the answer (we want it to be [])
-	- Explanation is a justification of the answer, a tree represented in a large Prolog term which the Tax-KB SWISH renderer displays as an indented list, including navigation links etc.
+	- ExplanationTemplate is either le(Explanation) or taxlog(Explanation), determining the explanation tree style
+		- Explanation is a justification of the answer, a tree represented in a large Prolog term which the Tax-KB SWISH renderer displays as an indented list, including navigation links etc.
 	- Result is either of true/unknown/false
 - Web API (POST) for querying
 	- Path: /taxkbapi
