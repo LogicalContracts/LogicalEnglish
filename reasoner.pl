@@ -36,16 +36,23 @@ limitations under the License.
 query(Goal,Questions,E,Result) :- 
     query_with_facts(Goal,[],false,Questions,E,Result).
 
-%! query_with_facts(+Goal,?FactsListOrExampleName,-Unknowns,-Explanation,-Result)
+%! query_with_facts(+Goal,?FactsListOrExampleName,-Unknowns,?ExplanationTemplate,-Result)
 query_with_facts(Goal,Facts,Questions,E,Outcome) :-
     query_with_facts(Goal,Facts,false,Questions,E,Outcome).
 
-%! query_with_facts(+Goal,?FactsListOrExampleName,+OnceUndo,-Unknowns,-Explanation,-Result)
+%! query_with_facts(+Goal,?FactsListOrExampleName,+OnceUndo,-Unknowns,-ExplanationTemplate,-Result)
 %  query considering the given facts (or accumulated facts of all scenarios the given example name)
 %  if OnceUndo, only one solution, and time execution is limited
+%  ExplanationTemplate determines Logical English or taxlog (Prolog syntax) explanation nodes
 %  Result will be true/false/unknown
 %  This is NOT reentrant
-query_with_facts(Goal,Facts_,OnceUndo,unknowns(Unknowns),taxlog(taxlogExplanation(E)),Outcome) :- %trace, 
+
+query_with_facts(Goal,Facts,OnceUndo,Unknowns,taxlog(taxlogExplanation(E)),Outcome) :- 
+    query_with_facts_(Goal,Facts,OnceUndo,Unknowns,E,Outcome).
+query_with_facts(Goal,Facts,OnceUndo,Unknowns,le(le_Explanation(E)),Outcome) :- 
+    query_with_facts_(Goal,Facts,OnceUndo,Unknowns,E,Outcome).
+
+query_with_facts_(Goal,Facts_,OnceUndo,unknowns(Unknowns),E,Outcome) :- 
     must_be(boolean,OnceUndo),
     (Goal=at(G,M__) -> atom_string(M_,M__) ; 
         myDeclaredModule(M_) -> Goal=G; 
@@ -63,23 +70,6 @@ query_with_facts(Goal,Facts_,OnceUndo,unknowns(Unknowns),taxlog(taxlogExplanatio
     list_without_variants(U,Unknowns_), % remove duplicates, keeping the first clause reference for each group
     mapModulesInUnknwons(Unknowns_,Unknowns).
 
-query_with_facts(Goal,Facts_,OnceUndo,unknowns(Unknowns),le(le_Explanation(E)),Outcome) :- %trace, 
-    must_be(boolean,OnceUndo),
-    (Goal=at(G,M__) -> atom_string(M_,M__) ; 
-        myDeclaredModule(M_) -> Goal=G; 
-        (print_message(error,"No knowledge module specified"-[]), fail)),
-    context_module(Me),
-    (shouldMapModule(M_,M)->true;M=M_),
-    (is_list(Facts_)-> Facts=Facts_; example_fact_sequence(M,Facts_,Facts)),
-    Caller = Me:(
-        i(at(G,M),OnceUndo,U,Result_),
-        Result_=..[Outcome,E_],
-        expand_explanation_refs_le(E_,Facts,E)
-        ),
-    retractall(hypothetical_fact(_,_,_,_,_,_)),
-    (OnceUndo==true -> (true, once_with_facts(Caller, M, Facts, true)) ; (true, call_with_facts(Caller, M, Facts))),
-    list_without_variants(U,Unknowns_), % remove duplicates, keeping the first clause reference for each group
-    mapModulesInUnknwons(Unknowns_,Unknowns).
 
 %! query_once_with_facts(+Goal,?FactsListOrExampleName,-Unknowns,-Explanation,-Result)
 %  query considering the given facts (or accumulated facts of all scenarios the given example name), undoes them at the end; limited execution time
