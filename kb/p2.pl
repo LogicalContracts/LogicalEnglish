@@ -1,7 +1,7 @@
 % Logical English document
 
 % an example of a prolog module name. Please adjust as convenient
-:- module('p2+http://tests.com',[]).
+:- module('p1+http://tests.com',[]).
 
 :- include(p1). % testing!
 
