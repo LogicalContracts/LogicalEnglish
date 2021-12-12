@@ -89,14 +89,11 @@ query three is:
     op(850,xfx,user:with), % to support querying
     op(800,fx,user:show), % to support querying
     op(850,xfx,user:of), % to support querying
-    dictionary/3, meta_dictionary/3,
-    get_answer_from_goal/2, name_as_atom/2, parsed/0
+    dictionary/3, meta_dictionary/3
     ]).
 :- use_module('./tokenize/prolog/tokenize.pl').
 :- use_module(library(pengines)).
 :- use_module('reasoner.pl').
-:- use_module(kp_loader).
-:- use_module(library(prolog_stack)).
 :- thread_local text_size/1, error_notice/4, dict/3, meta_dict/3, example/2, 
                 last_nl_parsed/1, kbname/1, happens/2, initiates/3, terminates/3, is_type/1,
                 predicates/1, events/1, fluents/1, metapredicates/1, parsed/0.  
@@ -406,9 +403,9 @@ statement(Statement) -->
       Statement = [if(it_is_illegal(Event, T), Body)])},!. 
 
 % a fact or a rule
-statement(Statement) --> currentLine(L), 
+statement(Statement) --> 
     literal_([], Map1, Head), body_(Body, Map1, _), period,  
-    {(Body = [] -> Statement = [if(L, Head, true)]; Statement = [if(L, Head, Body)])}. 
+    {(Body = [] -> Statement = [if(Head, true)]; Statement = [if(Head, Body)])}. 
 
 % error
 statement(_, Rest, _) :- 
@@ -495,23 +492,16 @@ conditions(Ind0, Map1, MapN, Conds) -->
     %{Ind0=<IndF}. % 
 
 % three conditions look ahead
-% more_conds(Ind0, Ind1, Ind4, Map1, MapN, C1, RestMapped, In1, Out) :-
-%     newline(In1, In2), spaces(Ind2, In2, In3), Ind0=<Ind2, operator(Op1, In3, In4), condition(C2, Ind1, Map1, Map2, In4, In5), 
-%     newline(In5, In6), spaces(Ind3, In6, In7), Ind0=<Ind3, operator(Op2, In7, In8), condition(C3, Ind2, Map2, Map3, In8, In9), 
-%     adjust_op(Ind2, Ind3, C1, Op1, C2, Op2, C3, Conditions), !, 
-%     more_conds(Ind0, Ind3, Ind4, Map3, MapN, Conditions, RestMapped, In9, Out). 
-% % more_conds(PreviosInd, CurrentInd, MapIn, MapOut, InCond, OutConds)
-% more_conds(Ind0, Ind1, Ind, Map1, MapN, Cond, Conditions) --> 
-%     newline, spaces(Ind), {Ind0 =< Ind}, % if the new indentation is deeper, it goes on as before. 
-%     operator(Op), condition(Cond2, Ind, Map1, MapN),
-%     {add_cond(Op, Ind1, Ind, Cond, Cond2, Conditions)},  
-%     {print_message(informational, "~w"-[Conditions])}, !.
-more_conds(Ind0, Ind1, Ind3, Map1, MapN, Cond, RestMapped) --> 
-    newline, spaces(Ind2), {Ind0 =< Ind2}, % if the new indentation is deeper, it goes on as before. 
-    operator(Op), condition(Cond2, Ind2, Map1, Map2),
-    {add_cond(Op, Ind1, Ind2, Cond, Cond2, Conditions)},  !, 
-    %{print_message(informational, "~w"-[Conditions])}, !,
-    more_conds(Ind0, Ind2, Ind3, Map2, MapN, Conditions, RestMapped). 
+more_conds(Ind0, Ind1, Ind4, Map1, MapN, C1, RestMapped, In1, Out) :-
+    newline(In1, In2), spaces(Ind2, In2, In3), Ind0=<Ind2, operator(Op1, In3, In4), condition(C2, Ind1, Map1, Map2, In4, In5), 
+    newline(In5, In6), spaces(Ind3, In6, In7), Ind0=<Ind3, operator(Op2, In7, In8), condition(C3, Ind2, Map2, Map3, In8, In9), 
+    adjust_op(Ind2, Ind3, C1, Op1, C2, Op2, C3, Conditions), !, 
+    more_conds(Ind0, Ind3, Ind4, Map3, MapN, Conditions, RestMapped, In9, Out). 
+% more_conds(PreviosInd, CurrentInd, MapIn, MapOut, InCond, OutConds)
+more_conds(Ind0, Ind1, Ind, Map1, MapN, Cond, Conditions) --> 
+    newline, spaces(Ind), {Ind0 =< Ind}, % if the new indentation is deeper, it goes on as before. 
+    operator(Op), condition(Cond2, Ind, Map1, MapN), 
+    {add_cond(Op, Ind1, Ind, Cond, Cond2, Conditions)}, !.
 more_conds(_, Ind, Ind, Map, Map, Cond, Cond, Rest, Rest).  
  
 % this naive definition of term is problematic
@@ -830,28 +820,18 @@ replace_vars([],[]) :- !.
 replace_vars([A|RI], [A|RO]) :- atom(A), replace_vars(RI,RO), !.
 replace_vars([W|RI], [A|RO]) :- term_to_atom(W, A), replace_vars(RI,RO).   
 
-add_cond(and, Ind1, Ind2, Previous, C4, (C; (C3, C4))) :-
-    last_cond(or, Previous, C, C3), % (C; C3)
+add_cond(and, Ind1, Ind2,  (C; C3), C4, (C; (C3, C4))) :-
     Ind1 =< Ind2, !. 
-add_cond(and, Ind1, Ind2, Previous, C4, ((C; C3), C4)) :-
-    last_cond(or, Previous, C, C3), % (C; C3)
+add_cond(and, Ind1, Ind2,  (C; C3), C4, ((C; C3), C4)) :-
     Ind1 > Ind2, !.     
 add_cond(and,_, _, (C, C3), C4, (C, (C3, C4))) :- !. 
 add_cond(and,_, _, Cond, RestC, (Cond, RestC)) :- !. 
-add_cond(or, Ind1, Ind2, Previous, C4, (C, (C3; C4))) :- 
-    last_cond(and, Previous, C, C3),  % (C, C3)
+add_cond(or, Ind1, Ind2, (C, C3), C4, (C, (C3; C4))) :- 
     Ind1 =< Ind2, !. 
-add_cond(or, Ind1, Ind2, Previous, C4, ((C, C3); C4)) :- 
-    last_cond(and, Previous, C, C3), % (C, C3)
+add_cond(or, Ind1, Ind2, (C, C3), C4, ((C, C3); C4)) :- 
     Ind1 > Ind2, !. 
 add_cond(or, _, _, (C; C3), C4, (C; (C3; C4))) :- !. 
 add_cond(or, _,_, Cond, RestC, (Cond; RestC)).
-
-last_cond(or, (A;B), A, B) :- B\=(_;_), !.
-last_cond(or, (C;D), (C;R), Last) :- last_cond(or, D, R, Last).
-
-last_cond(and, (A,B), A, B) :- B\=(_,_), !.
-last_cond(and, (C,D), (C,R), Last) :- last_cond(and, D, R, Last).
 
 % adjust_op(Ind1, Ind2, PreviousCond, Op1, Cond2, Op2, Rest, RestMapped, Conditions)
 % from and to and
@@ -1534,9 +1514,6 @@ asserted(F :- B) :- clause(F, B). % as a rule with a body
 asserted(F) :- clause(F,true). % as a fact
 
 /* -------------------------------------------------- error handling */
-currentLine(LineNumber, Rest, Rest) :-
-    once( nth1(_,Rest,newline(NextLine)) ), LineNumber is NextLine-2. 
-
 asserterror(Me, Rest) :-
     %print_message(error, ' Error found'), 
     %select_first_section(Rest, 40, Context), 
@@ -1615,41 +1592,13 @@ dictionary(Predicate, VariablesNames, Template) :- % dict(Predicate, VariablesNa
 % predef_dict/3 is a database with predefined templates for LE
 % it must be ordered by the side of the third argument, to allow the system to check first the longer template
 % with the corresponding starting words. 
-% for Taxlog examples
-predef_dict(['\'s_R&D_expense_credit_is', Project, ExtraDeduction, TaxCredit], 
-                                 [project-projectid, extra-amount, credit-amount],
-   [Project, '\'s', 'R&D', expense, credit, is, TaxCredit, plus, ExtraDeduction]).
-predef_dict(['can_request_R&D_relief_such_as', Project, ExtraDeduction, TaxCredit], 
-                                 [project-projectid, extra-amount, credit-amount],
-   [Project, can, request,'R&D', relief, for, a, credit, of, TaxCredit, with, a, deduction, of, ExtraDeduction]).
-predef_dict(['\'s_sme_R&D_relief_is', Project, ExtraDeduction, TaxCredit], 
-                                 [project-projectid, extra-amount, credit-amount],
-   [the, 'SME', 'R&D', relief, for, Project, is, estimated, at, TaxCredit, with, an, extra, of, ExtraDeduction]).
-predef_dict([project_subject_experts_list_is,Project,Experts], [project-object, experts_list-list],
-   [Project, has, an, Experts, list]).
-predef_dict([rollover_applies,EventID,Asset,Time,Transferor,TransfereesList], [id-event,asset-asset,when-time,from-person,to-list], 
-   [EventID, rollover, of, the, transfer, of, Asset, from, Transferor, to, TransfereesList, at, Time, applies]).
-predef_dict([transfer_event,ID,Asset,Time,Transferor,TransfereesList],[id-id,asset-asset,time-time,from-person,to-list],
-   [event, ID, of, transfering, Asset, from, Transferor, to, TransfereesList, at, Time, occurs]).
-predef_dict([s_type_and_liability_are(Asset,Type,Liability), [asset-asset, assettype-type, liabilty-amount],
-   [the, type, of, asset, Asset, is, Type, its, liability, is, Liability]]).
-predef_dict([exempt_transfer,From,To,SecurityIdentifier,Time],[from-taxpayer,to-taxpayer,secID-number, time-time],
-   [a, transfer, from, From, to, To, with, SecurityIdentifier, at, Time, is, exempt]).
-predef_dict([shares_transfer,Sender,Recipient,SecurityID,Time], [from-person, to-person, id-number, time-time], 
-   [Sender, transfers, shares, to, Recipient, at, Time, with, id, SecurityID]).
-predef_dict([trading_in_market,SecurityID,MarketID,Time], [id-number,market-number,time-time], 
-   [whoever, is, identified,by, SecurityID, is, trading, in, market, MarketID, at, Time]).
-predef_dict([uk_tax_year_for_date,Date,Year,Start,End], [date-date,year-year,start-date,end-date], 
-   [date, Date, falls, in, the, 'UK', tax, year, Year, that, starts, at, Start, ends, at, End]).
-predef_dict([days_spent_in_uk,Individual,Start,End,TotalDays], [who-person,start-date,end-date,total-number], 
-   [Individual, spent, TotalDays, days, in, the, 'UK', starting, at, Start, ending, at, End]).
-predef_dict([days_spent_in_uk,Individual,Start,End,TotalDays], [who-person,start-date,end-date,total-number], 
-                   [Individual, spent, TotalDays, in, the, 'UK', starting, at, Start, &, ending, at, End]). 
-predef_dict([uk_tax_year_for_date,Date,Year,Start,End], [first_date-date, year-year, second_date-date, third_date-date], 
-                   [in, the, 'UK', Date, falls, in, Year, beginning, at, Start, &, ending, at, End]).
-predef_dict([myDB_entities:is_individual_or_company_on, A, B],
-                   [affiliate-affiliate, date-date],
-                   [A, is, an, individual, or, is, a, company, at, B]).
+%predef_dict([days_spent_in_uk,Individual,Start,End,TotalDays], [who-person,start-date,end-date,total-number], 
+%                    [Individual, spent, TotalDays, in, the, 'UK', starting, at, Start, &, ending, at, End]). 
+%predef_dict([uk_tax_year_for_date,Date,Year,Start,End], [first_date-date, year-year, second_date-date, third_date-date], 
+%                    [in, the, 'UK', Date, falls, in, Year, beginning, at, Start, &, ending, at, End]).
+%predef_dict([myDB_entities:is_individual_or_company_on, A, B],
+%                    [affiliate-affiliate, date-date],
+%                    [A, is, an, individual, or, is, a, company, at, B]).
 % Prolog
 predef_dict([has_as_head_before, A, B, C], [list-list, symbol-term, rest_of_list-list], [A, has, B, as, head, before, C]).
 predef_dict([append, A, B, C],[first_list-list, second_list-list, third_list-list], [appending, A, then, B, gives, C]).
@@ -1733,20 +1682,17 @@ is_it_illegal(English, Scenario) :- % only event as possibly illegal for the tim
     print_message(informational, "Answers: ~w"-[EnglishAnswer]).
 
 % extract_goal_command(WrappedGoal, Module, InnerGoal, RealGoal)
-extract_goal_command(Goal, M, InnerGoal, Command) :- nonvar(Goal), 
-    extract_goal_command_(Goal, M, InnerGoal, Command). 
-
-extract_goal_command_((A;B), M, (IA;IB), (CA;CB)) :-
-    extract_goal_command_(A, M, IA, CA), extract_goal_command_(B, M, IB, CB), !. 
-extract_goal_command_((A,B), M, (IA,IB), (CA,CB)) :-
-    extract_goal_command_(A, M, IA, CA), extract_goal_command_(B, M, IB, CB), !. 
-extract_goal_command_(holds(Goal,T), M, Goal, (holds(Goal,T);M:holds(Goal,T))) :- !.
-extract_goal_command_(happens(Goal,T), M, Goal, (happens(Goal,T);M:happens(Goal,T))) :- !.
-extract_goal_command_(Goal, M, Goal, M:Goal) :- !. 
+extract_goal_command((A;B), M, (IA;IB), (CA;CB)) :-
+    (extract_goal_command(A, M, IA, CA); extract_goal_command(B, M, IB, CB)), !. 
+extract_goal_command((A,B), M, (IA,IB), (CA,CB)) :-
+    extract_goal_command(A, M, IA, CA), extract_goal_command(B, M, IB, CB), !. 
+extract_goal_command(holds(Goal,T), M, Goal, (holds(Goal,T);M:holds(Goal,T))) :- !.
+extract_goal_command(happens(Goal,T), M, Goal, (happens(Goal,T);M:happens(Goal,T))) :- !.
+extract_goal_command(Goal, M, Goal, M:Goal).
 
 get_assumptions_from_scenario(noscenario, _, []) :- !.  
 get_assumptions_from_scenario(Scenario, SwishModule, Assumptions) :-
-    SwishModule:example(Scenario, [scenario(Assumptions, _)]), !.
+    SwishModule:example(Scenario, [scenario(Assumptions, _)]).
 
 translate_query(English_String, Goals) :-
     tokenize(English_String, Tokens, [cased(true), spaces(true), numbers(false)]),
@@ -1782,6 +1728,34 @@ interrupted(T1, Fluent, T2) :- %trace,
     %(nonvar(T2) -> rbefore(T, T2) ; true ), !.  
     %(T2=(after(T1)-_)->T2=(after(T1)-before(T)); rbefore(T,T2)). 
 
+% experimental; BUG: apparently LE-originated clauses are not being asserted as in TaxLog; 
+% TODO: cleanup, refactor with answer(...)
+explainedAnswer(English,Unknowns,Explanation,Result) :- trace, 
+    (parsed -> true; fail), !, 
+    pengine_self(SwishModule), 
+    (translate_command(SwishModule, English, GoalName, Goal, Scenario) -> true 
+    ; ( print_message(error, "Don't understand this question: ~w "-[English]), !, fail ) ), % later -->, Kbs),
+    copy_term(Goal, CopyOfGoal),  
+    get_answer_from_goal(CopyOfGoal, RawGoal), name_as_atom(RawGoal, EnglishQuestion), 
+    print_message(informational, "Query ~w with ~w: ~w"-[GoalName, Scenario, EnglishQuestion]),
+    print_message(informational, "Scenario: ~w"-[Scenario]),
+    % assert facts in scenario
+    (Scenario==noscenario -> true ; %Facts = [] ; 
+        (SwishModule:example(Scenario, [scenario(_Facts, _)]) -> 
+            true;  print_message(error, "Scenario: ~w does not exist"-[Scenario]))), !,  
+    %print_message(informational, "Facts: ~w"-[Facts]), 
+    extract_goal_command(Goal, SwishModule, InnerGoal, Command), 
+    print_message(informational, "Command: ~w"-[Command]), trace, 
+    query_with_facts(at(InnerGoal,SwishModule),Scenario,Unknowns,Explanation,Result),
+    print_message(informational,"Result:~w, Explanation: ~w"-[Result,Explanation]),
+    print_message(informational,"Unknowns: ~w"-[Unknowns]),
+    % setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
+    %         catch((Command), Error, ( print_message(error, Error), fail ) ), 
+    %         _Result, 
+    %         retract_facts(SwishModule, Facts)), % probably not necessary, the SWISH module is transient
+    get_answer_from_goal(Goal, RawAnswer), name_as_atom(RawAnswer, EnglishAnswer),  
+    print_message(informational, "Answer: ~w"-[EnglishAnswer]).
+
 /* ----------------------------------------------------------------- CLI English */
 % answer/1
 % answer(+Query or Query Expression)
@@ -1802,27 +1776,16 @@ answer(English) :- %trace,
     extract_goal_command(Goal, SwishModule, _InnerGoal, Command), 
     %print_message(informational, "Command: ~w"-[Command]),
     setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
-            catch((true, Command), Error, ( print_message(error, Error), fail ) ), 
+            catch((trace, Command), Error, ( print_message(error, Error), fail ) ), 
             _Result, 
-            retract_facts(SwishModule, Facts)), 
+            retract_facts(SwishModule, Facts)), trace, 
     get_answer_from_goal(Goal, RawAnswer), name_as_atom(RawAnswer, EnglishAnswer),  
     print_message(informational, "Answer: ~w"-[EnglishAnswer]).
 
 % answer/2
 % answer(+Query, with(+Scenario))
-answer(English, Arg) :- % trace, 
+answer(English, Arg) :- %trace, 
     parsed,
-    prepare_query(English, Arg, SwishModule, Goal, Facts, Command), 
-    setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
-            Command, 
-            %call(Command), 
-            %catch_with_backtrace(Command, Error, print_message(error, Error)), 
-            %catch((true, Command), Error, ( print_message(error, Error), fail ) ), 
-            _Result, 
-            retract_facts(SwishModule, Facts)), 
-    show_answer(Goal). 
-
-prepare_query(English, Arg, SwishModule, Goal, Facts, Command) :-
     pengine_self(SwishModule), 
     (translate_command(SwishModule, English, GoalName, Goal, PreScenario) -> true 
     ; ( print_message(error, "Don't understand this question: ~w "-[English]), !, fail ) ), % later -->, Kbs),
@@ -1834,63 +1797,61 @@ prepare_query(English, Arg, SwishModule, Goal, Facts, Command) :-
     % assert facts in scenario
     (Scenario==noscenario -> Facts = [] ; 
         (SwishModule:example(Scenario, [scenario(Facts, _)]) -> 
-            true;  print_message(error, "Scenario: ~w does not exist"-[Scenario]))),  
+            true;  print_message(error, "Scenario: ~w does not exist"-[Scenario]))), !,  
     %print_message(informational, "Facts: ~w"-[Facts]), 
-    extract_goal_command(Goal, SwishModule, _InnerGoal, Command), !. 
-    %print_message(informational, "Command: ~w"-[Command])
-
-show_answer(Goal) :-
-    get_answer_from_goal(Goal, RawAnswer), name_as_atom(RawAnswer, EnglishAnswer), 
-    print_message(informational, "Answer: ~w"-[EnglishAnswer]), !. 
+    extract_goal_command((trace, Goal), SwishModule, _InnerGoal, Command), 
+    %print_message(informational, "Command: ~w"-[Command]),
+    setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
+            catch((true, Command), Error, ( print_message(error, Error), fail ) ), 
+            _Result, 
+            retract_facts(SwishModule, Facts)),
+    get_answer_from_goal(Goal, RawAnswer), name_as_atom(RawAnswer, EnglishAnswer),  
+    print_message(informational, "Answer: ~w"-[EnglishAnswer]).
 
 % answer/3
 % answer(+English, with(+Scenario), -Result)
-answer(English, Arg, EnglishAnswer) :- 
+answer(English, Arg, Answers) :-
     parsed, 
     pengine_self(SwishModule), 
     translate_command(SwishModule, English, _, Goal, PreScenario), % later -->, Kbs),
     %copy_term(Goal, CopyOfGoal), 
     %get_answer_from_goal(CopyOfGoal, RawGoal), name_as_atom(RawGoal, EnglishQuestion), 
     ((Arg = with(ScenarioName), PreScenario=noscenario) -> Scenario=ScenarioName; Scenario=PreScenario), 
-    extract_goal_command(Goal, SwishModule, _InnerGoal, Command),
+    extract_goal_command((trace, Goal), SwishModule, _InnerGoal, Command),
     (Scenario==noscenario -> Facts = [] ; SwishModule:example(Scenario, [scenario(Facts, _)])), 
     setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
-            catch_with_backtrace(Command, Error, print_message(error, Error)), 
-            %catch(Command, Error, ( print_message(error, Error), fail ) ), 
+            catch(Command, Error, ( print_message(error, Error), fail ) ), 
             _Result, 
             retract_facts(SwishModule, Facts)),
-    get_answer_from_goal(Goal, RawAnswer), name_as_atom(RawAnswer, EnglishAnswer). 
+    get_answer_from_goal(Goal, Answers). 
     %reasoner:query_once_with_facts(Goal,Scenario,_,_E,Result).
 
 % answer/4
 % answer(+English, with(+Scenario), -Explanations, -Result) :-
-% answer(at(English, Module), Arg, E, Result) :- trace,
-answer(English, Arg, E, Result) :- %trace, 
-    parsed, myDeclaredModule(Module), 
-    pengine_self(SwishModule), 
+answer(English, Arg, E, Result) :- %trace,
+    parsed, !, pengine_self(SwishModule), 
     translate_command(SwishModule, English, _, Goal, PreScenario), 
     ((Arg = with(ScenarioName), PreScenario=noscenario) -> Scenario=ScenarioName; Scenario=PreScenario), 
     extract_goal_command(Goal, SwishModule, InnerGoal, _Command),
     (Scenario==noscenario -> Facts = [] ; SwishModule:example(Scenario, [scenario(Facts, _)])), !, 
     setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
-            catch((true, query(at(InnerGoal, Module),_,E,Result)), Error, ( print_message(error, Error), fail ) ), 
+            catch((trace, query(at(InnerGoal, SwishModule),_,E,Result)), Error, ( print_message(error, Error), fail ) ), 
             _Result, 
             retract_facts(SwishModule, Facts)). 
 
 % get_answer_from_goal/2
-% get_answer_from_goal(+Goals_after_being_queried, -Goals_translated_into_LEnglish_as_answers)
 get_answer_from_goal((G,R), WholeAnswer) :- 
     get_answer_from_goal(G, Answer), 
-    get_answer_from_goal(R, RestAnswers), !, 
+    get_answer_from_goal(R, RestAnswers), 
     append(Answer, ['\n','\t',and|RestAnswers], WholeAnswer).
 get_answer_from_goal(not(G), [it,is,not,the,case,that,'\n', '\t'|Answer]) :- 
-    get_answer_from_goal(G, Answer), !.
-get_answer_from_goal(happens(Goal,T), Answer) :-    % simple goals do not return a list, just a literal
+    get_answer_from_goal(G, Answer).
+get_answer_from_goal(happens(Goal,T), Answer) :- !,   % simple goals do not return a list, just a literal
     Goal =.. [Pred|GoalElements], dict([Pred|GoalElements], Types, WordsAnswer), 
     process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), 
-    process_time_term(T, TimeExplain), !, 
+    process_time_term(T, TimeExplain),
     Answer = ['At', TimeExplain, it, occurs, that|ProcessedWordsAnswers].
-get_answer_from_goal(holds(Goal,T), Answer) :- 
+get_answer_from_goal(holds(Goal,T), Answer) :- !, 
     Goal =.. [Pred|GoalElements], dict([Pred|GoalElements], Types, WordsAnswer), 
     process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), 
     process_time_term(T, TimeExplain),
@@ -1900,7 +1861,7 @@ get_answer_from_goal(Goal, ProcessedWordsAnswers) :-
     process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), !. 
 get_answer_from_goal(Goal, ProcessedWordsAnswers) :-  
     Goal =.. [Pred|GoalElements], dictionary([Pred|GoalElements], Types, WordsAnswer),
-    process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), !. 
+    process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers). 
 
 process_time_term(T,ExplainT) :- var(T), name_as_atom([a, time, T], ExplainT). % in case of vars
 process_time_term(T,T) :- nonvar(T), atom(T), !. 
@@ -2019,7 +1980,7 @@ show(prolog) :-
 show(rules) :- % trace, 
     pengine_self(SwishModule), 
     findall((Pred :- Body), 
-        (dict(PredicateElements, _, _), Pred=..PredicateElements, clause(SwishModule:Pred, Body_), unwrapBody(Body_, Body)), Predicates),
+        (dict(PredicateElements, _, _), Pred=..PredicateElements, clause(SwishModule:Pred, Body)), Predicates),
     forall(member(Clause, Predicates), portray_clause(Clause)).
 
 show(queries) :- % trace, 
@@ -2054,20 +2015,6 @@ show(types) :-
     setof(Ty, is_type(Ty), Set), 
     forall(member(T, Set), print_message(informational, '~a'-[T])).
 
-unwrapBody(targetBody(Body, _, _, _, _, _), Body). 
-%unwrapBody(Body, Body). 
-
-% hack to bring in the reasoner for explanations.  
-targetBody(G, false, _, '', [], _) :- %trace, 
-    %nonvar(G),
-    pengine_self(SwishModule), extract_goal_command(G, SwishModule, _InnerG, Command), % clean extract goals
-    %print_message(informational, "Trying ~w"-[Command]), 
-    %call(Command). 
-    call(Command). 
-    %Command.
-    %catch_with_backtrace(Command, Error, (print_message(error, Error))). 
- 
-
 %%% ------------------------------------------------ Swish Interface to logical english
 %% based on logicalcontracts' lc_server.pl
 
@@ -2075,18 +2022,15 @@ targetBody(G, false, _, '', [], _) :- %trace,
 prolog_colour:term_colours(en(_Text),lps_delimiter-[classify]). % let 'en' stand out with other taxlog keywords
 prolog_colour:term_colours(en_decl(_Text),lps_delimiter-[classify]). % let 'en_decl' stand out with other taxlog keywords
 
-
-user:(answer Query with Scenario):- 
+user:(Command1 and Command2) :-
+    call(Command1), call(Command2). 
+user:(answer Query with Scenario):-
     answer(Query,with(Scenario)). 
-%:- discontiguous (with)/2.
-%user:(Query with Scenario):-  
-%    answer(Query,with(Scenario)). 
-%user:(Command1 and Command2) :-
-%    call(Command1), call(Command2). 
 user:answer( EnText) :- answer( EnText).
 user:answer( EnText, Scenario) :- answer( EnText, Scenario).
 user:answer( EnText, Scenario, Result) :- answer( EnText, Scenario, Result).
 user:answer( EnText, Scenario, E, Result) :- answer( EnText, Scenario, E, Result).
+user:explainedAnswer(Query,Unknowns,Explanation,Result) :- explainedAnswer(Query,Unknowns,Explanation,Result).
 
 user:(show Something) :- 
     show(Something). 
@@ -2102,8 +2046,6 @@ user:has_as_head_before(List, Head, Rest) :- has_as_head_before(List, Head, Rest
 user:le_taxlog_translate( en(Text), Terms) :- le_taxlog_translate( en(Text), Terms).
 
 user:op_stop(StopWords) :- op_stop(StopWords). 
-
-user:targetBody(G, B, X, S, L, R) :- targetBody(G, B, X, S, L, R). 
 
 le_taxlog_translate( EnText, Terms) :- le_taxlog_translate( EnText, someFile, 1, Terms).
 
@@ -2142,4 +2084,5 @@ sandbox:safe_primitive(le_input:show( _Something)).
 sandbox:safe_primitive(le_input:answer( _EnText, _Scenario)).
 sandbox:safe_primitive(le_input:answer( _EnText, _Scenario, _Result)).
 sandbox:safe_primitive(le_input:answer( _EnText, _Scenario, _Explanation, _Result)).
+sandbox:safe_primitive(le_input:explainedAnswer(_,_,_,_)).
 sandbox:safe_primitive(le_input:le_taxlog_translate( _EnText, _Terms)).
