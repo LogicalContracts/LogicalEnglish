@@ -61,7 +61,7 @@ query_with_facts(Goal,Facts_,OnceUndo,unknowns(Unknowns),taxlog(taxlogExplanatio
     retractall(hypothetical_fact(_,_,_,_,_,_)),
     (OnceUndo==true -> (true, once_with_facts(Caller, M, Facts, true)) ; (true, call_with_facts(Caller, M, Facts))),
     list_without_variants(U,Unknowns_), % remove duplicates, keeping the first clause reference for each group
-    mapModulesInUnknwons(Unknowns_,Unknowns).
+    mapModulesInUnknwons(Unknowns_,Unknowns), !.
 
 query_with_facts(Goal,Facts_,OnceUndo,unknowns(Unknowns),le(le_Explanation(E)),Outcome) :- %trace, 
     must_be(boolean,OnceUndo),
