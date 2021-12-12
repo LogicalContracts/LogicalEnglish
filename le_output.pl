@@ -360,7 +360,7 @@ le_clause(H,M,Ref,LE) :-
     prolog_clause:read_term_at_line(File, LineNo, M, Clause_, _TermPos0, VarNames),
     expand_term(Clause_,RawClause),
     (RawClause = (RealH:-RawBody) -> true ; (RawClause=RealH, RawBody=true)),
-    taxlogWrapper(RawBody,Explicit,Time,M,B,Ref,_IsProlog,_URL,_E),
+    taxlogWrapper(RawBody,Explicit,Time,M,B,Ref,_IsProlog,_URL,_E, _Line),
     ((H=on(_,Time);Explicit==true)->TheH=on(RealH,Time);TheH=RealH),
     % ...now for the normal stuff:
     atomicSentence(TheH,VarNames,[],Vars1,Head),
