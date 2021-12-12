@@ -47,4 +47,5 @@ myRule(X) if c(X) and X>10.
 /** <examples>
 ?- query_with_facts(testForall([0,1,2,3]) at 'http://tests.com',[d(3)],Unknowns,Explanation,Result).
 ?- le(LogicalEnglish).
+?- query_with_facts(testForall([0,1,2,3]) at 'http://tests.com',[d(3)],Unknowns,taxlog(Explanation),Result).
 */

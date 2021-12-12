@@ -95,22 +95,31 @@ clauseNavigator(C,H) :- clauseNavigator_(C,H,_).
 clauseNavigator(C,H,AP) :- clauseNavigator_(C,H,AP).
 
 % returns an element, as well as an anchor property
-clauseNavigator_(Ref,span([a([onclick=Handler]," TaxLog")|Origin]), onclick=Handler) :- 
-    blob(Ref,clause), clause_property(Ref,file(F_)), clause_property(Ref,line_count(L)),
-    myClause2(_H,_Time,Module_,_Body,Ref,_IsProlog,_URL,_E), 
+clauseNavigator_(Ref,span([a([onclick=Handler]," KB ")|Origin]), onclick=Handler) :- 
+    blob(Ref,clause), clause_property(Ref,file(F_)), clause_property(Ref,line_count(PrologLine)),
+    myClause2(_H,_,Module_,_Body,Ref,_IsProlog,_URL,_E, LE_Line), 
     !,
+	(LE_Line\=taxlog *-> Line=LE_Line;Line=PrologLine), % origin in LE or in Taxlog?
     % Module_ will be the temporary SWISH module with the current window's program
     % This seems to break links to source: (shouldMapModule(Module,Module_)-> kp_location(Module,F,true) ;(
     (moduleMapping(Module,Module_)-> must_succeed(kp_location(Module,F,true),one) ;(
         % strip swish "file" header if present:
 		(sub_atom(F_,0,_,R,'swish://'), sub_atom(F_,_,R,0,F)) -> true ; F=F_
         )),
-    refToOrigin(Ref,URL),
+    refToOrigin(Ref,MName), moduleName2URL(MName, URL), 
     % could probably use https://www.swi-prolog.org/pldoc/doc_for?object=js_call//1 , but having trouble embedding that as attribute above:
-    format(string(Handler),"myPlayFile('~a',~w);",[F,L]),
+    format(string(Handler),"myPlayFile('~a',~w);",[F,Line]), % format(string(Handler),"myPlayFile('~a',~w);",[F,L]),
     Origin = [a([href=URL, target='_self']," Text")].
-clauseNavigator_(Ref,i(" ~w"-[Ref]),onclick='').
+clauseNavigator_(Ref,i(" hypothesis (~w) in scenario"-[Ref]),onclick='').
 
+moduleName2URL(Name, URL) :-  split_module_name(Name, URL), !.
+moduleName2URL(URL, URL). 
+
+split_module_name(Name,URL):-
+	sub_atom(Name,U,1,_,'+'),
+	UU is U+1, 
+	sub_atom(Name,UU,_,0,URL), !. 
+	%print_message(informational, URL). 
 
 :- use_module(explanation_renderer,[]).
 :- use_rendering(explanation_renderer).

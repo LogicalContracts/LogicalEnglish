@@ -93,4 +93,5 @@ question( tried_to_overcome_uncertainty_by(Project,How), "Explain the work done 
 ?- query_with_facts(qualifies_for_a_research_and_development_relief(Project) at 'https://www.gov.uk/guidance/corporation-tax-research-and-development-rd-relief','email Chris Feb 17 - 3B',Unknowns,Explanation,Result).
 ?- query_with_facts(qualifies_for_a_research_and_development_relief(Project) at 'https://www.gov.uk/guidance/corporation-tax-research-and-development-rd-relief','email Chris Feb 17 - 3C',Unknowns,Explanation,Result), render_questions(Unknowns,Q).
 ?- le(LogicalEnglish).
+?- query_with_facts(qualifies_for_a_research_and_development_relief(Project) at 'https://www.gov.uk/guidance/corporation-tax-research-and-development-rd-relief','email Chris Feb 17 - 3A',Unknowns,taxlog(Explanation),Result).
 */

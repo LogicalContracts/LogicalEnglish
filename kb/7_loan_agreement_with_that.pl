@@ -1,4 +1,4 @@
-:- module('011+http://tests.com',[]).
+:- module('loanwiththat+http://tests.com',[]).
 
 en("the target language is: prolog.
 
