@@ -555,7 +555,7 @@ expand_explanation_refs(CrudeE,Facts,taxlog(taxlogExplanation(E))) :- !,
 expand_explanation_refs(CrudeE,Facts,le(le_Explanation(E))) :- !, 
     expand_explanation_refs_le(CrudeE, Facts, E). 
  
-expand_explanation_refs(CrudeE,Facts,casp(E)) :-
+expand_explanation_refs(CrudeE,Facts,scasp(E)) :-
     expand_explanation_refs_casp(CrudeE, Facts, E). 
 
 expand_explanation_refs_taxlog([Node|Nodes],Facts,[NewNode|NewNodes]) :- !,
