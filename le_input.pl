@@ -495,7 +495,7 @@ conditions(Ind0, Map1, MapN, Conds) -->
     %{Ind0=<IndF}. % 
 
 % three conditions look ahead
-% more_conds(Ind0, Ind1, Ind4, Map1, MapN, C1, RestMapped, In1, Out) :-
+%more_conds(Ind0, Ind1, Ind4, Map1, MapN, C1, RestMapped, In1, Out) :-
 %     newline(In1, In2), spaces(Ind2, In2, In3), Ind0=<Ind2, operator(Op1, In3, In4), condition(C2, Ind1, Map1, Map2, In4, In5), 
 %     newline(In5, In6), spaces(Ind3, In6, In7), Ind0=<Ind3, operator(Op2, In7, In8), condition(C3, Ind2, Map2, Map3, In8, In9), 
 %     adjust_op(Ind2, Ind3, C1, Op1, C2, Op2, C3, Conditions), !, 
@@ -832,20 +832,20 @@ replace_vars([W|RI], [A|RO]) :- term_to_atom(W, A), replace_vars(RI,RO).
 
 add_cond(and, Ind1, Ind2, Previous, C4, (C; (C3, C4))) :-
     last_cond(or, Previous, C, C3), % (C; C3)
-    Ind1 =< Ind2, !. 
+    Ind1 < Ind2, !. 
 add_cond(and, Ind1, Ind2, Previous, C4, ((C; C3), C4)) :-
     last_cond(or, Previous, C, C3), % (C; C3)
     Ind1 > Ind2, !.     
-add_cond(and,_, _, (C, C3), C4, (C, (C3, C4))) :- !. 
+add_cond(and,I, I, (C, C3), C4, (C, (C3, C4))) :- !. 
 add_cond(and,_, _, Cond, RestC, (Cond, RestC)) :- !. 
 add_cond(or, Ind1, Ind2, Previous, C4, (C, (C3; C4))) :- 
     last_cond(and, Previous, C, C3),  % (C, C3)
-    Ind1 =< Ind2, !. 
+    Ind1 < Ind2, !. 
 add_cond(or, Ind1, Ind2, Previous, C4, ((C, C3); C4)) :- 
     last_cond(and, Previous, C, C3), % (C, C3)
     Ind1 > Ind2, !. 
-add_cond(or, _, _, (C; C3), C4, (C; (C3; C4))) :- !. 
-add_cond(or, _,_, Cond, RestC, (Cond; RestC)).
+add_cond(or, I, I, (C; C3), C4, (C; (C3; C4))) :- !. 
+add_cond(or, _, _, Cond, RestC, (Cond; RestC)).
 
 last_cond(or, (A;B), A, B) :- B\=(_;_), !.
 last_cond(or, (C;D), (C;R), Last) :- last_cond(or, D, R, Last).
@@ -1043,7 +1043,7 @@ match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, [Expression|Re
     extract_expression([','|StopWords], NameWords, [Word|PossibleLiteral], NextWords), NameWords \= [],
     %print_message(informational, "Expression? ~w"-[NameWords]),
     % this expression cannot add variables 
-    ( phrase(expression_(Expression, Map1, Map1), NameWords) -> true ; ( name_predicate(NameWords, Expression) ) ),
+    ( phrase(expression_(Expression, Map1, _), NameWords) -> true ; ( name_predicate(NameWords, Expression) ) ),
     %print_message(informational, 'found a constant or an expression '), print_message(informational, Expression),
     match(RestElements, NextWords, Map1, MapN, RestSelected). 
 
@@ -1074,7 +1074,7 @@ expression_(InfixBuiltIn, Map1, MapN) -->
     {op_stop(Stop)}, term_(Stop, Term, Map1, Map2), spaces(_), binary_op(BuiltIn), !, 
     %{print_message(informational, "Binary exp first term ~w and op ~w"-[Term, BuiltIn])}, 
     spaces(_), expression_(Expression, Map2, MapN), spaces(_), 
-    {InfixBuiltIn =.. [BuiltIn, Term, Expression]}.%, print_message(informational, "Binary exp ~w"-InfixBuiltIn)}.  
+    {InfixBuiltIn =.. [BuiltIn, Term, Expression]}. %, print_message(informational, "Binary exp ~w"-InfixBuiltIn)}.  
 % a quick fix for integer numbers extracted from atoms from the tokenizer
 expression_(Number, Map, Map) --> [Atom],  spaces(_), { atom(Atom), atom_number(Atom, Number) }, !. 
 expression_(Var, Map1, Map2) -->  {op_stop(Stop)}, variable(Stop, Var, Map1, Map2),!.%, {print_message(informational, "Just var ~w"-Var)}, 
@@ -1670,7 +1670,7 @@ predef_dict([=, T1, T2], [thing_1-thing, thing_2-thing], [T1, is, equal, to, T2]
 predef_dict([before, T1, T2], [time1-time, time2-time], [T1, is, before, T2]). % see reasoner.pl before/2
 predef_dict([after, T1, T2], [time1-time, time2-time], [T1, is, after, T2]).  % see reasoner.pl before/2
 predef_dict([member, Member, List], [member-object, list-list], [Member, is, in, List]).
-predef_dict([is, A, B], [member-object, list-list], [A, is, B]). % builtin Prolog assignment
+predef_dict([is, A, B], [term-term, expression-expression], [A, is, B]). % builtin Prolog assignment
 % predefined entries:
 %predef_dict([assert,Information], [info-clause], [this, information, Information, ' has', been, recorded]).
 predef_dict([\=@=, T1, T2], [thing_1-thing, thing_2-thing], [T1, \,=,@,=, T2]).
@@ -2012,6 +2012,7 @@ scenario_or_empty_ --> spaces(_).
  
 % show/1
 show(prolog) :-
+    show(metarules), 
     show(rules),
     show(queries),
     show(scenarios). 
@@ -2020,6 +2021,12 @@ show(rules) :- % trace,
     pengine_self(SwishModule), 
     findall((Pred :- Body), 
         (dict(PredicateElements, _, _), Pred=..PredicateElements, clause(SwishModule:Pred, Body_), unwrapBody(Body_, Body)), Predicates),
+    forall(member(Clause, Predicates), portray_clause(Clause)).
+
+show(metarules) :- % trace, 
+    pengine_self(SwishModule), 
+    findall((Pred :- Body), 
+        (meta_dict(PredicateElements, _, _), Pred=..PredicateElements, clause(SwishModule:Pred, Body_), unwrapBody(Body_, Body)), Predicates),
     forall(member(Clause, Predicates), portray_clause(Clause)).
 
 show(queries) :- % trace, 
