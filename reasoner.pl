@@ -46,7 +46,7 @@ query_with_facts(Goal,Facts,Questions,E,Outcome) :-
 %  ExplanationTemplate determines Logical English or taxlog (Prolog syntax) explanation nodes
 %  Result will be true/false/unknown
 %  This is NOT reentrant
-query_with_facts(Goal,Facts_,OnceUndo,unknowns(Unknowns),E,Outcome) :- 
+query_with_facts(Goal,Facts_,OnceUndo,unknowns(Unknowns),E,Outcome) :- %trace, 
     must_be(boolean,OnceUndo),
     (Goal=at(G,M__) -> atom_string(M_,M__) ; 
         myDeclaredModule(M_) -> Goal=G; 
@@ -62,7 +62,7 @@ query_with_facts(Goal,Facts_,OnceUndo,unknowns(Unknowns),E,Outcome) :-
     retractall(hypothetical_fact(_,_,_,_,_,_)),
     (OnceUndo==true -> (true, once_with_facts(Caller, M, Facts, true)) ; (true, call_with_facts(Caller, M, Facts))),
     list_without_variants(U,Unknowns_), % remove duplicates, keeping the first clause reference for each group
-    mapModulesInUnknwons(Unknowns_,Unknowns), !.
+    mapModulesInUnknwons(Unknowns_,Unknowns).
 
 %! query_once_with_facts(+Goal,?FactsListOrExampleName,-Unknowns,-Explanation,-Result)
 %  query considering the given facts (or accumulated facts of all scenarios the given example name), undoes them at the end; limited execution time
@@ -549,10 +549,10 @@ simplify_explanation([],V,V,[]).
 % expand_explanation_refs(+ExpandedWhy,+ExtraFacts,-ExpandedRefLessWhy)
 % TODO: recover original variable names? seems to require either some hacking with clause_info or reparsing
 % transforms explanation: each nodetype(Literal,Module,ClauseRef,Children) --> nodetype(Literal,ClauseRef,Module,SourceString,OriginURL,Children)
-expand_explanation_refs(CrudeE,Facts,taxlog(taxlogExplanation(E))) :- !, 
+expand_explanation_refs(CrudeE,Facts,taxlog(taxlogExplanation(E))) :- !,  
     expand_explanation_refs_taxlog(CrudeE, Facts, E). 
 
-expand_explanation_refs(CrudeE,Facts,le(le_Explanation(E))) :- !, 
+expand_explanation_refs(CrudeE,Facts,le(le_Explanation(E))) :-  !, 
     expand_explanation_refs_le(CrudeE, Facts, E). 
  
 expand_explanation_refs(CrudeE,Facts,scasp(E)) :-
