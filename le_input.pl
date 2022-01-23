@@ -490,9 +490,28 @@ literal_(M, M, _, Rest, _) :-
 
 % conditions/4 or /6
 conditions(Ind0, Map1, MapN, Conds) --> 
-    condition(Cond, Ind0, Map1, Map2), 
-    more_conds(Ind0, Ind0, _IndF, Map2, MapN, Cond, Conds).
-    %{Ind0=<IndF}. % 
+    list_of_conds_with_ind(Ind0, Map1, MapN, Errors, ListConds),
+    {Errors=[] -> ri(Conds, ListConds); assert_error_os(Errors)}. % preempty validation of errors  
+conditions(_, Map, Map, _, Rest, _) :-
+    asserterror('LE indentation error ', Rest), fail. 
+
+% list_of_conds_with_ind/5
+% list_of_conds_with_ind(+InitialInd, +InMap, -OutMap, -Errors, -ListOfConds)
+list_of_conds_with_ind(Ind0, Map1, MapN, [], [Cond|Conditions]) -->
+    condition(Cond, Ind0, Map1, Map2),
+    more_conds(Ind0, Ind0,_, Map2, MapN, Conditions).
+list_of_conds_with_ind(_, M, M, [error('Error in condition at', LineNumber, Tokens)], [], Rest, _) :-
+    once( nth1(N,Rest,newline(NextLine)) ), LineNumber is NextLine-2,
+    RelevantN is N-1,
+    length(Relevant,RelevantN), append(Relevant,_,Rest),
+    findall(Token, (member(T,Relevant), (T=newline(_) -> Token='\n' ; Token=T)), Tokens). 
+
+more_conds(Ind0, _, Ind3, Map1, MapN, [ind(Ind2), Op, Cond2|RestMapped]) --> 
+    newline, spaces(Ind2), {Ind0 =< Ind2}, % if the new indentation is deeper, it goes on as before. 
+    operator(Op), condition(Cond2, Ind2, Map1, Map2),
+    %{print_message(informational, "~w"-[Conditions])}, !,
+    more_conds(Ind0, Ind2, Ind3, Map2, MapN, RestMapped). 
+more_conds(_, Ind, Ind, Map, Map, [], L, L).  
 
 % three conditions look ahead
 %more_conds(Ind0, Ind1, Ind4, Map1, MapN, C1, RestMapped, In1, Out) :-
@@ -506,13 +525,13 @@ conditions(Ind0, Map1, MapN, Conds) -->
 %     operator(Op), condition(Cond2, Ind, Map1, MapN),
 %     {add_cond(Op, Ind1, Ind, Cond, Cond2, Conditions)},  
 %     {print_message(informational, "~w"-[Conditions])}, !.
-more_conds(Ind0, Ind1, Ind3, Map1, MapN, Cond, RestMapped) --> 
-    newline, spaces(Ind2), {Ind0 =< Ind2}, % if the new indentation is deeper, it goes on as before. 
-    operator(Op), condition(Cond2, Ind2, Map1, Map2),
-    {add_cond(Op, Ind1, Ind2, Cond, Cond2, Conditions)},  !, 
-    %{print_message(informational, "~w"-[Conditions])}, !,
-    more_conds(Ind0, Ind2, Ind3, Map2, MapN, Conditions, RestMapped). 
-more_conds(_, Ind, Ind, Map, Map, Cond, Cond, Rest, Rest).  
+% more_conds(Ind0, Ind1, Ind3, Map1, MapN, Cond, RestMapped) --> 
+%     newline, spaces(Ind2), {Ind0 =< Ind2}, % if the new indentation is deeper, it goes on as before. 
+%     operator(Op), condition(Cond2, Ind2, Map1, Map2),
+%     {add_cond(Op, Ind1, Ind2, Cond, Cond2, Conditions)},  !, 
+%     %{print_message(informational, "~w"-[Conditions])}, !,
+%     more_conds(Ind0, Ind2, Ind3, Map2, MapN, Conditions, RestMapped). 
+% more_conds(_, Ind, Ind, Map, Map, Cond, Cond, Rest, Rest).  
  
 % this naive definition of term is problematic
 % term_/4 or /6
@@ -719,6 +738,60 @@ it_is_illegal_that_  -->
     it_, [is], spaces(_), [illegal], spaces(_), [that], spaces(_).
 
 /* --------------------------------------------------- Supporting code */
+% indentation code
+% ri/2 ri(-Conditions, +IndentedForm). 
+
+ri(P, L) :- rinden(Q, L), c2p(Q, P).  
+
+% rinden/2 produces the conditions from the list with the indented form. 
+rinden(Q, List) :- rind(_, _, Q, List).  
+
+rind(L, I, Q, List) :- rind_and(L, I, Q, List); rind_or(L, I, Q, List). 
+
+rind_and(100, [], true, []). 
+rind_and(100, [], Cond, [Cond]) :- simple(Cond). 
+rind_and(T, [T|RestT], and(First,Rest), Final) :-
+	combine(NewF, [ind(T), and|RestC], Final),
+	rind(T1, Tr1, First, NewF),
+	T1>T, 
+	rind(Tn, Tr, Rest, RestC),
+	append(Tr1, Tr, RestT), 
+	right_order_and(Rest, Tn, T). 
+
+rind_or(100, [], false, []). 
+rind_or(100, [], Cond, [Cond]) :- simple(Cond).
+rind_or(T, [T|RestT], or(First,Rest), Final) :-
+	combine(NewF, [ind(T), or|RestC], Final), 
+	rind(T1, Tr1, First, NewF),
+	T1>T, 
+	rind(Tn, Tr, Rest, RestC),
+	append(Tr1, Tr, RestT), 
+	right_order_or(Rest, Tn, T).    
+	
+right_order_and(Rest, Tn, T) :- Rest=or(_,_), Tn>T. 
+right_order_and(Rest, Tn, T) :- Rest=and(_,_), Tn=T.
+right_order_and(Rest, _, _) :- simple(Rest).  
+
+right_order_or(Rest, Tn, T) :- Rest=and(_,_), Tn>T. 
+right_order_or(Rest, Tn, T) :- Rest=or(_,_), Tn=T.
+right_order_or(Rest, _, _) :- simple(Rest).  
+
+combine(F, S, O) :- ( F\=[], S=[ind(_), Op, V], ((Op==and_); (Op==or_)), simple(V), O=F) ; (F=[], O=S). 
+combine([H|T], S, [H|NT]) :- combine(T, S, NT). 
+
+simple(Cond) :- Cond\=and(_,_), Cond\=or(_,_), Cond\=true, Cond\=false.  
+
+c2p(true, true).
+c2p(false, false). 
+c2p(C, C) :- simple(C). 
+c2p(and(A, RestA), (AA, RestAA)) :- 
+	c2p(A, AA), 
+	c2p(RestA, RestAA). 
+c2p(or(A, RestA), (AA; RestAA)) :- 
+	c2p(A, AA), 
+	c2p(RestA, RestAA). 
+
+/* --------------------------------------------------- More Supporting code */
 clean_comments([], []) :- !.
 clean_comments(['%'|Rest], New) :- % like in prolog comments start with %
     jump_comment(Rest, Next), 
@@ -1536,6 +1609,13 @@ asserted(F) :- clause(F,true). % as a fact
 /* -------------------------------------------------- error handling */
 currentLine(LineNumber, Rest, Rest) :-
     once( nth1(_,Rest,newline(NextLine)) ), LineNumber is NextLine-2. 
+
+% assert_error_os/1
+% to save final error to be displayed
+assert_error_os([]) :- !. 
+assert_error_os([error(Message, LineNumber, Tokens)|Re]) :-
+    asserta(error_notice(error, Message, LineNumber, Tokens)),
+    assert_error_os(Re).
 
 asserterror(Me, Rest) :-
     %print_message(error, ' Error found'), 
