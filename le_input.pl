@@ -491,7 +491,7 @@ literal_(M, M, _, Rest, _) :-
 % conditions/4 or /6
 conditions(Ind0, Map1, MapN, Conds) --> 
     list_of_conds_with_ind(Ind0, Map1, MapN, Errors, ListConds),
-    {Errors=[] -> ri(Conds, ListConds); assert_error_os(Errors)}. % preempty validation of errors  
+    {Errors=[] -> ri(Conds, ListConds); (assert_error_os(Errors), fail)}. % preempty validation of errors  
 conditions(_, Map, Map, _, Rest, _) :-
     asserterror('LE indentation error ', Rest), fail. 
 
@@ -633,11 +633,12 @@ predicate_name_(Predicate) --> extract_constant([], NameWords), { name_predicate
 at_time(T, Map1, MapN) --> spaces_or_newlines(_), at_, expression_(T, Map1, MapN), spaces_or_newlines(_).
 
 spaces(N) --> [' '], !, spaces(M), {N is M + 1}.
-spaces(N) --> ['\t'], !, spaces(M), {N is M + 1}. % counting tab as one space
+% todo: reach out for codemirror's configuration https://codemirror.net/doc/manual.html for tabSize
+spaces(N) --> ['\t'], !, spaces(M), {N is M + 4}. % counting tab as four spaces (default in codemirror)
 spaces(0) --> []. 
 
 spaces_or_newlines(N) --> [' '], !, spaces_or_newlines(M), {N is M + 1}.
-spaces_or_newlines(N) --> ['\t'], !, spaces_or_newlines(M), {N is M + 1}. % counting tab as one space
+spaces_or_newlines(N) --> ['\t'], !, spaces_or_newlines(M), {N is M + 4}. % counting tab as four spaces. See above
 spaces_or_newlines(N) --> newline, !, spaces_or_newlines(M), {N is M + 1}. % counting \r as one space
 spaces_or_newlines(0) --> [].
 
@@ -1747,8 +1748,8 @@ predef_dict([==, T1, T2], [thing_1-thing, thing_2-thing], [T1, is, equivalent, t
 predef_dict([is_a, Object, Type], [object-object, type-type], [Object, is, of, type, Type]).
 predef_dict([is_not_before, T1, T2], [time1-time, time2-time], [T1, is, not, before, T2]). % see reasoner.pl before/2
 predef_dict([=, T1, T2], [thing_1-thing, thing_2-thing], [T1, is, equal, to, T2]).
-predef_dict([before, T1, T2], [time1-time, time2-time], [T1, is, before, T2]). % see reasoner.pl before/2
-predef_dict([after, T1, T2], [time1-time, time2-time], [T1, is, after, T2]).  % see reasoner.pl before/2
+predef_dict([isbefore, T1, T2], [time1-time, time2-time], [T1, is, before, T2]). % see reasoner.pl before/2
+predef_dict([isafter, T1, T2], [time1-time, time2-time], [T1, is, after, T2]).  % see reasoner.pl before/2
 predef_dict([member, Member, List], [member-object, list-list], [Member, is, in, List]).
 predef_dict([is, A, B], [term-term, expression-expression], [A, is, B]). % builtin Prolog assignment
 % predefined entries:
@@ -1965,22 +1966,23 @@ get_answer_from_goal((G,R), WholeAnswer) :-
     append(Answer, ['\n','\t',and|RestAnswers], WholeAnswer).
 get_answer_from_goal(not(G), [it,is,not,the,case,that,'\n', '\t'|Answer]) :- 
     get_answer_from_goal(G, Answer), !.
-get_answer_from_goal(happens(Goal,T), Answer) :-    % simple goals do not return a list, just a literal
-    Goal =.. [Pred|GoalElements], dict([Pred|GoalElements], Types, WordsAnswer), 
-    process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), 
-    process_time_term(T, TimeExplain), !, 
-    Answer = ['At', TimeExplain, it, occurs, that|ProcessedWordsAnswers].
-get_answer_from_goal(holds(Goal,T), Answer) :- 
-    Goal =.. [Pred|GoalElements], dict([Pred|GoalElements], Types, WordsAnswer), 
-    process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), 
-    process_time_term(T, TimeExplain),
-    Answer = ['At', TimeExplain, it, holds, that|ProcessedWordsAnswers], !.
 get_answer_from_goal(Goal, ProcessedWordsAnswers) :-  
     Goal =.. [Pred|GoalElements], meta_dictionary([Pred|GoalElements], Types, WordsAnswer),
     process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), !. 
 get_answer_from_goal(Goal, ProcessedWordsAnswers) :-  
     Goal =.. [Pred|GoalElements], dictionary([Pred|GoalElements], Types, WordsAnswer),
-    process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), !. 
+    print_message(informational, "from  ~w to ~w "-[Goal, ProcessedWordsAnswers]), 
+    process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), !.
+get_answer_from_goal(happens(Goal,T), Answer) :-    % simple goals do not return a list, just a literal
+    Goal =.. [Pred|GoalElements], dictionary([Pred|GoalElements], Types, WordsAnswer), 
+    process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), 
+    process_time_term(T, TimeExplain), !, 
+    Answer = ['At', TimeExplain, it, occurs, that|ProcessedWordsAnswers].
+get_answer_from_goal(holds(Goal,T), Answer) :- 
+    Goal =.. [Pred|GoalElements], dictionary([Pred|GoalElements], Types, WordsAnswer), 
+    process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), 
+    process_time_term(T, TimeExplain),
+    Answer = ['At', TimeExplain, it, holds, that|ProcessedWordsAnswers], !. 
 
 process_time_term(T,ExplainT) :- var(T), name_as_atom([a, time, T], ExplainT). % in case of vars
 process_time_term(T,T) :- nonvar(T), atom(T), !. 
@@ -2123,7 +2125,8 @@ show(scenarios) :- % trace,
 
 show(templates) :-
     findall(EnglishAnswer, 
-        ( dictionary([_|GoalElements], Types, WordsAnswer),
+        ( ( meta_dictionary([_|GoalElements], Types, WordsAnswer) ; 
+            dictionary([_|GoalElements], Types, WordsAnswer)),
         process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers),
         name_as_atom(ProcessedWordsAnswers, EnglishAnswer)), Templates), 
     forall(member(T, Templates), print_message(informational, "~w"-[T])). 
@@ -2139,7 +2142,26 @@ show(types) :-
     forall(member(Tp, PreSet),print_message(informational, '~a'-[Tp])), 
     print_message(informational, "Types defined in the current document:"-[]), 
     setof(Ty, is_type(Ty), Set), 
-    forall(member(T, Set), print_message(informational, '~a'-[T])).
+    forall(member(T, Set), print_message(informational, '~a'-[T])). 
+
+show(scasp) :-
+    show(metarules), 
+    show(rules). 
+
+show(scasp, with(Q, S)) :-
+    show(scasp), 
+    pengine_self(SwishModule), 
+    clause(SwishModule:query(Q,Query), _),
+    print_message(informational, "% ? ~w ."-[Query]),
+    clause(SwishModule:example(S, [scenario(Scenario, _)]), _),
+    %print_message(informational, "% scenario ~w ."-[List]),
+    forall(member(Clause, Scenario), portray_clause(Clause)).
+
+show(scasp, with(Q)) :-
+    show(scasp), 
+    pengine_self(SwishModule), 
+    clause(SwishModule:query(Q,Query), _),
+    print_message(informational, "% ? ~w ."-[Query]). 
 
 unwrapBody(targetBody(Body, _, _, _, _, _), Body). 
 %unwrapBody(Body, Body). 
@@ -2177,6 +2199,9 @@ user:answer( EnText, Scenario, E, Result) :- answer( EnText, Scenario, E, Result
 
 user:(show Something) :- 
     show(Something). 
+
+user:(show(Something, With) ):- 
+    show(Something, With). 
 
 user:is_it_illegal( EnText, Scenario) :- is_it_illegal( EnText, Scenario).
 
@@ -2226,6 +2251,7 @@ showtaxlog.
 sandbox:safe_primitive(le_input:showtaxlog).
 sandbox:safe_primitive(le_input:answer( _EnText)).
 sandbox:safe_primitive(le_input:show( _Something)).
+sandbox:safe_primitive(le_input:show( _Something, _With)).
 sandbox:safe_primitive(le_input:answer( _EnText, _Scenario)).
 sandbox:safe_primitive(le_input:answer( _EnText, _Scenario, _Result)).
 sandbox:safe_primitive(le_input:answer( _EnText, _Scenario, _Explanation, _Result)).

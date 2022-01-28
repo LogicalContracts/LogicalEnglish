@@ -581,8 +581,8 @@ expand_explanation_refs_le([Node|Nodes],Facts, [NewNode|NewNodes]) :-
             %expand_explanation_refs(Children,Facts,NewChildren),
             %AllNodes = [NewNode|NewNodes]
             )
-        ; %print_message(informational, "Can't translate ~w"-[X])
-            Output='it is still unproven'(X)
+        ;   ( print_message(informational, "Can't translate ~w"-[X]), 
+              Output='it is still untranslated'(X) )
         )
     ;         %AllNodes = NewNodes
         Output = 'it is a fact'
@@ -594,7 +594,8 @@ expand_explanation_refs_le([Node|Nodes],Facts, [NewNode|NewNodes]) :-
 expand_explanation_refs_le([],_,[]). 
 
 translate_to_le(X, EnglishAnswer) :-
-    le_input:get_answer_from_goal(X, RawAnswer), le_input:name_as_atom(RawAnswer, EnglishAnswer), !. 
+    le_input:get_answer_from_goal(X, RawAnswer), le_input:name_as_atom(RawAnswer, EnglishAnswer), 
+    print_message(informational, "Translating ~w into ~w"-[X, EnglishAnswer]), !. 
 
 expand_explanation_refs_casp([Node|Nodes],Facts,[X-NewChildren|NewNodes]) :- !,
     Node=..[_Type,X,_Module,_Ref,Children], 
