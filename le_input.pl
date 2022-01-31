@@ -89,8 +89,10 @@ query three is:
     op(850,xfx,user:with), % to support querying
     op(800,fx,user:show), % to support querying
     op(850,xfx,user:of), % to support querying
+    op(850,fx,user:'#pred'), % to support scasp 
+    op(800,xfx,user:'::'), % to support scasp 
     dictionary/3, meta_dictionary/3,
-    get_answer_from_goal/2, name_as_atom/2, parsed/0
+    translate_goal_into_LE/2, name_as_atom/2, parsed/0
     ]).
 :- use_module('./tokenize/prolog/tokenize.pl').
 :- use_module(library(pengines)).
@@ -870,6 +872,11 @@ name_as_atom(Words, Name) :-
     list_words_to_codes(Atoms, Codes),
     replace_ast_a(Codes, CCodes), 
     atom_codes(Name, CCodes).  
+
+words_to_atom(Words, Name) :- trace, 
+    numbervars(Words, 0, _, [singletons(true)]),
+    list_words_to_codes(Words, Codes),
+    atom_codes(Name, Codes). 
 
 replace_ast_a([], []) :- !. 
 replace_ast_a([42,32,97|Rest], [42,97|Out]) :- !, 
@@ -1728,7 +1735,7 @@ predef_dict([days_spent_in_uk,Individual,Start,End,TotalDays], [who-person,start
                    [Individual, spent, TotalDays, in, the, 'UK', starting, at, Start, &, ending, at, End]). 
 predef_dict([uk_tax_year_for_date,Date,Year,Start,End], [first_date-date, year-year, second_date-date, third_date-date], 
                    [in, the, 'UK', Date, falls, in, Year, beginning, at, Start, &, ending, at, End]).
-predef_dict([myDB_entities:is_individual_or_company_on, A, B],
+predef_dict([is_individual_or_company_on, A, B],
                    [affiliate-affiliate, date-date],
                    [A, is, an, individual, or, is, a, company, at, B]).
 % Prolog
@@ -1800,7 +1807,7 @@ is_it_illegal(English, Scenario) :- % only event as possibly illegal for the tim
     pengine_self(SwishModule), %SwishModule:query(GoalName, Goal), 
     %extract_goal_command(Question, SwishModule, Goal, Command), 
     copy_term(Goal, CopyOfGoal), 
-    get_answer_from_goal(CopyOfGoal, RawGoal),  name_as_atom(RawGoal, EnglishQuestion), 
+    translate_goal_into_LE(CopyOfGoal, RawGoal),  name_as_atom(RawGoal, EnglishQuestion), 
     print_message(informational, "Testing illegality: ~w"-[EnglishQuestion]),
     print_message(informational, "Scenario: ~w"-[Scenario]),
     get_assumptions_from_scenario(Scenario, SwishModule, Assumptions), 
@@ -1810,7 +1817,7 @@ is_it_illegal(English, Scenario) :- % only event as possibly illegal for the tim
             catch(SwishModule:it_is_illegal(Goal, T), Error, ( print_message(error, Error), fail ) ), 
             _Result, 
             retract_facts(SwishModule, Assumptions)), 
-    get_answer_from_goal(Goal, RawAnswer), name_as_atom(RawAnswer, EnglishAnswer),  
+    translate_goal_into_LE(Goal, RawAnswer), name_as_atom(RawAnswer, EnglishAnswer),  
     print_message(informational, "Answers: ~w"-[EnglishAnswer]).
 
 % extract_goal_command(WrappedGoal, Module, InnerGoal, RealGoal)
@@ -1872,7 +1879,7 @@ answer(English) :- %trace,
     (translate_command(SwishModule, English, GoalName, Goal, Scenario) -> true 
     ; ( print_message(error, "Don't understand this question: ~w "-[English]), !, fail ) ), % later -->, Kbs),
     copy_term(Goal, CopyOfGoal),  
-    get_answer_from_goal(CopyOfGoal, RawGoal), name_as_atom(RawGoal, EnglishQuestion), 
+    translate_goal_into_LE(CopyOfGoal, RawGoal), name_as_atom(RawGoal, EnglishQuestion), 
     print_message(informational, "Query ~w with ~w: ~w"-[GoalName, Scenario, EnglishQuestion]),
     %print_message(informational, "Scenario: ~w"-[Scenario]),
     % assert facts in scenario
@@ -1886,7 +1893,7 @@ answer(English) :- %trace,
             catch((true, Command), Error, ( print_message(error, Error), fail ) ), 
             _Result, 
             retract_facts(SwishModule, Facts)), 
-    get_answer_from_goal(Goal, RawAnswer), name_as_atom(RawAnswer, EnglishAnswer),  
+    translate_goal_into_LE(Goal, RawAnswer), name_as_atom(RawAnswer, EnglishAnswer),  
     print_message(informational, "Answer: ~w"-[EnglishAnswer]).
 
 % answer/2
@@ -1908,7 +1915,7 @@ prepare_query(English, Arg, SwishModule, Goal, Facts, Command) :-
     (translate_command(SwishModule, English, GoalName, Goal, PreScenario) -> true 
     ; ( print_message(error, "Don't understand this question: ~w "-[English]), !, fail ) ), % later -->, Kbs),
     copy_term(Goal, CopyOfGoal),  
-    get_answer_from_goal(CopyOfGoal, RawGoal), name_as_atom(RawGoal, EnglishQuestion), 
+    translate_goal_into_LE(CopyOfGoal, RawGoal), name_as_atom(RawGoal, EnglishQuestion), 
     ((Arg = with(ScenarioName), PreScenario=noscenario) -> Scenario=ScenarioName; Scenario=PreScenario),   
     print_message(informational, "Query ~w with ~w: ~w"-[GoalName, Scenario, EnglishQuestion]),
     %print_message(informational, "Scenario: ~w"-[Scenario]),
@@ -1921,7 +1928,7 @@ prepare_query(English, Arg, SwishModule, Goal, Facts, Command) :-
     %print_message(informational, "Command: ~w"-[Command])
 
 show_answer(Goal) :-
-    get_answer_from_goal(Goal, RawAnswer), name_as_atom(RawAnswer, EnglishAnswer), 
+    translate_goal_into_LE(Goal, RawAnswer), name_as_atom(RawAnswer, EnglishAnswer), 
     print_message(informational, "Answer: ~w"-[EnglishAnswer]), !. 
 
 % answer/3
@@ -1931,7 +1938,7 @@ answer(English, Arg, EnglishAnswer) :-
     pengine_self(SwishModule), 
     translate_command(SwishModule, English, _, Goal, PreScenario), % later -->, Kbs),
     %copy_term(Goal, CopyOfGoal), 
-    %get_answer_from_goal(CopyOfGoal, RawGoal), name_as_atom(RawGoal, EnglishQuestion), 
+    %translate_goal_into_LE(CopyOfGoal, RawGoal), name_as_atom(RawGoal, EnglishQuestion), 
     ((Arg = with(ScenarioName), PreScenario=noscenario) -> Scenario=ScenarioName; Scenario=PreScenario), 
     extract_goal_command(Goal, SwishModule, _InnerGoal, Command),
     (Scenario==noscenario -> Facts = [] ; SwishModule:example(Scenario, [scenario(Facts, _)])), 
@@ -1940,7 +1947,7 @@ answer(English, Arg, EnglishAnswer) :-
             %catch(Command, Error, ( print_message(error, Error), fail ) ), 
             _Result, 
             retract_facts(SwishModule, Facts)),
-    get_answer_from_goal(Goal, RawAnswer), name_as_atom(RawAnswer, EnglishAnswer). 
+    translate_goal_into_LE(Goal, RawAnswer), name_as_atom(RawAnswer, EnglishAnswer). 
     %reasoner:query_once_with_facts(Goal,Scenario,_,_E,Result).
 
 % answer/4
@@ -1958,27 +1965,27 @@ answer(English, Arg, E, Result) :- %trace,
             _Result, 
             retract_facts(SwishModule, Facts)). 
 
-% get_answer_from_goal/2
-% get_answer_from_goal(+Goals_after_being_queried, -Goals_translated_into_LEnglish_as_answers)
-get_answer_from_goal((G,R), WholeAnswer) :- 
-    get_answer_from_goal(G, Answer), 
-    get_answer_from_goal(R, RestAnswers), !, 
+% translate_goal_into_LE/2
+% translate_goal_into_LE(+Goals_after_being_queried, -Goals_translated_into_LEnglish_as_answers)
+translate_goal_into_LE((G,R), WholeAnswer) :- 
+    translate_goal_into_LE(G, Answer), 
+    translate_goal_into_LE(R, RestAnswers), !, 
     append(Answer, ['\n','\t',and|RestAnswers], WholeAnswer).
-get_answer_from_goal(not(G), [it,is,not,the,case,that,'\n', '\t'|Answer]) :- 
-    get_answer_from_goal(G, Answer), !.
-get_answer_from_goal(Goal, ProcessedWordsAnswers) :-  
+translate_goal_into_LE(not(G), [it,is,not,the,case,that,'\n', '\t'|Answer]) :- 
+    translate_goal_into_LE(G, Answer), !.
+translate_goal_into_LE(Goal, ProcessedWordsAnswers) :-  
     Goal =.. [Pred|GoalElements], meta_dictionary([Pred|GoalElements], Types, WordsAnswer),
     process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), !. 
-get_answer_from_goal(Goal, ProcessedWordsAnswers) :-  
+translate_goal_into_LE(Goal, ProcessedWordsAnswers) :-  
     Goal =.. [Pred|GoalElements], dictionary([Pred|GoalElements], Types, WordsAnswer),
     print_message(informational, "from  ~w to ~w "-[Goal, ProcessedWordsAnswers]), 
     process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), !.
-get_answer_from_goal(happens(Goal,T), Answer) :-    % simple goals do not return a list, just a literal
+translate_goal_into_LE(happens(Goal,T), Answer) :-    % simple goals do not return a list, just a literal
     Goal =.. [Pred|GoalElements], dictionary([Pred|GoalElements], Types, WordsAnswer), 
     process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), 
     process_time_term(T, TimeExplain), !, 
     Answer = ['At', TimeExplain, it, occurs, that|ProcessedWordsAnswers].
-get_answer_from_goal(holds(Goal,T), Answer) :- 
+translate_goal_into_LE(holds(Goal,T), Answer) :- 
     Goal =.. [Pred|GoalElements], dictionary([Pred|GoalElements], Types, WordsAnswer), 
     process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), 
     process_time_term(T, TimeExplain),
@@ -1994,7 +2001,8 @@ process_time_term((after(T)-Var), Explain) :- var(Var), !,
 process_time_term((after(T1)-before(T2)), Explain) :- !,
     process_time_term(T1, Time1), process_time_term(T2, Time2),
     name_as_atom([any, time, after, Time1, and, before, Time2], Explain).
-    
+
+% process_types_or_names/4
 process_types_or_names([], _, _, []) :- !.
 process_types_or_names([Word|RestWords], Elements, Types, PrintExpression ) :- 
     atom(Word), concat_atom(WordList, '_', Word), !, 
@@ -2015,11 +2023,24 @@ process_types_or_names([Word|RestWords], Elements, Types, [PrintWord|RestPrintWo
     process_types_or_names(RestWords,  Elements, Types, RestPrintWords). 
 process_types_or_names([Word|RestWords],  Elements, Types, Output) :-
     compound(Word), 
-    get_answer_from_goal(Word, PrintWord), !, % cut the alternatives
+    translate_goal_into_LE(Word, PrintWord), !, % cut the alternatives
     process_types_or_names(RestWords,  Elements, Types, RestPrintWords),
     append(PrintWord, RestPrintWords, Output). 
 process_types_or_names([Word|RestWords],  Elements, Types, [Word|RestPrintWords] ) :-
     process_types_or_names(RestWords,  Elements, Types, RestPrintWords).
+
+%process_template_for_scasp/4
+%process_template_for_scasp(WordsAnswer, GoalElements, Types, +FormatElements, +ProcessedWordsAnswers)
+process_template_for_scasp([], _, _, [], []) :- !.
+process_template_for_scasp([Word|RestWords], Elements, Types, [' @(~w:~w) '|RestFormat], [Word, TypeName|RestPrintWords]) :- 
+    var(Word), matches_type(Word, Elements, Types, Type), !, 
+    process_template_for_scasp(RestWords,  Elements, Types, RestFormat, RestPrintWords),
+    tokenize_atom(Type, NameWords), delete_underscore(NameWords, [TypeName]).
+process_template_for_scasp([Word|RestWords],  Elements, Types, ['~w'|RestFormat], [Word|RestPrintWords] ) :-
+    op_stop(List), member(Word,List), !, 
+    process_template_for_scasp(RestWords,  Elements, Types, RestFormat, RestPrintWords).
+process_template_for_scasp([Word|RestWords],  Elements, Types, [' ~w '|RestFormat], [Word|RestPrintWords] ) :-
+    process_template_for_scasp(RestWords,  Elements, Types, RestFormat, RestPrintWords).
 
 add_determiner([Word|RestWords], [Det, Word|RestWords]) :-
     name(Word,[First|_]), proper_det(First, Det).
@@ -2131,6 +2152,18 @@ show(templates) :-
         name_as_atom(ProcessedWordsAnswers, EnglishAnswer)), Templates), 
     forall(member(T, Templates), print_message(informational, "~w"-[T])). 
 
+show(templates_scasp) :-
+    findall(Term, 
+        ( ( meta_dict([Pred|GoalElements], Types, WordsAnswer) ; 
+            dict([Pred|GoalElements], Types, WordsAnswer)),
+        Goal =.. [Pred|GoalElements], 
+        process_template_for_scasp(WordsAnswer, GoalElements, Types, FormatEl, LE),
+        atomic_list_concat(['#pred ~w ::'|FormatEl], Format),
+        Elements = [Goal|LE], 
+        numbervars(Elements, 1, _),
+        format(atom(Term), Format, Elements)), Templates), 
+    forall(member(T, Templates), portray_clause(T)). 
+
 show(types) :-
     %findall(EnglishAnswer, 
     %    ( dictionary([_|GoalElements], Types, _), 
@@ -2145,6 +2178,7 @@ show(types) :-
     forall(member(T, Set), print_message(informational, '~a'-[T])). 
 
 show(scasp) :-
+    show(templates_scasp), 
     show(metarules), 
     show(rules). 
 

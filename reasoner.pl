@@ -16,7 +16,7 @@ limitations under the License.
 
 :- module(_ThisFileName,[query/4, query_with_facts/5, query_once_with_facts/5, explanation_node_type/2, render_questions/2,
     run_examples/0, run_examples/1, myClause2/9, myClause/4, taxlogWrapper/10, niceModule/2, refToOrigin/2,
-    after/2, is_not_before/2, before/2, immediately_before/2, same_date/2, subtract_days/3, this_year/1, uk_tax_year/4, in/2,
+    isafter/2, is_not_before/2, isbefore/2, immediately_before/2, same_date/2, subtract_days/3, this_year/1, uk_tax_year/4, in/2,
     isExpressionFunctor/1, set_time_of_day/3, start_of_day/2, end_of_day/2, is_days_after/3, is_1_day_after/2, unparse_time/2
     ]).
 
@@ -594,7 +594,7 @@ expand_explanation_refs_le([Node|Nodes],Facts, [NewNode|NewNodes]) :-
 expand_explanation_refs_le([],_,[]). 
 
 translate_to_le(X, EnglishAnswer) :-
-    le_input:get_answer_from_goal(X, RawAnswer), le_input:name_as_atom(RawAnswer, EnglishAnswer), 
+    le_input:translate_goal_into_LE(X, RawAnswer), le_input:name_as_atom(RawAnswer, EnglishAnswer), 
     print_message(informational, "Translating ~w into ~w"-[X, EnglishAnswer]), !. 
 
 expand_explanation_refs_casp([Node|Nodes],Facts,[X-NewChildren|NewNodes]) :- !,
@@ -638,14 +638,14 @@ nodeAttributes(at(G,K), [color=green,label=S]) :- format(string(S),"~w",G).
 
 %!  after(+Later,+Earlier) is det.
 %   Arguments must be dates in iso_8601 format, e.g. '20210206' or '2021-02-06T08:25:34'
-after(Later,Earlier) :- 
+isafter(Later,Earlier) :- 
     parse_time(Later,L), parse_time(Earlier,E), L>E.
 is_not_before(Later,Earlier) :-
     parse_time(Later,L), parse_time(Earlier,E), L>=E.
-before(Earlier,Later) :-
+isbefore(Earlier,Later) :-
     parse_time(Later,L), parse_time(Earlier,E), E<L, !.
 % an argument can be any number
-before(Earlier,Later) :-
+isbefore(Earlier,Later) :-
     number(Later), number(Earlier), Earlier<Later.
 
 % Dates in seconds since 1970-01-01T00:00:00, Day in partial format Year-Month-Day
