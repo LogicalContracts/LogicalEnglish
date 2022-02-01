@@ -1172,14 +1172,83 @@ expression(_, _, _, Rest, _) :-
 % operators with any amout of words/symbols
 % binary_op/3
 binary_op(Op, In, Out) :-
-    op_tokens(Op, OpTokens),
+    op2tokens(Op, OpTokens, _),
     append(OpTokens, Out, In).
 
+% very inefficient. Better to compute and store. See below
 op_tokens(Op, OpTokens) :-
     current_op(_Prec, Fix, Op), Op \= '.',
     (Fix = 'xfx'; Fix='yfx'; Fix='xfy'; Fix='yfy'),
     term_string(Op, OpString), tokenize(OpString, Tokens, [cased(true), spaces(true), numbers(false)]),
     unpack_tokens(Tokens, OpTokens).
+
+% findall(op2tokens(Op, OpTokens, OpTokens), op_tokens(Op, OpTokens), L), forall(member(T,L), (write(T),write('.'), nl)).
+% op2tokens(+Operator, PrologTokens, sCASPTokens)
+% op2tokens/3
+op2tokens(is_not_before,[is_not_before],[is_not_before]).
+op2tokens(of,[of],[of]).
+op2tokens(if,[if],[if]).
+op2tokens(then,[then],[then]).
+op2tokens(must,[must],[must]).
+op2tokens(on,[on],[on]).
+op2tokens(because,[because],[because]).
+op2tokens(and,[and],[and]).
+op2tokens(in,[in],[in]).
+op2tokens(or,[or],[or]).
+op2tokens(at,[at],[at]).
+op2tokens(before,[before],[before]).
+op2tokens(after,[after],[after]).
+op2tokens(else,[else],[else]).
+op2tokens(with,[with],[with]).
+op2tokens(::,[:,:],[:,:]).
+op2tokens(->,[-,>],[-,>]).
+op2tokens(:,[:],[:]).
+op2tokens(,,[',,,'],[',,,']).
+op2tokens(:=,[:,=],[:,=]).
+op2tokens(==,[=,=],[=,=]).
+op2tokens(:-,[:,-],[:,-]).
+op2tokens(/\,[/,\],[/,\]).
+op2tokens(=,[=],[=]).
+op2tokens(rem,[rem],[rem]).
+op2tokens(is,[is],[is]).
+op2tokens(=:=,[=,:,=],[=,:,=]).
+op2tokens(=\=,[=,\,=],[=,\,=]).
+op2tokens(xor,[xor],[xor]).
+op2tokens(as,[as],[as]).
+op2tokens(rdiv,[rdiv],[rdiv]).
+op2tokens(>=,[>,=],[>,=]).
+op2tokens(@<,[@,<],[@,<]).
+op2tokens(@=<,[@,=,<],[@,=,<]).
+op2tokens(=@=,[=,@,=],[=,@,=]).
+op2tokens(\=@=,[\,=,@,=],[\,=,@,=]).
+op2tokens(@>,[@,>],[@,>]).
+op2tokens(@>=,[@,>,=],[@,>,=]).
+op2tokens(\==,[\,=,=],[\,=,=]).
+op2tokens(\=,[\,=],[\,=]).
+op2tokens(>,[>],[>]).
+%op2tokens(|,[',|,'],[',|,']).
+op2tokens('|',['|'],['|']).
+op2tokens(\/,[\,/],[\,/]).
+op2tokens(+,[+],[+]).
+op2tokens(>>,[>,>],[>,>]).
+op2tokens(;,[;],[;]).
+op2tokens(<<,[<,<],[<,<]).
+op2tokens(:<,[:,<],[:,<]).
+op2tokens(>:<,[>,:,<],[>,:,<]).
+op2tokens(/,[/],[/]).
+op2tokens(=>,[=,>],[=,>]).
+op2tokens(=..,[=,.,.],[=,.,.]).
+op2tokens(div,[div],[div]).
+op2tokens(//,[/,/],[/,/]).
+op2tokens(**,[*,*],[*,*]).
+op2tokens(*,[*],[*]).
+op2tokens(^,[^],[^]).
+op2tokens(mod,[mod],[mod]).
+op2tokens(-,[-],[-]).
+op2tokens(*->,[*,-,>],[*,-,>]).
+op2tokens(<,[<],[<]).
+op2tokens(=<,[=,<],[=,<]).
+op2tokens(-->,[-,-,>],[-,-,>]).
 
 % very inefficient. Better to compute and store. See below
 op_stop_words(Words) :-
@@ -1978,7 +2047,7 @@ translate_goal_into_LE(Goal, ProcessedWordsAnswers) :-
     process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), !. 
 translate_goal_into_LE(Goal, ProcessedWordsAnswers) :-  
     Goal =.. [Pred|GoalElements], dictionary([Pred|GoalElements], Types, WordsAnswer),
-    print_message(informational, "from  ~w to ~w "-[Goal, ProcessedWordsAnswers]), 
+    %print_message(informational, "from  ~w to ~w "-[Goal, ProcessedWordsAnswers]), 
     process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), !.
 translate_goal_into_LE(happens(Goal,T), Answer) :-    % simple goals do not return a list, just a literal
     Goal =.. [Pred|GoalElements], dictionary([Pred|GoalElements], Types, WordsAnswer), 
@@ -2125,6 +2194,14 @@ show(rules) :- % trace,
     findall((Pred :- Body), 
         (dict(PredicateElements, _, _), Pred=..PredicateElements, clause(SwishModule:Pred, Body_), unwrapBody(Body_, Body)), Predicates),
     forall(member(Clause, Predicates), portray_clause(Clause)).
+
+% 
+%(op2tokens(Pred, _, OpTokens) -> % Fixing binary predicates for scasp
+%( append([X|_], [Y], GoalElements),
+%  append([X|OpTokens],[Y], RevGoalElements), 
+%  print_message(informational, "binary op ~w"-[Pred]) ) 
+%; RevGoalElements = GoalElements 
+%), 
 
 show(metarules) :- % trace, 
     pengine_self(SwishModule), 
