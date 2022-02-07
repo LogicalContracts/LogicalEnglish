@@ -16,7 +16,7 @@ limitations under the License.
 
 :- module(_ThisFileName,[query/4, query_with_facts/5, query_once_with_facts/5, explanation_node_type/2, render_questions/2,
     run_examples/0, run_examples/1, myClause2/9, myClause/4, taxlogWrapper/10, niceModule/2, refToOrigin/2,
-    after/2, is_not_before/2, before/2, immediately_before/2, same_date/2, subtract_days/3, this_year/1, uk_tax_year/4, in/2,
+    isafter/2, is_not_before/2, isbefore/2, immediately_before/2, same_date/2, subtract_days/3, this_year/1, uk_tax_year/4, in/2,
     isExpressionFunctor/1, set_time_of_day/3, start_of_day/2, end_of_day/2, is_days_after/3, is_1_day_after/2, unparse_time/2
     ]).
 
@@ -46,13 +46,7 @@ query_with_facts(Goal,Facts,Questions,E,Outcome) :-
 %  ExplanationTemplate determines Logical English or taxlog (Prolog syntax) explanation nodes
 %  Result will be true/false/unknown
 %  This is NOT reentrant
-
-query_with_facts(Goal,Facts,OnceUndo,Unknowns,taxlog(taxlogExplanation(E)),Outcome) :- 
-    query_with_facts_(Goal,Facts,OnceUndo,Unknowns,E,Outcome).
-query_with_facts(Goal,Facts,OnceUndo,Unknowns,le(le_Explanation(E)),Outcome) :- 
-    query_with_facts_le(Goal,Facts,OnceUndo,Unknowns,E,Outcome).
-
-query_with_facts_(Goal,Facts_,OnceUndo,unknowns(Unknowns),E,Outcome) :- 
+query_with_facts(Goal,Facts_,OnceUndo,unknowns(Unknowns),E,Outcome) :- %trace, 
     must_be(boolean,OnceUndo),
     (Goal=at(G,M__) -> atom_string(M_,M__) ; 
         myDeclaredModule(M_) -> Goal=G; 
@@ -64,24 +58,6 @@ query_with_facts_(Goal,Facts_,OnceUndo,unknowns(Unknowns),E,Outcome) :-
         i(at(G,M),OnceUndo,U,Result_),
         Result_=..[Outcome,E_],
         expand_explanation_refs(E_,Facts,E)
-        ),
-    retractall(hypothetical_fact(_,_,_,_,_,_)),
-    (OnceUndo==true -> (true, once_with_facts(Caller, M, Facts, true)) ; (true, call_with_facts(Caller, M, Facts))),
-    list_without_variants(U,Unknowns_), % remove duplicates, keeping the first clause reference for each group
-    mapModulesInUnknwons(Unknowns_,Unknowns), !.
-
-query_with_facts_le(Goal,Facts_,OnceUndo,unknowns(Unknowns),E,Outcome) :- 
-    must_be(boolean,OnceUndo),
-    (Goal=at(G,M__) -> atom_string(M_,M__) ; 
-        myDeclaredModule(M_) -> Goal=G; 
-        (print_message(error,"No knowledge module specified"-[]), fail)),
-    context_module(Me),
-    (shouldMapModule(M_,M)->true;M=M_),
-    (is_list(Facts_)-> Facts=Facts_; example_fact_sequence(M,Facts_,Facts)),
-    Caller = Me:(
-        i(at(G,M),OnceUndo,U,Result_),
-        Result_=..[Outcome,E_],
-        expand_explanation_refs_le(E_,Facts,E)
         ),
     retractall(hypothetical_fact(_,_,_,_,_,_)),
     (OnceUndo==true -> (true, once_with_facts(Caller, M, Facts, true)) ; (true, call_with_facts(Caller, M, Facts))),
@@ -573,15 +549,24 @@ simplify_explanation([],V,V,[]).
 % expand_explanation_refs(+ExpandedWhy,+ExtraFacts,-ExpandedRefLessWhy)
 % TODO: recover original variable names? seems to require either some hacking with clause_info or reparsing
 % transforms explanation: each nodetype(Literal,Module,ClauseRef,Children) --> nodetype(Literal,ClauseRef,Module,SourceString,OriginURL,Children)
-expand_explanation_refs([Node|Nodes],Facts,[NewNode|NewNodes]) :- !,
+expand_explanation_refs(CrudeE,Facts,taxlog(taxlogExplanation(E))) :- !,  
+    expand_explanation_refs_taxlog(CrudeE, Facts, E). 
+
+expand_explanation_refs(CrudeE,Facts,le(le_Explanation(E))) :-  !, 
+    expand_explanation_refs_le(CrudeE, Facts, E). 
+ 
+expand_explanation_refs(CrudeE,Facts,scasp(E)) :-
+    expand_explanation_refs_casp(CrudeE, Facts, E). 
+
+expand_explanation_refs_taxlog([Node|Nodes],Facts,[NewNode|NewNodes]) :- !,
     Node=..[Type,X,Module,Ref,Children], 
     refToSourceAndOrigin(Ref,Source,Origin),
     %TODO: is the following test against facts necessary???:
     ((member(XX,Facts), variant(XX,X)) -> NewOrigin=userFact ; NewOrigin=Origin),
     NewNode=..[Type,X,Ref,Module,Source,NewOrigin,NewChildren],
-    expand_explanation_refs(Children,Facts,NewChildren),
-    expand_explanation_refs(Nodes,Facts,NewNodes).
-expand_explanation_refs([],_,[]).
+    expand_explanation_refs_taxlog(Children,Facts,NewChildren),
+    expand_explanation_refs_taxlog(Nodes,Facts,NewNodes).
+expand_explanation_refs_taxlog([],_,[]).
 
 expand_explanation_refs_le([Node|Nodes],Facts, [NewNode|NewNodes]) :-  
     Node=..[Type,X,Module,Ref,Children], 
@@ -596,8 +581,8 @@ expand_explanation_refs_le([Node|Nodes],Facts, [NewNode|NewNodes]) :-
             %expand_explanation_refs(Children,Facts,NewChildren),
             %AllNodes = [NewNode|NewNodes]
             )
-        ; %print_message(informational, "Can't translate ~w"-[X])
-            Output='it is still unproven'(X)
+        ;   ( %print_message(informational, "Can't translate ~w"-[X]), 
+              Output='it is still untranslated'(X) )
         )
     ;         %AllNodes = NewNodes
         Output = 'it is a fact'
@@ -609,7 +594,18 @@ expand_explanation_refs_le([Node|Nodes],Facts, [NewNode|NewNodes]) :-
 expand_explanation_refs_le([],_,[]). 
 
 translate_to_le(X, EnglishAnswer) :-
-    le_input:get_answer_from_goal(X, RawAnswer), le_input:name_as_atom(RawAnswer, EnglishAnswer), !. 
+    le_input:translate_goal_into_LE(X, RawAnswer), le_input:name_as_atom(RawAnswer, EnglishAnswer). 
+    %print_message(informational, "Translating ~w into ~w"-[X, EnglishAnswer]), !. 
+
+expand_explanation_refs_casp([Node|Nodes],Facts,[X-NewChildren|NewNodes]) :- !,
+    Node=..[_Type,X,_Module,_Ref,Children], 
+    %refToSourceAndOrigin(Ref,Source,Origin),
+    %TODO: is the following test against facts necessary???:
+    %((member(XX,Facts), variant(XX,X)) -> NewOrigin=userFact ; NewOrigin=Origin),
+    %NewNode=..[Type,X,Ref,Module,Source,NewOrigin,NewChildren],
+    expand_explanation_refs_casp(Children,Facts,NewChildren),
+    expand_explanation_refs_casp(Nodes,Facts,NewNodes).
+expand_explanation_refs_casp([],_,[]).
 
 % [s(a(1,a),<clause>(0x7f95c763bc30),[s(c(1),<clause>(0x7f95c763bd90),[]),s(t(a),<clause>(0x7f95c763c000),[])])]
 explanation_node_type(s,success).
@@ -642,14 +638,14 @@ nodeAttributes(at(G,K), [color=green,label=S]) :- format(string(S),"~w",G).
 
 %!  after(+Later,+Earlier) is det.
 %   Arguments must be dates in iso_8601 format, e.g. '20210206' or '2021-02-06T08:25:34'
-after(Later,Earlier) :- 
+isafter(Later,Earlier) :- 
     parse_time(Later,L), parse_time(Earlier,E), L>E.
 is_not_before(Later,Earlier) :-
     parse_time(Later,L), parse_time(Earlier,E), L>=E.
-before(Earlier,Later) :-
+isbefore(Earlier,Later) :-
     parse_time(Later,L), parse_time(Earlier,E), E<L, !.
 % an argument can be any number
-before(Earlier,Later) :-
+isbefore(Earlier,Later) :-
     number(Later), number(Earlier), Earlier<Later.
 
 % Dates in seconds since 1970-01-01T00:00:00, Day in partial format Year-Month-Day

@@ -1,9 +1,9 @@
-% Logical English document
-
-% an example of a prolog module name. Please adjust as convenient
 :- module('<yourToken>+http://tests.com',[]).
 
 en("the target language is: prolog. % other languages available soon
+% Logical English document
+% above example of a prolog module name. Please adjust as convenient. 
+% comments only after the en( 
 
 % uncomment to use
 % the meta predicates are:

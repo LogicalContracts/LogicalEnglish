@@ -110,7 +110,8 @@ clauseNavigator_(Ref,span([a([onclick=Handler]," KB ")|Origin]), onclick=Handler
     % could probably use https://www.swi-prolog.org/pldoc/doc_for?object=js_call//1 , but having trouble embedding that as attribute above:
     format(string(Handler),"myPlayFile('~a',~w);",[F,Line]), % format(string(Handler),"myPlayFile('~a',~w);",[F,L]),
     Origin = [a([href=URL, target='_self']," Text")].
-clauseNavigator_(Ref,i(" hypothesis (~w) in scenario"-[Ref]),onclick='').
+%clauseNavigator_(Ref,i(" hypothesis (~w) in scenario"-[Ref]),onclick='').
+clauseNavigator_(_,i(" hypothesis in scenario"-[]),onclick='').
 
 moduleName2URL(Name, URL) :-  split_module_name(Name, URL), !.
 moduleName2URL(URL, URL). 

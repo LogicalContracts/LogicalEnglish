@@ -89,8 +89,10 @@ query three is:
     op(850,xfx,user:with), % to support querying
     op(800,fx,user:show), % to support querying
     op(850,xfx,user:of), % to support querying
+    op(850,fx,user:'#pred'), % to support scasp 
+    op(800,xfx,user:'::'), % to support scasp 
     dictionary/3, meta_dictionary/3,
-    get_answer_from_goal/2, name_as_atom/2, parsed/0
+    translate_goal_into_LE/2, name_as_atom/2, parsed/0
     ]).
 :- use_module('./tokenize/prolog/tokenize.pl').
 :- use_module(library(pengines)).
@@ -490,12 +492,31 @@ literal_(M, M, _, Rest, _) :-
 
 % conditions/4 or /6
 conditions(Ind0, Map1, MapN, Conds) --> 
-    condition(Cond, Ind0, Map1, Map2), 
-    more_conds(Ind0, Ind0, _IndF, Map2, MapN, Cond, Conds).
-    %{Ind0=<IndF}. % 
+    list_of_conds_with_ind(Ind0, Map1, MapN, Errors, ListConds),
+    {Errors=[] -> ri(Conds, ListConds); (assert_error_os(Errors), fail)}. % preempty validation of errors  
+conditions(_, Map, Map, _, Rest, _) :-
+    asserterror('LE indentation error ', Rest), fail. 
+
+% list_of_conds_with_ind/5
+% list_of_conds_with_ind(+InitialInd, +InMap, -OutMap, -Errors, -ListOfConds)
+list_of_conds_with_ind(Ind0, Map1, MapN, [], [Cond|Conditions]) -->
+    condition(Cond, Ind0, Map1, Map2),
+    more_conds(Ind0, Ind0,_, Map2, MapN, Conditions).
+list_of_conds_with_ind(_, M, M, [error('Error in condition at', LineNumber, Tokens)], [], Rest, _) :-
+    once( nth1(N,Rest,newline(NextLine)) ), LineNumber is NextLine-2,
+    RelevantN is N-1,
+    length(Relevant,RelevantN), append(Relevant,_,Rest),
+    findall(Token, (member(T,Relevant), (T=newline(_) -> Token='\n' ; Token=T)), Tokens). 
+
+more_conds(Ind0, _, Ind3, Map1, MapN, [ind(Ind2), Op, Cond2|RestMapped]) --> 
+    newline, spaces(Ind2), {Ind0 =< Ind2}, % if the new indentation is deeper, it goes on as before. 
+    operator(Op), condition(Cond2, Ind2, Map1, Map2),
+    %{print_message(informational, "~w"-[Conditions])}, !,
+    more_conds(Ind0, Ind2, Ind3, Map2, MapN, RestMapped). 
+more_conds(_, Ind, Ind, Map, Map, [], L, L).  
 
 % three conditions look ahead
-% more_conds(Ind0, Ind1, Ind4, Map1, MapN, C1, RestMapped, In1, Out) :-
+%more_conds(Ind0, Ind1, Ind4, Map1, MapN, C1, RestMapped, In1, Out) :-
 %     newline(In1, In2), spaces(Ind2, In2, In3), Ind0=<Ind2, operator(Op1, In3, In4), condition(C2, Ind1, Map1, Map2, In4, In5), 
 %     newline(In5, In6), spaces(Ind3, In6, In7), Ind0=<Ind3, operator(Op2, In7, In8), condition(C3, Ind2, Map2, Map3, In8, In9), 
 %     adjust_op(Ind2, Ind3, C1, Op1, C2, Op2, C3, Conditions), !, 
@@ -506,13 +527,13 @@ conditions(Ind0, Map1, MapN, Conds) -->
 %     operator(Op), condition(Cond2, Ind, Map1, MapN),
 %     {add_cond(Op, Ind1, Ind, Cond, Cond2, Conditions)},  
 %     {print_message(informational, "~w"-[Conditions])}, !.
-more_conds(Ind0, Ind1, Ind3, Map1, MapN, Cond, RestMapped) --> 
-    newline, spaces(Ind2), {Ind0 =< Ind2}, % if the new indentation is deeper, it goes on as before. 
-    operator(Op), condition(Cond2, Ind2, Map1, Map2),
-    {add_cond(Op, Ind1, Ind2, Cond, Cond2, Conditions)},  !, 
-    %{print_message(informational, "~w"-[Conditions])}, !,
-    more_conds(Ind0, Ind2, Ind3, Map2, MapN, Conditions, RestMapped). 
-more_conds(_, Ind, Ind, Map, Map, Cond, Cond, Rest, Rest).  
+% more_conds(Ind0, Ind1, Ind3, Map1, MapN, Cond, RestMapped) --> 
+%     newline, spaces(Ind2), {Ind0 =< Ind2}, % if the new indentation is deeper, it goes on as before. 
+%     operator(Op), condition(Cond2, Ind2, Map1, Map2),
+%     {add_cond(Op, Ind1, Ind2, Cond, Cond2, Conditions)},  !, 
+%     %{print_message(informational, "~w"-[Conditions])}, !,
+%     more_conds(Ind0, Ind2, Ind3, Map2, MapN, Conditions, RestMapped). 
+% more_conds(_, Ind, Ind, Map, Map, Cond, Cond, Rest, Rest).  
  
 % this naive definition of term is problematic
 % term_/4 or /6
@@ -614,11 +635,12 @@ predicate_name_(Predicate) --> extract_constant([], NameWords), { name_predicate
 at_time(T, Map1, MapN) --> spaces_or_newlines(_), at_, expression_(T, Map1, MapN), spaces_or_newlines(_).
 
 spaces(N) --> [' '], !, spaces(M), {N is M + 1}.
-spaces(N) --> ['\t'], !, spaces(M), {N is M + 1}. % counting tab as one space
+% todo: reach out for codemirror's configuration https://codemirror.net/doc/manual.html for tabSize
+spaces(N) --> ['\t'], !, spaces(M), {N is M + 4}. % counting tab as four spaces (default in codemirror)
 spaces(0) --> []. 
 
 spaces_or_newlines(N) --> [' '], !, spaces_or_newlines(M), {N is M + 1}.
-spaces_or_newlines(N) --> ['\t'], !, spaces_or_newlines(M), {N is M + 1}. % counting tab as one space
+spaces_or_newlines(N) --> ['\t'], !, spaces_or_newlines(M), {N is M + 4}. % counting tab as four spaces. See above
 spaces_or_newlines(N) --> newline, !, spaces_or_newlines(M), {N is M + 1}. % counting \r as one space
 spaces_or_newlines(0) --> [].
 
@@ -719,6 +741,60 @@ it_is_illegal_that_  -->
     it_, [is], spaces(_), [illegal], spaces(_), [that], spaces(_).
 
 /* --------------------------------------------------- Supporting code */
+% indentation code
+% ri/2 ri(-Conditions, +IndentedForm). 
+
+ri(P, L) :- rinden(Q, L), c2p(Q, P).  
+
+% rinden/2 produces the conditions from the list with the indented form. 
+rinden(Q, List) :- rind(_, _, Q, List).  
+
+rind(L, I, Q, List) :- rind_and(L, I, Q, List); rind_or(L, I, Q, List). 
+
+rind_and(100, [], true, []). 
+rind_and(100, [], Cond, [Cond]) :- simple(Cond). 
+rind_and(T, [T|RestT], and(First,Rest), Final) :-
+	combine(NewF, [ind(T), and|RestC], Final),
+	rind(T1, Tr1, First, NewF),
+	T1>T, 
+	rind(Tn, Tr, Rest, RestC),
+	append(Tr1, Tr, RestT), 
+	right_order_and(Rest, Tn, T). 
+
+rind_or(100, [], false, []). 
+rind_or(100, [], Cond, [Cond]) :- simple(Cond).
+rind_or(T, [T|RestT], or(First,Rest), Final) :-
+	combine(NewF, [ind(T), or|RestC], Final), 
+	rind(T1, Tr1, First, NewF),
+	T1>T, 
+	rind(Tn, Tr, Rest, RestC),
+	append(Tr1, Tr, RestT), 
+	right_order_or(Rest, Tn, T).    
+	
+right_order_and(Rest, Tn, T) :- Rest=or(_,_), Tn>T. 
+right_order_and(Rest, Tn, T) :- Rest=and(_,_), Tn=T.
+right_order_and(Rest, _, _) :- simple(Rest).  
+
+right_order_or(Rest, Tn, T) :- Rest=and(_,_), Tn>T. 
+right_order_or(Rest, Tn, T) :- Rest=or(_,_), Tn=T.
+right_order_or(Rest, _, _) :- simple(Rest).  
+
+combine(F, S, O) :- ( F\=[], S=[ind(_), Op, V], ((Op==and_); (Op==or_)), simple(V), O=F) ; (F=[], O=S). 
+combine([H|T], S, [H|NT]) :- combine(T, S, NT). 
+
+simple(Cond) :- Cond\=and(_,_), Cond\=or(_,_), Cond\=true, Cond\=false.  
+
+c2p(true, true).
+c2p(false, false). 
+c2p(C, C) :- simple(C). 
+c2p(and(A, RestA), (AA, RestAA)) :- 
+	c2p(A, AA), 
+	c2p(RestA, RestAA). 
+c2p(or(A, RestA), (AA; RestAA)) :- 
+	c2p(A, AA), 
+	c2p(RestA, RestAA). 
+
+/* --------------------------------------------------- More Supporting code */
 clean_comments([], []) :- !.
 clean_comments(['%'|Rest], New) :- % like in prolog comments start with %
     jump_comment(Rest, Next), 
@@ -797,6 +873,11 @@ name_as_atom(Words, Name) :-
     replace_ast_a(Codes, CCodes), 
     atom_codes(Name, CCodes).  
 
+words_to_atom(Words, Name) :- trace, 
+    numbervars(Words, 0, _, [singletons(true)]),
+    list_words_to_codes(Words, Codes),
+    atom_codes(Name, Codes). 
+
 replace_ast_a([], []) :- !. 
 replace_ast_a([42,32,97|Rest], [42,97|Out]) :- !, 
     replace_final_ast(Rest, Out). 
@@ -832,20 +913,20 @@ replace_vars([W|RI], [A|RO]) :- term_to_atom(W, A), replace_vars(RI,RO).
 
 add_cond(and, Ind1, Ind2, Previous, C4, (C; (C3, C4))) :-
     last_cond(or, Previous, C, C3), % (C; C3)
-    Ind1 =< Ind2, !. 
+    Ind1 < Ind2, !. 
 add_cond(and, Ind1, Ind2, Previous, C4, ((C; C3), C4)) :-
     last_cond(or, Previous, C, C3), % (C; C3)
     Ind1 > Ind2, !.     
-add_cond(and,_, _, (C, C3), C4, (C, (C3, C4))) :- !. 
+add_cond(and,I, I, (C, C3), C4, (C, (C3, C4))) :- !. 
 add_cond(and,_, _, Cond, RestC, (Cond, RestC)) :- !. 
 add_cond(or, Ind1, Ind2, Previous, C4, (C, (C3; C4))) :- 
     last_cond(and, Previous, C, C3),  % (C, C3)
-    Ind1 =< Ind2, !. 
+    Ind1 < Ind2, !. 
 add_cond(or, Ind1, Ind2, Previous, C4, ((C, C3); C4)) :- 
     last_cond(and, Previous, C, C3), % (C, C3)
     Ind1 > Ind2, !. 
-add_cond(or, _, _, (C; C3), C4, (C; (C3; C4))) :- !. 
-add_cond(or, _,_, Cond, RestC, (Cond; RestC)).
+add_cond(or, I, I, (C; C3), C4, (C; (C3; C4))) :- !. 
+add_cond(or, _, _, Cond, RestC, (Cond; RestC)).
 
 last_cond(or, (A;B), A, B) :- B\=(_;_), !.
 last_cond(or, (C;D), (C;R), Last) :- last_cond(or, D, R, Last).
@@ -1043,7 +1124,7 @@ match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, [Expression|Re
     extract_expression([','|StopWords], NameWords, [Word|PossibleLiteral], NextWords), NameWords \= [],
     %print_message(informational, "Expression? ~w"-[NameWords]),
     % this expression cannot add variables 
-    ( phrase(expression_(Expression, Map1, Map1), NameWords) -> true ; ( name_predicate(NameWords, Expression) ) ),
+    ( phrase(expression_(Expression, Map1, _), NameWords) -> true ; ( name_predicate(NameWords, Expression) ) ),
     %print_message(informational, 'found a constant or an expression '), print_message(informational, Expression),
     match(RestElements, NextWords, Map1, MapN, RestSelected). 
 
@@ -1074,7 +1155,7 @@ expression_(InfixBuiltIn, Map1, MapN) -->
     {op_stop(Stop)}, term_(Stop, Term, Map1, Map2), spaces(_), binary_op(BuiltIn), !, 
     %{print_message(informational, "Binary exp first term ~w and op ~w"-[Term, BuiltIn])}, 
     spaces(_), expression_(Expression, Map2, MapN), spaces(_), 
-    {InfixBuiltIn =.. [BuiltIn, Term, Expression]}.%, print_message(informational, "Binary exp ~w"-InfixBuiltIn)}.  
+    {InfixBuiltIn =.. [BuiltIn, Term, Expression]}. %, print_message(informational, "Binary exp ~w"-InfixBuiltIn)}.  
 % a quick fix for integer numbers extracted from atoms from the tokenizer
 expression_(Number, Map, Map) --> [Atom],  spaces(_), { atom(Atom), atom_number(Atom, Number) }, !. 
 expression_(Var, Map1, Map2) -->  {op_stop(Stop)}, variable(Stop, Var, Map1, Map2),!.%, {print_message(informational, "Just var ~w"-Var)}, 
@@ -1091,14 +1172,83 @@ expression(_, _, _, Rest, _) :-
 % operators with any amout of words/symbols
 % binary_op/3
 binary_op(Op, In, Out) :-
-    op_tokens(Op, OpTokens),
+    op2tokens(Op, OpTokens, _),
     append(OpTokens, Out, In).
 
+% very inefficient. Better to compute and store. See below
 op_tokens(Op, OpTokens) :-
     current_op(_Prec, Fix, Op), Op \= '.',
     (Fix = 'xfx'; Fix='yfx'; Fix='xfy'; Fix='yfy'),
     term_string(Op, OpString), tokenize(OpString, Tokens, [cased(true), spaces(true), numbers(false)]),
     unpack_tokens(Tokens, OpTokens).
+
+% findall(op2tokens(Op, OpTokens, OpTokens), op_tokens(Op, OpTokens), L), forall(member(T,L), (write(T),write('.'), nl)).
+% op2tokens(+Operator, PrologTokens, sCASPTokens)
+% op2tokens/3
+op2tokens(is_not_before,[is_not_before],[is_not_before]).
+op2tokens(of,[of],[of]).
+op2tokens(if,[if],[if]).
+op2tokens(then,[then],[then]).
+op2tokens(must,[must],[must]).
+op2tokens(on,[on],[on]).
+op2tokens(because,[because],[because]).
+op2tokens(and,[and],[and]).
+op2tokens(in,[in],[in]).
+op2tokens(or,[or],[or]).
+op2tokens(at,[at],[at]).
+op2tokens(before,[before],[before]).
+op2tokens(after,[after],[after]).
+op2tokens(else,[else],[else]).
+op2tokens(with,[with],[with]).
+op2tokens(::,[:,:],[:,:]).
+op2tokens(->,[-,>],[-,>]).
+op2tokens(:,[:],[:]).
+op2tokens(,,[',,,'],[',,,']).
+op2tokens(:=,[:,=],[:,=]).
+op2tokens(==,[=,=],[=,=]).
+op2tokens(:-,[:,-],[:,-]).
+op2tokens(/\,[/,\],[/,\]).
+op2tokens(=,[=],[=]).
+op2tokens(rem,[rem],[rem]).
+op2tokens(is,[is],[is]).
+op2tokens(=:=,[=,:,=],[=,:,=]).
+op2tokens(=\=,[=,\,=],[=,\,=]).
+op2tokens(xor,[xor],[xor]).
+op2tokens(as,[as],[as]).
+op2tokens(rdiv,[rdiv],[rdiv]).
+op2tokens(>=,[>,=],[>,=]).
+op2tokens(@<,[@,<],[@,<]).
+op2tokens(@=<,[@,=,<],[@,=,<]).
+op2tokens(=@=,[=,@,=],[=,@,=]).
+op2tokens(\=@=,[\,=,@,=],[\,=,@,=]).
+op2tokens(@>,[@,>],[@,>]).
+op2tokens(@>=,[@,>,=],[@,>,=]).
+op2tokens(\==,[\,=,=],[\,=,=]).
+op2tokens(\=,[\,=],[\,=]).
+op2tokens(>,[>],[>]).
+%op2tokens(|,[',|,'],[',|,']).
+op2tokens('|',['|'],['|']).
+op2tokens(\/,[\,/],[\,/]).
+op2tokens(+,[+],[+]).
+op2tokens(>>,[>,>],[>,>]).
+op2tokens(;,[;],[;]).
+op2tokens(<<,[<,<],[<,<]).
+op2tokens(:<,[:,<],[:,<]).
+op2tokens(>:<,[>,:,<],[>,:,<]).
+op2tokens(/,[/],[/]).
+op2tokens(=>,[=,>],[=,>]).
+op2tokens(=..,[=,.,.],[=,.,.]).
+op2tokens(div,[div],[div]).
+op2tokens(//,[/,/],[/,/]).
+op2tokens(**,[*,*],[*,*]).
+op2tokens(*,[*],[*]).
+op2tokens(^,[^],[^]).
+op2tokens(mod,[mod],[mod]).
+op2tokens(-,[-],[-]).
+op2tokens(*->,[*,-,>],[*,-,>]).
+op2tokens(<,[<],[<]).
+op2tokens(=<,[=,<],[=,<]).
+op2tokens(-->,[-,-,>],[-,-,>]).
 
 % very inefficient. Better to compute and store. See below
 op_stop_words(Words) :-
@@ -1537,6 +1687,13 @@ asserted(F) :- clause(F,true). % as a fact
 currentLine(LineNumber, Rest, Rest) :-
     once( nth1(_,Rest,newline(NextLine)) ), LineNumber is NextLine-2. 
 
+% assert_error_os/1
+% to save final error to be displayed
+assert_error_os([]) :- !. 
+assert_error_os([error(Message, LineNumber, Tokens)|Re]) :-
+    asserta(error_notice(error, Message, LineNumber, Tokens)),
+    assert_error_os(Re).
+
 asserterror(Me, Rest) :-
     %print_message(error, ' Error found'), 
     %select_first_section(Rest, 40, Context), 
@@ -1647,7 +1804,7 @@ predef_dict([days_spent_in_uk,Individual,Start,End,TotalDays], [who-person,start
                    [Individual, spent, TotalDays, in, the, 'UK', starting, at, Start, &, ending, at, End]). 
 predef_dict([uk_tax_year_for_date,Date,Year,Start,End], [first_date-date, year-year, second_date-date, third_date-date], 
                    [in, the, 'UK', Date, falls, in, Year, beginning, at, Start, &, ending, at, End]).
-predef_dict([myDB_entities:is_individual_or_company_on, A, B],
+predef_dict([is_individual_or_company_on, A, B],
                    [affiliate-affiliate, date-date],
                    [A, is, an, individual, or, is, a, company, at, B]).
 % Prolog
@@ -1667,10 +1824,10 @@ predef_dict([==, T1, T2], [thing_1-thing, thing_2-thing], [T1, is, equivalent, t
 predef_dict([is_a, Object, Type], [object-object, type-type], [Object, is, of, type, Type]).
 predef_dict([is_not_before, T1, T2], [time1-time, time2-time], [T1, is, not, before, T2]). % see reasoner.pl before/2
 predef_dict([=, T1, T2], [thing_1-thing, thing_2-thing], [T1, is, equal, to, T2]).
-predef_dict([before, T1, T2], [time1-time, time2-time], [T1, is, before, T2]). % see reasoner.pl before/2
-predef_dict([after, T1, T2], [time1-time, time2-time], [T1, is, after, T2]).  % see reasoner.pl before/2
+predef_dict([isbefore, T1, T2], [time1-time, time2-time], [T1, is, before, T2]). % see reasoner.pl before/2
+predef_dict([isafter, T1, T2], [time1-time, time2-time], [T1, is, after, T2]).  % see reasoner.pl before/2
 predef_dict([member, Member, List], [member-object, list-list], [Member, is, in, List]).
-predef_dict([is, A, B], [member-object, list-list], [A, is, B]). % builtin Prolog assignment
+predef_dict([is, A, B], [term-term, expression-expression], [A, is, B]). % builtin Prolog assignment
 % predefined entries:
 %predef_dict([assert,Information], [info-clause], [this, information, Information, ' has', been, recorded]).
 predef_dict([\=@=, T1, T2], [thing_1-thing, thing_2-thing], [T1, \,=,@,=, T2]).
@@ -1719,7 +1876,7 @@ is_it_illegal(English, Scenario) :- % only event as possibly illegal for the tim
     pengine_self(SwishModule), %SwishModule:query(GoalName, Goal), 
     %extract_goal_command(Question, SwishModule, Goal, Command), 
     copy_term(Goal, CopyOfGoal), 
-    get_answer_from_goal(CopyOfGoal, RawGoal),  name_as_atom(RawGoal, EnglishQuestion), 
+    translate_goal_into_LE(CopyOfGoal, RawGoal),  name_as_atom(RawGoal, EnglishQuestion), 
     print_message(informational, "Testing illegality: ~w"-[EnglishQuestion]),
     print_message(informational, "Scenario: ~w"-[Scenario]),
     get_assumptions_from_scenario(Scenario, SwishModule, Assumptions), 
@@ -1729,7 +1886,7 @@ is_it_illegal(English, Scenario) :- % only event as possibly illegal for the tim
             catch(SwishModule:it_is_illegal(Goal, T), Error, ( print_message(error, Error), fail ) ), 
             _Result, 
             retract_facts(SwishModule, Assumptions)), 
-    get_answer_from_goal(Goal, RawAnswer), name_as_atom(RawAnswer, EnglishAnswer),  
+    translate_goal_into_LE(Goal, RawAnswer), name_as_atom(RawAnswer, EnglishAnswer),  
     print_message(informational, "Answers: ~w"-[EnglishAnswer]).
 
 % extract_goal_command(WrappedGoal, Module, InnerGoal, RealGoal)
@@ -1791,7 +1948,7 @@ answer(English) :- %trace,
     (translate_command(SwishModule, English, GoalName, Goal, Scenario) -> true 
     ; ( print_message(error, "Don't understand this question: ~w "-[English]), !, fail ) ), % later -->, Kbs),
     copy_term(Goal, CopyOfGoal),  
-    get_answer_from_goal(CopyOfGoal, RawGoal), name_as_atom(RawGoal, EnglishQuestion), 
+    translate_goal_into_LE(CopyOfGoal, RawGoal), name_as_atom(RawGoal, EnglishQuestion), 
     print_message(informational, "Query ~w with ~w: ~w"-[GoalName, Scenario, EnglishQuestion]),
     %print_message(informational, "Scenario: ~w"-[Scenario]),
     % assert facts in scenario
@@ -1805,7 +1962,7 @@ answer(English) :- %trace,
             catch((true, Command), Error, ( print_message(error, Error), fail ) ), 
             _Result, 
             retract_facts(SwishModule, Facts)), 
-    get_answer_from_goal(Goal, RawAnswer), name_as_atom(RawAnswer, EnglishAnswer),  
+    translate_goal_into_LE(Goal, RawAnswer), name_as_atom(RawAnswer, EnglishAnswer),  
     print_message(informational, "Answer: ~w"-[EnglishAnswer]).
 
 % answer/2
@@ -1827,7 +1984,7 @@ prepare_query(English, Arg, SwishModule, Goal, Facts, Command) :-
     (translate_command(SwishModule, English, GoalName, Goal, PreScenario) -> true 
     ; ( print_message(error, "Don't understand this question: ~w "-[English]), !, fail ) ), % later -->, Kbs),
     copy_term(Goal, CopyOfGoal),  
-    get_answer_from_goal(CopyOfGoal, RawGoal), name_as_atom(RawGoal, EnglishQuestion), 
+    translate_goal_into_LE(CopyOfGoal, RawGoal), name_as_atom(RawGoal, EnglishQuestion), 
     ((Arg = with(ScenarioName), PreScenario=noscenario) -> Scenario=ScenarioName; Scenario=PreScenario),   
     print_message(informational, "Query ~w with ~w: ~w"-[GoalName, Scenario, EnglishQuestion]),
     %print_message(informational, "Scenario: ~w"-[Scenario]),
@@ -1840,7 +1997,7 @@ prepare_query(English, Arg, SwishModule, Goal, Facts, Command) :-
     %print_message(informational, "Command: ~w"-[Command])
 
 show_answer(Goal) :-
-    get_answer_from_goal(Goal, RawAnswer), name_as_atom(RawAnswer, EnglishAnswer), 
+    translate_goal_into_LE(Goal, RawAnswer), name_as_atom(RawAnswer, EnglishAnswer), 
     print_message(informational, "Answer: ~w"-[EnglishAnswer]), !. 
 
 % answer/3
@@ -1850,7 +2007,7 @@ answer(English, Arg, EnglishAnswer) :-
     pengine_self(SwishModule), 
     translate_command(SwishModule, English, _, Goal, PreScenario), % later -->, Kbs),
     %copy_term(Goal, CopyOfGoal), 
-    %get_answer_from_goal(CopyOfGoal, RawGoal), name_as_atom(RawGoal, EnglishQuestion), 
+    %translate_goal_into_LE(CopyOfGoal, RawGoal), name_as_atom(RawGoal, EnglishQuestion), 
     ((Arg = with(ScenarioName), PreScenario=noscenario) -> Scenario=ScenarioName; Scenario=PreScenario), 
     extract_goal_command(Goal, SwishModule, _InnerGoal, Command),
     (Scenario==noscenario -> Facts = [] ; SwishModule:example(Scenario, [scenario(Facts, _)])), 
@@ -1859,7 +2016,7 @@ answer(English, Arg, EnglishAnswer) :-
             %catch(Command, Error, ( print_message(error, Error), fail ) ), 
             _Result, 
             retract_facts(SwishModule, Facts)),
-    get_answer_from_goal(Goal, RawAnswer), name_as_atom(RawAnswer, EnglishAnswer). 
+    translate_goal_into_LE(Goal, RawAnswer), name_as_atom(RawAnswer, EnglishAnswer). 
     %reasoner:query_once_with_facts(Goal,Scenario,_,_E,Result).
 
 % answer/4
@@ -1877,30 +2034,31 @@ answer(English, Arg, E, Result) :- %trace,
             _Result, 
             retract_facts(SwishModule, Facts)). 
 
-% get_answer_from_goal/2
-% get_answer_from_goal(+Goals_after_being_queried, -Goals_translated_into_LEnglish_as_answers)
-get_answer_from_goal((G,R), WholeAnswer) :- 
-    get_answer_from_goal(G, Answer), 
-    get_answer_from_goal(R, RestAnswers), !, 
+% translate_goal_into_LE/2
+% translate_goal_into_LE(+Goals_after_being_queried, -Goals_translated_into_LEnglish_as_answers)
+translate_goal_into_LE((G,R), WholeAnswer) :- 
+    translate_goal_into_LE(G, Answer), 
+    translate_goal_into_LE(R, RestAnswers), !, 
     append(Answer, ['\n','\t',and|RestAnswers], WholeAnswer).
-get_answer_from_goal(not(G), [it,is,not,the,case,that,'\n', '\t'|Answer]) :- 
-    get_answer_from_goal(G, Answer), !.
-get_answer_from_goal(happens(Goal,T), Answer) :-    % simple goals do not return a list, just a literal
-    Goal =.. [Pred|GoalElements], dict([Pred|GoalElements], Types, WordsAnswer), 
+translate_goal_into_LE(not(G), [it,is,not,the,case,that,'\n', '\t'|Answer]) :- 
+    translate_goal_into_LE(G, Answer), !.
+translate_goal_into_LE(Goal, ProcessedWordsAnswers) :-  
+    Goal =.. [Pred|GoalElements], meta_dictionary([Pred|GoalElements], Types, WordsAnswer),
+    process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), !. 
+translate_goal_into_LE(Goal, ProcessedWordsAnswers) :-  
+    Goal =.. [Pred|GoalElements], dictionary([Pred|GoalElements], Types, WordsAnswer),
+    %print_message(informational, "from  ~w to ~w "-[Goal, ProcessedWordsAnswers]), 
+    process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), !.
+translate_goal_into_LE(happens(Goal,T), Answer) :-    % simple goals do not return a list, just a literal
+    Goal =.. [Pred|GoalElements], dictionary([Pred|GoalElements], Types, WordsAnswer), 
     process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), 
     process_time_term(T, TimeExplain), !, 
     Answer = ['At', TimeExplain, it, occurs, that|ProcessedWordsAnswers].
-get_answer_from_goal(holds(Goal,T), Answer) :- 
-    Goal =.. [Pred|GoalElements], dict([Pred|GoalElements], Types, WordsAnswer), 
+translate_goal_into_LE(holds(Goal,T), Answer) :- 
+    Goal =.. [Pred|GoalElements], dictionary([Pred|GoalElements], Types, WordsAnswer), 
     process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), 
     process_time_term(T, TimeExplain),
-    Answer = ['At', TimeExplain, it, holds, that|ProcessedWordsAnswers], !.
-get_answer_from_goal(Goal, ProcessedWordsAnswers) :-  
-    Goal =.. [Pred|GoalElements], meta_dictionary([Pred|GoalElements], Types, WordsAnswer),
-    process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), !. 
-get_answer_from_goal(Goal, ProcessedWordsAnswers) :-  
-    Goal =.. [Pred|GoalElements], dictionary([Pred|GoalElements], Types, WordsAnswer),
-    process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), !. 
+    Answer = ['At', TimeExplain, it, holds, that|ProcessedWordsAnswers], !. 
 
 process_time_term(T,ExplainT) :- var(T), name_as_atom([a, time, T], ExplainT). % in case of vars
 process_time_term(T,T) :- nonvar(T), atom(T), !. 
@@ -1912,7 +2070,8 @@ process_time_term((after(T)-Var), Explain) :- var(Var), !,
 process_time_term((after(T1)-before(T2)), Explain) :- !,
     process_time_term(T1, Time1), process_time_term(T2, Time2),
     name_as_atom([any, time, after, Time1, and, before, Time2], Explain).
-    
+
+% process_types_or_names/4
 process_types_or_names([], _, _, []) :- !.
 process_types_or_names([Word|RestWords], Elements, Types, PrintExpression ) :- 
     atom(Word), concat_atom(WordList, '_', Word), !, 
@@ -1933,11 +2092,24 @@ process_types_or_names([Word|RestWords], Elements, Types, [PrintWord|RestPrintWo
     process_types_or_names(RestWords,  Elements, Types, RestPrintWords). 
 process_types_or_names([Word|RestWords],  Elements, Types, Output) :-
     compound(Word), 
-    get_answer_from_goal(Word, PrintWord), !, % cut the alternatives
+    translate_goal_into_LE(Word, PrintWord), !, % cut the alternatives
     process_types_or_names(RestWords,  Elements, Types, RestPrintWords),
     append(PrintWord, RestPrintWords, Output). 
 process_types_or_names([Word|RestWords],  Elements, Types, [Word|RestPrintWords] ) :-
     process_types_or_names(RestWords,  Elements, Types, RestPrintWords).
+
+%process_template_for_scasp/4
+%process_template_for_scasp(WordsAnswer, GoalElements, Types, +FormatElements, +ProcessedWordsAnswers)
+process_template_for_scasp([], _, _, [], []) :- !.
+process_template_for_scasp([Word|RestWords], Elements, Types, [' @(~w:~w) '|RestFormat], [Word, TypeName|RestPrintWords]) :- 
+    var(Word), matches_type(Word, Elements, Types, Type), !, 
+    process_template_for_scasp(RestWords,  Elements, Types, RestFormat, RestPrintWords),
+    tokenize_atom(Type, NameWords), delete_underscore(NameWords, [TypeName]).
+process_template_for_scasp([Word|RestWords],  Elements, Types, ['~w'|RestFormat], [Word|RestPrintWords] ) :-
+    op_stop(List), member(Word,List), !, 
+    process_template_for_scasp(RestWords,  Elements, Types, RestFormat, RestPrintWords).
+process_template_for_scasp([Word|RestWords],  Elements, Types, [' ~w '|RestFormat], [Word|RestPrintWords] ) :-
+    process_template_for_scasp(RestWords,  Elements, Types, RestFormat, RestPrintWords).
 
 add_determiner([Word|RestWords], [Det, Word|RestWords]) :-
     name(Word,[First|_]), proper_det(First, Det).
@@ -2012,6 +2184,7 @@ scenario_or_empty_ --> spaces(_).
  
 % show/1
 show(prolog) :-
+    show(metarules), 
     show(rules),
     show(queries),
     show(scenarios). 
@@ -2020,6 +2193,20 @@ show(rules) :- % trace,
     pengine_self(SwishModule), 
     findall((Pred :- Body), 
         (dict(PredicateElements, _, _), Pred=..PredicateElements, clause(SwishModule:Pred, Body_), unwrapBody(Body_, Body)), Predicates),
+    forall(member(Clause, Predicates), portray_clause(Clause)).
+
+% 
+%(op2tokens(Pred, _, OpTokens) -> % Fixing binary predicates for scasp
+%( append([X|_], [Y], GoalElements),
+%  append([X|OpTokens],[Y], RevGoalElements), 
+%  print_message(informational, "binary op ~w"-[Pred]) ) 
+%; RevGoalElements = GoalElements 
+%), 
+
+show(metarules) :- % trace, 
+    pengine_self(SwishModule), 
+    findall((Pred :- Body), 
+        (meta_dict(PredicateElements, _, _), Pred=..PredicateElements, clause(SwishModule:Pred, Body_), unwrapBody(Body_, Body)), Predicates),
     forall(member(Clause, Predicates), portray_clause(Clause)).
 
 show(queries) :- % trace, 
@@ -2036,10 +2223,23 @@ show(scenarios) :- % trace,
 
 show(templates) :-
     findall(EnglishAnswer, 
-        ( dictionary([_|GoalElements], Types, WordsAnswer),
+        ( ( meta_dictionary([_|GoalElements], Types, WordsAnswer) ; 
+            dictionary([_|GoalElements], Types, WordsAnswer)),
         process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers),
         name_as_atom(ProcessedWordsAnswers, EnglishAnswer)), Templates), 
     forall(member(T, Templates), print_message(informational, "~w"-[T])). 
+
+show(templates_scasp) :-
+    findall(Term, 
+        ( ( meta_dict([Pred|GoalElements], Types, WordsAnswer) ; 
+            dict([Pred|GoalElements], Types, WordsAnswer)),
+        Goal =.. [Pred|GoalElements], 
+        process_template_for_scasp(WordsAnswer, GoalElements, Types, FormatEl, LE),
+        atomic_list_concat(['#pred ~w ::'|FormatEl], Format),
+        Elements = [Goal|LE], 
+        numbervars(Elements, 1, _),
+        format(atom(Term), Format, Elements)), Templates), 
+    forall(member(T, Templates), portray_clause(T)). 
 
 show(types) :-
     %findall(EnglishAnswer, 
@@ -2052,7 +2252,27 @@ show(types) :-
     forall(member(Tp, PreSet),print_message(informational, '~a'-[Tp])), 
     print_message(informational, "Types defined in the current document:"-[]), 
     setof(Ty, is_type(Ty), Set), 
-    forall(member(T, Set), print_message(informational, '~a'-[T])).
+    forall(member(T, Set), print_message(informational, '~a'-[T])). 
+
+show(scasp) :-
+    show(templates_scasp), 
+    show(metarules), 
+    show(rules). 
+
+show(scasp, with(Q, S)) :-
+    show(scasp), 
+    pengine_self(SwishModule), 
+    clause(SwishModule:query(Q,Query), _),
+    print_message(informational, "% ? ~w ."-[Query]),
+    clause(SwishModule:example(S, [scenario(Scenario, _)]), _),
+    %print_message(informational, "% scenario ~w ."-[List]),
+    forall(member(Clause, Scenario), portray_clause(Clause)).
+
+show(scasp, with(Q)) :-
+    show(scasp), 
+    pengine_self(SwishModule), 
+    clause(SwishModule:query(Q,Query), _),
+    print_message(informational, "% ? ~w ."-[Query]). 
 
 unwrapBody(targetBody(Body, _, _, _, _, _), Body). 
 %unwrapBody(Body, Body). 
@@ -2090,6 +2310,9 @@ user:answer( EnText, Scenario, E, Result) :- answer( EnText, Scenario, E, Result
 
 user:(show Something) :- 
     show(Something). 
+
+user:(show(Something, With) ):- 
+    show(Something, With). 
 
 user:is_it_illegal( EnText, Scenario) :- is_it_illegal( EnText, Scenario).
 
@@ -2139,6 +2362,7 @@ showtaxlog.
 sandbox:safe_primitive(le_input:showtaxlog).
 sandbox:safe_primitive(le_input:answer( _EnText)).
 sandbox:safe_primitive(le_input:show( _Something)).
+sandbox:safe_primitive(le_input:show( _Something, _With)).
 sandbox:safe_primitive(le_input:answer( _EnText, _Scenario)).
 sandbox:safe_primitive(le_input:answer( _EnText, _Scenario, _Result)).
 sandbox:safe_primitive(le_input:answer( _EnText, _Scenario, _Explanation, _Result)).
