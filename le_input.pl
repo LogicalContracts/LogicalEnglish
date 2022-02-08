@@ -2231,15 +2231,15 @@ show(templates) :-
 
 show(templates_scasp) :-
     findall(Term, 
-        ( ( meta_dict([Pred|GoalElements], Types, WordsAnswer) ; 
+        ( ( meta_dict([Pred|GoalElements], Types, WordsAnswer) ;
             dict([Pred|GoalElements], Types, WordsAnswer)),
-        Goal =.. [Pred|GoalElements], 
+        Goal =.. [Pred|GoalElements],
         process_template_for_scasp(WordsAnswer, GoalElements, Types, FormatEl, LE),
-        atomic_list_concat(['#pred ~w ::'|FormatEl], Format),
-        Elements = [Goal|LE], 
+        atomic_list_concat(['#pred ~w ::\''|FormatEl], Format),
+        Elements = [Goal|LE],
         numbervars(Elements, 1, _),
-        format(atom(Term), Format, Elements)), Templates), 
-    forall(member(T, Templates), portray_clause(T)). 
+        format(atom(Term), Format, Elements)), Templates),
+    forall(member(T, Templates), (atom_string(T, R), print_message(informational, '~w\'.'-[R]))).
 
 show(types) :-
     %findall(EnglishAnswer, 
@@ -2263,16 +2263,16 @@ show(scasp, with(Q, S)) :-
     show(scasp), 
     pengine_self(SwishModule), 
     clause(SwishModule:query(Q,Query), _),
-    print_message(informational, "% ? ~w ."-[Query]),
     clause(SwishModule:example(S, [scenario(Scenario, _)]), _),
     %print_message(informational, "% scenario ~w ."-[List]),
-    forall(member(Clause, Scenario), portray_clause(Clause)).
+    forall(member(Clause, Scenario), portray_clause(Clause)),
+    print_message(informational, "/** <examples>\n?- ? ~w .\n**/"-[Query]).
 
 show(scasp, with(Q)) :-
     show(scasp), 
     pengine_self(SwishModule), 
     clause(SwishModule:query(Q,Query), _),
-    print_message(informational, "% ? ~w ."-[Query]). 
+    print_message(informational, "/** <examples>\n?- ? ~w .\n**/"-[Query]).
 
 unwrapBody(targetBody(Body, _, _, _, _, _), Body). 
 %unwrapBody(Body, Body). 
