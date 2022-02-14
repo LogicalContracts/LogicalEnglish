@@ -92,14 +92,15 @@ query three is:
     op(850,fx,user:'#pred'), % to support scasp 
     op(800,xfx,user:'::'), % to support scasp 
     dictionary/3, meta_dictionary/3,
-    translate_goal_into_LE/2, name_as_atom/2, parsed/0
+    translate_goal_into_LE/2, name_as_atom/2, parsed/0,
+    dump/4, dump/3, dump/2
     ]).
 :- use_module('./tokenize/prolog/tokenize.pl').
 :- use_module(library(pengines)).
 :- use_module('reasoner.pl').
 :- use_module(kp_loader).
 :- use_module(library(prolog_stack)).
-:- thread_local text_size/1, error_notice/4, dict/3, meta_dict/3, example/2, 
+:- thread_local text_size/1, error_notice/4, dict/3, meta_dict/3, example/2, local_dict/3, local_meta_dict/3,
                 last_nl_parsed/1, kbname/1, happens/2, initiates/3, terminates/3, is_type/1,
                 predicates/1, events/1, fluents/1, metapredicates/1, parsed/0.  
 :- discontiguous statement/3, declaration/4, example/2. 
@@ -873,7 +874,7 @@ name_as_atom(Words, Name) :-
     replace_ast_a(Codes, CCodes), 
     atom_codes(Name, CCodes).  
 
-words_to_atom(Words, Name) :- trace, 
+words_to_atom(Words, Name) :- %trace, 
     numbervars(Words, 0, _, [singletons(true)]),
     list_words_to_codes(Words, Codes),
     atom_codes(Name, Codes). 
@@ -1924,7 +1925,7 @@ holds(Fluent, T) :-
     not(interrupted(T1, Fluent, T)).
 
 rbefore(T1, T) :-
-    nonvar(T1), nonvar(T), before(T1, T). %, !.
+    nonvar(T1), nonvar(T), isbefore(T1, T). %, !.
 %rbefore(T1, T) :- (var(T1); var(T)), !. % if anyone is a variable, don't compute
 %rbefore(T1, (after(T2)-_)) :-
 %    nonvar(T1), nonvar(T2), before(T1, T2).
@@ -1943,27 +1944,28 @@ interrupted(T1, Fluent, T2) :- %trace,
 % answer/1
 % answer(+Query or Query Expression)
 answer(English) :- %trace, 
-    parsed, 
-    pengine_self(SwishModule), 
-    (translate_command(SwishModule, English, GoalName, Goal, Scenario) -> true 
-    ; ( print_message(error, "Don't understand this question: ~w "-[English]), !, fail ) ), % later -->, Kbs),
-    copy_term(Goal, CopyOfGoal),  
-    translate_goal_into_LE(CopyOfGoal, RawGoal), name_as_atom(RawGoal, EnglishQuestion), 
-    print_message(informational, "Query ~w with ~w: ~w"-[GoalName, Scenario, EnglishQuestion]),
-    %print_message(informational, "Scenario: ~w"-[Scenario]),
-    % assert facts in scenario
-    (Scenario==noscenario -> Facts = [] ; 
-        (SwishModule:example(Scenario, [scenario(Facts, _)]) -> 
-            true;  print_message(error, "Scenario: ~w does not exist"-[Scenario]))), !,  
-    %print_message(informational, "Facts: ~w"-[Facts]), 
-    extract_goal_command(Goal, SwishModule, _InnerGoal, Command), 
-    %print_message(informational, "Command: ~w"-[Command]),
-    setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
-            catch((true, Command), Error, ( print_message(error, Error), fail ) ), 
-            _Result, 
-            retract_facts(SwishModule, Facts)), 
-    translate_goal_into_LE(Goal, RawAnswer), name_as_atom(RawAnswer, EnglishAnswer),  
-    print_message(informational, "Answer: ~w"-[EnglishAnswer]).
+    answer(English, empty). 
+    % parsed, 
+    % pengine_self(SwishModule), 
+    % (translate_command(SwishModule, English, GoalName, Goal, Scenario) -> true 
+    % ; ( print_message(error, "Don't understand this question: ~w "-[English]), !, fail ) ), % later -->, Kbs),
+    % copy_term(Goal, CopyOfGoal),  
+    % translate_goal_into_LE(CopyOfGoal, RawGoal), name_as_atom(RawGoal, EnglishQuestion), 
+    % print_message(informational, "Query ~w with ~w: ~w"-[GoalName, Scenario, EnglishQuestion]),
+    % %print_message(informational, "Scenario: ~w"-[Scenario]),
+    % % assert facts in scenario
+    % (Scenario==noscenario -> Facts = [] ; 
+    %     (SwishModule:example(Scenario, [scenario(Facts, _)]) -> 
+    %         true;  print_message(error, "Scenario: ~w does not exist"-[Scenario]))), !,  
+    % %print_message(informational, "Facts: ~w"-[Facts]), 
+    % extract_goal_command(Goal, SwishModule, _InnerGoal, Command), 
+    % %print_message(informational, "Command: ~w"-[Command]),
+    % setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
+    %         catch((true, Command), Error, ( print_message(error, Error), fail ) ), 
+    %         _Result, 
+    %         retract_facts(SwishModule, Facts)), 
+    % translate_goal_into_LE(Goal, RawAnswer), name_as_atom(RawAnswer, EnglishAnswer),  
+    % print_message(informational, "Answer: ~w"-[EnglishAnswer]).
 
 % answer/2
 % answer(+Query, with(+Scenario))
@@ -1978,27 +1980,6 @@ answer(English, Arg) :- % trace,
             _Result, 
             retract_facts(SwishModule, Facts)), 
     show_answer(Goal). 
-
-prepare_query(English, Arg, SwishModule, Goal, Facts, Command) :-
-    pengine_self(SwishModule), 
-    (translate_command(SwishModule, English, GoalName, Goal, PreScenario) -> true 
-    ; ( print_message(error, "Don't understand this question: ~w "-[English]), !, fail ) ), % later -->, Kbs),
-    copy_term(Goal, CopyOfGoal),  
-    translate_goal_into_LE(CopyOfGoal, RawGoal), name_as_atom(RawGoal, EnglishQuestion), 
-    ((Arg = with(ScenarioName), PreScenario=noscenario) -> Scenario=ScenarioName; Scenario=PreScenario),   
-    print_message(informational, "Query ~w with ~w: ~w"-[GoalName, Scenario, EnglishQuestion]),
-    %print_message(informational, "Scenario: ~w"-[Scenario]),
-    % assert facts in scenario
-    (Scenario==noscenario -> Facts = [] ; 
-        (SwishModule:example(Scenario, [scenario(Facts, _)]) -> 
-            true;  print_message(error, "Scenario: ~w does not exist"-[Scenario]))),  
-    %print_message(informational, "Facts: ~w"-[Facts]), 
-    extract_goal_command(Goal, SwishModule, _InnerGoal, Command), !. 
-    %print_message(informational, "Command: ~w"-[Command])
-
-show_answer(Goal) :-
-    translate_goal_into_LE(Goal, RawAnswer), name_as_atom(RawAnswer, EnglishAnswer), 
-    print_message(informational, "Answer: ~w"-[EnglishAnswer]), !. 
 
 % answer/3
 % answer(+English, with(+Scenario), -Result)
@@ -2033,6 +2014,29 @@ answer(English, Arg, E, Result) :- %trace,
             catch((true, query(at(InnerGoal, Module),_,E,Result)), Error, ( print_message(error, Error), fail ) ), 
             _Result, 
             retract_facts(SwishModule, Facts)). 
+
+% prepare_query/6
+% prepare_query(English, Arguments, Module, Goal, Facts, Command)
+prepare_query(English, Arg, SwishModule, Goal, Facts, Command) :- %trace, 
+    %restore_dicts, 
+    pengine_self(SwishModule), 
+    (translate_command(SwishModule, English, GoalName, Goal, PreScenario) -> true 
+    ; ( print_message(error, "Don't understand this question: ~w "-[English]), !, fail ) ), % later -->, Kbs),
+    copy_term(Goal, CopyOfGoal),  
+    translate_goal_into_LE(CopyOfGoal, RawGoal), name_as_atom(RawGoal, EnglishQuestion), 
+    ((Arg = with(ScenarioName), PreScenario=noscenario) -> Scenario=ScenarioName; Scenario=PreScenario),   
+    print_message(informational, "Query ~w with ~w: ~w"-[GoalName, Scenario, EnglishQuestion]), 
+    %print_message(informational, "Scenario: ~w"-[Scenario]),
+    (Scenario==noscenario -> Facts = [] ; 
+        (SwishModule:example(Scenario, [scenario(Facts, _)]) -> 
+            true;  print_message(error, "Scenario: ~w does not exist"-[Scenario]))),
+    %print_message(informational, "Facts: ~w"-[Facts]), 
+    extract_goal_command(Goal, SwishModule, _InnerGoal, Command), !,  
+    print_message(informational, "Command: ~w"-[Command]). 
+
+show_answer(Goal) :-
+    translate_goal_into_LE(Goal, RawAnswer), name_as_atom(RawAnswer, EnglishAnswer), 
+    print_message(informational, "Answer: ~w"-[EnglishAnswer]), !. 
 
 % translate_goal_into_LE/2
 % translate_goal_into_LE(+Goals_after_being_queried, -Goals_translated_into_LEnglish_as_answers)
@@ -2142,7 +2146,7 @@ retract_facts(SwishModule, [F|R]) :- nonvar(F), % print_message(informational, "
     retract(SwishModule:F), retract_facts(SwishModule, R). 
 
 % translate_command/1
-translate_command(SwishModule, English_String, GoalName, Goals, Scenario) :-
+translate_command(SwishModule, English_String, GoalName, Goals, Scenario) :- %trace, 
     tokenize(English_String, Tokens, [cased(true), spaces(true), numbers(false)]),
     unpack_tokens(Tokens, UTokens), 
     clean_comments(UTokens, CTokens),
@@ -2286,7 +2290,64 @@ targetBody(G, false, _, '', [], _) :- %trace,
     call(Command). 
     %Command.
     %catch_with_backtrace(Command, Error, (print_message(error, Error))). 
- 
+
+dump(templates, String) :-
+    findall(local_dict(Prolog, NamesTypes, Templates), (dict(Prolog, NamesTypes, Templates)), PredicatesDict),
+    with_output_to(string(String01), forall(member(Clause1, PredicatesDict), portray_clause(Clause1))),
+    (PredicatesDict==[]-> string_concat("local_dict([],[],[]).\n", String01, String1); String1 = String01), 
+    findall(local_meta_dict(Prolog, NamesTypes, Templates), (meta_dict(Prolog, NamesTypes, Templates)), PredicatesMeta),
+    with_output_to(string(String02), forall(member(Clause2, PredicatesMeta), portray_clause(Clause2))),
+    (PredicatesMeta==[]-> string_concat("local_meta_dict([],[],[]).\n", String02, String2); String2 = String02), 
+    string_concat(String1, String2, String).     
+
+dump(all, Module, List, String) :-
+	dump(templates, StringTemplates), 
+	dump(rules, List, StringRules),
+    dump(scenarios, List, StringScenarios),
+    dump(queries, List, StringQueries), 
+    string_concat(":-module(\'", Module, Module01),
+    string_concat(Module01, "\', []).\n", TopHeadString), 
+	string_concat(TopHeadString, StringTemplates, HeadString), 
+	string_concat(HeadString, StringRules, String1),
+    string_concat(String1, StringScenarios, String2),
+    string_concat(String2, StringQueries, String3), 
+    string_concat(String3, "prolog_le(verified).\n", String).   
+
+dump(rules, List, String) :- %trace, 
+    findall((Pred :- Body), 
+        (member( (Pred :- Body_), List), unwrapBody(Body_, Body)), Predicates),
+    with_output_to(string(String), forall(member(Clause, Predicates), portray_clause(Clause))).
+
+dump(queries, List, String) :- 
+    findall( query(Name, Query), 
+        (member( query(Name, Query), List)), Predicates),
+    with_output_to(string(String), forall(member(Clause, Predicates), portray_clause(Clause))).
+
+dump(scenarios, List, String) :- 
+    findall( example(Name, Scenario), 
+        (member( example(Name, Scenario), List)), Predicates),
+    with_output_to(string(String), forall(member(Clause, Predicates), portray_clause(Clause))).
+
+restore_dicts :- %trace, 
+    %print_message(informational, "dictionaries being restored"),
+    pengine_self(SwishModule),
+    (SwishModule:local_dict(_,_,_) -> findall(dict(A,B,C), SwishModule:local_dict(A,B,C), ListDict) ; ListDict = []),
+    (SwishModule:local_meta_dict(_,_,_) -> findall(meta_dict(A,B,C), SwishModule:local_meta_dict(A,B,C), ListMetaDict); ListMetaDict = []),
+    append(ListDict, ListMetaDict, DictEntries), 
+    %print_message(informational, "the dictionaries being restored are ~w"-[DictEntries]),
+    collect_all_preds(SwishModule, Preds),
+    declare_preds_as_dynamic(SwishModule, Preds), 
+    order_templates(DictEntries, OrderedEntries), 
+    process_types_dict(OrderedEntries, Types), 
+    append(OrderedEntries, Types, MRules), 
+    assertall(MRules), !. % asserting contextual information
+
+collect_all_preds(M, ListPreds) :-
+    findall(AA, ((M:local_dict(A,_,_); M:local_meta_dict(A, _,_)), A\=[], AA =.. A, not(clause(M:AA,_))), ListPreds). 
+
+declare_preds_as_dynamic(_, []) :- !. 
+declare_preds_as_dynamic(M, [F|R]) :- functor(F, P, A),  % facts are the templates now
+        dynamic([M:P/A], [thread(local), discontiguous(true)]), declare_preds_as_dynamic(M, R). 
 
 %%% ------------------------------------------------ Swish Interface to logical english
 %% based on logicalcontracts' lc_server.pl
@@ -2322,23 +2383,24 @@ user:holds(Fluent, Time) :- holds(Fluent, Time).
 
 user:has_as_head_before(List, Head, Rest) :- has_as_head_before(List, Head, Rest). 
 
-user:le_taxlog_translate( en(Text), Terms) :- le_taxlog_translate( en(Text), Terms).
+% for term_expansion
+%user:le_taxlog_translate( en(Text), Terms) :- le_taxlog_translate( en(Text), Terms)..
+%user:le_taxlog_translate( en(Text), File, Base, Terms) :- le_taxlog_translate( en(Text),  File, Base, Terms).
 
 user:op_stop(StopWords) :- op_stop(StopWords). 
 
 user:targetBody(G, B, X, S, L, R) :- targetBody(G, B, X, S, L, R). 
 
-le_taxlog_translate( EnText, Terms) :- le_taxlog_translate( EnText, someFile, 1, Terms).
+user:restore_dicts :- restore_dicts.
+
+%le_taxlog_translate( EnText, Terms) :- le_taxlog_translate( EnText, someFile, 1, Terms).
 
 % Baseline is the line number of the start of Logical English text
 le_taxlog_translate( en(Text), File, BaseLine, Terms) :-
-	%findall(Decl, psyntax:lps_swish_clause(en_decl(Decl),_Body,_Vars), Decls),
-    %combine_list_into_string(Decls, StringDecl),
-	%string_concat(StringDecl, Text, Whole_Text),
-    %once( text_to_logic(Text, Terms) ),
-    %catch(text_to_logic(Text, Terms), Error, ( print_message(error, Error),  showErrors(File,BaseLine) ) ).
-    text_to_logic(Text, Terms) -> true; showErrors(File,BaseLine). % cut didnt work.
-        %write_taxlog_code(Translation, Terms)). 
+    text_to_logic(Text, Terms) -> true; showErrors(File,BaseLine). 
+le_taxlog_translate( prolog_le(verified), _, _, prolog_le(verified)) :- %trace, 
+    assertz(parsed), 
+    restore_dicts. 
 
 combine_list_into_string(List, String) :-
     combine_list_into_string(List, "", String).
@@ -2349,6 +2411,9 @@ combine_list_into_string([HS|RestS], Previous, OutS) :-
     combine_list_into_string(RestS, NewS, OutS).
 
 user:showtaxlog :- showtaxlog.
+user:is_type(T) :- is_type(T).
+user:dict(A,B,C) :- dict(A,B,C).
+user:meta_dict(A,B,C) :- meta_dict(A,B,C). 
 
 showtaxlog:-
     % ?????????????????????????????????????????
@@ -2359,11 +2424,15 @@ showtaxlog:-
 	fail.
 showtaxlog.
 
+sanbox:safe_primitive(le_input:is_type(_)).
+sanbox:safe_primitive(le_input:dict(_,_,_)).
+sanbox:safe_primitive(le_input:meta_dict(_,_,_)).
 sandbox:safe_primitive(le_input:showtaxlog).
+sandbox:safe_primitive(le_input:restore_dicts).
 sandbox:safe_primitive(le_input:answer( _EnText)).
 sandbox:safe_primitive(le_input:show( _Something)).
 sandbox:safe_primitive(le_input:show( _Something, _With)).
 sandbox:safe_primitive(le_input:answer( _EnText, _Scenario)).
 sandbox:safe_primitive(le_input:answer( _EnText, _Scenario, _Result)).
 sandbox:safe_primitive(le_input:answer( _EnText, _Scenario, _Explanation, _Result)).
-sandbox:safe_primitive(le_input:le_taxlog_translate( _EnText, _Terms)).
+sandbox:safe_primitive(le_input:le_taxlog_translate( _EnText, _File, _Baseline, _Terms)). 

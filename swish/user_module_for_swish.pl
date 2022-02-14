@@ -113,13 +113,15 @@ clauseNavigator_(Ref,span([a([onclick=Handler]," KB ")|Origin]), onclick=Handler
 %clauseNavigator_(Ref,i(" hypothesis (~w) in scenario"-[Ref]),onclick='').
 clauseNavigator_(_,i(" hypothesis in scenario"-[]),onclick='').
 
-moduleName2URL(Name, URL) :-  split_module_name(Name, URL), !.
+moduleName2URL(Name, URL) :-  split_module_name(Name, _, URL), !.
 moduleName2URL(URL, URL). 
 
-split_module_name(Name,URL):-
+split_module_name(Name, File, URL):-
 	sub_atom(Name,U,1,_,'+'),
+	sub_atom(Name,0,U,_,File),
 	UU is U+1, 
-	sub_atom(Name,UU,_,0,URL), !. 
+	sub_atom(Name,UU,_,0,URL), 
+	!. 
 	%print_message(informational, URL). 
 
 :- use_module(explanation_renderer,[]).
@@ -264,9 +266,10 @@ prolog_colour:term_colours(T,C) :- taxlog2prolog(T,C,_).
 %user:term_expansion(NiceTerm,'$source_location'(File, Line):ExpandedTerms) :- 
 user:term_expansion(NiceTerm, ExpandedTerms) :-  % hook for LE extension
 	% somehow the source location is not being kept, causing later failure of clause_info/5 :-(
-	context_module(user), % LPS programs are in the user module
+	context_module(user), % LE programs are in the user module
 	prolog_load_context(source,File), % atom_prefix(File,'pengine://'), % process only SWISH windows
 	prolog_load_context(term_position,TP), stream_position_data(line_count,TP,Line),
+	%print_message(informational, "current file ~w"-[File]), 
 	le_taxlog_translate(NiceTerm,File,Line,TaxlogTerms),
 	(TaxlogTerms\=[]-> 
 			findall(PrologTerm, (
@@ -274,6 +277,14 @@ user:term_expansion(NiceTerm, ExpandedTerms) :-  % hook for LE extension
 			(is_list(TT_)->member(TT,TT_);TT=TT_), % the LE translator generates a list of lists... and non lists
 			(member(target(prolog),TaxlogTerms) -> semantics2prolog(TT,_,PrologTerm) ; taxlog2prolog(TT,_,PrologTerm))
 			), ExpandedTerms) 
-		; ExpandedTerms = []).
+		; ExpandedTerms = []),
+	% to save as a separated file
+	(member(target(prolog),TaxlogTerms) -> 
+		myDeclaredModule(Name),  % the module in the editor
+		split_module_name(Name, FileName, URL), 
+		atomic_list_concat([FileName,'-prolog','.pl'], NewFileName), 
+		atomic_list_concat([FileName,'-prolog', '+', URL], NewModule), 
+		dump(all, NewModule, ExpandedTerms, String), 
+		update_gitty_file(NewFileName, URL, String)).
 user:term_expansion(T,NT) :- taxlog2prolog(T,_,NT).
 %user:term_expansion(T,NT) :- (member(target(prolog),T) -> semantics2prolog(T,_,NT) ; taxlog2prolog(T,_,NT)).
