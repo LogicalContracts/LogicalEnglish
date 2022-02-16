@@ -1587,20 +1587,34 @@ is_a_type(T) :- % pending integration with wei2nlen:is_a_type/1
 
 ind_det_C('A').
 ind_det_C('An').
+ind_det_C('Un').     % spanish and french
+ind_det_C('Una').    % spanish
+ind_det_C('Une').    % french
 % ind_det_C('Some').
-ind_det_C('Each'). % added experimental
+ind_det_C('Each').   % added experimental
 ind_det_C('Which').  % added experimentally
 
 def_det_C('The').
+def_det_C('El').  % spanish
+def_det_C('La').  % spanish and french
+def_det_C('Le').  % french
+def_det_C('L'). % french
 
 ind_det(a).
 ind_det(an).
 ind_det(another). % added experimentally
-ind_det(which).  % added experimentally
-ind_det(each).  % added experimentally
+ind_det(which).   % added experimentally
+ind_det(each).    % added experimentally
+ind_det(un).      % spanish and french
+ind_det(una).     % spanish
+ind_det(une).     % french
 % ind_det(some).
 
 def_det(the).
+def_det(el).     % spanish
+def_det(la).     % spanish and french
+def_det(le).     % french
+def_det(l).  % french
 
 /* ------------------------------------------------ reserved words */
 reserved_word(W) :- % more reserved words pending??
@@ -2031,8 +2045,8 @@ prepare_query(English, Arg, SwishModule, Goal, Facts, Command) :- %trace,
         (SwishModule:example(Scenario, [scenario(Facts, _)]) -> 
             true;  print_message(error, "Scenario: ~w does not exist"-[Scenario]))),
     %print_message(informational, "Facts: ~w"-[Facts]), 
-    extract_goal_command(Goal, SwishModule, _InnerGoal, Command), !,  
-    print_message(informational, "Command: ~w"-[Command]). 
+    extract_goal_command(Goal, SwishModule, _InnerGoal, Command), !.  
+    %print_message(informational, "Command: ~w"-[Command]). 
 
 show_answer(Goal) :-
     translate_goal_into_LE(Goal, RawAnswer), name_as_atom(RawAnswer, EnglishAnswer), 
