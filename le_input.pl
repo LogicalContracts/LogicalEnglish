@@ -651,6 +651,7 @@ one_or_many_newlines --> newline, spaces(_), one_or_many_newlines, !.
 one_or_many_newlines --> [].
 
 if_ --> [if], spaces_or_newlines(_).  % so that if can be written many lines away from the rest
+if_ --> [se], spaces_or_newlines(_). % italian
 
 period --> ['.'].
 comma --> [','].
@@ -660,15 +661,20 @@ comma_or_period --> period, !.
 comma_or_period --> comma. 
 
 and_ --> [and].
+and_ --> [e]. % italian
 
 or_ --> [or].
+or_ --> [o]. % italian
 
 not_ --> [it], spaces(_), [is], spaces(_), [not], spaces(_), [the], spaces(_), [case], spaces(_), [that], spaces(_). 
+not_ --> [non], spaces(_), [è], spaces(_), [provato], spaces(_), [che], spaces(_). % italian
 
 is_the_sum_of_each_ --> [is], spaces(_), [the], spaces(_), [sum], spaces(_), [of], spaces(_), [each], spaces(_) .
 is_the_sum_of_each_ --> [is], spaces(_), [the], spaces(_), [every], spaces(_), [of], spaces(_), [each], spaces(_) .
+is_the_sum_of_each_ --> [è], spaces(_), [la], spaces(_), [somma], spaces(_), [di], spaces(_), [ogni], space(_).
 
 such_that_ --> [such], spaces(_), [that], spaces(_). 
+such_that_ --> [tale], spaces(_), [che], spaces(_).
 
 at_ --> [at], spaces(_). 
 
@@ -693,6 +699,7 @@ has_been_recorded_ --> [has], spaces(_), [been], spaces(_), [recorded], spaces(_
 for_all_cases_in_which_ --> spaces_or_newlines(_), [for], spaces(_), [all], spaces(_), [cases], spaces(_), [in], spaces(_), [which], spaces(_).
 
 it_is_the_case_that_ --> [it], spaces(_), [is], spaces(_), [the], spaces(_), [case], spaces(_), [that], spaces(_).
+% it_is_the_case_that_ --> [è], spaces(_), [provato], spaces(_), [che], spaces(_).
 
 is_a_set_of_ --> [is], spaces(_), [a], spaces(_), [set], spaces(_), [of], spaces(_). 
 
@@ -1587,34 +1594,40 @@ is_a_type(T) :- % pending integration with wei2nlen:is_a_type/1
 
 ind_det_C('A').
 ind_det_C('An').
-ind_det_C('Un').     % spanish and french
-ind_det_C('Una').    % spanish
+ind_det_C('Un').     % spanish, italian, and french
+ind_det_C('Una').    % spanish, italian
 ind_det_C('Une').    % french
+ind_det_C('Uno').    % italian
 % ind_det_C('Some').
 ind_det_C('Each').   % added experimental
 ind_det_C('Which').  % added experimentally
 
 def_det_C('The').
 def_det_C('El').  % spanish
-def_det_C('La').  % spanish and french
+def_det_C('La').  % spanish, italian, and french
 def_det_C('Le').  % french
 def_det_C('L'). % french
+def_det_C('Il'). % italian
+def_det_C('Lo'). % italian
 
 ind_det(a).
 ind_det(an).
 ind_det(another). % added experimentally
 ind_det(which).   % added experimentally
 ind_det(each).    % added experimentally
-ind_det(un).      % spanish and french
-ind_det(una).     % spanish
+ind_det(un).      % spanish, italian, and french
+ind_det(una).     % spanish, italian
 ind_det(une).     % french
+ind_det(uno).     % italian
 % ind_det(some).
 
 def_det(the).
 def_det(el).     % spanish
-def_det(la).     % spanish and french
+def_det(la).     % spanish, italian and french
 def_det(le).     % french
 def_det(l).  % french
+def_det(il). % italian
+def_det(lo). % italian
 
 /* ------------------------------------------------ reserved words */
 reserved_word(W) :- % more reserved words pending??
