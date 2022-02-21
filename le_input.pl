@@ -86,7 +86,9 @@ query three is:
     op(1000,xfy,user:and),  % to support querying
     op(800,fx,user:resolve), % to support querying
     op(800,fx,user:answer), % to support querying
+    op(800,fx,user:répondre), % to support querying in french
     op(850,xfx,user:with), % to support querying
+    op(850,xfx,user:avec), % to support querying in french
     op(800,fx,user:show), % to support querying
     op(850,xfx,user:of), % to support querying
     op(850,fx,user:'#pred'), % to support scasp 
@@ -231,6 +233,10 @@ kbase_content(_, Rest, _) :-
 declaration([], [target(Language)]) --> % one word description for the language: prolog, taxlog
     spaces(_), [the], spaces(_), [target], spaces(_), [language], spaces(_), [is], spaces(_), colon_or_not_, 
     spaces(_), [Language], spaces(_), period, !.
+% french: la langue cible est : prolog 
+declaration([], [target(Language)]) --> % one word description for the language: prolog, taxlog
+    spaces(_), [la], spaces(_), [langue], spaces(_), [cible], spaces(_), [est], spaces(_), colon_or_not_, 
+    spaces(_), [Language], spaces(_), period, !.
 % meta predicates
 declaration(Rules, [metapredicates(MetaTemplates)]) -->
     meta_predicate_previous, list_of_meta_predicates_decl(Rules, MetaTemplates), !.
@@ -264,6 +270,9 @@ predicate_previous -->
     spaces(_), [the], spaces(_), [templates], spaces(_), [are], spaces(_), [':'], spaces_or_newlines(_).
 predicate_previous --> 
     spaces(_), [the], spaces(_), [timeless], spaces(_), [predicates], spaces(_), [are], spaces(_), [':'], spaces_or_newlines(_).
+% french : les modèles sont :
+predicate_previous --> 
+    spaces(_), [les], spaces(_), ['modèles'], spaces(_), [sont], spaces(_), [':'], spaces_or_newlines(_).
 
 event_predicate_previous --> 
     spaces(_), [the], spaces(_), [event], spaces(_), [predicates], spaces(_), [are], spaces(_), [':'], spaces_or_newlines(_).
@@ -339,11 +348,15 @@ rules_previous(KBName) -->
     {name_as_atom(NameWords, KBName)}.
 rules_previous(default) -->  % backward compatibility
     spaces_or_newlines(_), [the], spaces(_), ['knowledge'], spaces(_), [base], spaces(_), [includes], spaces(_), [':'], spaces_or_newlines(_). 
+% french: la base de connaissances dont le nom est <nom> comprend :
+rules_previous(KBName) --> 
+    spaces_or_newlines(_), [la], spaces(_), [base], spaces(_), [de], spaces(_), [connaissances], spaces(_), [dont], spaces(_), [le], spaces(_), [nom], spaces(_), [est], extract_constant([comprend], NameWords), [comprend], spaces(_), [':'], !, spaces_or_newlines(_),
+    {name_as_atom(NameWords, KBName)}.
 
 % scenario_content/1 or /3
 % a scenario description: assuming one example -> one scenario -> one list of facts.
 scenario_content(Scenario) -->
-    scenario_, extract_constant([is], NameWords), is_colon_, newline,
+    scenario_, extract_constant([is, es, est], NameWords), is_colon_, newline,
     %list_of_facts(Facts), period, !, 
     spaces(_), assumptions_(Assumptions), !, % period is gone
     {name_as_atom(NameWords, Name), Scenario = [example( Name, [scenario(Assumptions, true)])]}.
@@ -355,7 +368,7 @@ scenario_content(_,  Rest, _) :-
 % statement: the different types of statements in a LE text
 % a query
 query_content(Query) -->
-    query_, extract_constant([is], NameWords), is_colon_, spaces_or_newlines(_),
+    query_, extract_constant([is, es, est], NameWords), is_colon_, spaces_or_newlines(_),
     query_header(Ind0, Map1),  
     conditions(Ind0, Map1, _, Conds), !, period,  % period stays!
     {name_as_atom(NameWords, Name), Query = [query(Name, Conds)]}. 
@@ -610,10 +623,10 @@ modifiers(MainExpression, Map, Map, MainExpression) --> [].
 
 % variable/4 or /6
 variable(StopWords, Var, Map1, MapN) --> 
-    spaces(_), [Det], {indef_determiner(Det)}, extract_variable(StopWords, [], NameWords, [], _), % <-- CUT!
+    spaces(_), indef_determiner, extract_variable(StopWords, [], NameWords, [], _), % <-- CUT!
     {  NameWords\=[], name_predicate(NameWords, Name), update_map(Var, Name, Map1, MapN) }. 
 variable(StopWords, Var, Map1, MapN) --> 
-    spaces(_), [Det], {def_determiner(Det)}, extract_variable(StopWords, [], NameWords, [], _), % <-- CUT!
+    spaces(_), def_determiner, extract_variable(StopWords, [], NameWords, [], _), % <-- CUT!
     {  NameWords\=[], name_predicate(NameWords, Name), consult_map(Var, Name, Map1, MapN) }. 
 % allowing for symbolic variables: 
 variable(StopWords, Var, Map1, MapN) --> 
@@ -651,7 +664,8 @@ one_or_many_newlines --> newline, spaces(_), one_or_many_newlines, !.
 one_or_many_newlines --> [].
 
 if_ --> [if], spaces_or_newlines(_).  % so that if can be written many lines away from the rest
-if_ --> [se], spaces_or_newlines(_). % italian
+if_ --> [se], spaces_or_newlines(_).  % italian
+if_ --> [si], spaces_or_newlines(_).  % french and spanish
 
 period --> ['.'].
 comma --> [','].
@@ -661,20 +675,28 @@ comma_or_period --> period, !.
 comma_or_period --> comma. 
 
 and_ --> [and].
-and_ --> [e]. % italian
+and_ --> [e].  % italian
+and_ --> [et]. % french
+and_ --> [y].  % spanish
 
 or_ --> [or].
-or_ --> [o]. % italian
+or_ --> [o].  % italian and spanish
+or_ --> [ou]. % french
 
 not_ --> [it], spaces(_), [is], spaces(_), [not], spaces(_), [the], spaces(_), [case], spaces(_), [that], spaces(_). 
 not_ --> [non], spaces(_), [è], spaces(_), [provato], spaces(_), [che], spaces(_). % italian
+not_ --> [ce], spaces(_), [n],[A],[est], spaces(_), [pas], spaces(_), [le], spaces(_), [cas], spaces(_), [que], spaces(_), {atom_string(A, "'")}. % french
+not_ --> [no], spaces(_), [es], spaces(_), [el], spaces(_), [caso], spaces(_), [que], spaces(_).  % spanish
 
 is_the_sum_of_each_ --> [is], spaces(_), [the], spaces(_), [sum], spaces(_), [of], spaces(_), [each], spaces(_) .
-is_the_sum_of_each_ --> [is], spaces(_), [the], spaces(_), [every], spaces(_), [of], spaces(_), [each], spaces(_) .
-is_the_sum_of_each_ --> [è], spaces(_), [la], spaces(_), [somma], spaces(_), [di], spaces(_), [ogni], space(_).
+is_the_sum_of_each_ --> [è], spaces(_), [la], spaces(_), [somma], spaces(_), [di], spaces(_), [ogni], spaces(_). % italian
+is_the_sum_of_each_ --> [es], spaces(_), [la], spaces(_), [suma], spaces(_), [de], spaces(_), [cada], spaces(_). % spanish
+is_the_sum_of_each_ --> [est], spaces(_), [la], spaces(_), [somme], spaces(_), [de], spaces(_), [chaque], spaces(_). % french
 
 such_that_ --> [such], spaces(_), [that], spaces(_). 
-such_that_ --> [tale], spaces(_), [che], spaces(_).
+such_that_ --> [tale], spaces(_), [che], spaces(_). % italian
+such_that_ --> [tel], spaces(_), [que], spaces(_).  % french
+such_that_ --> [tal], spaces(_), [que], spaces(_).  % spanish
 
 at_ --> [at], spaces(_). 
 
@@ -686,41 +708,55 @@ divide_ --> ['/'], spaces(_).
 
 times_ --> ['*'], spaces(_).
 
-bracket_open_ --> ['['], spaces(_). 
-bracket_close --> [']'], spaces(_). 
+bracket_open_ --> [A], spaces(_), {atom_string(A, "[")}.
+bracket_close --> [A], spaces(_), {atom_string(A, "]")}. 
 
 parentesis_open_ --> ['('], spaces(_).
-parentesis_close_ --> [')'], spaces(_). 
+parentesis_close_ --> [A], spaces(_), {atom_string(A, ")")}. 
 
 this_information_ --> [this], spaces(_), [information], spaces(_).
 
 has_been_recorded_ --> [has], spaces(_), [been], spaces(_), [recorded], spaces(_).
 
 for_all_cases_in_which_ --> spaces_or_newlines(_), [for], spaces(_), [all], spaces(_), [cases], spaces(_), [in], spaces(_), [which], spaces(_).
+for_all_cases_in_which_ --> spaces_or_newlines(_), [pour], spaces(_), [tous], spaces(_), [les], spaces(_), [cas], spaces(_), [o],[ù], spaces(_).  % french 
 
 it_is_the_case_that_ --> [it], spaces(_), [is], spaces(_), [the], spaces(_), [case], spaces(_), [that], spaces(_).
 % it_is_the_case_that_ --> [è], spaces(_), [provato], spaces(_), [che], spaces(_).
-
+it_is_the_case_that_ --> [es], spaces(_), [el], spaces(_), [caso], spaces(_), [que], spaces(_).  % spanish
+it_is_the_case_that_ --> [c], [A], [est], spaces(_), [le], spaces(_), [cas], spaces(_), [que], spaces(_), {atom_string(A, "'")}. % french
+  
 is_a_set_of_ --> [is], spaces(_), [a], spaces(_), [set], spaces(_), [of], spaces(_). 
+is_a_set_of_ --> [es], spaces(_), [un],  spaces(_), [conjunto],  spaces(_), [de], spaces(_). % spanish
+is_a_set_of_ --> [est], spaces(_), [un],  spaces(_), [ensemble],  spaces(_), [de],  spaces(_). % french
 
 where_ --> [where], spaces(_). 
+where_ --> [en], spaces(_), [donde], spaces(_). % spanish
+where_ --> [o], [ù], spaces(_). % french  
 
 scenario_ -->  spaces_or_newlines(_), ['Scenario'], !, spaces(_).
 scenario_ -->  spaces_or_newlines(_), [scenario], spaces(_). 
+scenario_ -->  spaces_or_newlines(_), [scénario], spaces(_). % french
+scenario_ -->  spaces_or_newlines(_), [escenario], spaces(_). % spanish
 
 is_colon_ -->  [is], spaces(_), [':'], spaces(_).
+is_colon_ -->  [es], spaces(_), [':'], spaces(_).  % spanish
+is_colon_ -->  [est], spaces(_), [':'], spaces(_). % french
 
 query_ --> spaces_or_newlines(_), ['Query'], !, spaces(_).
 query_ --> spaces_or_newlines(_), [query], spaces(_).
-
+query_ --> spaces_or_newlines(_), [question], spaces(_). % french
+query_ --> spaces_or_newlines(_), [la], spaces(_), [pregunta], spaces(_). % spanish
 
 for_which_ --> [for], spaces(_), [which], spaces(_). 
+for_which_ --> [para], spaces(_), [el], spaces(_), [cual], spaces(_). % spanish singular
+for_which_ --> [pour], spaces(_), [qui], spaces(_). % french
 
 query_header(Ind, Map) --> spaces(Ind), for_which_, list_of_vars([], Map), colon_, spaces_or_newlines(_).
 query_header(0, []) --> []. 
 
 list_of_vars(Map1, MapN) --> 
-    extract_variable([',', and, ':'], [], NameWords, [], _), 
+    extract_variable([',', and, el, et, y, ':'], [], NameWords, [], _), 
     { name_predicate(NameWords, Name), update_map(_Var, Name, Map1, Map2) },
     rest_of_list_of_vars(Map2, MapN).
 
@@ -728,7 +764,7 @@ rest_of_list_of_vars(Map1, MapN) --> and_or_comma_, list_of_vars(Map1, MapN).
 rest_of_list_of_vars(Map, Map) --> []. 
 
 and_or_comma_ --> [','], spaces(_). 
-and_or_comma_ --> [and], spaces(_).
+and_or_comma_ --> and_, spaces(_).
 
 it_becomes_the_case_that_ --> 
     it_, [becomes], spaces(_), [the], spaces(_), [case], spaces(_), [that], spaces(_).
@@ -846,8 +882,8 @@ build_template_elements([], _, [], [], [], []) :- !.
 build_template_elements(['*', Word|RestOfWords], _Previous, [Var|RestVars], [Name-Type|RestTypes], Others, [Var|RestTemplate]) :-
     has_pairing_asteriks([Word|RestOfWords]), 
     %(ind_det(Word); ind_det_C(Word)), % Previous \= [is|_], % removing this requirement when * is used
-    determiner(Word), % allows the for variables in templates declarations only
-    extract_variable_template(['*'], [], NameWords, [], TypeWords, RestOfWords, ['*'|NextWords]), !, % <-- it must end with * too
+    phrase(determiner, [Word|RestOfWords], RRestOfWords), % allows the for variables in templates declarations only
+    extract_variable_template(['*'], [], NameWords, [], TypeWords, RRestOfWords, ['*'|NextWords]), !, % <-- it must end with * too
     name_predicate(NameWords, Name),
     name_predicate(TypeWords, Type), 
     build_template_elements(NextWords, [], RestVars, RestTypes, Others, RestTemplate). 
@@ -1053,15 +1089,15 @@ meta_match([MetaElement|RestMetaElements], PossibleLiteral, Map1, MapN, [Literal
 % it could also be an object level matching of other kind
 meta_match([Element|RestElements], [Det|PossibleLiteral], Map1, MapN, [Var|RestSelected]) :-
     var(Element), 
-    indef_determiner(Det), stop_words(RestElements, StopWords), 
-    extract_variable(StopWords, [], NameWords, [], _, PossibleLiteral, NextWords),  NameWords \= [], % <- leave that _ unbound!
+    phrase(indef_determiner, [Det|PossibleLiteral], RPossibleLiteral), stop_words(RestElements, StopWords), 
+    extract_variable(StopWords, [], NameWords, [], _, RPossibleLiteral, NextWords),  NameWords \= [], % <- leave that _ unbound!
     name_predicate(NameWords, Name), 
     update_map(Var, Name, Map1, Map2), !,  % <-- CUT!  
     meta_match(RestElements, NextWords, Map2, MapN, RestSelected). 
 meta_match([Element|RestElements], [Det|PossibleLiteral], Map1, MapN, [Var|RestSelected]) :-
     var(Element), 
-    def_determiner(Det), stop_words(RestElements, StopWords), 
-    extract_variable(StopWords, [], NameWords, [], _, PossibleLiteral, NextWords),  NameWords \= [], % <- leave that _ unbound!
+    phrase(def_determiner, [Det|PossibleLiteral], RPossibleLiteral), stop_words(RestElements, StopWords), 
+    extract_variable(StopWords, [], NameWords, [], _, RPossibleLiteral, NextWords),  NameWords \= [], % <- leave that _ unbound!
     name_predicate(NameWords, Name), 
     consult_map(Var, Name, Map1, Map2), !,  % <-- CUT!  
     meta_match(RestElements, NextWords, Map2, MapN, RestSelected). 
@@ -1100,15 +1136,15 @@ match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, [Element|RestS
     match(RestElements, PossibleLiteral, Map1, MapN, RestSelected). 
 match([Element|RestElements], [Det|PossibleLiteral], Map1, MapN, [Var|RestSelected]) :-
     var(Element), 
-    indef_determiner(Det), stop_words(RestElements, StopWords), 
-    extract_variable(StopWords, [], NameWords, [], _, PossibleLiteral, NextWords),  NameWords \= [], % <- leave that _ unbound!
+    phrase(indef_determiner,[Det|PossibleLiteral], RPossibleLiteral), stop_words(RestElements, StopWords), 
+    extract_variable(StopWords, [], NameWords, [], _, RPossibleLiteral, NextWords),  NameWords \= [], % <- leave that _ unbound!
     name_predicate(NameWords, Name), 
     update_map(Var, Name, Map1, Map2), !,  % <-- CUT!  
     match(RestElements, NextWords, Map2, MapN, RestSelected). 
 match([Element|RestElements], [Det|PossibleLiteral], Map1, MapN, [Var|RestSelected]) :-
     var(Element), 
-    def_determiner(Det), stop_words(RestElements, StopWords), 
-    extract_variable(StopWords, [], NameWords, [], _, PossibleLiteral, NextWords),  NameWords \= [], % <- leave that _ unbound!
+    phrase(def_determiner, [Det|PossibleLiteral], RPossibleLiteral), stop_words(RestElements, StopWords), 
+    extract_variable(StopWords, [], NameWords, [], _, RPossibleLiteral, NextWords),  NameWords \= [], % <- leave that _ unbound!
     name_predicate(NameWords, Name), 
     consult_map(Var, Name, Map1, Map2), !,  % <-- CUT!  
     match(RestElements, NextWords, Map2, MapN, RestSelected). 
@@ -1464,8 +1500,8 @@ extract_list(SW, RestList, Map1, MapN, [','|RestOfWords],  NextWords) :- !, % sk
 extract_list(SW, RestList, Map1, MapN, ['|'|RestOfWords],  NextWords) :- !, % skip over commas
     extract_list(SW, RestList, Map1, MapN, RestOfWords, NextWords).
 extract_list(StopWords, List, Map1, MapN, [Det|InWords], LeftWords) :-
-    indef_determiner(Det), 
-    extract_variable(['|'|StopWords], [], NameWords, [], _, InWords, NextWords), NameWords \= [], % <- leave that _ unbound!
+    phrase(indef_determiner, [Det|InWords], RInWords), 
+    extract_variable(['|'|StopWords], [], NameWords, [], _, RInWords, NextWords), NameWords \= [], % <- leave that _ unbound!
     name_predicate(NameWords, Name),  
     update_map(Var, Name, Map1, Map2),
     (NextWords = [']'|_] -> (RestList = [], LeftWords=NextWords, MapN=Map2 ) ; 
@@ -1473,8 +1509,8 @@ extract_list(StopWords, List, Map1, MapN, [Det|InWords], LeftWords) :-
     (RestList=[] -> List=[Var|[]]; List=[Var|RestList]), 
     !.
 extract_list(StopWords, List, Map1, MapN, [Det|InWords], LeftWords) :-
-    def_determiner(Det), 
-    extract_variable(['|'|StopWords], [], NameWords, [], _, InWords, NextWords), NameWords \= [], % <- leave that _ unbound!
+    phrase(def_determiner, [Det|InWords], RInWords), 
+    extract_variable(['|'|StopWords], [], NameWords, [], _, RInWords, NextWords), NameWords \= [], % <- leave that _ unbound!
     name_predicate(NameWords, Name),  
     consult_map(Var, Name, Map1, Map2), 
     (NextWords = [']'|_] -> (RestList = [], LeftWords=NextWords, MapN=Map2 ) ;
@@ -1495,14 +1531,16 @@ extract_list(StopWords, List, Map1, MapN, InWords, LeftWords) :-
     ;    extract_list(StopWords, RestList, Map2, MapN, NextWords, LeftWords) ), 
     (RestList=[] -> List=[Expression|[]]; List=[Expression|RestList]), !.
 
-determiner(Det) :-
-    (ind_det(Det); ind_det_C(Det); def_det(Det); def_det_C(Det)), !. 
+determiner --> ind_det, !.
+determiner --> ind_det_C, !.
+determiner --> def_det, !.
+determinar --> def_det_C. 
 
-indef_determiner(Det) :-
-    (ind_det(Det); ind_det_C(Det)), !. 
+indef_determiner --> ind_det, !.
+indef_determiner --> ind_det_C. 
 
-def_determiner(Det) :-
-    (def_det(Det); def_det_C(Det)), !. 
+def_determiner --> def_det, !.
+def_determiner --> def_det_C. 
 
 rebuild_template(RawTemplate, Map1, MapN, Template) :-
     template_elements(RawTemplate, Map1, MapN, [], Template).
@@ -1510,14 +1548,14 @@ rebuild_template(RawTemplate, Map1, MapN, Template) :-
 % template_elements(+Input,+InMap, -OutMap, +Previous, -Template)
 template_elements([], Map1, Map1, _, []).     
 template_elements([Word|RestOfWords], Map1, MapN, Previous, [Var|RestTemplate]) :-
-    (ind_det(Word); ind_det_C(Word)), Previous \= [is|_], 
-    extract_variable([], [], NameWords, [], _, RestOfWords, NextWords), !, % <-- CUT!
+    (phrase(ind_det, [Word|RestOfWords], RRestOfWords); phrase(ind_det_C,[Word|RestOfWords], RRestOfWords)), Previous \= [is|_], 
+    extract_variable([], [], NameWords, [], _, RRestOfWords, NextWords), !, % <-- CUT!
     name_predicate(NameWords, Name), 
     update_map(Var, Name, Map1, Map2), 
     template_elements(NextWords, Map2, MapN, [], RestTemplate).
 template_elements([Word|RestOfWords], Map1, MapN, Previous, [Var|RestTemplate]) :-
-    (def_det_C(Word); def_det(Word)), Previous \= [is|_], 
-    extract_variable([], [], NameWords, [], _, RestOfWords, NextWords), !, % <-- CUT!
+    (phrase(def_det, [Word|RestOfWords], RRestOfWords); phrase(def_det_C,[Word|RestOfWords], RRestOfWords)), Previous \= [is|_], 
+    extract_variable([], [], NameWords, [], _, RRestOfWords, NextWords), !, % <-- CUT!
     name_predicate(NameWords, Name), 
     member(map(Var,Name), Map1),  % confirming it is an existing variable and unifying
     template_elements(NextWords, Map1, MapN, [], RestTemplate).
@@ -1579,6 +1617,17 @@ ordinal(7,  'seventh').
 ordinal(8,  'eighth').
 ordinal(9,  'ninth').
 ordinal(10, 'tenth').
+% french
+ordinal(1, 'premier').
+ordinal(2, 'seconde').
+ordinal(3, 'troisième').
+ordinal(4, 'quatrième').
+ordinal(5, 'cinquième').
+ordinal(6, 'sixième').
+ordinal(7, 'septième').
+ordinal(8, 'huitième').
+ordinal(9, 'neuvième').
+ordinal(10, 'dixième'). 
 
 %is_a_type/1
 is_a_type(T) :- % pending integration with wei2nlen:is_a_type/1
@@ -1592,42 +1641,46 @@ is_a_type(T) :- % pending integration with wei2nlen:is_a_type/1
 
 /* ------------------------------------------------ determiners */
 
-ind_det_C('A').
-ind_det_C('An').
-ind_det_C('Un').     % spanish, italian, and french
-ind_det_C('Una').    % spanish, italian
-ind_det_C('Une').    % french
-ind_det_C('Uno').    % italian
+ind_det_C --> ['A'].
+ind_det_C --> ['An'].
+ind_det_C --> ['Un'].     % spanish, italian, and french
+ind_det_C --> ['Una'].    % spanish, italian
+ind_det_C --> ['Une'].    % french
+ind_det_C --> ['Qui'].    % french which? 
+ind_det_C --> ['Quoi'].    % french which? 
+ind_det_C --> ['Uno'].    % italian
 % ind_det_C('Some').
-ind_det_C('Each').   % added experimental
-ind_det_C('Which').  % added experimentally
+ind_det_C --> ['Each'].   % added experimental
+ind_det_C --> ['Which'].  % added experimentally
 
-def_det_C('The').
-def_det_C('El').  % spanish
-def_det_C('La').  % spanish, italian, and french
-def_det_C('Le').  % french
-def_det_C('L'). % french
-def_det_C('Il'). % italian
-def_det_C('Lo'). % italian
+def_det_C --> ['The'].
+def_det_C --> ['El'].  % spanish
+def_det_C --> ['La'].  % spanish, italian, and french
+def_det_C --> ['Le'].  % french
+def_det_C --> ['L'], [A], {atom_string(A, "'")}.   % french
+def_det_C --> ['Il'].  % italian
+def_det_C --> ['Lo'].  % italian
 
-ind_det(a).
-ind_det(an).
-ind_det(another). % added experimentally
-ind_det(which).   % added experimentally
-ind_det(each).    % added experimentally
-ind_det(un).      % spanish, italian, and french
-ind_det(una).     % spanish, italian
-ind_det(une).     % french
-ind_det(uno).     % italian
+ind_det --> [a].
+ind_det --> [an].
+ind_det --> [another]. % added experimentally
+ind_det --> [which].   % added experimentally
+ind_det --> [each].    % added experimentally
+ind_det --> [un].      % spanish, italian, and french
+ind_det --> [una].     % spanish, italian
+ind_det --> [une].     % french
+ind_det --> [qui].     % french which?
+ind_det --> [quoi].    % french which?
+ind_det --> [uno].     % italian
 % ind_det(some).
 
-def_det(the).
-def_det(el).     % spanish
-def_det(la).     % spanish, italian and french
-def_det(le).     % french
-def_det(l).  % french
-def_det(il). % italian
-def_det(lo). % italian
+def_det --> [the].
+def_det --> [el].     % spanish
+def_det --> [la].     % spanish, italian and french
+def_det --> [le].     % french
+def_det --> [l], [A], {atom_string(A, "'")}.  % french, italian?
+def_det --> [il].     % italian
+def_det --> [lo].     % italian
 
 /* ------------------------------------------------ reserved words */
 reserved_word(W) :- % more reserved words pending??
@@ -2385,6 +2438,8 @@ prolog_colour:term_colours(en_decl(_Text),lps_delimiter-[classify]). % let 'en_d
 
 
 user:(answer Query with Scenario):- 
+    answer(Query,with(Scenario)). 
+user: (répondre Query avec Scenario):-
     answer(Query,with(Scenario)). 
 %:- discontiguous (with)/2.
 %user:(Query with Scenario):-  
