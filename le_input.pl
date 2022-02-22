@@ -89,6 +89,8 @@ query three is:
     op(800,fx,user:répondre), % to support querying in french
     op(850,xfx,user:with), % to support querying
     op(850,xfx,user:avec), % to support querying in french
+    op(800,fx,user:risposta), % to support querying in italian
+    op(850,xfx,user:con), % to support querying in italian
     op(800,fx,user:show), % to support querying
     op(850,xfx,user:of), % to support querying
     op(850,fx,user:'#pred'), % to support scasp 
@@ -357,13 +359,13 @@ rules_previous(KBName) -->
     {name_as_atom(NameWords, KBName)}.
 rules_previous(default) -->  % backward compatibility
     spaces_or_newlines(_), [the], spaces(_), ['knowledge'], spaces(_), [base], spaces(_), [includes], spaces(_), [':'], spaces_or_newlines(_). 
-% french: la base de connaissances dont le nom est <nom> comprend :
-rules_previous(KBName) --> 
-    spaces_or_newlines(_), [la], spaces(_), [base], spaces(_), [de], spaces(_), [connaissances], spaces(_), [dont], spaces(_), [le], spaces(_), [nom], spaces(_), [est], extract_constant([comprend], NameWords), [comprend], spaces(_), [':'], !, spaces_or_newlines(_),
-    {name_as_atom(NameWords, KBName)}.
 % italian: la base di conoscenza <nome> include
 rules_previous(KBName) --> 
     spaces_or_newlines(_), [la], spaces(_), [base], spaces(_), [di], spaces(_), [conoscenza], spaces(_), extract_constant([include], NameWords), [include], spaces(_), [':'], !, spaces_or_newlines(_),
+    {name_as_atom(NameWords, KBName)}.
+% french: la base de connaissances dont le nom est <nom> comprend :
+rules_previous(KBName) --> 
+    spaces_or_newlines(_), [la], spaces(_), [base], spaces(_), [de], spaces(_), [connaissances], spaces(_), [dont], spaces(_), [le], spaces(_), [nom], spaces(_), [est], extract_constant([comprend], NameWords), [comprend], spaces(_), [':'], !, spaces_or_newlines(_),
     {name_as_atom(NameWords, KBName)}.
 
 % scenario_content/1 or /3
@@ -2284,7 +2286,6 @@ query_or_empty --> query_.
 query_or_empty --> []. 
 
 with_ --> [with], spaces(_).
-with_ --> [con], spaces(_). % italian
 
 scenario_name_(Scenario) -->  scenario_or_empty_, extract_constant([], ScenarioWords), spaces(_), 
 {name_as_atom(ScenarioWords, Scenario)}. % Scenario by name
@@ -2466,6 +2467,8 @@ prolog_colour:term_colours(en_decl(_Text),lps_delimiter-[classify]). % let 'en_d
 user:(answer Query with Scenario):- 
     answer(Query,with(Scenario)). 
 user: (répondre Query avec Scenario):-
+    answer(Query,with(Scenario)).
+user: (risposta Query con Scenario):-
     answer(Query,with(Scenario)). 
 %:- discontiguous (with)/2.
 %user:(Query with Scenario):-  
