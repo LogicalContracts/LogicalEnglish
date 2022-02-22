@@ -117,6 +117,7 @@ text_to_logic(String_, Translation) :-
     retractall(last_nl_parsed(_)), asserta(last_nl_parsed(1)), % preparing line counting
     unpack_tokens(Tokens, UTokens), 
     clean_comments(UTokens, CTokens), !, 
+    print_message(informational, "Tokens: ~w"-[CTokens]), 
     phrase(document(Translation), CTokens). 
     %( phrase(document(Translation), CTokens) -> 
     %    ( print_message(informational, "Translation: ~w"-[Translation]) )
@@ -732,7 +733,7 @@ is_a_set_of_ --> [est], spaces(_), [un],  spaces(_), [ensemble],  spaces(_), [de
 
 where_ --> [where], spaces(_). 
 where_ --> [en], spaces(_), [donde], spaces(_). % spanish
-where_ --> [o], [ù], spaces(_). % french  
+where_ --> ['où'], spaces(_). % french  
 
 scenario_ -->  spaces_or_newlines(_), ['Scenario'], !, spaces(_).
 scenario_ -->  spaces_or_newlines(_), [scenario], spaces(_). 
