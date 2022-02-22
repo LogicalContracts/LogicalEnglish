@@ -356,10 +356,10 @@ rules_previous(KBName) -->
     spaces_or_newlines(_), [the], spaces(_), ['knowledge'], spaces(_), [base], extract_constant([includes], NameWords), [includes], spaces(_), [':'], !, spaces_or_newlines(_),
     {name_as_atom(NameWords, KBName)}.
 rules_previous(default) -->  % backward compatibility
-    spaces_or_newlines(_), [the], spaces(_), ['knowledge'], spaces(_), [base], spaces(_), [includes], spaces(_), [':'], spaces_or_comprendnewlines(_). 
+    spaces_or_newlines(_), [the], spaces(_), ['knowledge'], spaces(_), [base], spaces(_), [includes], spaces(_), [':'], spaces_or_newlines(_). 
 % french: la base de connaissances dont le nom est <nom> comprend :
 rules_previous(KBName) --> 
-    spaces_or_newlines(_), [la], spaces(_), [base], spaces(_), [de], spaces(_), [connaissances], spaces(_), [dont], spaces(_), [le], spaces(_), [nom], spaces(_), [est], extract_constant([comprend], NameWords), [], spaces(_), [':'], !, spaces_or_newlines(_),
+    spaces_or_newlines(_), [la], spaces(_), [base], spaces(_), [de], spaces(_), [connaissances], spaces(_), [dont], spaces(_), [le], spaces(_), [nom], spaces(_), [est], extract_constant([comprend], NameWords), [comprend], spaces(_), [':'], !, spaces_or_newlines(_),
     {name_as_atom(NameWords, KBName)}.
 % italian: la base di conoscenza <nome> include
 rules_previous(KBName) --> 
