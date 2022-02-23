@@ -2077,7 +2077,7 @@ answer(English) :- %trace,
 
 % answer/2
 % answer(+Query, with(+Scenario))
-answer(English, Arg) :- trace, 
+answer(English, Arg) :- %trace, 
     parsed,
     prepare_query(English, Arg, SwishModule, Goal, Facts, Command), 
     setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
