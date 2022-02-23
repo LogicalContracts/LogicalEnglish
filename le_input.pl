@@ -89,6 +89,8 @@ query three is:
     op(800,fx,user:répondre), % to support querying in french
     op(850,xfx,user:with), % to support querying
     op(850,xfx,user:avec), % to support querying in french
+    op(800,fx,user:risposta), % to support querying in italian
+    op(850,xfx,user:con), % to support querying in italian
     op(800,fx,user:show), % to support querying
     op(850,xfx,user:of), % to support querying
     op(850,fx,user:'#pred'), % to support scasp 
@@ -238,6 +240,11 @@ declaration([], [target(Language)]) --> % one word description for the language:
 declaration([], [target(Language)]) --> % one word description for the language: prolog, taxlog
     spaces(_), [la], spaces(_), [langue], spaces(_), [cible], spaces(_), [est], spaces(_), colon_or_not_, 
     spaces(_), [Language], spaces(_), period, !.
+% italiano: il linguaggio destinazione è : prolog 
+declaration([], [target(Language)]) --> % one word description for the language: prolog, taxlog
+    spaces(_), [il], spaces(_), [linguaggio], spaces(_), [destinazione], spaces(_), [è], spaces(_), colon_or_not_, 
+    spaces(_), [Language], spaces(_), period, !.
+
 % meta predicates
 declaration(Rules, [metapredicates(MetaTemplates)]) -->
     meta_predicate_previous, list_of_meta_predicates_decl(Rules, MetaTemplates), !.
@@ -274,6 +281,9 @@ predicate_previous -->
 % french : les modèles sont :
 predicate_previous --> 
     spaces(_), [les], spaces(_), ['modèles'], spaces(_), [sont], spaces(_), [':'], spaces_or_newlines(_).
+% italian: i predicati sono:
+predicate_previous --> 
+    spaces(_), [i], spaces(_), [modelli], spaces(_), [sono], spaces(_), [':'], spaces_or_newlines(_).
 
 event_predicate_previous --> 
     spaces(_), [the], spaces(_), [event], spaces(_), [predicates], spaces(_), [are], spaces(_), [':'], spaces_or_newlines(_).
@@ -349,6 +359,10 @@ rules_previous(KBName) -->
     {name_as_atom(NameWords, KBName)}.
 rules_previous(default) -->  % backward compatibility
     spaces_or_newlines(_), [the], spaces(_), ['knowledge'], spaces(_), [base], spaces(_), [includes], spaces(_), [':'], spaces_or_newlines(_). 
+% italian: la base di conoscenza <nome> include
+rules_previous(KBName) --> 
+    spaces_or_newlines(_), [la], spaces(_), [base], spaces(_), [di], spaces(_), [conoscenza], spaces(_), extract_constant([include], NameWords), [include], spaces(_), [':'], !, spaces_or_newlines(_),
+    {name_as_atom(NameWords, KBName)}.
 % french: la base de connaissances dont le nom est <nom> comprend :
 rules_previous(KBName) --> 
     spaces_or_newlines(_), [la], spaces(_), [base], spaces(_), [de], spaces(_), [connaissances], spaces(_), [dont], spaces(_), [le], spaces(_), [nom], spaces(_), [est], extract_constant([comprend], NameWords), [comprend], spaces(_), [':'], !, spaces_or_newlines(_),
@@ -357,7 +371,7 @@ rules_previous(KBName) -->
 % scenario_content/1 or /3
 % a scenario description: assuming one example -> one scenario -> one list of facts.
 scenario_content(Scenario) -->
-    scenario_, extract_constant([is, es, est], NameWords), is_colon_, newline,
+    scenario_, extract_constant([is, es, est, è], NameWords), is_colon_, newline,
     %list_of_facts(Facts), period, !, 
     spaces(_), assumptions_(Assumptions), !, % period is gone
     {name_as_atom(NameWords, Name), Scenario = [example( Name, [scenario(Assumptions, true)])]}.
@@ -369,7 +383,7 @@ scenario_content(_,  Rest, _) :-
 % statement: the different types of statements in a LE text
 % a query
 query_content(Query) -->
-    query_, extract_constant([is, es, est], NameWords), is_colon_, spaces_or_newlines(_),
+    query_, extract_constant([is, es, est, è], NameWords), is_colon_, spaces_or_newlines(_),
     query_header(Ind0, Map1),  
     conditions(Ind0, Map1, _, Conds), !, period,  % period stays!
     {name_as_atom(NameWords, Name), Query = [query(Name, Conds)]}. 
@@ -700,6 +714,7 @@ such_that_ --> [tel], spaces(_), [que], spaces(_).  % french
 such_that_ --> [tal], spaces(_), [que], spaces(_).  % spanish
 
 at_ --> [at], spaces(_). 
+at_ --> [a], spaces(_). % italian 
 
 minus_ --> ['-'], spaces(_).
 
@@ -721,37 +736,44 @@ has_been_recorded_ --> [has], spaces(_), [been], spaces(_), [recorded], spaces(_
 
 for_all_cases_in_which_ --> spaces_or_newlines(_), [for], spaces(_), [all], spaces(_), [cases], spaces(_), [in], spaces(_), [which], spaces(_).
 for_all_cases_in_which_ --> spaces_or_newlines(_), [pour], spaces(_), [tous], spaces(_), [les], spaces(_), [cas], spaces(_), [o],[ù], spaces(_).  % french 
+for_all_cases_in_which_ --> spaces_or_newlines(_), [per], spaces(_), [tutti], spaces(_), [i], spaces(_), [casi], spaces(_), [in], spaces(_), [cui], spaces(_).  % italian 
 
 it_is_the_case_that_ --> [it], spaces(_), [is], spaces(_), [the], spaces(_), [case], spaces(_), [that], spaces(_).
-% it_is_the_case_that_ --> [è], spaces(_), [provato], spaces(_), [che], spaces(_).
 it_is_the_case_that_ --> [es], spaces(_), [el], spaces(_), [caso], spaces(_), [que], spaces(_).  % spanish
 it_is_the_case_that_ --> [c], [A], [est], spaces(_), [le], spaces(_), [cas], spaces(_), [que], spaces(_), {atom_string(A, "'")}. % french
-  
+it_is_the_case_that_ --> [è], spaces(_), [provato], spaces(_), [che], spaces(_). % italian
+
 is_a_set_of_ --> [is], spaces(_), [a], spaces(_), [set], spaces(_), [of], spaces(_). 
 is_a_set_of_ --> [es], spaces(_), [un],  spaces(_), [conjunto],  spaces(_), [de], spaces(_). % spanish
 is_a_set_of_ --> [est], spaces(_), [un],  spaces(_), [ensemble],  spaces(_), [de],  spaces(_). % french
+is_a_set_of_ --> [est], spaces(_), [un],  spaces(_), [ensemble],  spaces(_), [de],  spaces(_). % italian
 
 where_ --> [where], spaces(_). 
 where_ --> [en], spaces(_), [donde], spaces(_). % spanish
 where_ --> ['où'], spaces(_). % french  
+where_ --> [dove], spaces(_). % italian
+where_ --> [quando], spaces(_). % italian
 
 scenario_ -->  spaces_or_newlines(_), ['Scenario'], !, spaces(_).
-scenario_ -->  spaces_or_newlines(_), [scenario], spaces(_). 
+scenario_ -->  spaces_or_newlines(_), [scenario], spaces(_). % english and italian
 scenario_ -->  spaces_or_newlines(_), [scénario], spaces(_). % french
 scenario_ -->  spaces_or_newlines(_), [escenario], spaces(_). % spanish
 
 is_colon_ -->  [is], spaces(_), [':'], spaces(_).
 is_colon_ -->  [es], spaces(_), [':'], spaces(_).  % spanish
 is_colon_ -->  [est], spaces(_), [':'], spaces(_). % french
+is_colon_ -->  [è], spaces(_), [':'], spaces(_). % italian
 
 query_ --> spaces_or_newlines(_), ['Query'], !, spaces(_).
 query_ --> spaces_or_newlines(_), [query], spaces(_).
 query_ --> spaces_or_newlines(_), [question], spaces(_). % french
 query_ --> spaces_or_newlines(_), [la], spaces(_), [pregunta], spaces(_). % spanish
+query_ --> spaces_or_newlines(_), [domanda], spaces(_). % italian
 
 for_which_ --> [for], spaces(_), [which], spaces(_). 
 for_which_ --> [para], spaces(_), [el], spaces(_), [cual], spaces(_). % spanish singular
 for_which_ --> [pour], spaces(_), [qui], spaces(_). % french
+for_which_ --> [per], spaces(_), [cui], spaces(_). % italian
 
 query_header(Ind, Map) --> spaces(Ind), for_which_, list_of_vars([], Map), colon_, spaces_or_newlines(_).
 query_header(0, []) --> []. 
@@ -1650,6 +1672,8 @@ ind_det_C --> ['Une'].    % french
 ind_det_C --> ['Qui'].    % french which? 
 ind_det_C --> ['Quoi'].    % french which? 
 ind_det_C --> ['Uno'].    % italian
+ind_det_C --> ['Che']. % italian which
+ind_det_C --> ['Quale']. % italian which
 % ind_det_C('Some').
 ind_det_C --> ['Each'].   % added experimental
 ind_det_C --> ['Which'].  % added experimentally
@@ -1672,6 +1696,8 @@ ind_det --> [una].     % spanish, italian
 ind_det --> [une].     % french
 ind_det --> [qui].     % french which?
 ind_det --> [quoi].    % french which?
+ind_det --> [che]. % italian which
+ind_det --> [quale]. % italian which
 ind_det --> [uno].     % italian
 % ind_det(some).
 
@@ -1679,7 +1705,7 @@ def_det --> [the].
 def_det --> [el].     % spanish
 def_det --> [la].     % spanish, italian and french
 def_det --> [le].     % french
-def_det --> [l], [A], {atom_string(A, "'")}.  % french, italian?
+def_det --> [l], [A], {atom_string(A, "'")}.  % french, italian
 def_det --> [il].     % italian
 def_det --> [lo].     % italian
 
@@ -2441,6 +2467,8 @@ prolog_colour:term_colours(en_decl(_Text),lps_delimiter-[classify]). % let 'en_d
 user:(answer Query with Scenario):- 
     answer(Query,with(Scenario)). 
 user: (répondre Query avec Scenario):-
+    answer(Query,with(Scenario)).
+user: (risposta Query con Scenario):-
     answer(Query,with(Scenario)). 
 %:- discontiguous (with)/2.
 %user:(Query with Scenario):-  
