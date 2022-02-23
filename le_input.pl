@@ -96,7 +96,7 @@ query three is:
     op(850,fx,user:'#pred'), % to support scasp 
     op(800,xfx,user:'::'), % to support scasp 
     dictionary/3, meta_dictionary/3,
-    translate_goal_into_LE/2, name_as_atom/2, parsed/0,
+    translate_goal_into_LE/2, name_as_atom/2, parsed/0, source_lang/1, 
     dump/4, dump/3, dump/2
     ]).
 :- use_module('./tokenize/prolog/tokenize.pl').
@@ -106,7 +106,7 @@ query three is:
 :- use_module(library(prolog_stack)).
 :- thread_local text_size/1, error_notice/4, dict/3, meta_dict/3, example/2, local_dict/3, local_meta_dict/3,
                 last_nl_parsed/1, kbname/1, happens/2, initiates/3, terminates/3, is_type/1,
-                predicates/1, events/1, fluents/1, metapredicates/1, parsed/0.  
+                predicates/1, events/1, fluents/1, metapredicates/1, parsed/0, source_lang/1.  
 :- discontiguous statement/3, declaration/4, example/2. 
 
 % Main clause: text_to_logic(+String,-Clauses) is det
@@ -119,7 +119,7 @@ text_to_logic(String_, Translation) :-
     retractall(last_nl_parsed(_)), asserta(last_nl_parsed(1)), % preparing line counting
     unpack_tokens(Tokens, UTokens), 
     clean_comments(UTokens, CTokens), !, 
-    print_message(informational, "Tokens: ~w"-[CTokens]), 
+    %print_message(informational, "Tokens: ~w"-[CTokens]), 
     phrase(document(Translation), CTokens). 
     %( phrase(document(Translation), CTokens) -> 
     %    ( print_message(informational, "Translation: ~w"-[Translation]) )
@@ -128,6 +128,7 @@ text_to_logic(String_, Translation) :-
 % document/3 (or document/1 in dcg)
 document(Translation, In, Rest) :- 
     (parsed -> retract(parsed); true), 
+    (source_lang(L) -> retract(source_lang(L)) ; true),
     phrase(header(Settings), In, AfterHeader), !, %print_message(informational, "Declarations completed: ~w"-[Settings]), 
     phrase(content(Content), AfterHeader, Rest), 
     append(Settings, Content, Translation), !,  
@@ -235,15 +236,15 @@ kbase_content(_, Rest, _) :-
 % target
 declaration([], [target(Language)]) --> % one word description for the language: prolog, taxlog
     spaces(_), [the], spaces(_), [target], spaces(_), [language], spaces(_), [is], spaces(_), colon_or_not_, 
-    spaces(_), [Language], spaces(_), period, !.
+    spaces(_), [Language], spaces(_), period, !, {assertz(source_lang(en))}.
 % french: la langue cible est : prolog 
 declaration([], [target(Language)]) --> % one word description for the language: prolog, taxlog
     spaces(_), [la], spaces(_), [langue], spaces(_), [cible], spaces(_), [est], spaces(_), colon_or_not_, 
-    spaces(_), [Language], spaces(_), period, !.
+    spaces(_), [Language], spaces(_), period, !, {assertz(source_lang(fr))}.
 % italiano: il linguaggio destinazione è : prolog 
 declaration([], [target(Language)]) --> % one word description for the language: prolog, taxlog
     spaces(_), [il], spaces(_), [linguaggio], spaces(_), [destinazione], spaces(_), [è], spaces(_), colon_or_not_, 
-    spaces(_), [Language], spaces(_), period, !.
+    spaces(_), [Language], spaces(_), period, !, {assertz(source_lang(it))}.
 
 % meta predicates
 declaration(Rules, [metapredicates(MetaTemplates)]) -->
@@ -2076,7 +2077,7 @@ answer(English) :- %trace,
 
 % answer/2
 % answer(+Query, with(+Scenario))
-answer(English, Arg) :- % trace, 
+answer(English, Arg) :- trace, 
     parsed,
     prepare_query(English, Arg, SwishModule, Goal, Facts, Command), 
     setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
@@ -2131,8 +2132,8 @@ prepare_query(English, Arg, SwishModule, Goal, Facts, Command) :- %trace,
     ; ( print_message(error, "Don't understand this question: ~w "-[English]), !, fail ) ), % later -->, Kbs),
     copy_term(Goal, CopyOfGoal),  
     translate_goal_into_LE(CopyOfGoal, RawGoal), name_as_atom(RawGoal, EnglishQuestion), 
-    ((Arg = with(ScenarioName), PreScenario=noscenario) -> Scenario=ScenarioName; Scenario=PreScenario),   
-    print_message(informational, "Query ~w with ~w: ~w"-[GoalName, Scenario, EnglishQuestion]), 
+    ((Arg = with(ScenarioName), PreScenario=noscenario) -> Scenario=ScenarioName; Scenario=PreScenario),
+    show_question(GoalName, Scenario, EnglishQuestion), 
     %print_message(informational, "Scenario: ~w"-[Scenario]),
     (Scenario==noscenario -> Facts = [] ; 
         (SwishModule:example(Scenario, [scenario(Facts, _)]) -> 
@@ -2141,9 +2142,18 @@ prepare_query(English, Arg, SwishModule, Goal, Facts, Command) :- %trace,
     extract_goal_command(Goal, SwishModule, _InnerGoal, Command), !.  
     %print_message(informational, "Command: ~w"-[Command]). 
 
+show_question(GoalName, Scenario, NLQuestion) :-   
+    (source_lang(en) -> print_message(informational, "Query ~w with ~w: ~w"-[GoalName, Scenario, NLQuestion]); true),
+    (source_lang(fr) -> print_message(informational, "La question ~w avec ~w: ~w"-[GoalName, Scenario, NLQuestion]); true),
+    (source_lang(it) -> print_message(informational, "Il interrogativo ~w con ~w: ~w"-[GoalName, Scenario, NLQuestion]); true),  
+    !.  
+
 show_answer(Goal) :-
-    translate_goal_into_LE(Goal, RawAnswer), name_as_atom(RawAnswer, EnglishAnswer), 
-    print_message(informational, "Answer: ~w"-[EnglishAnswer]), !. 
+    translate_goal_into_LE(Goal, RawAnswer), name_as_atom(RawAnswer, NLAnswer), 
+    (source_lang(en) -> print_message(informational, "Answer: ~w"-[NLAnswer]); true), 
+    (source_lang(fr) -> print_message(informational, "La réponse: ~w"-[NLAnswer]); true), 
+    (source_lang(it) -> print_message(informational, "Il responso: ~w"-[NLAnswer]); true), 
+    !. 
 
 % translate_goal_into_LE/2
 % translate_goal_into_LE(+Goals_after_being_queried, -Goals_translated_into_LEnglish_as_answers)
