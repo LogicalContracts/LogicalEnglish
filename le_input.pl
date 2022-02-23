@@ -2481,6 +2481,10 @@ user:restore_dicts :- restore_dicts.
 % Baseline is the line number of the start of Logical English text
 le_taxlog_translate( en(Text), File, BaseLine, Terms) :-
     text_to_logic(Text, Terms) -> true; showErrors(File,BaseLine). 
+le_taxlog_translate( fr(Text), File, BaseLine, Terms) :-
+    text_to_logic(Text, Terms) -> true; showErrors(File,BaseLine). 
+le_taxlog_translate( it(Text), File, BaseLine, Terms) :-
+        text_to_logic(Text, Terms) -> true; showErrors(File,BaseLine). 
 le_taxlog_translate( prolog_le(verified), _, _, prolog_le(verified)) :- %trace, 
     assertz(parsed), 
     restore_dicts. 
