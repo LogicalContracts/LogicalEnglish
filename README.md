@@ -20,6 +20,14 @@ Initial copyright holders by country: LodgeIT (AU), AORA Law (UK), Bob Kowalski 
 
 Special thanks to: Andrew Noble, Chris Mennell and Bruce Mennell
 
+## Projects using LE
+
+### [Accziom.com](https://accziom.com/logical-english/)
+
+Introduction and list of resources at [Advent of Logical English​​](https://accziom.com/advent-of-logical-english/)
+
+### [University of Bologna](https://legalmachinelab.unibo.it/logicalenglish/)
+
 
 ## Development RoadMap
 
