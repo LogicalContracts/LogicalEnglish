@@ -275,16 +275,25 @@ user:term_expansion(NiceTerm, ExpandedTerms) :-  % hook for LE extension
 			findall(PrologTerm, (
 			member(TT_,TaxlogTerms), 
 			(is_list(TT_)->member(TT,TT_);TT=TT_), % the LE translator generates a list of lists... and non lists
-			(member(target(prolog),TaxlogTerms) -> semantics2prolog(TT,_,PrologTerm) ; taxlog2prolog(TT,_,PrologTerm))
+			((member(target(prolog),TaxlogTerms);member(target(scasp),TaxlogTerms)) -> 
+				semantics2prolog(TT,_,PrologTerm) ; taxlog2prolog(TT,_,PrologTerm))
 			), ExpandedTerms) 
 		; ExpandedTerms = []),
 	% to save as a separated file
 	(member(target(prolog),TaxlogTerms) -> 
-		myDeclaredModule(Name),  % the module in the editor
+		( myDeclaredModule(Name),  % the module in the editor
 		split_module_name(Name, FileName, URL), 
 		atomic_list_concat([FileName,'-prolog','.pl'], NewFileName), 
 		atomic_list_concat([FileName,'-prolog', '+', URL], NewModule), 
 		dump(all, NewModule, ExpandedTerms, String), 
-		update_gitty_file(NewFileName, URL, String)).
+		update_gitty_file(NewFileName, URL, String)) ; true),
+	%print_message(informational, " Terms ~w"-[TaxlogTerms]), 
+	(member(target(scasp),TaxlogTerms) -> 
+		( myDeclaredModule(Name),  % the module in the editor
+		split_module_name(Name, FileName, URL), 
+		atomic_list_concat([FileName,'-scasp','.pl'], NewFileName), 
+		atomic_list_concat([FileName,'-scasp', '+', URL], NewModule), 
+		dump_scasp(NewModule, ExpandedTerms, String), 
+		update_gitty_file(NewFileName, URL, String)) ; true). 
 user:term_expansion(T,NT) :- taxlog2prolog(T,_,NT).
 %user:term_expansion(T,NT) :- (member(target(prolog),T) -> semantics2prolog(T,_,NT) ; taxlog2prolog(T,_,NT)).

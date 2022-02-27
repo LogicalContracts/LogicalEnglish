@@ -17,7 +17,7 @@ un ensemble A est un sous-ensemble de un ensemble B
     	c'est le cas que 
     	la chose appartient à l'ensemble B. 
 
-scénario un est:
+le scénario un est:
     la famille un est un ensemble.
     la famille deux est un ensemble.
     Bob appartient à la famille un.
@@ -25,17 +25,17 @@ scénario un est:
     
     Alice appartient à la famille deux.
       
-question un est:
+la question un est:
     quoi premier famille est un sous-ensemble de quoi seconde famille.
     
-scénario deux est:
+le scénario deux est:
     [Alice, Bob] est un ensemble.
     [Alice] est un ensemble.
     
     une chose appartient à un ensemble 
         si la chose is in l'ensemble.
     
-question deux est:
+la question deux est:
     quoi ensemble est un sous-ensemble de quoi autre ensemble.
    
 ").

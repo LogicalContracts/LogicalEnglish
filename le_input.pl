@@ -91,13 +91,14 @@ query three is:
     op(850,xfx,user:avec), % to support querying in french
     op(800,fx,user:risposta), % to support querying in italian
     op(850,xfx,user:con), % to support querying in italian
+    op(800,fx,user:responde), % to support querying in spanish
     op(800,fx,user:show), % to support querying
     op(850,xfx,user:of), % to support querying
     op(850,fx,user:'#pred'), % to support scasp 
     op(800,xfx,user:'::'), % to support scasp 
     dictionary/3, meta_dictionary/3,
     translate_goal_into_LE/2, name_as_atom/2, parsed/0, source_lang/1, 
-    dump/4, dump/3, dump/2
+    dump/4, dump/3, dump/2, dump_scasp/3
     ]).
 :- use_module('./tokenize/prolog/tokenize.pl').
 :- use_module(library(pengines)).
@@ -241,10 +242,14 @@ declaration([], [target(Language)]) --> % one word description for the language:
 declaration([], [target(Language)]) --> % one word description for the language: prolog, taxlog
     spaces(_), [la], spaces(_), [langue], spaces(_), [cible], spaces(_), [est], spaces(_), colon_or_not_, 
     spaces(_), [Language], spaces(_), period, !, {assertz(source_lang(fr))}.
-% italiano: il linguaggio destinazione è : prolog 
+% italian: il linguaggio destinazione è : prolog 
 declaration([], [target(Language)]) --> % one word description for the language: prolog, taxlog
     spaces(_), [il], spaces(_), [linguaggio], spaces(_), [destinazione], spaces(_), [è], spaces(_), colon_or_not_, 
     spaces(_), [Language], spaces(_), period, !, {assertz(source_lang(it))}.
+% spanish: el lenguaje objetivo es: prolog
+declaration([], [target(Language)]) --> % one word description for the language: prolog, taxlog
+    spaces(_), [el], spaces(_), [lenguaje], spaces(_), [objetivo], spaces(_), [es], spaces(_), colon_or_not_, 
+    spaces(_), [Language], spaces(_), period, !, {assertz(source_lang(es))}.
 
 % meta predicates
 declaration(Rules, [metapredicates(MetaTemplates)]) -->
@@ -272,6 +277,15 @@ meta_predicate_previous -->
     spaces(_), [the], spaces(_), [meta], spaces(_), [predicates], spaces(_), [are], spaces(_), [':'], spaces_or_newlines(_).
 meta_predicate_previous --> 
     spaces(_), [the], spaces(_), [meta], spaces(_), ['-'], spaces(_), [predicates], spaces(_), [are], spaces(_), [':'], spaces_or_newlines(_).
+% french : les modèles sont :
+meta_predicate_previous --> 
+    spaces(_), [les], spaces(_), ['méta'], spaces(_), ['modèles'], spaces(_), [sont], spaces(_), [':'], spaces_or_newlines(_).
+% italian: i predicati sono:
+meta_predicate_previous --> 
+    spaces(_), [i], spaces(_), [meta], spaces(_), [modelli], spaces(_), [sono], spaces(_), [':'], spaces_or_newlines(_).
+% spanish: los predicados son:
+meta_predicate_previous --> 
+    spaces(_), [los], spaces(_), [meta], spaces(_), [predicados], spaces(_), [son], spaces(_), [':'], spaces_or_newlines(_).
 
 predicate_previous --> 
     spaces(_), [the], spaces(_), [predicates], spaces(_), [are], spaces(_), [':'], spaces_or_newlines(_).
@@ -285,6 +299,9 @@ predicate_previous -->
 % italian: i predicati sono:
 predicate_previous --> 
     spaces(_), [i], spaces(_), [modelli], spaces(_), [sono], spaces(_), [':'], spaces_or_newlines(_).
+% spanish: los predicados son:
+predicate_previous --> 
+    spaces(_), [los], spaces(_), [predicados], spaces(_), [son], spaces(_), [':'], spaces_or_newlines(_).
 
 event_predicate_previous --> 
     spaces(_), [the], spaces(_), [event], spaces(_), [predicates], spaces(_), [are], spaces(_), [':'], spaces_or_newlines(_).
@@ -367,6 +384,10 @@ rules_previous(KBName) -->
 % french: la base de connaissances dont le nom est <nom> comprend :
 rules_previous(KBName) --> 
     spaces_or_newlines(_), [la], spaces(_), [base], spaces(_), [de], spaces(_), [connaissances], spaces(_), [dont], spaces(_), [le], spaces(_), [nom], spaces(_), [est], extract_constant([comprend], NameWords), [comprend], spaces(_), [':'], !, spaces_or_newlines(_),
+    {name_as_atom(NameWords, KBName)}.
+% spanish: la base de conocimiento <nombre> incluye: 
+rules_previous(KBName) --> 
+    spaces_or_newlines(_), [la], spaces(_), [base], spaces(_), [de], spaces(_), [conocimiento], extract_constant([comprend], NameWords), [incluye], spaces(_), [':'], !, spaces_or_newlines(_),
     {name_as_atom(NameWords, KBName)}.
 
 % scenario_content/1 or /3
@@ -738,11 +759,13 @@ has_been_recorded_ --> [has], spaces(_), [been], spaces(_), [recorded], spaces(_
 for_all_cases_in_which_ --> spaces_or_newlines(_), [for], spaces(_), [all], spaces(_), [cases], spaces(_), [in], spaces(_), [which], spaces(_).
 for_all_cases_in_which_ --> spaces_or_newlines(_), [pour], spaces(_), [tous], spaces(_), [les], spaces(_), [cas], spaces(_), [o],[ù], spaces(_).  % french 
 for_all_cases_in_which_ --> spaces_or_newlines(_), [per], spaces(_), [tutti], spaces(_), [i], spaces(_), [casi], spaces(_), [in], spaces(_), [cui], spaces(_).  % italian 
+for_all_cases_in_which_ --> spaces_or_newlines(_), [en], spaces(_), [todos], spaces(_), [los], spaces(_), [casos], spaces(_), [en], spaces(_), [los], spaces(_), [que], spaces(_).  % spanish 
 
 it_is_the_case_that_ --> [it], spaces(_), [is], spaces(_), [the], spaces(_), [case], spaces(_), [that], spaces(_).
 it_is_the_case_that_ --> [es], spaces(_), [el], spaces(_), [caso], spaces(_), [que], spaces(_).  % spanish
 it_is_the_case_that_ --> [c], [A], [est], spaces(_), [le], spaces(_), [cas], spaces(_), [que], spaces(_), {atom_string(A, "'")}. % french
 it_is_the_case_that_ --> [è], spaces(_), [provato], spaces(_), [che], spaces(_). % italian
+it_is_the_case_that_ --> [es], spaces(_), [el], spaces(_), [caso], spaces(_), [que], spaces(_). % italian
 
 is_a_set_of_ --> [is], spaces(_), [a], spaces(_), [set], spaces(_), [of], spaces(_). 
 is_a_set_of_ --> [es], spaces(_), [un],  spaces(_), [conjunto],  spaces(_), [de], spaces(_). % spanish
@@ -754,10 +777,11 @@ where_ --> [en], spaces(_), [donde], spaces(_). % spanish
 where_ --> ['où'], spaces(_). % french  
 where_ --> [dove], spaces(_). % italian
 where_ --> [quando], spaces(_). % italian
+where_ --> [donde], spaces(_). % spanish
 
 scenario_ -->  spaces_or_newlines(_), ['Scenario'], !, spaces(_).
 scenario_ -->  spaces_or_newlines(_), [scenario], spaces(_). % english and italian
-scenario_ -->  spaces_or_newlines(_), [scénario], spaces(_). % french
+scenario_ -->  spaces_or_newlines(_), [le], spaces(_), [scénario], spaces(_). % french
 scenario_ -->  spaces_or_newlines(_), [escenario], spaces(_). % spanish
 
 is_colon_ -->  [is], spaces(_), [':'], spaces(_).
@@ -767,7 +791,7 @@ is_colon_ -->  [è], spaces(_), [':'], spaces(_). % italian
 
 query_ --> spaces_or_newlines(_), ['Query'], !, spaces(_).
 query_ --> spaces_or_newlines(_), [query], spaces(_).
-query_ --> spaces_or_newlines(_), [question], spaces(_). % french
+query_ --> spaces_or_newlines(_), [la], spaces(_), [question], spaces(_). % french
 query_ --> spaces_or_newlines(_), [la], spaces(_), [pregunta], spaces(_). % spanish
 query_ --> spaces_or_newlines(_), [domanda], spaces(_). % italian
 
@@ -2145,7 +2169,8 @@ prepare_query(English, Arg, SwishModule, Goal, Facts, Command) :- %trace,
 show_question(GoalName, Scenario, NLQuestion) :-   
     (source_lang(en) -> print_message(informational, "Query ~w with ~w: ~w"-[GoalName, Scenario, NLQuestion]); true),
     (source_lang(fr) -> print_message(informational, "La question ~w avec ~w: ~w"-[GoalName, Scenario, NLQuestion]); true),
-    (source_lang(it) -> print_message(informational, "Il interrogativo ~w con ~w: ~w"-[GoalName, Scenario, NLQuestion]); true),  
+    (source_lang(it) -> print_message(informational, "Il interrogativo ~w con ~w: ~w"-[GoalName, Scenario, NLQuestion]); true), 
+    (source_lang(es) -> print_message(informational, "La pregunta ~w con ~w: ~w"-[GoalName, Scenario, NLQuestion]); true),   
     !.  
 
 show_answer(Goal) :-
@@ -2153,6 +2178,7 @@ show_answer(Goal) :-
     (source_lang(en) -> print_message(informational, "Answer: ~w"-[NLAnswer]); true), 
     (source_lang(fr) -> print_message(informational, "La réponse: ~w"-[NLAnswer]); true), 
     (source_lang(it) -> print_message(informational, "Il responso: ~w"-[NLAnswer]); true), 
+    (source_lang(es) -> print_message(informational, "La respuesta: ~w"-[NLAnswer]); true), 
     !. 
 
 % translate_goal_into_LE/2
@@ -2360,7 +2386,7 @@ show(templates_scasp) :-
         Elements = [Goal|LE],
         numbervars(Elements, 1, _),
         format(atom(Term), Format, Elements)), Templates),
-    forall(member(T, Templates), (atom_string(T, R), print_message(informational, '~w\'.'-[R]))).
+    forall(member(T, Templates), (atom_string(T, R), print_message(informational, "~w\'."-[R]))).
 
 show(types) :-
     %findall(EnglishAnswer, 
@@ -2387,48 +2413,74 @@ show(scasp, with(Q, S)) :-
     clause(SwishModule:example(S, [scenario(Scenario, _)]), _),
     %print_message(informational, "% scenario ~w ."-[List]),
     forall(member(Clause, Scenario), portray_clause(Clause)),
-    print_message(informational, "/** <examples>\n?- ? ~w .\n**/"-[Query]).
+    print_message(informational, "/** <examples>\n?- ? ~w .\n **/ "-[Query]).
 
 show(scasp, with(Q)) :-
     show(scasp), 
     pengine_self(SwishModule), 
     clause(SwishModule:query(Q,Query), _),
-    print_message(informational, "/** <examples>\n?- ? ~w .\n**/"-[Query]).
+    print_message(informational, "/** <examples>\n?- ? ~w .\n **/ "-[Query]).
 
 unwrapBody(targetBody(Body, _, _, _, _, _), Body). 
-%unwrapBody(Body, Body). 
 
 % hack to bring in the reasoner for explanations.  
-targetBody(G, false, _, '', [], _) :- %trace, 
-    %nonvar(G),
-    pengine_self(SwishModule), extract_goal_command(G, SwishModule, _InnerG, Command), % clean extract goals
-    %print_message(informational, "Trying ~w"-[Command]), 
-    %call(Command). 
+targetBody(G, false, _, '', [], _) :-
+    pengine_self(SwishModule), extract_goal_command(G, SwishModule, _InnerG, Command), 
     call(Command). 
-    %Command.
-    %catch_with_backtrace(Command, Error, (print_message(error, Error))). 
 
 dump(templates, String) :-
     findall(local_dict(Prolog, NamesTypes, Templates), (dict(Prolog, NamesTypes, Templates)), PredicatesDict),
     with_output_to(string(String01), forall(member(Clause1, PredicatesDict), portray_clause(Clause1))),
-    (PredicatesDict==[]-> string_concat("local_dict([],[],[]).\n", String01, String1); String1 = String01), 
+    (PredicatesDict==[] -> string_concat("local_dict([],[],[]).\n", String01, String1); String1 = String01), 
     findall(local_meta_dict(Prolog, NamesTypes, Templates), (meta_dict(Prolog, NamesTypes, Templates)), PredicatesMeta),
     with_output_to(string(String02), forall(member(Clause2, PredicatesMeta), portray_clause(Clause2))),
-    (PredicatesMeta==[]-> string_concat("local_meta_dict([],[],[]).\n", String02, String2); String2 = String02), 
-    string_concat(String1, String2, String).     
+    (PredicatesMeta==[] -> string_concat("local_meta_dict([],[],[]).\n", String02, String2); String2 = String02), 
+    string_concat(String1, String2, String). 
 
-dump(all, Module, List, String) :-
-	dump(templates, StringTemplates), 
-	dump(rules, List, StringRules),
-    dump(scenarios, List, StringScenarios),
-    dump(queries, List, StringQueries), 
-    string_concat(":-module(\'", Module, Module01),
-    string_concat(Module01, "\', []).\n", TopHeadString), 
-	string_concat(TopHeadString, StringTemplates, HeadString), 
-	string_concat(HeadString, StringRules, String1),
-    string_concat(String1, StringScenarios, String2),
-    string_concat(String2, StringQueries, String3), 
-    string_concat(String3, "prolog_le(verified).\n", String).   
+dump(templates_scasp, String) :-
+    findall(Term, 
+        ( ( meta_dict([Pred|GoalElements], Types, WordsAnswer) ;
+            dict([Pred|GoalElements], Types, WordsAnswer)),
+        Goal =.. [Pred|GoalElements],
+        process_template_for_scasp(WordsAnswer, GoalElements, Types, FormatEl, LE),
+        atomic_list_concat(['#pred ~p :: \''|FormatEl], Format),
+        Elements = [Goal|LE], 
+        numbervars(Elements, 1, _), 
+        format(atom(Term), Format, Elements) ), Templates),
+    with_output_to(string(String), forall(member(T, Templates), (atom_string(T, R),write(R),write("\'\n")))).
+    %)).
+
+dump(source_lang, String) :-
+    source_lang(L) -> 
+    with_output_to(string(String), portray_clause(source_lang(L))) ; String="". 
+
+dump(scasp_scenarios_queries, List, String) :- 
+    findall( example(Name, Scenario), 
+        (member( example(Name, Scenario), List)), Scenarios),
+    %print_message(informational, "Scenarios ~w"-[Scenarios]),
+    % example(one, [scenario(
+    %                       [(the_service_is_delivered_before(1654423200.0):-true),  
+    %                       (the_service_recipient_maintains_all_communication_within_the_confines_of(domain):-true),  
+    %                       (the_service_recipient_delivers_requested_information_before(1654077600.0):-true),  
+    %                       (is_signed_by_the_service_provider(the_contract):-true),  
+    %                       (is_also_signed_by_the_service_recipient(the_contract):-true)
+    %                       ], true)]).
+    with_output_to(string(StringScenarios),
+        ( forall(member(example(S, [scenario(Scenario, _)]), Scenarios),
+                ( write("/** Scenario "), write(S), write("\n"),
+                  forall(member(Clause, Scenario), portray_clause(Clause)),
+                  write("% **/ \n")
+                )
+            )
+        )
+    ),
+    with_output_to(string(String00), write("/** <examples>\n")), 
+    findall( Query, (member( query(_, Query), List), Query\=true), Queries),
+    with_output_to(string(String01), forall(member(Q, Queries), ( write("?- ? "), writeq(Q), write(".\n") ))),
+    with_output_to(string(String0N), write("**/")),
+    string_concat(String00, String01, String02),
+    string_concat(String02, String0N, StringQueries),
+    string_concat(StringScenarios, StringQueries, String). 
 
 dump(rules, List, String) :- %trace, 
     findall((Pred :- Body), 
@@ -2444,6 +2496,41 @@ dump(scenarios, List, String) :-
     findall( example(Name, Scenario), 
         (member( example(Name, Scenario), List)), Predicates),
     with_output_to(string(String), forall(member(Clause, Predicates), portray_clause(Clause))).
+
+dump(all, Module, List, String) :-
+	dump(templates, StringTemplates), 
+	dump(rules, List, StringRules),
+    dump(scenarios, List, StringScenarios),
+    dump(queries, List, StringQueries), 
+    string_concat(":-module(\'", Module, Module01),
+    string_concat(Module01, "\', []).\n", TopHeadString),  
+    dump(source_lang, SourceLang), 
+    string_concat(TopHeadString, SourceLang, TopMost), 
+	string_concat(TopMost, StringTemplates, HeadString), 
+	string_concat(HeadString, StringRules, String1),
+    string_concat(String1, StringScenarios, String2),
+    string_concat(String2, StringQueries, String3), 
+    string_concat(String3, "prolog_le(verified).\n", String).   
+
+dump_scasp(Module, List, String) :-
+	dump(templates_scasp, StringTemplates), 
+	dump(rules, List, StringRules),
+    %dump(scenarios, List, StringScenarios),
+    %dump(queries, List, StringQueries), 
+    dump(scasp_scenarios_queries, List, StringQueriesScenarios), 
+    string_concat(":-module(\'", Module, Module01),
+    string_concat(Module01, "\', []).\n", TopHeadString), 
+    dump(source_lang, SourceLang), 
+    string_concat(TopHeadString, SourceLang, TopMost), 
+    % headers for scasp
+    string_concat("% s(CASP) Programming \n:- use_module(library(scasp)).\n% Uncomment to suppress warnings\n%:- style_check(-discontiguous).\n",
+                ":- style_check(-singleton).\n:- set_prolog_flag(scasp_forall, prev).\n", SCAPSHeader),
+    string_concat(TopMost, SCAPSHeader, Header), 
+	string_concat(Header, StringTemplates, HeadString), 
+	string_concat(HeadString, StringRules, String1),
+    string_concat(String1, "prolog_le(verified).\n", String2),
+    string_concat(String2, StringQueriesScenarios, String). 
+    % string_concat(String2, StringQueries, String3), .  
 
 restore_dicts :- %trace, 
     %print_message(informational, "dictionaries being restored"),
@@ -2479,6 +2566,8 @@ user:(answer Query with Scenario):-
 user: (répondre Query avec Scenario):-
     answer(Query,with(Scenario)).
 user: (risposta Query con Scenario):-
+    answer(Query,with(Scenario)). 
+user: (responde Query con Scenario):-
     answer(Query,with(Scenario)). 
 %:- discontiguous (with)/2.
 %user:(Query with Scenario):-  
@@ -2522,7 +2611,9 @@ le_taxlog_translate( en(Text), File, BaseLine, Terms) :-
 le_taxlog_translate( fr(Text), File, BaseLine, Terms) :-
     text_to_logic(Text, Terms) -> true; showErrors(File,BaseLine). 
 le_taxlog_translate( it(Text), File, BaseLine, Terms) :-
-        text_to_logic(Text, Terms) -> true; showErrors(File,BaseLine). 
+    text_to_logic(Text, Terms) -> true; showErrors(File,BaseLine). 
+le_taxlog_translate( es(Text), File, BaseLine, Terms) :-
+    text_to_logic(Text, Terms) -> true; showErrors(File,BaseLine).
 le_taxlog_translate( prolog_le(verified), _, _, prolog_le(verified)) :- %trace, 
     assertz(parsed), 
     restore_dicts. 
