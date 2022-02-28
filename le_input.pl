@@ -1179,6 +1179,12 @@ match([Word|_LastElement], [Word|PossibleLiteral], Map1, MapN, [Word,Literal]) :
     match(Candidate, PossibleLiteral, Map1, MapN, InnerTemplate),
     (meta_dictionary(Predicate, _, InnerTemplate); dictionary(Predicate, _, InnerTemplate)), 
     Literal =.. Predicate, !. 
+%match([Element, Apost|RestElements], [_Word|PossibleLiteral], Map1, MapN, [Element, Apost|RestSelected]) :-
+%    nonvar(Element), atom_string(Apost, "'"), !, %Word aprox= Element, TO BE DONE: full test
+%    match(RestElements, PossibleLiteral, Map1, MapN, RestSelected). 
+%match([Element|RestElements], [_Word, Apost|PossibleLiteral], Map1, MapN, [Element|RestSelected]) :-
+%    nonvar(Element), atom_string(Apost, "'"), !, %Word aprox= Element, TO BE DONE: full test
+%    match(RestElements, PossibleLiteral, Map1, MapN, RestSelected). 
 match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, [Element|RestSelected]) :-
     nonvar(Element), Word = Element, 
     match(RestElements, PossibleLiteral, Map1, MapN, RestSelected). 
@@ -1720,7 +1726,8 @@ ind_det --> [un].      % spanish, italian, and french
 ind_det --> [una].     % spanish, italian
 ind_det --> [une].     % french
 ind_det --> [qui].     % french which?
-ind_det --> [quoi].    % french which?
+ind_det --> [quel].    % french which? masculine    
+ind_det --> [quelle].  % french which? femenine
 ind_det --> [che]. % italian which
 ind_det --> [quale]. % italian which
 ind_det --> [uno].     % italian

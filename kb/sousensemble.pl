@@ -3,13 +3,13 @@
 fr("la langue cible est : prolog.
     
 les modèles sont:
-    *un ensemble* est un sous-ensemble de *un ensemble*,
+    *un ensemble* est un sous-ensemble d'*un ensemble*,
     *une chose* est un ensemble,
     *une chose* appartient à *un ensemble*.
 
 la base de connaissances dont le nom est sousensemble comprend:
 
-un ensemble A est un sous-ensemble de un ensemble B
+un ensemble A est un sous-ensemble d'un ensemble B
     si l'ensemble A est un ensemble
     et l'ensemble B est un ensemble
     et pour tous les cas où
@@ -26,7 +26,7 @@ le scénario un est:
     Alice appartient à la famille deux.
       
 la question un est:
-    quoi premier famille est un sous-ensemble de quoi seconde famille.
+    quelle premier famille est un sous-ensemble d' quelle seconde famille.
     
 le scénario deux est:
     [Alice, Bob] est un ensemble.
@@ -36,13 +36,11 @@ le scénario deux est:
         si la chose is in l'ensemble.
     
 la question deux est:
-    quoi ensemble est un sous-ensemble de quoi autre ensemble.
+    quelle ensemble est un sous-ensemble d' quelle autre ensemble.
    
 ").
 
 /** <examples>
-?- answer one with one.
 ?- show prolog.
-?- answer two with two.
 ?- répondre un avec un.
 */
