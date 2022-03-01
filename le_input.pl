@@ -2255,14 +2255,14 @@ process_types_or_names([Word|RestWords],  Elements, Types, [Word|RestPrintWords]
 %process_template_for_scasp/4
 %process_template_for_scasp(WordsAnswer, GoalElements, Types, +FormatElements, +ProcessedWordsAnswers)
 process_template_for_scasp([], _, _, [], []) :- !.
-process_template_for_scasp([Word|RestWords], Elements, Types, [' @(~w:~w) '|RestFormat], [Word, TypeName|RestPrintWords]) :- 
+process_template_for_scasp([Word|RestWords], Elements, Types, [' @(~p:~p) '|RestFormat], [Word, TypeName|RestPrintWords]) :- 
     var(Word), matches_type(Word, Elements, Types, Type), !, 
     process_template_for_scasp(RestWords,  Elements, Types, RestFormat, RestPrintWords),
     tokenize_atom(Type, NameWords), delete_underscore(NameWords, [TypeName]).
-process_template_for_scasp([Word|RestWords],  Elements, Types, ['~w'|RestFormat], [Word|RestPrintWords] ) :-
+process_template_for_scasp([Word|RestWords],  Elements, Types, ['~p'|RestFormat], [Word|RestPrintWords] ) :-
     op_stop(List), member(Word,List), !, 
     process_template_for_scasp(RestWords,  Elements, Types, RestFormat, RestPrintWords).
-process_template_for_scasp([Word|RestWords],  Elements, Types, [' ~w '|RestFormat], [Word|RestPrintWords] ) :-
+process_template_for_scasp([Word|RestWords],  Elements, Types, [' ~p '|RestFormat], [Word|RestPrintWords] ) :-
     process_template_for_scasp(RestWords,  Elements, Types, RestFormat, RestPrintWords).
 
 add_determiner([Word|RestWords], [Det, Word|RestWords]) :-
@@ -2454,7 +2454,7 @@ dump(templates_scasp, String) :-
         Elements = [Goal|LE], 
         numbervars(Elements, 1, _), 
         format(atom(Term), Format, Elements) ), Templates),
-    with_output_to(string(String), forall(member(T, Templates), (atom_string(T, R),write(R),write("\'\n")))).
+    with_output_to(string(String), forall(member(T, Templates), (atom_string(T, R),write(R),write("\'.\n")))).
     %)).
 
 dump(source_lang, String) :-
@@ -2519,16 +2519,16 @@ dump(all, Module, List, String) :-
     string_concat(String2, StringQueries, String3), 
     string_concat(String3, "prolog_le(verified).\n", String).   
 
-dump_scasp(Module, List, String) :-
+dump_scasp(_Module, List, String) :-
 	dump(templates_scasp, StringTemplates), 
 	dump(rules, List, StringRules),
     %dump(scenarios, List, StringScenarios),
     %dump(queries, List, StringQueries), 
     dump(scasp_scenarios_queries, List, StringQueriesScenarios), 
-    string_concat(":-module(\'", Module, Module01),
-    string_concat(Module01, "\', []).\n", TopHeadString), 
-    dump(source_lang, SourceLang), 
-    string_concat(TopHeadString, SourceLang, TopMost), 
+    %string_concat(":-module(\'", Module, Module01),
+    %string_concat(Module01, "\', []).\n", TopHeadString), 
+    dump(source_lang, TopMost), 
+    %string_concat(TopHeadString, SourceLang, TopMost), 
     % headers for scasp
     string_concat("% s(CASP) Programming \n:- use_module(library(scasp)).\n% Uncomment to suppress warnings\n%:- style_check(-discontiguous).\n",
                 ":- style_check(-singleton).\n:- set_prolog_flag(scasp_forall, prev).\n", SCAPSHeader),
