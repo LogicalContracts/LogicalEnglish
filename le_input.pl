@@ -2535,8 +2535,8 @@ dump_scasp(Module, List, String) :-
     string_concat(TopMost, SCAPSHeader, Header), 
 	string_concat(Header, StringTemplates, HeadString), 
 	string_concat(HeadString, StringRules, String1),
-    string_concat(String1, "prolog_le(verified).\n", String2),
-    string_concat(String2, StringQueriesScenarios, String). 
+    %string_concat(String1, "prolog_le(verified).\n", String2), % not need for scasp
+    string_concat(String1, StringQueriesScenarios, String). 
     % string_concat(String2, StringQueries, String3), .  
 
 restore_dicts :- %trace, 
