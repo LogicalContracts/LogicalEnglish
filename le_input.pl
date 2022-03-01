@@ -2259,6 +2259,9 @@ process_template_for_scasp([Word|RestWords], Elements, Types, [' @(~p:~p) '|Rest
     var(Word), matches_type(Word, Elements, Types, Type), !, 
     process_template_for_scasp(RestWords,  Elements, Types, RestFormat, RestPrintWords),
     tokenize_atom(Type, NameWords), delete_underscore(NameWords, [TypeName]).
+process_template_for_scasp([Word|RestWords],  Elements, Types, RestFormat, RestPrintWords ) :- % skipping apostrofes by now
+    nonvar(Word), Word = '\'', !, 
+    process_template_for_scasp(RestWords,  Elements, Types, RestFormat, RestPrintWords).
 process_template_for_scasp([Word|RestWords],  Elements, Types, ['~p'|RestFormat], [Word|RestPrintWords] ) :-
     op_stop(List), member(Word,List), !, 
     process_template_for_scasp(RestWords,  Elements, Types, RestFormat, RestPrintWords).
