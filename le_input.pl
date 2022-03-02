@@ -145,6 +145,7 @@ header(Settings, In, Next) :-
     Settings = [query(null, true), example(null, [])|Settings1], % a hack to stop the loop when query is empty
     RulesforErrors = % rules for errors that have been statically added
       [(text_size(TextSize))|Settings], % is text_size being used? % asserting the Settings too! predicates, events and fluents
+    ( member(in_files(Files), Settings) ->  print_message(informational, "Files ~w\n"-[Files]); true ),  % include all those files and get additional DictEntries before ordering
     order_templates(DictEntries, OrderedEntries), 
     process_types_dict(OrderedEntries, Types), 
     %print_message(informational, Types),
@@ -254,7 +255,7 @@ declaration([], [target(Language)]) --> % one word description for the language:
 % meta predicates
 declaration(Rules, [metapredicates(MetaTemplates)]) -->
     meta_predicate_previous, list_of_meta_predicates_decl(Rules, MetaTemplates), !.
-%timeless 
+%timeless or just templates
 declaration(Rules, [predicates(Templates)]) -->
     predicate_previous, list_of_predicates_decl(Rules, Templates), !.
 %events
@@ -263,6 +264,9 @@ declaration(Rules, [events(EventTypes)]) -->
 %time varying
 declaration(Rules, [fluents(Fluents)]) -->
     fluent_predicate_previous, list_of_predicates_decl(Rules, Fluents), !.
+%files to be included
+declaration([kbname(KBName)], [in_files(Files)]) -->
+    files_to_include_previous(KBName), list_of_files(Files), !.
 %
 declaration(_, _, Rest, _) :- 
     asserterror('LE error in a declaration ', Rest), 
@@ -311,11 +315,15 @@ fluent_predicate_previous -->
 fluent_predicate_previous --> 
     spaces(_), [the], spaces(_), [time], ['-'], [varying], spaces(_), [predicates], spaces(_), [are], spaces(_), [':'], spaces_or_newlines(_).
 
+files_to_include_previous(KBName) --> 
+    spaces_or_newlines(_), [the], spaces(_), ['knowledge'], spaces(_), [base], extract_constant([includes], NameWords), [includes], 
+    spaces(_), [these], spaces(_), [files], spaces(_), [':'], !, spaces_or_newlines(_), {name_as_atom(NameWords, KBName)}.
+
 % at least one predicate declaration required
 list_of_predicates_decl([], []) --> spaces_or_newlines(_), next_section, !. 
 list_of_predicates_decl([Ru|Rin], [F|Rout]) --> spaces_or_newlines(_), predicate_decl(Ru,F), comma_or_period, list_of_predicates_decl(Rin, Rout), !.
 list_of_predicates_decl(_, _, Rest, _) :- 
-    asserterror('LE error found in a declaration ', Rest), 
+    asserterror('LE error found in a template declaration ', Rest), 
     fail.
 
 % at least one predicate declaration required
@@ -324,6 +332,13 @@ list_of_meta_predicates_decl([Ru|Rin], [F|Rout]) -->
     spaces_or_newlines(_), meta_predicate_decl(Ru,F), comma_or_period, list_of_meta_predicates_decl(Rin, Rout).
 list_of_meta_predicates_decl(_, _, Rest, _) :- 
     asserterror('LE error found in the declaration of a meta template ', Rest), 
+    fail.
+
+list_of_files([]) --> spaces_or_newlines(_), next_section, !.
+list_of_files([Filename|Rout]) --> spaces_or_newlines(_), extract_constant([',', '.'], NameWords), comma_or_period, list_of_files(Rout), !,
+    {name_as_atom(NameWords, Filename)}.
+list_of_files(_, Rest, _) :- 
+    asserterror('LE error found in a file to include ', Rest), 
     fail.
 
 % next_section/2
@@ -339,6 +354,9 @@ next_section(StopHere, StopHere)  :-
 
 next_section(StopHere, StopHere)  :-
     phrase(fluent_predicate_previous, StopHere, _), !. % format(string(Message), "Next fluents", []), print_message(informational, Message).
+
+next_section(StopHere, StopHere)  :-
+    phrase(files_to_include_previous(_), StopHere, _), !.
 
 next_section(StopHere, StopHere)  :-
     phrase(rules_previous(_), StopHere, _), !. % format(string(Message), "Next knowledge base", []), print_message(informational, Message).
