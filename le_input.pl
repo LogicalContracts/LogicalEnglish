@@ -129,7 +129,7 @@ text_to_logic(String_, Translation) :-
 % document/3 (or document/1 in dcg)
 document(Translation, In, Rest) :- 
     (parsed -> retract(parsed); true), 
-    (source_lang(L) -> retract(source_lang(L)) ; true),
+    (source_lang(_L) -> retractall(source_lang(_)) ; true),
     phrase(header(Settings), In, AfterHeader), !, %print_message(informational, "Declarations completed: ~w"-[Settings]), 
     phrase(content(Content), AfterHeader, Rest), 
     append(Settings, Content, Translation), !,  
@@ -2213,19 +2213,21 @@ prepare_query(English, Arg, SwishModule, Goal, Facts, Command) :- %trace,
     extract_goal_command(Goal, SwishModule, _InnerGoal, Command), !.  
     %print_message(informational, "Command: ~w"-[Command]). 
 
-show_question(GoalName, Scenario, NLQuestion) :-   
-    (source_lang(en) -> print_message(informational, "Query ~w with ~w: ~w"-[GoalName, Scenario, NLQuestion]); true),
-    (source_lang(fr) -> print_message(informational, "La question ~w avec ~w: ~w"-[GoalName, Scenario, NLQuestion]); true),
-    (source_lang(it) -> print_message(informational, "Il interrogativo ~w con ~w: ~w"-[GoalName, Scenario, NLQuestion]); true), 
-    (source_lang(es) -> print_message(informational, "La pregunta ~w con ~w: ~w"-[GoalName, Scenario, NLQuestion]); true),   
+show_question(GoalName, Scenario, NLQuestion) :-   trace, 
+    pengine_self(M), 
+    (M:source_lang(en) -> print_message(informational, "Query ~w with ~w: ~w"-[GoalName, Scenario, NLQuestion]); true),
+    (M:source_lang(fr) -> print_message(informational, "La question ~w avec ~w: ~w"-[GoalName, Scenario, NLQuestion]); true),
+    (M:source_lang(it) -> print_message(informational, "Il interrogativo ~w con ~w: ~w"-[GoalName, Scenario, NLQuestion]); true), 
+    (M:source_lang(es) -> print_message(informational, "La pregunta ~w con ~w: ~w"-[GoalName, Scenario, NLQuestion]); true),   
     !.  
 
 show_answer(Goal) :-
     translate_goal_into_LE(Goal, RawAnswer), name_as_atom(RawAnswer, NLAnswer), 
-    (source_lang(en) -> print_message(informational, "Answer: ~w"-[NLAnswer]); true), 
-    (source_lang(fr) -> print_message(informational, "La réponse: ~w"-[NLAnswer]); true), 
-    (source_lang(it) -> print_message(informational, "Il responso: ~w"-[NLAnswer]); true), 
-    (source_lang(es) -> print_message(informational, "La respuesta: ~w"-[NLAnswer]); true), 
+    pengine_self(M), 
+    (M:source_lang(en) -> print_message(informational, "Answer: ~w"-[NLAnswer]); true), 
+    (M:source_lang(fr) -> print_message(informational, "La réponse: ~w"-[NLAnswer]); true), 
+    (M:source_lang(it) -> print_message(informational, "Il responso: ~w"-[NLAnswer]); true), 
+    (M:source_lang(es) -> print_message(informational, "La respuesta: ~w"-[NLAnswer]); true), 
     !. 
 
 % translate_goal_into_LE/2
@@ -2672,6 +2674,8 @@ user:targetBody(G, B, X, S, L, R) :- targetBody(G, B, X, S, L, R).
 
 user:restore_dicts :- restore_dicts.
 
+% user:source_lang(L) :- source_lang(L). 
+
 %le_taxlog_translate( EnText, Terms) :- le_taxlog_translate( EnText, someFile, 1, Terms).
 
 % Baseline is the line number of the start of Logical English text
@@ -2684,8 +2688,8 @@ le_taxlog_translate( it(Text), File, BaseLine, Terms) :-
 le_taxlog_translate( es(Text), File, BaseLine, Terms) :-
     text_to_logic(Text, Terms) -> true; showErrors(File,BaseLine).
 le_taxlog_translate( prolog_le(verified), _, _, prolog_le(verified)) :- %trace, 
-    assertz(parsed). 
-    %restore_dicts. 
+    assertz(parsed),  
+    restore_dicts. 
 
 combine_list_into_string(List, String) :-
     combine_list_into_string(List, "", String).
@@ -2709,6 +2713,7 @@ showtaxlog:-
 	fail.
 showtaxlog.
 
+sanbox:safe_primitive(le_input:source_lang(_)).
 sanbox:safe_primitive(le_input:is_type(_)).
 sanbox:safe_primitive(le_input:dict(_,_,_)).
 sanbox:safe_primitive(le_input:meta_dict(_,_,_)).
