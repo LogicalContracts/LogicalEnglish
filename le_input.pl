@@ -98,7 +98,7 @@ query three is:
     op(800,xfx,user:'::'), % to support scasp 
     dictionary/3, meta_dictionary/3,
     translate_goal_into_LE/2, name_as_atom/2, parsed/0, source_lang/1, 
-    dump/4, dump/3, dump/2, dump_scasp/3
+    dump/4, dump/3, dump/2, dump_scasp/3, split_module_name/3
     ]).
 :- use_module('./tokenize/prolog/tokenize.pl').
 :- use_module(library(pengines)).
@@ -108,7 +108,7 @@ query three is:
 :- thread_local text_size/1, error_notice/4, dict/3, meta_dict/3, example/2, local_dict/3, local_meta_dict/3,
                 last_nl_parsed/1, kbname/1, happens/2, initiates/3, terminates/3, is_type/1,
                 predicates/1, events/1, fluents/1, metapredicates/1, parsed/0, source_lang/1.  
-:- discontiguous statement/3, declaration/4, example/2. 
+:- discontiguous statement/3, declaration/4, _:example/2, _:query/2. 
 
 % Main clause: text_to_logic(+String,-Clauses) is det
 % Errors are added to error_notice 
@@ -145,16 +145,38 @@ header(Settings, In, Next) :-
     Settings = [query(null, true), example(null, [])|Settings1], % a hack to stop the loop when query is empty
     RulesforErrors = % rules for errors that have been statically added
       [(text_size(TextSize))|Settings], % is text_size being used? % asserting the Settings too! predicates, events and fluents
-    ( member(in_files(Files), Settings) ->  print_message(informational, "Files ~w\n"-[Files]); true ),  % include all those files and get additional DictEntries before ordering
-    order_templates(DictEntries, OrderedEntries), 
+    ( member(in_files(ModuleNames), Settings) ->   % include all those files and get additional DictEntries before ordering
+      ( print_message(informational, "Module Names ~w\n"-[ModuleNames]),
+        %load_named_file('including.pl', 'including+http://tests.com', true)
+        %load_named_file('citizenship.pl', 'citizenship_trust+https://www.legislation.gov.uk/ukpga/1981/61/section/1', true),
+        %load_named_file('citizenship.pl', _, true),
+        %load_named_file('subset.pl', 'subset+http://tests.com', true)
+        load_all_files(ModuleNames), 
+        restore_dicts(RestoredDictEntries)
+      )
+    ; RestoredDictEntries = [] ), 
+    append(DictEntries, RestoredDictEntries, AllDictEntries), 
+    order_templates(AllDictEntries, OrderedEntries), 
     process_types_dict(OrderedEntries, Types), 
-    %print_message(informational, Types),
+    %print_message(informational, "types ~w "-[Types]),
     append(OrderedEntries, RulesforErrors, SomeRules),
     append(SomeRules, Types, MRules), 
     assertall(MRules), !. % asserting contextual information
 header(_, Rest, _) :- 
     asserterror('LE error in the header ', Rest), 
     fail.
+
+%load_all_files/1
+%load the prolog files that correspond to the modules names listed in the section of inclusion
+load_all_files([]).
+load_all_files([Name|R]) :- 
+    split_module_name(Name, File, URL), 
+    concat(File, "-prolog", Part1), concat(Part1, ".pl", Filename),  
+    (URL\=''->atomic_list_concat([File,'-prolog', '+', URL], NewName); atomic_list_concat([Filename,'-prolog'], NewName)), 
+    print_message(informational, "Loading ~w"-[Filename]),
+    load_named_file(Filename, NewName, true), 
+    print_message(informational, "Loaded ~w"-[Filename]),
+    load_all_files(R). 
 
 % Experimental rules for processing types:
 process_types_dict(Dictionary, Type_entries) :- 
@@ -2562,24 +2584,43 @@ dump_scasp(_Module, List, String) :-
 
 restore_dicts :- %trace, 
     %print_message(informational, "dictionaries being restored"),
-    pengine_self(SwishModule),
-    (SwishModule:local_dict(_,_,_) -> findall(dict(A,B,C), SwishModule:local_dict(A,B,C), ListDict) ; ListDict = []),
-    (SwishModule:local_meta_dict(_,_,_) -> findall(meta_dict(A,B,C), SwishModule:local_meta_dict(A,B,C), ListMetaDict); ListMetaDict = []),
-    append(ListDict, ListMetaDict, DictEntries), 
-    %print_message(informational, "the dictionaries being restored are ~w"-[DictEntries]),
-    collect_all_preds(SwishModule, Preds),
-    declare_preds_as_dynamic(SwishModule, Preds), 
+    restore_dicts(DictEntries), 
     order_templates(DictEntries, OrderedEntries), 
     process_types_dict(OrderedEntries, Types), 
     append(OrderedEntries, Types, MRules), 
     assertall(MRules), !. % asserting contextual information
 
-collect_all_preds(M, ListPreds) :-
-    findall(AA, ((M:local_dict(A,_,_); M:local_meta_dict(A, _,_)), A\=[], AA =.. A, not(clause(M:AA,_))), ListPreds). 
+restore_dicts(DictEntries) :- trace, 
+    pengine_self(SwishModule),
+    (SwishModule:local_dict(_,_,_) -> findall(dict(A,B,C), SwishModule:local_dict(A,B,C), ListDict) ; ListDict = []),
+    (SwishModule:local_meta_dict(_,_,_) -> findall(meta_dict(A,B,C), SwishModule:local_meta_dict(A,B,C), ListMetaDict); ListMetaDict = []),
+    append(ListDict, ListMetaDict, DictEntries), 
+    %print_message(informational, "the dictionaries being restored are ~w"-[DictEntries]),
+    collect_all_preds(SwishModule, DictEntries, Preds),
+    declare_preds_as_dynamic(SwishModule, Preds). 
+
+% collect_all_preds/3
+collect_all_preds(M, DictEntries, ListPreds) :-
+    findall(AA, ((member(dict(A,_,_), DictEntries); member(meta_dict(A,_,_), DictEntries)), A\=[], AA =.. A, not(clause(M:AA,_))), ListPreds). 
 
 declare_preds_as_dynamic(_, []) :- !. 
 declare_preds_as_dynamic(M, [F|R]) :- functor(F, P, A),  % facts are the templates now
         dynamic([M:P/A], [thread(local), discontiguous(true)]), declare_preds_as_dynamic(M, R). 
+
+split_module_name(Name, Name, '') :-
+   \+ sub_atom(Name, _, _, _, '+'),
+   \+ sub_atom(Name, _, _, _, 'http'), !. 
+
+split_module_name(Name, File, URL):-
+	sub_atom(Name,U,1,_,'+'),
+	sub_atom(Name,0,U,_,File),
+	UU is U+1, 
+	sub_atom(Name,UU,_,0,URL), 
+	!. 
+	%print_message(informational, URL). 
+
+split_module_name(Name, Name, Name) :- % dangerous. But it maybe needed for earlier taxlog examples. 
+	sub_atom(Name, _, _, _, 'http'), !. 
 
 %%% ------------------------------------------------ Swish Interface to logical english
 %% based on logicalcontracts' lc_server.pl
@@ -2643,8 +2684,8 @@ le_taxlog_translate( it(Text), File, BaseLine, Terms) :-
 le_taxlog_translate( es(Text), File, BaseLine, Terms) :-
     text_to_logic(Text, Terms) -> true; showErrors(File,BaseLine).
 le_taxlog_translate( prolog_le(verified), _, _, prolog_le(verified)) :- %trace, 
-    assertz(parsed), 
-    restore_dicts. 
+    assertz(parsed). 
+    %restore_dicts. 
 
 combine_list_into_string(List, String) :-
     combine_list_into_string(List, "", String).

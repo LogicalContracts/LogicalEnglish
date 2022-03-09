@@ -113,16 +113,8 @@ clauseNavigator_(Ref,span([a([onclick=Handler]," KB ")|Origin]), onclick=Handler
 %clauseNavigator_(Ref,i(" hypothesis (~w) in scenario"-[Ref]),onclick='').
 clauseNavigator_(_,i(" hypothesis in scenario"-[]),onclick='').
 
-moduleName2URL(Name, URL) :-  split_module_name(Name, _, URL), !.
+moduleName2URL(Name, URL) :-  le_input:split_module_name(Name, _, URL), !. % from le_input
 moduleName2URL(URL, URL). 
-
-split_module_name(Name, File, URL):-
-	sub_atom(Name,U,1,_,'+'),
-	sub_atom(Name,0,U,_,File),
-	UU is U+1, 
-	sub_atom(Name,UU,_,0,URL), 
-	!. 
-	%print_message(informational, URL). 
 
 :- use_module(explanation_renderer,[]).
 :- use_rendering(explanation_renderer).
@@ -284,7 +276,7 @@ user:term_expansion(NiceTerm, ExpandedTerms) :-  % hook for LE extension
 		( myDeclaredModule(Name),  % the module in the editor
 		split_module_name(Name, FileName, URL), 
 		atomic_list_concat([FileName,'-prolog','.pl'], NewFileName), 
-		atomic_list_concat([FileName,'-prolog', '+', URL], NewModule), 
+		(URL\=''->atomic_list_concat([FileName,'-prolog', '+', URL], NewModule); atomic_list_concat([FileName,'-prolog'], NewModule)), 
 		dump(all, NewModule, ExpandedTerms, String), 
 		update_gitty_file(NewFileName, URL, String)) ; true),
 	%print_message(informational, " Terms ~w"-[TaxlogTerms]), 
@@ -292,7 +284,7 @@ user:term_expansion(NiceTerm, ExpandedTerms) :-  % hook for LE extension
 		( myDeclaredModule(Name),  % the module in the editor
 		split_module_name(Name, FileName, URL), 
 		atomic_list_concat([FileName,'-scasp','.pl'], NewFileName), 
-		atomic_list_concat([FileName,'-scasp', '+', URL], NewModule), 
+		(URL\=''->atomic_list_concat([FileName,'-prolog', '+', URL], NewModule); atomic_list_concat([FileName,'-prolog'], NewModule)), 
 		dump_scasp(NewModule, ExpandedTerms, String), 
 		update_gitty_file(NewFileName, URL, String)) ; true). 
 user:term_expansion(T,NT) :- taxlog2prolog(T,_,NT).
