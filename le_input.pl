@@ -1341,7 +1341,7 @@ op2tokens(with,[with],[with]).
 op2tokens(::,[:,:],[:,:]).
 op2tokens(->,[-,>],[-,>]).
 op2tokens(:,[:],[:]).
-op2tokens(,,[',,,'],[',,,']).
+%op2tokens(,,[',,,'],[',,,']).
 op2tokens(:=,[:,=],[:,=]).
 op2tokens(==,[=,=],[=,=]).
 op2tokens(:-,[:,-],[:,-]).
@@ -2181,7 +2181,7 @@ answer(English, Arg, EnglishAnswer) :-
 
 % answer/4
 % answer(+English, with(+Scenario), -Explanations, -Result) :-
-% answer(at(English, Module), Arg, E, Result) :- trace,
+% answer(at(English, Module), Arg, E, Result) :- %trace,
 answer(English, Arg, E, Result) :- %trace, 
     parsed, myDeclaredModule(Module), 
     pengine_self(SwishModule), 
@@ -2213,7 +2213,7 @@ prepare_query(English, Arg, SwishModule, Goal, Facts, Command) :- %trace,
     extract_goal_command(Goal, SwishModule, _InnerGoal, Command), !.  
     %print_message(informational, "Command: ~w"-[Command]). 
 
-show_question(GoalName, Scenario, NLQuestion) :-   trace, 
+show_question(GoalName, Scenario, NLQuestion) :-   %trace, 
     pengine_self(M), 
     (M:source_lang(en) -> print_message(informational, "Query ~w with ~w: ~w"-[GoalName, Scenario, NLQuestion]); true),
     (M:source_lang(fr) -> print_message(informational, "La question ~w avec ~w: ~w"-[GoalName, Scenario, NLQuestion]); true),
@@ -2558,17 +2558,15 @@ dump(all, Module, List, String) :-
     string_concat(Module01, "\', []).\n", TopHeadString),  
     dump(source_lang, SourceLang), 
     string_concat(TopHeadString, SourceLang, TopMost), 
-	string_concat(TopMost, StringTemplates, HeadString), 
-	string_concat(HeadString, StringRules, String1),
+	string_concat(TopMost, StringTemplates, HeadString),  
+    string_concat(HeadString, "prolog_le(verified).\n", String0), % it has to be here to set the context
+	string_concat(String0, StringRules, String1),
     string_concat(String1, StringScenarios, String2),
-    string_concat(String2, StringQueries, String3), 
-    string_concat(String3, "prolog_le(verified).\n", String).   
+    string_concat(String2, StringQueries, String).   
 
 dump_scasp(_Module, List, String) :-
 	dump(templates_scasp, StringTemplates), 
 	dump(rules, List, StringRules),
-    %dump(scenarios, List, StringScenarios),
-    %dump(queries, List, StringQueries), 
     dump(scasp_scenarios_queries, List, StringQueriesScenarios), 
     %string_concat(":-module(\'", Module, Module01),
     %string_concat(Module01, "\', []).\n", TopHeadString), 
@@ -2579,10 +2577,9 @@ dump_scasp(_Module, List, String) :-
                 ":- style_check(-singleton).\n:- set_prolog_flag(scasp_forall, prev).\n", SCAPSHeader),
     string_concat(TopMost, SCAPSHeader, Header), 
 	string_concat(Header, StringTemplates, HeadString), 
-	string_concat(HeadString, StringRules, String1),
     %string_concat(String1, "prolog_le(verified).\n", String2), % not need for scasp
+	string_concat(HeadString, StringRules, String1),
     string_concat(String1, StringQueriesScenarios, String). 
-    % string_concat(String2, StringQueries, String3), .  
 
 restore_dicts :- %trace, 
     %print_message(informational, "dictionaries being restored"),
@@ -2592,18 +2589,19 @@ restore_dicts :- %trace,
     append(OrderedEntries, Types, MRules), 
     assertall(MRules), !. % asserting contextual information
 
-restore_dicts(DictEntries) :- trace, 
+restore_dicts(DictEntries) :- %trace, 
     pengine_self(SwishModule),
     (SwishModule:local_dict(_,_,_) -> findall(dict(A,B,C), SwishModule:local_dict(A,B,C), ListDict) ; ListDict = []),
     (SwishModule:local_meta_dict(_,_,_) -> findall(meta_dict(A,B,C), SwishModule:local_meta_dict(A,B,C), ListMetaDict); ListMetaDict = []),
     append(ListDict, ListMetaDict, DictEntries), 
     %print_message(informational, "the dictionaries being restored are ~w"-[DictEntries]),
     collect_all_preds(SwishModule, DictEntries, Preds),
+    %print_message(informational, "the dictionaries being set dynamics are ~w"-[Preds]),
     declare_preds_as_dynamic(SwishModule, Preds). 
 
 % collect_all_preds/3
-collect_all_preds(M, DictEntries, ListPreds) :-
-    findall(AA, ((member(dict(A,_,_), DictEntries); member(meta_dict(A,_,_), DictEntries)), A\=[], AA =.. A, not(clause(M:AA,_))), ListPreds). 
+collect_all_preds(_, DictEntries, ListPreds) :-
+    findall(AA, ((member(dict(A,_,_), DictEntries); member(meta_dict(A,_,_), DictEntries)), A\=[], AA =.. A, not(predicate_property(AA,built_in))), ListPreds). 
 
 declare_preds_as_dynamic(_, []) :- !. 
 declare_preds_as_dynamic(M, [F|R]) :- functor(F, P, A),  % facts are the templates now
@@ -2658,7 +2656,7 @@ user:(show(Something, With) ):-
 
 user:is_it_illegal( EnText, Scenario) :- is_it_illegal( EnText, Scenario).
 
-user:query(Name, Goal) :- query(Name, Goal).
+%user:query(Name, Goal) :- query(Name, Goal).
 
 user:holds(Fluent, Time) :- holds(Fluent, Time). 
 
