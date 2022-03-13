@@ -95,6 +95,7 @@ load_named_file(File,Module,InGittyStorage) :-
     (xref_source(Module,[silent(true)]) -> true ; print_message(warning,"failed xref_source"-[])).
 
 load_named_file_(File,Module,true) :- !,
+    %print_message(informational, "load File into Module ~w ~w\n"-[File, Module]), 
     use_gitty_file(Module:File,[/* useless: module(Module)*/]).
 load_named_file_(File,Module,false) :- 
     load_files(File,[module(Module)]).

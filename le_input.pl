@@ -107,7 +107,7 @@ query three is:
 :- use_module(library(prolog_stack)).
 :- thread_local text_size/1, error_notice/4, dict/3, meta_dict/3, example/2, local_dict/3, local_meta_dict/3,
                 last_nl_parsed/1, kbname/1, happens/2, initiates/3, terminates/3, is_type/1,
-                predicates/1, events/1, fluents/1, metapredicates/1, parsed/0, source_lang/1.  
+                predicates/1, events/1, fluents/1, metapredicates/1, parsed/0, source_lang/1, including/0.  
 :- discontiguous statement/3, declaration/4, _:example/2, _:query/2. 
 
 % Main clause: text_to_logic(+String,-Clauses) is det
@@ -129,6 +129,7 @@ text_to_logic(String_, Translation) :-
 % document/3 (or document/1 in dcg)
 document(Translation, In, Rest) :- 
     (parsed -> retract(parsed); true), 
+    (including -> retract(including); true), 
     (source_lang(_L) -> retractall(source_lang(_)) ; true),
     phrase(header(Settings), In, AfterHeader), !, %print_message(informational, "Declarations completed: ~w"-[Settings]), 
     phrase(content(Content), AfterHeader, Rest), 
@@ -147,18 +148,16 @@ header(Settings, In, Next) :-
       [(text_size(TextSize))|Settings], % is text_size being used? % asserting the Settings too! predicates, events and fluents
     ( member(in_files(ModuleNames), Settings) ->   % include all those files and get additional DictEntries before ordering
       ( print_message(informational, "Module Names ~w\n"-[ModuleNames]),
-        %load_named_file('including.pl', 'including+http://tests.com', true)
-        %load_named_file('citizenship.pl', 'citizenship_trust+https://www.legislation.gov.uk/ukpga/1981/61/section/1', true),
-        %load_named_file('citizenship.pl', _, true),
-        %load_named_file('subset.pl', 'subset+http://tests.com', true)
-        load_all_files(ModuleNames), 
-        restore_dicts(RestoredDictEntries)
+        assertz(including), 
+        load_all_files(ModuleNames, RestoredDictEntries) 
+        %restore_dicts(RestoredDictEntries),
+        %print_message(informational, "Restored Entries ~w\n"-[RestoredDictEntries])
       )
     ; RestoredDictEntries = [] ), 
     append(DictEntries, RestoredDictEntries, AllDictEntries), 
     order_templates(AllDictEntries, OrderedEntries), 
     process_types_dict(OrderedEntries, Types), 
-    %print_message(informational, "types ~w "-[Types]),
+    print_message(informational, "types ~w "-[Types]),
     append(OrderedEntries, RulesforErrors, SomeRules),
     append(SomeRules, Types, MRules), 
     assertall(MRules), !. % asserting contextual information
@@ -166,17 +165,33 @@ header(_, Rest, _) :-
     asserterror('LE error in the header ', Rest), 
     fail.
 
-%load_all_files/1
+%load_all_files/2
 %load the prolog files that correspond to the modules names listed in the section of inclusion
-load_all_files([]).
-load_all_files([Name|R]) :- 
+%and produces the list of entries that must be added to the dictionaries
+load_all_files([], []).
+load_all_files([Name|R], AllDictEntries) :- 
     split_module_name(Name, File, URL), 
     concat(File, "-prolog", Part1), concat(Part1, ".pl", Filename),  
-    (URL\=''->atomic_list_concat([File,'-prolog', '+', URL], NewName); atomic_list_concat([Filename,'-prolog'], NewName)), 
-    print_message(informational, "Loading ~w"-[Filename]),
+    (URL\=''->atomic_list_concat([File,'-prolog', '+', URL], NewName); atomic_list_concat([File,'-prolog'], NewName)), 
+    %print_message(informational, "Loading ~w"-[Filename]), 
+    %consult(Filename), %iri_scheme `pengine' does not exist
+    %load_files(Filename, [module(NewName)]), %iri_scheme `pengine' does not exist
+    %load_named_file(Filename, NewName, false), %iri_scheme `pengine' does not exist
+    %pengine_self(M), 
+    %myDeclaredModule(TargetModule),
     load_named_file(Filename, NewName, true), 
-    print_message(informational, "Loaded ~w"-[Filename]),
-    load_all_files(R). 
+    listing(user:local_dict), 
+    %print_message(informational, "the dictionaries of ~w being restored into module ~w"-[SwishModule]),
+    (NewName:local_dict(_,_,_) -> findall(dict(A,B,C), NewName:local_dict(A,B,C), ListDict) ; ListDict = []),
+    (NewName:local_meta_dict(_,_,_) -> findall(meta_dict(A,B,C), NewName:local_meta_dict(A,B,C), ListMetaDict); ListMetaDict = []),
+    append(ListDict, ListMetaDict, DictEntries), 
+    %print_message(informational, "the dictionaries being restored are ~w"-[DictEntries]),
+    %collect_all_preds(SwishModule, DictEntries, Preds),
+    %print_message(informational, "the dictionaries being set dynamics are ~w"-[Preds]),
+    %declare_preds_as_dynamic(SwishModule, Preds)
+    %print_message(informational, "Loaded ~w"-[Filename]),
+    load_all_files(R, RDict),
+    append(RDict, DictEntries, AllDictEntries). 
 
 % Experimental rules for processing types:
 process_types_dict(Dictionary, Type_entries) :- 
@@ -2391,7 +2406,8 @@ show(prolog) :-
 show(rules) :- % trace, 
     pengine_self(SwishModule), 
     findall((Pred :- Body), 
-        (dict(PredicateElements, _, _), Pred=..PredicateElements, clause(SwishModule:Pred, Body_), unwrapBody(Body_, Body)), Predicates),
+        (dict(PredicateElements, _, _),  PredicateElements\=[], Pred=..PredicateElements,
+        clause(SwishModule:Pred, Body_), unwrapBody(Body_, Body)), Predicates),
     forall(member(Clause, Predicates), portray_clause(Clause)).
 
 % 
@@ -2405,7 +2421,8 @@ show(rules) :- % trace,
 show(metarules) :- % trace, 
     pengine_self(SwishModule), 
     findall((Pred :- Body), 
-        (meta_dict(PredicateElements, _, _), Pred=..PredicateElements, clause(SwishModule:Pred, Body_), unwrapBody(Body_, Body)), Predicates),
+        (meta_dict(PredicateElements, _, _), PredicateElements\=[], 
+         Pred=..PredicateElements, clause(SwishModule:Pred, Body_), unwrapBody(Body_, Body)), Predicates),
     forall(member(Clause, Predicates), portray_clause(Clause)).
 
 show(queries) :- % trace, 
@@ -2590,13 +2607,18 @@ restore_dicts :- %trace,
     assertall(MRules), !. % asserting contextual information
 
 restore_dicts(DictEntries) :- %trace, 
-    pengine_self(SwishModule),
+    pengine_self(SwishModule), 
+    %myDeclaredModule(SwishModule),
+    %SwishModule=user,
+    print_message(informational, "the dictionaries being restored into module ~w"-[SwishModule]),
     (SwishModule:local_dict(_,_,_) -> findall(dict(A,B,C), SwishModule:local_dict(A,B,C), ListDict) ; ListDict = []),
     (SwishModule:local_meta_dict(_,_,_) -> findall(meta_dict(A,B,C), SwishModule:local_meta_dict(A,B,C), ListMetaDict); ListMetaDict = []),
+    %(local_dict(_,_,_) -> findall(dict(A,B,C), local_dict(A,B,C), ListDict) ; ListDict = []),
+    %(local_meta_dict(_,_,_) -> findall(meta_dict(A,B,C), local_meta_dict(A,B,C), ListMetaDict); ListMetaDict = []),
     append(ListDict, ListMetaDict, DictEntries), 
-    %print_message(informational, "the dictionaries being restored are ~w"-[DictEntries]),
+    print_message(informational, "the dictionaries being restored are ~w"-[DictEntries]),
     collect_all_preds(SwishModule, DictEntries, Preds),
-    %print_message(informational, "the dictionaries being set dynamics are ~w"-[Preds]),
+    print_message(informational, "the dictionaries being set dynamics are ~w"-[Preds]),
     declare_preds_as_dynamic(SwishModule, Preds). 
 
 % collect_all_preds/3
@@ -2687,7 +2709,7 @@ le_taxlog_translate( es(Text), File, BaseLine, Terms) :-
     text_to_logic(Text, Terms) -> true; showErrors(File,BaseLine).
 le_taxlog_translate( prolog_le(verified), _, _, prolog_le(verified)) :- %trace, 
     assertz(parsed),  
-    restore_dicts. 
+    including -> true; restore_dicts. 
 
 combine_list_into_string(List, String) :-
     combine_list_into_string(List, "", String).
