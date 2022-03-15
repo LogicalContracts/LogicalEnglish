@@ -158,7 +158,7 @@ header(Settings, In, Next) :-
     append(DictEntries, RestoredDictEntries, AllDictEntries), 
     order_templates(AllDictEntries, OrderedEntries), 
     process_types_dict(OrderedEntries, Types), 
-    print_message(informational, "types ~w rules ~w"-[Types, CollectedRules]),
+    %print_message(informational, "types ~w rules ~w"-[Types, CollectedRules]),
     append(OrderedEntries, RulesforErrors, SomeRules),
     append(SomeRules, Types, MRules), 
     assertall(MRules), !. % asserting contextual information
