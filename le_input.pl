@@ -143,21 +143,22 @@ header(Settings, In, Next) :-
     ( phrase(settings(DictEntries, Settings_), In, Next) -> 
         ( member(target(_), Settings_) -> Settings1 = Settings_ ; Settings1 = [target(taxlog)|Settings_] )  % taxlog as default
     ; (DictEntries = [], Settings1 = [target(taxlog)] ) ), % taxlog as default
-    Settings = [query(null, true), example(null, [])|Settings1], % a hack to stop the loop when query is empty
+    Settings2 = [query(null, true), example(null, [])|Settings1], % a hack to stop the loop when query is empty
     RulesforErrors = % rules for errors that have been statically added
-      [(text_size(TextSize))|Settings], % is text_size being used? % asserting the Settings too! predicates, events and fluents
-    ( member(in_files(ModuleNames), Settings) ->   % include all those files and get additional DictEntries before ordering
-      ( print_message(informational, "Module Names ~w\n"-[ModuleNames]),
+      [(text_size(TextSize))|Settings2], % is text_size being used? % asserting the Settings too! predicates, events and fluents
+    ( member(in_files(ModuleNames), Settings2) ->   % include all those files and get additional DictEntries before ordering
+      ( %print_message(informational, "Module Names ~w\n"-[ModuleNames]),
         assertz(including), 
-        load_all_files(ModuleNames, RestoredDictEntries) 
+        load_all_files(ModuleNames, RestoredDictEntries, CollectedRules) 
         %restore_dicts(RestoredDictEntries),
         %print_message(informational, "Restored Entries ~w\n"-[RestoredDictEntries])
       )
-    ; RestoredDictEntries = [] ), 
+    ; ( RestoredDictEntries = [], CollectedRules = [] ) ), 
+    append(Settings2, CollectedRules, Settings),  % sending rules for term expansion
     append(DictEntries, RestoredDictEntries, AllDictEntries), 
     order_templates(AllDictEntries, OrderedEntries), 
     process_types_dict(OrderedEntries, Types), 
-    print_message(informational, "types ~w "-[Types]),
+    %print_message(informational, "types ~w rules ~w"-[Types, CollectedRules]),
     append(OrderedEntries, RulesforErrors, SomeRules),
     append(SomeRules, Types, MRules), 
     assertall(MRules), !. % asserting contextual information
@@ -168,8 +169,8 @@ header(_, Rest, _) :-
 %load_all_files/2
 %load the prolog files that correspond to the modules names listed in the section of inclusion
 %and produces the list of entries that must be added to the dictionaries
-load_all_files([], []).
-load_all_files([Name|R], AllDictEntries) :- 
+load_all_files([], [], []).
+load_all_files([Name|R], AllDictEntries, AllRules) :- 
     split_module_name(Name, File, URL), 
     concat(File, "-prolog", Part1), concat(Part1, ".pl", Filename),  
     (URL\=''->atomic_list_concat([File,'-prolog', '+', URL], NewName); atomic_list_concat([File,'-prolog'], NewName)), 
@@ -180,18 +181,26 @@ load_all_files([Name|R], AllDictEntries) :-
     %pengine_self(M), 
     %myDeclaredModule(TargetModule),
     load_named_file(Filename, NewName, true), 
-    listing(user:local_dict), 
+    %listing(user:local_dict), 
+    %listing(NewName:_), 
     %print_message(informational, "the dictionaries of ~w being restored into module ~w"-[SwishModule]),
     (NewName:local_dict(_,_,_) -> findall(dict(A,B,C), NewName:local_dict(A,B,C), ListDict) ; ListDict = []),
     (NewName:local_meta_dict(_,_,_) -> findall(meta_dict(A,B,C), NewName:local_meta_dict(A,B,C), ListMetaDict); ListMetaDict = []),
     append(ListDict, ListMetaDict, DictEntries), 
     %print_message(informational, "the dictionaries being restored are ~w"-[DictEntries]),
+    %listing(NewName:_), 
+    findall(if(H,B), (member(dict(E, _,_), DictEntries), E\=[], H=..E, clause(NewName:H, B)), Rules), 
+    findall(Pred, (member(dict(E,_,_), ListDict), E\=[], Pred=..E), ListOfPred),
+    findall(MPred, (member(dict(ME,_,_), ListMetaDict), ME\=[], MPred=..ME), ListOfMPred),
+    append([predicates(ListOfPred), metapredicates(ListOfMPred)], Rules, TheseRules), % for term expansion     
+    %print_message(informational, "rules to copy ~w"-[Rules]),
     %collect_all_preds(SwishModule, DictEntries, Preds),
     %print_message(informational, "the dictionaries being set dynamics are ~w"-[Preds]),
     %declare_preds_as_dynamic(SwishModule, Preds)
     %print_message(informational, "Loaded ~w"-[Filename]),
-    load_all_files(R, RDict),
-    append(RDict, DictEntries, AllDictEntries). 
+    load_all_files(R, RDict, NextRules),
+    append(RDict, DictEntries, AllDictEntries),
+    append(TheseRules, NextRules, AllRules). 
 
 % Experimental rules for processing types:
 process_types_dict(Dictionary, Type_entries) :- 
@@ -1869,7 +1878,7 @@ preposition(by).
 assertall([]).
 assertall([F|R]) :-
     not(asserted(F)),
-    %print_message(informational, "Asserting"-[F]),
+    %print_message(informational, "Asserting ~w"-[F]),
     assertz(F), !,
     assertall(R).
 assertall([_F|R]) :-
