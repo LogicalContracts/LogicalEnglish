@@ -2237,21 +2237,19 @@ prepare_query(English, Arg, SwishModule, Goal, Facts, Command) :- %trace,
     extract_goal_command(Goal, SwishModule, _InnerGoal, Command), !.  
     %print_message(informational, "Command: ~w"-[Command]). 
 
-show_question(GoalName, Scenario, NLQuestion) :-   %trace, 
-    pengine_self(M), 
-    (M:source_lang(en) -> print_message(informational, "Query ~w with ~w: ~w"-[GoalName, Scenario, NLQuestion]); true),
-    (M:source_lang(fr) -> print_message(informational, "La question ~w avec ~w: ~w"-[GoalName, Scenario, NLQuestion]); true),
-    (M:source_lang(it) -> print_message(informational, "Il interrogativo ~w con ~w: ~w"-[GoalName, Scenario, NLQuestion]); true), 
-    (M:source_lang(es) -> print_message(informational, "La pregunta ~w con ~w: ~w"-[GoalName, Scenario, NLQuestion]); true),   
+show_question(GoalName, Scenario, NLQuestion) :-   
+    (source_lang(en) -> print_message(informational, "Query ~w with ~w: ~w"-[GoalName, Scenario, NLQuestion]); true),
+    (source_lang(fr) -> print_message(informational, "La question ~w avec ~w: ~w"-[GoalName, Scenario, NLQuestion]); true),
+    (source_lang(it) -> print_message(informational, "Domanda ~w con ~w: ~w"-[GoalName, Scenario, NLQuestion]); true), 
+    (source_lang(es) -> print_message(informational, "La pregunta ~w con ~w: ~w"-[GoalName, Scenario, NLQuestion]); true),   
     !.  
 
 show_answer(Goal) :-
     translate_goal_into_LE(Goal, RawAnswer), name_as_atom(RawAnswer, NLAnswer), 
-    pengine_self(M), 
-    (M:source_lang(en) -> print_message(informational, "Answer: ~w"-[NLAnswer]); true), 
-    (M:source_lang(fr) -> print_message(informational, "La réponse: ~w"-[NLAnswer]); true), 
-    (M:source_lang(it) -> print_message(informational, "Il responso: ~w"-[NLAnswer]); true), 
-    (M:source_lang(es) -> print_message(informational, "La respuesta: ~w"-[NLAnswer]); true), 
+    (source_lang(en) -> print_message(informational, "Answer: ~w"-[NLAnswer]); true), 
+    (source_lang(fr) -> print_message(informational, "La réponse: ~w"-[NLAnswer]); true), 
+    (source_lang(it) -> print_message(informational, "Risposta: ~w"-[NLAnswer]); true), 
+    (source_lang(es) -> print_message(informational, "La respuesta: ~w"-[NLAnswer]); true), 
     !. 
 
 % translate_goal_into_LE/2
