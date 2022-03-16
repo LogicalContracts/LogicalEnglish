@@ -140,31 +140,33 @@ document(Translation, In, Rest) :-
 % header/3
 header(Settings, In, Next) :-
     length(In, TextSize), % after comments were removed
-    ( phrase(settings(DictEntries, Settings_), In, Next) -> 
-        ( member(target(_), Settings_) -> Settings1 = Settings_ ; Settings1 = [target(taxlog)|Settings_] )  % taxlog as default
-    ; (DictEntries = [], Settings1 = [target(taxlog)] ) ), % taxlog as default
-    Settings2 = [query(null, true), example(null, [])|Settings1], % a hack to stop the loop when query is empty
-    RulesforErrors = % rules for errors that have been statically added
-      [(text_size(TextSize))|Settings2], % is text_size being used? % asserting the Settings too! predicates, events and fluents
-    ( member(in_files(ModuleNames), Settings2) ->   % include all those files and get additional DictEntries before ordering
-      ( %print_message(informational, "Module Names ~w\n"-[ModuleNames]),
-        assertz(including), 
-        load_all_files(ModuleNames, RestoredDictEntries, CollectedRules) 
-        %restore_dicts(RestoredDictEntries),
-        %print_message(informational, "Restored Entries ~w\n"-[RestoredDictEntries])
-      )
-    ; ( RestoredDictEntries = [], CollectedRules = [] ) ), 
+    phrase(settings(DictEntries, Settings_), In, Next), 
+    fix_settings(Settings_, Settings2), 
+    RulesforErrors = [(text_size(TextSize))|Settings2], % is text_size being used? % asserting the Settings too! predicates, events and fluents
+    included_files(Settings2, RestoredDictEntries, CollectedRules), 
     append(Settings2, CollectedRules, Settings),  % sending rules for term expansion
     append(DictEntries, RestoredDictEntries, AllDictEntries), 
     order_templates(AllDictEntries, OrderedEntries), 
     process_types_dict(OrderedEntries, Types), 
-    %print_message(informational, "types ~w rules ~w"-[Types, CollectedRules]),
+    print_message(informational, "types ~w rules ~w"-[Types, CollectedRules]),
     append(OrderedEntries, RulesforErrors, SomeRules),
     append(SomeRules, Types, MRules), 
     assertall(MRules), !. % asserting contextual information
 header(_, Rest, _) :- 
     asserterror('LE error in the header ', Rest), 
     fail.
+
+fix_settings(Settings_, Settings2) :-
+    ( member(target(_), Settings_) -> Settings1 = Settings_ ; Settings1 = [target(taxlog)|Settings_] ), !,  % taxlog as default
+    Settings2 = [query(null, true), example(null, [])|Settings1]. % a hack to stop the loop when query is empty
+
+included_files(Settings2, RestoredDictEntries, CollectedRules) :-
+    member(in_files(ModuleNames), Settings2),   % include all those files and get additional DictEntries before ordering
+    %print_message(informational, "Module Names ~w\n"-[ModuleNames]),
+    assertz(including), !, % cut to prevent escaping failure of load_all_files
+    load_all_files(ModuleNames, RestoredDictEntries, CollectedRules). 
+    %print_message(informational, "Restored Entries ~w\n"-[RestoredDictEntries]). 
+included_files(_, [], []). 
 
 %load_all_files/2
 %load the prolog files that correspond to the modules names listed in the section of inclusion
@@ -174,20 +176,12 @@ load_all_files([Name|R], AllDictEntries, AllRules) :-
     split_module_name(Name, File, URL), 
     concat(File, "-prolog", Part1), concat(Part1, ".pl", Filename),  
     (URL\=''->atomic_list_concat([File,'-prolog', '+', URL], NewName); atomic_list_concat([File,'-prolog'], NewName)), 
-    %print_message(informational, "Loading ~w"-[Filename]), 
-    %consult(Filename), %iri_scheme `pengine' does not exist
-    %load_files(Filename, [module(NewName)]), %iri_scheme `pengine' does not exist
-    %load_named_file(Filename, NewName, false), %iri_scheme `pengine' does not exist
-    %pengine_self(M), 
-    %myDeclaredModule(TargetModule),
-    load_named_file(Filename, NewName, true), 
-    %listing(user:local_dict), 
-    %listing(NewName:_), 
+    load_named_file(Filename, NewName, true), !, 
     %print_message(informational, "the dictionaries of ~w being restored into module ~w"-[SwishModule]),
     (NewName:local_dict(_,_,_) -> findall(dict(A,B,C), NewName:local_dict(A,B,C), ListDict) ; ListDict = []),
     (NewName:local_meta_dict(_,_,_) -> findall(meta_dict(A,B,C), NewName:local_meta_dict(A,B,C), ListMetaDict); ListMetaDict = []),
     append(ListDict, ListMetaDict, DictEntries), 
-    %print_message(informational, "the dictionaries being restored are ~w"-[DictEntries]),
+    print_message(informational, "the dictionaries being restored are ~w"-[DictEntries]),
     %listing(NewName:_), 
     findall(if(H,B), (member(dict(E, _,_), DictEntries), E\=[], H=..E, clause(NewName:H, B)), Rules), 
     findall(Pred, (member(dict(E,_,_), ListDict), E\=[], Pred=..E), ListOfPred),
@@ -201,6 +195,8 @@ load_all_files([Name|R], AllDictEntries, AllRules) :-
     load_all_files(R, RDict, NextRules),
     append(RDict, DictEntries, AllDictEntries),
     append(TheseRules, NextRules, AllRules). 
+load_all_files([Filename|_], [], []) :-
+    print_message(informational, "Failed to load file ~w"-[Filename]), fail.   
 
 % Experimental rules for processing types:
 process_types_dict(Dictionary, Type_entries) :- 
@@ -240,13 +236,13 @@ template_before([H1|R1], [H2|R2]) :- H1=@=H2, template_before(R1, R2).
 settings(AllR, AllS) --> 
     spaces_or_newlines(_), declaration(Rules,Setting), settings(RRules, RS), 
     {append(Setting, RS, AllS), append(Rules, RRules, AllR)}, !.
-settings([], [], Stay, Stay) :-
+settings([], [], Stay, Stay) :- !, 
     ( phrase(rules_previous(_), Stay, _) ; 
       phrase(scenario_, Stay, _)  ;  
-      phrase(query_, Stay, _) ), !.  
+      phrase(query_, Stay, _) ).  
     % settings ending with the start of the knowledge base or scenarios or queries. 
 settings(_, _, Rest, _) :- 
-    asserterror('LE error in the declarations ', Rest), 
+    asserterror('LE error in the declarations on or before ', Rest), 
     fail.
 settings([], [], Stay, Stay).
 
@@ -315,7 +311,7 @@ declaration([kbname(KBName)], [in_files(Files)]) -->
     files_to_include_previous(KBName), list_of_files(Files), !.
 %
 declaration(_, _, Rest, _) :- 
-    asserterror('LE error in a declaration ', Rest), 
+    asserterror('LE error in a declaration on or before ', Rest), 
     fail.
 
 colon_or_not_ --> [':'], spaces(_).
@@ -1054,7 +1050,13 @@ list_words_to_codes([Word|RestW], Out) :-
     atom_codes(Word, Codes),
     remove_quotes(Codes, CleanCodes), 
     list_words_to_codes(RestW, Next),
-    (Next=[]-> Out=CleanCodes; append(CleanCodes, [32|Next], Out)), !. 
+    (Next=[]-> Out=CleanCodes;
+        % if it comes the symbol _ + - / \ or the previous is only + o - then no space is added between words
+        (Next=[95|_]; Next=[43|_]; Next=[45|_]; Next=[47|_]; Next=[92|_];
+         CleanCodes=[43]; CleanCodes=[45])->  
+            append(CleanCodes, Next, Out);
+            append(CleanCodes, [32|Next], Out)
+    ), !. 
 
 remove_quotes([], []) :-!.
 remove_quotes([39|RestI], RestC) :- remove_quotes(RestI, RestC), !.
