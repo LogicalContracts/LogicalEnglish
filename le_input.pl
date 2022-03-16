@@ -148,7 +148,7 @@ header(Settings, In, Next) :-
     append(DictEntries, RestoredDictEntries, AllDictEntries), 
     order_templates(AllDictEntries, OrderedEntries), 
     process_types_dict(OrderedEntries, Types), 
-    print_message(informational, "types ~w rules ~w"-[Types, CollectedRules]),
+    %print_message(informational, "types ~w rules ~w"-[Types, CollectedRules]),
     append(OrderedEntries, RulesforErrors, SomeRules),
     append(SomeRules, Types, MRules), 
     assertall(MRules), !. % asserting contextual information
@@ -181,7 +181,7 @@ load_all_files([Name|R], AllDictEntries, AllRules) :-
     (NewName:local_dict(_,_,_) -> findall(dict(A,B,C), NewName:local_dict(A,B,C), ListDict) ; ListDict = []),
     (NewName:local_meta_dict(_,_,_) -> findall(meta_dict(A,B,C), NewName:local_meta_dict(A,B,C), ListMetaDict); ListMetaDict = []),
     append(ListDict, ListMetaDict, DictEntries), 
-    print_message(informational, "the dictionaries being restored are ~w"-[DictEntries]),
+    %print_message(informational, "the dictionaries being restored are ~w"-[DictEntries]),
     %listing(NewName:_), 
     findall(if(H,B), (member(dict(E, _,_), DictEntries), E\=[], H=..E, clause(NewName:H, B)), Rules), 
     findall(Pred, (member(dict(E,_,_), ListDict), E\=[], Pred=..E), ListOfPred),
