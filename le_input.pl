@@ -92,10 +92,14 @@ query three is:
     op(800,fx,user:risposta), % to support querying in italian
     op(850,xfx,user:con), % to support querying in italian
     op(800,fx,user:responde), % to support querying in spanish
-    op(800,fx,user:show), % to support querying
+    %op(1150,fx,user:show), % to support querying
     op(850,xfx,user:of), % to support querying
-    op(850,fx,user:'#pred'), % to support scasp 
-    op(800,xfx,user:'::'), % to support scasp 
+    %op(850,fx,user:'#pred'), % to support scasp 
+    %op(800,xfx,user:'::'), % to support scasp 
+    op(950, xfx, ::),           % pred not x :: "...".
+    op(1200, fx, #),
+    op(1150, fx, pred),
+    op(1150, fx, show),
     dictionary/3, meta_dictionary/3,
     translate_goal_into_LE/2, name_as_atom/2, parsed/0, source_lang/1, 
     dump/4, dump/3, dump/2, dump_scasp/3, split_module_name/3
@@ -107,7 +111,7 @@ query three is:
 :- use_module(library(prolog_stack)).
 :- thread_local text_size/1, error_notice/4, dict/3, meta_dict/3, example/2, local_dict/3, local_meta_dict/3,
                 last_nl_parsed/1, kbname/1, happens/2, initiates/3, terminates/3, is_type/1,
-                predicates/1, events/1, fluents/1, metapredicates/1, parsed/0, source_lang/1, including/0.  
+                predicates/1, events/1, fluents/1, metapredicates/1, parsed/0, source_lang/1, including/0, just_saved_scasp/2. 
 :- discontiguous statement/3, declaration/4, _:example/2, _:query/2. 
 
 % Main clause: text_to_logic(+String,-Clauses) is det
@@ -124,7 +128,7 @@ text_to_logic(String_, Translation) :-
     phrase(document(Translation), CTokens). 
     %( phrase(document(Translation), CTokens) -> 
     %    ( print_message(informational, "Translation: ~w"-[Translation]) )
-    %;   ( print_message(informational, "Translation failed: "-[]), Translation=[], fail)). 
+    %;   ( print_message(informational, "Translation failed: ~w"-[CTokens]), Translation=[], fail)). 
 
 % document/3 (or document/1 in dcg)
 document(Translation, In, Rest) :- 
@@ -138,7 +142,7 @@ document(Translation, In, Rest) :-
 
 % header parses all the declarations and assert them into memory to be invoked by the rules. 
 % header/3
-header(Settings, In, Next) :-
+header(Settings, In, Next) :- 
     length(In, TextSize), % after comments were removed
     phrase(settings(DictEntries, Settings_), In, Next), 
     fix_settings(Settings_, Settings2), 
@@ -2150,53 +2154,44 @@ interrupted(T1, Fluent, T2) :- %trace,
 % answer(+Query or Query Expression)
 answer(English) :- %trace, 
     answer(English, empty). 
-    % parsed, 
-    % pengine_self(SwishModule), 
-    % (translate_command(SwishModule, English, GoalName, Goal, Scenario) -> true 
-    % ; ( print_message(error, "Don't understand this question: ~w "-[English]), !, fail ) ), % later -->, Kbs),
-    % copy_term(Goal, CopyOfGoal),  
-    % translate_goal_into_LE(CopyOfGoal, RawGoal), name_as_atom(RawGoal, EnglishQuestion), 
-    % print_message(informational, "Query ~w with ~w: ~w"-[GoalName, Scenario, EnglishQuestion]),
-    % %print_message(informational, "Scenario: ~w"-[Scenario]),
-    % % assert facts in scenario
-    % (Scenario==noscenario -> Facts = [] ; 
-    %     (SwishModule:example(Scenario, [scenario(Facts, _)]) -> 
-    %         true;  print_message(error, "Scenario: ~w does not exist"-[Scenario]))), !,  
-    % %print_message(informational, "Facts: ~w"-[Facts]), 
-    % extract_goal_command(Goal, SwishModule, _InnerGoal, Command), 
-    % %print_message(informational, "Command: ~w"-[Command]),
-    % setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
-    %         catch((true, Command), Error, ( print_message(error, Error), fail ) ), 
-    %         _Result, 
-    %         retract_facts(SwishModule, Facts)), 
-    % translate_goal_into_LE(Goal, RawAnswer), name_as_atom(RawAnswer, EnglishAnswer),  
-    % print_message(informational, "Answer: ~w"-[EnglishAnswer]).
 
 % answer/2
 % answer(+Query, with(+Scenario))
 answer(English, Arg) :- %trace, 
     parsed,
     prepare_query(English, Arg, SwishModule, Goal, Facts, Command), 
-    setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
+    (SwishModule:just_saved_scasp(FileName, ModuleName) -> 
+        %print_message(informational, "To query file ~w in module ~w "-[FileName, ModuleName]),
+        load_named_file(FileName, ModuleName, true), 
+        %print_message(informational, "loaded scasp ~w "-[FileName]),    
+        setup_call_catcher_cleanup(assert_facts(ModuleName, Facts), 
+            catch(ModuleName:scasp(Goal, [model(_M), tree(_T)]), Error, ( print_message(error, Error), fail ) ), 
+            _Result, 
+        retract_facts(ModuleName, Facts))
+    ;   %print_message(error, "no scasp"-[]),
+        setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
             Command, 
             %call(Command), 
             %catch_with_backtrace(Command, Error, print_message(error, Error)), 
             %catch((true, Command), Error, ( print_message(error, Error), fail ) ), 
             _Result, 
-            retract_facts(SwishModule, Facts)), 
+            retract_facts(SwishModule, Facts)) 
+    ),  
+    %retractall(SwishModule:just_saved_scasp(_, _)), 
     show_answer(Goal). 
 
 % answer/3
 % answer(+English, with(+Scenario), -Result)
 answer(English, Arg, EnglishAnswer) :- 
     parsed, 
-    pengine_self(SwishModule), 
-    translate_command(SwishModule, English, _, Goal, PreScenario), % later -->, Kbs),
-    %copy_term(Goal, CopyOfGoal), 
-    %translate_goal_into_LE(CopyOfGoal, RawGoal), name_as_atom(RawGoal, EnglishQuestion), 
-    ((Arg = with(ScenarioName), PreScenario=noscenario) -> Scenario=ScenarioName; Scenario=PreScenario), 
-    extract_goal_command(Goal, SwishModule, _InnerGoal, Command),
-    (Scenario==noscenario -> Facts = [] ; SwishModule:example(Scenario, [scenario(Facts, _)])), 
+    prepare_query(English, Arg, SwishModule, Goal, Facts, Command), 
+    % pengine_self(SwishModule), 
+    % translate_command(SwishModule, English, _, Goal, PreScenario), % later -->, Kbs),
+    % %copy_term(Goal, CopyOfGoal), 
+    % %translate_goal_into_LE(CopyOfGoal, RawGoal), name_as_atom(RawGoal, EnglishQuestion), 
+    % ((Arg = with(ScenarioName), PreScenario=noscenario) -> Scenario=ScenarioName; Scenario=PreScenario), 
+    % extract_goal_command(Goal, SwishModule, _InnerGoal, Command),
+    % (Scenario==noscenario -> Facts = [] ; SwishModule:example(Scenario, [scenario(Facts, _)])), 
     setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
             catch_with_backtrace(Command, Error, print_message(error, Error)), 
             %catch(Command, Error, ( print_message(error, Error), fail ) ), 
@@ -2221,7 +2216,7 @@ answer(English, Arg, E, Result) :- %trace,
             retract_facts(SwishModule, Facts)). 
 
 % prepare_query/6
-% prepare_query(English, Arguments, Module, Goal, Facts, Command)
+% prepare_query(+English, +Arguments, -Module, -Goal, -Facts, -Command)
 prepare_query(English, Arg, SwishModule, Goal, Facts, Command) :- %trace, 
     %restore_dicts, 
     pengine_self(SwishModule), 
@@ -2516,6 +2511,16 @@ dump(templates, String) :-
     string_concat(String1, String2, String). 
 
 dump(templates_scasp, String) :-
+    findall(Pred/N, ( ( meta_dict([Pred|GoalElements], Types, WordsAnswer) ;
+                   dict([Pred|GoalElements], _, _) ),
+                   length(GoalElements, N) ), 
+        Functors),
+    (Functors\=[] -> 
+        write_functors_to_string(Functors, "", StringFunctors), 
+        string_concat(":- dynamic ", StringFunctors, String0 ),
+        string_concat(String0, ".\n", String1)
+    ;   String1 = ""
+    ), 
     findall(Term, 
         ( ( meta_dict([Pred|GoalElements], Types, WordsAnswer) ;
             dict([Pred|GoalElements], Types, WordsAnswer)),
@@ -2525,8 +2530,8 @@ dump(templates_scasp, String) :-
         Elements = [Goal|LE], 
         numbervars(Elements, 1, _), 
         format(atom(Term), Format, Elements) ), Templates),
-    with_output_to(string(String), forall(member(T, Templates), (atom_string(T, R),write(R),write("\'.\n")))).
-    %)).
+    with_output_to(string(String2), forall(member(T, Templates), (atom_string(T, R),write(R),write("\'.\n")))),
+    string_concat(String1, String2, String). 
 
 dump(source_lang, String) :-
     source_lang(L) -> 
@@ -2545,9 +2550,9 @@ dump(scasp_scenarios_queries, List, String) :-
     %                       ], true)]).
     with_output_to(string(StringScenarios),
         ( forall(member(example(S, [scenario(Scenario, _)]), Scenarios),
-                ( write("/** Scenario "), write(S), write("\n"),
+                ( write("/* Scenario "), write(S), write("\n"), % simple comment not for PlDoc
                   forall(member(Clause, Scenario), portray_clause(Clause)),
-                  write("% **/ \n")
+                  write("% */ \n")
                 )
             )
         )
@@ -2590,14 +2595,14 @@ dump(all, Module, List, String) :-
     string_concat(String1, StringScenarios, String2),
     string_concat(String2, StringQueries, String).   
 
-dump_scasp(_Module, List, String) :-
+dump_scasp(Module, List, String) :-
 	dump(templates_scasp, StringTemplates), 
 	dump(rules, List, StringRules),
     dump(scasp_scenarios_queries, List, StringQueriesScenarios), 
-    %string_concat(":-module(\'", Module, Module01),
-    %string_concat(Module01, "\', []).\n", TopHeadString), 
-    dump(source_lang, TopMost), 
-    %string_concat(TopHeadString, SourceLang, TopMost), 
+    string_concat(":-module(\'", Module, Module01),
+    string_concat(Module01, "\', []).\n", TopHeadString), 
+    dump(source_lang, SourceLang), 
+    string_concat(TopHeadString, SourceLang, TopMost), 
     % headers for scasp
     string_concat("% s(CASP) Programming \n:- use_module(library(scasp)).\n% Uncomment to suppress warnings\n%:- style_check(-discontiguous).\n",
                 ":- style_check(-singleton).\n:- set_prolog_flag(scasp_forall, prev).\n", SCAPSHeader),
@@ -2653,6 +2658,15 @@ split_module_name(Name, File, URL):-
 split_module_name(Name, Name, Name) :- % dangerous. But it maybe needed for earlier taxlog examples. 
 	sub_atom(Name, _, _, _, 'http'), !. 
 
+write_functors_to_string([F/N], Previous, StringFunctors) :- !, 
+    with_output_to(string(StringF), format("~w/~d", [F,N])),
+    string_concat(Previous, StringF, StringFunctors). 
+write_functors_to_string([F/N|R], Previous, StringFunctors) :- !, 
+    write_functors_to_string(R, Previous, NextString), 
+    with_output_to(string(StringF), format("~w/~d, ", [F,N])),
+    string_concat(StringF, NextString, StringFunctors). 
+
+
 %%% ------------------------------------------------ Swish Interface to logical english
 %% based on logicalcontracts' lc_server.pl
 
@@ -2680,10 +2694,10 @@ user:answer( EnText, Scenario, Result) :- answer( EnText, Scenario, Result).
 user:answer( EnText, Scenario, E, Result) :- answer( EnText, Scenario, E, Result).
 
 user:(show Something) :- 
-    show(Something). 
+    le_input:show(Something). 
 
 user:(show(Something, With) ):- 
-    show(Something, With). 
+    le_input:show(Something, With). 
 
 user:is_it_illegal( EnText, Scenario) :- is_it_illegal( EnText, Scenario).
 
