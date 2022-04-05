@@ -451,7 +451,7 @@ rules_previous(KBName) -->
     {name_as_atom(NameWords, KBName)}.
 % spanish: la base de conocimiento <nombre> incluye: 
 rules_previous(KBName) --> 
-    spaces_or_newlines(_), [la], spaces(_), [base], spaces(_), [de], spaces(_), [conocimiento], extract_constant([comprend], NameWords), [incluye], spaces(_), [':'], !, spaces_or_newlines(_),
+    spaces_or_newlines(_), [la], spaces(_), [base], spaces(_), [de], spaces(_), [conocimiento], extract_constant([incluye], NameWords), [incluye], spaces(_), [':'], !, spaces_or_newlines(_),
     {name_as_atom(NameWords, KBName)}.
 
 % scenario_content/1 or /3
@@ -829,7 +829,6 @@ it_is_the_case_that_ --> [it], spaces(_), [is], spaces(_), [the], spaces(_), [ca
 it_is_the_case_that_ --> [es], spaces(_), [el], spaces(_), [caso], spaces(_), [que], spaces(_).  % spanish
 it_is_the_case_that_ --> [c], [A], [est], spaces(_), [le], spaces(_), [cas], spaces(_), [que], spaces(_), {atom_string(A, "'")}. % french
 it_is_the_case_that_ --> [è], spaces(_), [provato], spaces(_), [che], spaces(_). % italian
-it_is_the_case_that_ --> [es], spaces(_), [el], spaces(_), [caso], spaces(_), [que], spaces(_). % italian
 
 is_a_set_of_ --> [is], spaces(_), [a], spaces(_), [set], spaces(_), [of], spaces(_). 
 is_a_set_of_ --> [es], spaces(_), [un],  spaces(_), [conjunto],  spaces(_), [de], spaces(_). % spanish
@@ -1752,6 +1751,28 @@ ordinal(7, 'septième').
 ordinal(8, 'huitième').
 ordinal(9, 'neuvième').
 ordinal(10, 'dixième'). 
+% spanish male
+ordinal(1, 'primero').
+ordinal(2, 'segundo').
+ordinal(3, 'tercero').
+ordinal(4, 'cuarto').
+ordinal(5, 'quinto').
+ordinal(6, 'sexto').
+ordinal(7, 'séptimo').
+ordinal(8, 'octavo').
+ordinal(9, 'noveno').
+ordinal(10, 'decimo'). 
+% spanish female
+ordinal(1, 'primera').
+ordinal(2, 'segunda').
+ordinal(3, 'tercera').
+ordinal(4, 'cuarta').
+ordinal(5, 'quinta').
+ordinal(6, 'sexta').
+ordinal(7, 'séptima').
+ordinal(8, 'octava').
+ordinal(9, 'novena').
+ordinal(10, 'decima'). 
 
 %is_a_type/1
 is_a_type(T) :- % pending integration with wei2nlen:is_a_type/1
@@ -1778,6 +1799,7 @@ ind_det_C --> ['Quale']. % italian which
 % ind_det_C('Some').
 ind_det_C --> ['Each'].   % added experimental
 ind_det_C --> ['Which'].  % added experimentally
+ind_det_C --> ['Cuál'].   % added experimentally spanish
 
 def_det_C --> ['The'].
 def_det_C --> ['El'].  % spanish
@@ -1801,6 +1823,7 @@ ind_det --> [quelle].  % french which? femenine
 ind_det --> [che]. % italian which
 ind_det --> [quale]. % italian which
 ind_det --> [uno].     % italian
+ind_det --> ['cuál'].    % spanish
 % ind_det(some).
 
 def_det --> [the].
@@ -2316,6 +2339,10 @@ process_types_or_names([Word|RestWords],  Elements, Types, [Word|RestPrintWords]
 %process_template_for_scasp/4
 %process_template_for_scasp(WordsAnswer, GoalElements, Types, +FormatElements, +ProcessedWordsAnswers)
 process_template_for_scasp([], _, _, [], []) :- !.
+process_template_for_scasp([Word|RestWords], Elements, Types, [' @(~p:~w) '|RestFormat], [Word, TypeName|RestPrintWords]) :- 
+    var(Word), matches_type(Word, Elements, Types, Type), 
+    process_template_for_scasp(RestWords,  Elements, Types, RestFormat, RestPrintWords),
+    tokenize_atom(Type, NameWords), delete_underscore(NameWords, [TypeName]), escape_uppercased(TypeName, _), !.
 process_template_for_scasp([Word|RestWords], Elements, Types, [' @(~p:~p) '|RestFormat], [Word, TypeName|RestPrintWords]) :- 
     var(Word), matches_type(Word, Elements, Types, Type), !, 
     process_template_for_scasp(RestWords,  Elements, Types, RestFormat, RestPrintWords),
@@ -2326,8 +2353,18 @@ process_template_for_scasp([Word|RestWords],  Elements, Types, RestFormat, RestP
 process_template_for_scasp([Word|RestWords],  Elements, Types, ['~p'|RestFormat], [Word|RestPrintWords] ) :-
     op_stop(List), member(Word,List), !, 
     process_template_for_scasp(RestWords,  Elements, Types, RestFormat, RestPrintWords).
+process_template_for_scasp([Word|RestWords],  Elements, Types, [' ~w '|RestFormat], [Word|RestPrintWords] ) :-
+    escape_uppercased(Word, _), !, 
+    %name(Word, List), 
+    %print_message(informational, "processing word ~p ~q"-[Word, List]), 
+    process_template_for_scasp(RestWords,  Elements, Types, RestFormat, RestPrintWords).
 process_template_for_scasp([Word|RestWords],  Elements, Types, [' ~p '|RestFormat], [Word|RestPrintWords] ) :-
     process_template_for_scasp(RestWords,  Elements, Types, RestFormat, RestPrintWords).
+
+escape_uppercased(Word, EscapedWord) :-
+    name(Word, [First|Rest]), First >= 65, First =< 90,
+    append([92, First|Rest], [92], NewCodes),
+    name(EscapedWord, NewCodes).
 
 add_determiner([Word|RestWords], [Det, Word|RestWords]) :-
     name(Word,[First|_]), proper_det(First, Det).
@@ -2659,11 +2696,11 @@ split_module_name(Name, Name, Name) :- % dangerous. But it maybe needed for earl
 	sub_atom(Name, _, _, _, 'http'), !. 
 
 write_functors_to_string([F/N], Previous, StringFunctors) :- !, 
-    with_output_to(string(StringF), format("~w/~d", [F,N])),
+    with_output_to(string(StringF), format("~p/~d", [F,N])),
     string_concat(Previous, StringF, StringFunctors). 
 write_functors_to_string([F/N|R], Previous, StringFunctors) :- !, 
     write_functors_to_string(R, Previous, NextString), 
-    with_output_to(string(StringF), format("~w/~d, ", [F,N])),
+    with_output_to(string(StringF), format("~p/~d, ", [F,N])),
     string_concat(StringF, NextString, StringFunctors). 
 
 

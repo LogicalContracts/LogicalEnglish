@@ -287,6 +287,7 @@ user:term_expansion(NiceTerm, ExpandedTerms) :-  % hook for LE extension
 		(URL\=''->atomic_list_concat([FileName,'-scasp', '+', URL], NewModule); atomic_list_concat([FileName,'-scasp'], NewModule)), 
 		%print_message(informational, "sCASP module name ~w"-[NewModule]), 
 		dump_scasp(NewModule, ExpandedTerms_0, String), 
+		%print_message(informational, "sCASP content to assert: ~w \n"-[String]), 
 		update_gitty_file(NewFileName, NewModule, String),
 		ExpandedTerms_1 = [just_saved_scasp(NewFileName, NewModule)|ExpandedTerms_0] ) ; ExpandedTerms_1 = ExpandedTerms_0),
 	ExpandedTerms = ExpandedTerms_1. 
