@@ -4,7 +4,7 @@
     discover_kps_in_dir/1, discover_kps_in_dir/0, discover_kps_gitty/0, setup_kp_modules/0, load_kps/0,
     load_gitty_files/1, load_gitty_files/0, save_gitty_files/1, save_gitty_files/0, delete_gitty_file/1, update_gitty_file/3,
     xref_all/0, xref_clean/0, print_kp_predicates/0, print_kp_predicates/1, reset_errors/0, my_xref_defined/3, url_simple/2,
-    kp_predicate_mention/3, predicate_literal/2,
+    kp_predicate_mention/3, predicate_literal/2,load_named_file/3, 
     edit_kp/1, swish_editor_path/2, knowledgePagesGraph/1, knowledgePagesGraph/2]).
 
 :- use_module(library(prolog_xref)).
@@ -95,6 +95,7 @@ load_named_file(File,Module,InGittyStorage) :-
     (xref_source(Module,[silent(true)]) -> true ; print_message(warning,"failed xref_source"-[])).
 
 load_named_file_(File,Module,true) :- !,
+    %print_message(informational, "load File into Module ~w ~w\n"-[File, Module]), 
     use_gitty_file(Module:File,[/* useless: module(Module)*/]).
 load_named_file_(File,Module,false) :- 
     load_files(File,[module(Module)]).

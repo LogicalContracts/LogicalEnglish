@@ -114,6 +114,9 @@ semantics2prolog(events(Assumptions), delimiter-[classify,classify],events([N]))
 semantics2prolog(fluents(Assumptions), delimiter-[classify,classify],fluents([N])) :-
     pengine_self(SwishModule), lists:length(Assumptions,N),
     declare_facts_as_dynamic(SwishModule, [it_is_illegal(_,_)|Assumptions]), !.
+semantics2prolog(target(T), delimiter-[classify,classify],target(T)) :- 
+    pengine_self(SwishModule), 
+    declare_facts_as_dynamic(SwishModule, [just_saved_scasp(_, _)]), !. 
 
 % assuming one example -> one scenario -> one list of facts. % deprecated
 % declare_dynamic(Module, [scenario(Facts, _)]) :- declare_facts_as_dynamic(Module, Facts).

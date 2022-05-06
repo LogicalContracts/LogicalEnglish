@@ -113,16 +113,8 @@ clauseNavigator_(Ref,span([a([onclick=Handler]," KB ")|Origin]), onclick=Handler
 %clauseNavigator_(Ref,i(" hypothesis (~w) in scenario"-[Ref]),onclick='').
 clauseNavigator_(_,i(" hypothesis in scenario"-[]),onclick='').
 
-moduleName2URL(Name, URL) :-  split_module_name(Name, _, URL), !.
+moduleName2URL(Name, URL) :-  le_input:split_module_name(Name, _, URL), !. % from le_input
 moduleName2URL(URL, URL). 
-
-split_module_name(Name, File, URL):-
-	sub_atom(Name,U,1,_,'+'),
-	sub_atom(Name,0,U,_,File),
-	UU is U+1, 
-	sub_atom(Name,UU,_,0,URL), 
-	!. 
-	%print_message(informational, URL). 
 
 :- use_module(explanation_renderer,[]).
 :- use_rendering(explanation_renderer).
@@ -275,16 +267,30 @@ user:term_expansion(NiceTerm, ExpandedTerms) :-  % hook for LE extension
 			findall(PrologTerm, (
 			member(TT_,TaxlogTerms), 
 			(is_list(TT_)->member(TT,TT_);TT=TT_), % the LE translator generates a list of lists... and non lists
-			(member(target(prolog),TaxlogTerms) -> semantics2prolog(TT,_,PrologTerm) ; taxlog2prolog(TT,_,PrologTerm))
-			), ExpandedTerms) 
-		; ExpandedTerms = []),
+			((member(target(prolog),TaxlogTerms);member(target(scasp),TaxlogTerms)) -> 
+				semantics2prolog(TT,_,PrologTerm) ; taxlog2prolog(TT,_,PrologTerm))
+			), ExpandedTerms_0) 
+		; ExpandedTerms_0 = []),
 	% to save as a separated file
 	(member(target(prolog),TaxlogTerms) -> 
-		myDeclaredModule(Name),  % the module in the editor
+		( myDeclaredModule(Name),  % the module in the editor
 		split_module_name(Name, FileName, URL), 
 		atomic_list_concat([FileName,'-prolog','.pl'], NewFileName), 
-		atomic_list_concat([FileName,'-prolog', '+', URL], NewModule), 
-		dump(all, NewModule, ExpandedTerms, String), 
-		update_gitty_file(NewFileName, URL, String)).
+		(URL\=''->atomic_list_concat([FileName,'-prolog', '+', URL], NewModule); atomic_list_concat([FileName,'-prolog'], NewModule)), 
+		dump(all, NewModule, ExpandedTerms_0, String), 
+		update_gitty_file(NewFileName, URL, String),
+		ExpandedTerms_1 = [just_saved_scasp(null, null)|ExpandedTerms_0]) ; ExpandedTerms_1 = ExpandedTerms_0),
+	%print_message(informational, " Terms ~w"-[TaxlogTerms]), 
+	(member(target(scasp),TaxlogTerms) -> 
+		( myDeclaredModule(Name),  % the module in the editor
+		split_module_name(Name, FileName, URL), 
+		atomic_list_concat([FileName,'-scasp','.pl'], NewFileName), 
+		(URL\=''->atomic_list_concat([FileName,'-scasp', '+', URL], NewModule); atomic_list_concat([FileName,'-scasp'], NewModule)), 
+		%print_message(informational, "sCASP module name ~w"-[NewModule]), 
+		dump_scasp(NewModule, ExpandedTerms_0, String), 
+		%print_message(informational, "sCASP content to assert: ~w \n"-[String]), 
+		update_gitty_file(NewFileName, NewModule, String),
+		ExpandedTerms_2 = [just_saved_scasp(NewFileName, NewModule)|ExpandedTerms_1] ) ; ExpandedTerms_2 = ExpandedTerms_1),
+	ExpandedTerms = ExpandedTerms_2. 
 user:term_expansion(T,NT) :- taxlog2prolog(T,_,NT).
 %user:term_expansion(T,NT) :- (member(target(prolog),T) -> semantics2prolog(T,_,NT) ; taxlog2prolog(T,_,NT)).
