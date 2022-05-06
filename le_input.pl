@@ -1278,11 +1278,11 @@ match([Element|RestElements], PossibleLiteral, Map1, MapN, [Var|RestSelected]) :
     name_predicate(NameWords, Name), 
     consult_map(Var, Name, Map1, Map2), !, % <-- CUT!  % if the variables has been previously registered
     match(RestElements, NextWords, Map2, MapN, RestSelected).
-match([Element|RestElements], ['['|PossibleLiteral], Map1, MapN, [Term|RestSelected]) :-
+match([Element|RestElements], ['['|PossibleLiteral], Map1, MapN, [List|RestSelected]) :-
     var(Element), stop_words(RestElements, StopWords),
     extract_list([']'|StopWords], List, Map1, Map2, PossibleLiteral, [']'|NextWords]),  % matching brackets verified
     %print_message(informational, "List ~w"-[List]),  
-    correct_list(List, Term), 
+    %correct_list(List, Term), 
     match(RestElements, NextWords, Map2, MapN, RestSelected).
 % enabling expressions and constants
 match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, [Expression|RestSelected]) :-
@@ -1620,7 +1620,7 @@ extract_list(SW, RestList, Map1, MapN, ['\t'|RestOfWords],  NextWords) :- !,
     extract_list(SW, RestList, Map1, MapN, RestOfWords, NextWords).
 extract_list(SW, RestList, Map1, MapN, [','|RestOfWords],  NextWords) :- !, % skip over commas
     extract_list(SW, RestList, Map1, MapN, RestOfWords, NextWords).
-extract_list(SW, RestList, Map1, MapN, ['|'|RestOfWords],  NextWords) :- !, % skip over commas
+extract_list(SW, RestList, Map1, MapN, ['|'|RestOfWords],  NextWords) :- !, % skip over |
     extract_list(SW, RestList, Map1, MapN, RestOfWords, NextWords).
 extract_list(StopWords, List, Map1, MapN, [Det|InWords], LeftWords) :-
     phrase(indef_determiner, [Det|InWords], RInWords), 
@@ -1629,7 +1629,7 @@ extract_list(StopWords, List, Map1, MapN, [Det|InWords], LeftWords) :-
     update_map(Var, Name, Map1, Map2),
     (NextWords = [']'|_] -> (RestList = [], LeftWords=NextWords, MapN=Map2 ) ; 
     extract_list(StopWords, RestList, Map2, MapN, NextWords, LeftWords) ), 
-    (RestList=[] -> List=[Var|[]]; List=[Var|RestList]), 
+    (RestList\=[] -> List=[Var|RestList]; List=[Var]), 
     !.
 extract_list(StopWords, List, Map1, MapN, [Det|InWords], LeftWords) :-
     phrase(def_determiner, [Det|InWords], RInWords), 
@@ -1638,21 +1638,28 @@ extract_list(StopWords, List, Map1, MapN, [Det|InWords], LeftWords) :-
     consult_map(Var, Name, Map1, Map2), 
     (NextWords = [']'|_] -> (RestList = [], LeftWords=NextWords, MapN=Map2 ) ;
     extract_list(StopWords, RestList, Map2, MapN, NextWords, LeftWords) ), 
-    (RestList=[] -> List=[Var|[]]; List=[Var|RestList]), !.
+    (RestList\=[] -> List=[Var|RestList]; List=[Var]), !.
 extract_list(StopWords, List, Map1, MapN, InWords, LeftWords) :- % symbolic variables without determiner
     extract_variable(['|'|StopWords], [], NameWords, [], _, InWords, NextWords), NameWords \= [],  % <- leave that _ unbound!
     name_predicate(NameWords, Name),  
     consult_map(Var, Name, Map1, Map2), 
     (NextWords = [']'|_] -> (RestList = [], LeftWords=NextWords, MapN=Map2 ) ; 
     extract_list(StopWords, RestList, Map2, MapN, NextWords, LeftWords) ), 
-    (RestList=[] -> List=[Var|[]]; List=[Var|RestList]), !.
+    (RestList\=[] -> List=[Var|RestList]; List=[Var]), !.
 extract_list(StopWords, List, Map1, MapN, InWords, LeftWords) :-
     extract_expression(['|',','|StopWords], NameWords, InWords, NextWords), NameWords \= [], 
-    ( phrase(expression_(Expression, Map1, Map2), NameWords) -> true 
+    ( phrase(expression_(Expression, Map1, Map2), NameWords) ->   true 
     ; ( Map1 = Map2, name_predicate(NameWords, Expression) ) ),
     ( NextWords = [']'|_] -> ( RestList = [], LeftWords=NextWords, MapN=Map2 ) 
     ;    extract_list(StopWords, RestList, Map2, MapN, NextWords, LeftWords) ), 
-    (RestList=[] -> List=[Expression|[]]; List=[Expression|RestList]), !.
+    extend_list(RestList, Expression, List), !. %  print_message(informational, " ~q "-[List]), !. 
+    %(RestList=[_,_|_] -> List=[Expression|RestList] ; 
+    %    RestList = [One] -> List=[Expression, One] ;
+    %        RestList = [] -> List = [[]] ), !.
+
+extend_list([A,B|R], X, List) :- append([X], [A,B|R], List). 
+extend_list([A], X, [X|[A]]).
+extend_list([], X, [X]). 
 
 determiner --> ind_det, !.
 determiner --> ind_det_C, !.
@@ -2183,7 +2190,7 @@ answer(English) :- %trace,
 answer(English, Arg) :- %trace, 
     parsed,
     prepare_query(English, Arg, SwishModule, Goal, Facts, Command), 
-    (SwishModule:just_saved_scasp(FileName, ModuleName) -> 
+    ((SwishModule:just_saved_scasp(FileName, ModuleName), FileName\=null) -> 
         %print_message(informational, "To query file ~w in module ~w "-[FileName, ModuleName]),
         load_named_file(FileName, ModuleName, true), 
         %print_message(informational, "loaded scasp ~w "-[FileName]),    
@@ -2205,7 +2212,7 @@ answer(English, Arg) :- %trace,
 
 % answer/3
 % answer(+English, with(+Scenario), -Result)
-answer(English, Arg, EnglishAnswer) :- 
+answer(English, Arg, EnglishAnswer) :- %trace, 
     parsed, 
     prepare_query(English, Arg, SwishModule, Goal, Facts, Command), 
     % pengine_self(SwishModule), 
@@ -2257,19 +2264,22 @@ prepare_query(English, Arg, SwishModule, Goal, Facts, Command) :- %trace,
     extract_goal_command(Goal, SwishModule, _InnerGoal, Command), !.  
     %print_message(informational, "Command: ~w"-[Command]). 
 
-show_question(GoalName, Scenario, NLQuestion) :-   
-    (source_lang(en) -> print_message(informational, "Query ~w with ~w: ~w"-[GoalName, Scenario, NLQuestion]); true),
-    (source_lang(fr) -> print_message(informational, "La question ~w avec ~w: ~w"-[GoalName, Scenario, NLQuestion]); true),
-    (source_lang(it) -> print_message(informational, "Domanda ~w con ~w: ~w"-[GoalName, Scenario, NLQuestion]); true), 
-    (source_lang(es) -> print_message(informational, "La pregunta ~w con ~w: ~w"-[GoalName, Scenario, NLQuestion]); true),   
+show_question(GoalName, Scenario, NLQuestion) :- pengine_self(M),   
+    (M:source_lang(en) -> print_message(informational, "Query ~w with ~w: ~w"-[GoalName, Scenario, NLQuestion]); true),
+    (M:source_lang(fr) -> print_message(informational, "La question ~w avec ~w: ~w"-[GoalName, Scenario, NLQuestion]); true),
+    (M:source_lang(it) -> print_message(informational, "Domanda ~w con ~w: ~w"-[GoalName, Scenario, NLQuestion]); true), 
+    (M:source_lang(es) -> print_message(informational, "La pregunta ~w con ~w: ~w"-[GoalName, Scenario, NLQuestion]); true),  
+    (\+(M:source_lang(_)) -> print_message(informational, "Query ~w with ~w: ~w"-[GoalName, Scenario, NLQuestion]); true),  
     !.  
 
-show_answer(Goal) :-
+show_answer(Goal) :- %trace, 
+    pengine_self(M), 
     translate_goal_into_LE(Goal, RawAnswer), name_as_atom(RawAnswer, NLAnswer), 
-    (source_lang(en) -> print_message(informational, "Answer: ~w"-[NLAnswer]); true), 
-    (source_lang(fr) -> print_message(informational, "La réponse: ~w"-[NLAnswer]); true), 
-    (source_lang(it) -> print_message(informational, "Risposta: ~w"-[NLAnswer]); true), 
-    (source_lang(es) -> print_message(informational, "La respuesta: ~w"-[NLAnswer]); true), 
+    (M:source_lang(en) -> print_message(informational, "Answer: ~w"-[NLAnswer]); true), 
+    (M:source_lang(fr) -> print_message(informational, "La réponse: ~w"-[NLAnswer]); true), 
+    (M:source_lang(it) -> print_message(informational, "Risposta: ~w"-[NLAnswer]); true), 
+    (M:source_lang(es) -> print_message(informational, "La respuesta: ~w"-[NLAnswer]); true),
+    (\+(M:source_lang(_)) -> print_message(informational, "Answer: ~w"-[NLAnswer]); true),  % english as default
     !. 
 
 % translate_goal_into_LE/2
@@ -2278,6 +2288,8 @@ translate_goal_into_LE((G,R), WholeAnswer) :-
     translate_goal_into_LE(G, Answer), 
     translate_goal_into_LE(R, RestAnswers), !, 
     append(Answer, ['\n','\t',and|RestAnswers], WholeAnswer).
+translate_goal_into_LE(aggregate_all(sum(V),Conditions,R), [R,is,the,sum,of,each,V,such,that,'\n', '\t'|Answer]) :-
+    translate_goal_into_LE(Conditions, Answer), !.
 translate_goal_into_LE(not(G), [it,is,not,the,case,that,'\n', '\t'|Answer]) :- 
     translate_goal_into_LE(G, Answer), !.
 translate_goal_into_LE(Goal, ProcessedWordsAnswers) :-  
@@ -2661,15 +2673,15 @@ restore_dicts(DictEntries) :- %trace,
     pengine_self(SwishModule), 
     %myDeclaredModule(SwishModule),
     %SwishModule=user,
-    print_message(informational, "the dictionaries being restored into module ~w"-[SwishModule]),
+    %print_message(informational, "the dictionaries are being restored into module ~w"-[SwishModule]),
     (SwishModule:local_dict(_,_,_) -> findall(dict(A,B,C), SwishModule:local_dict(A,B,C), ListDict) ; ListDict = []),
     (SwishModule:local_meta_dict(_,_,_) -> findall(meta_dict(A,B,C), SwishModule:local_meta_dict(A,B,C), ListMetaDict); ListMetaDict = []),
     %(local_dict(_,_,_) -> findall(dict(A,B,C), local_dict(A,B,C), ListDict) ; ListDict = []),
     %(local_meta_dict(_,_,_) -> findall(meta_dict(A,B,C), local_meta_dict(A,B,C), ListMetaDict); ListMetaDict = []),
     append(ListDict, ListMetaDict, DictEntries), 
-    print_message(informational, "the dictionaries being restored are ~w"-[DictEntries]),
+    %print_message(informational, "the dictionaries being restored are ~w"-[DictEntries]),
     collect_all_preds(SwishModule, DictEntries, Preds),
-    print_message(informational, "the dictionaries being set dynamics are ~w"-[Preds]),
+    %print_message(informational, "the dictionaries being set dynamics are ~w"-[Preds]),
     declare_preds_as_dynamic(SwishModule, Preds). 
 
 % collect_all_preds/3
@@ -2767,8 +2779,9 @@ le_taxlog_translate( it(Text), File, BaseLine, Terms) :-
     text_to_logic(Text, Terms) -> true; showErrors(File,BaseLine). 
 le_taxlog_translate( es(Text), File, BaseLine, Terms) :-
     text_to_logic(Text, Terms) -> true; showErrors(File,BaseLine).
-le_taxlog_translate( prolog_le(verified), _, _, prolog_le(verified)) :- %trace, 
-    assertz(parsed),  
+le_taxlog_translate( prolog_le(verified), _, _, prolog_le(verified)) :- %trace, % running from prolog file
+    assertz(parsed), pengine_self(M),  
+    assertz(M:just_saved_scasp(null, null)), 
     including -> true; restore_dicts. 
 
 combine_list_into_string(List, String) :-

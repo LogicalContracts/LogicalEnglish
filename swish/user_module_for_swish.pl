@@ -278,7 +278,8 @@ user:term_expansion(NiceTerm, ExpandedTerms) :-  % hook for LE extension
 		atomic_list_concat([FileName,'-prolog','.pl'], NewFileName), 
 		(URL\=''->atomic_list_concat([FileName,'-prolog', '+', URL], NewModule); atomic_list_concat([FileName,'-prolog'], NewModule)), 
 		dump(all, NewModule, ExpandedTerms_0, String), 
-		update_gitty_file(NewFileName, URL, String)) ; true),
+		update_gitty_file(NewFileName, URL, String),
+		ExpandedTerms_1 = [just_saved_scasp(null, null)|ExpandedTerms_0]) ; ExpandedTerms_1 = ExpandedTerms_0),
 	%print_message(informational, " Terms ~w"-[TaxlogTerms]), 
 	(member(target(scasp),TaxlogTerms) -> 
 		( myDeclaredModule(Name),  % the module in the editor
@@ -289,7 +290,7 @@ user:term_expansion(NiceTerm, ExpandedTerms) :-  % hook for LE extension
 		dump_scasp(NewModule, ExpandedTerms_0, String), 
 		%print_message(informational, "sCASP content to assert: ~w \n"-[String]), 
 		update_gitty_file(NewFileName, NewModule, String),
-		ExpandedTerms_1 = [just_saved_scasp(NewFileName, NewModule)|ExpandedTerms_0] ) ; ExpandedTerms_1 = ExpandedTerms_0),
-	ExpandedTerms = ExpandedTerms_1. 
+		ExpandedTerms_2 = [just_saved_scasp(NewFileName, NewModule)|ExpandedTerms_1] ) ; ExpandedTerms_2 = ExpandedTerms_1),
+	ExpandedTerms = ExpandedTerms_2. 
 user:term_expansion(T,NT) :- taxlog2prolog(T,_,NT).
 %user:term_expansion(T,NT) :- (member(target(prolog),T) -> semantics2prolog(T,_,NT) ; taxlog2prolog(T,_,NT)).
