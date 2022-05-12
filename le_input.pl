@@ -889,7 +889,10 @@ it_is_illegal_that_  -->
     it_, [is], spaces(_), [illegal], spaces(_), [that], spaces(_).
 
 it_is_unknown_whether_ --> 
-    it_, [is], spaces(_), [unknown], spaces(_), [whether], spaces(_).
+    it_, [is], spaces(_), [unknown], spaces(_), [whether], !, spaces(_).
+
+it_is_unknown_whether_ --> 
+    it_, [is], spaces(_), [unknown], spaces(_), [that], spaces(_).
 
 /* --------------------------------------------------- Supporting code */
 % indentation code
