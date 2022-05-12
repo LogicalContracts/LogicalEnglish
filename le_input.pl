@@ -100,6 +100,7 @@ query three is:
     op(1200, fx, #),
     op(1150, fx, pred),
     op(1150, fx, show),
+    op(1150, fx, abducible),
     dictionary/3, meta_dictionary/3,
     translate_goal_into_LE/2, name_as_atom/2, parsed/0, source_lang/1, 
     dump/4, dump/3, dump/2, dump_scasp/3, split_module_name/3
@@ -162,7 +163,7 @@ header(_, Rest, _) :-
 
 fix_settings(Settings_, Settings2) :-
     ( member(target(_), Settings_) -> Settings1 = Settings_ ; Settings1 = [target(taxlog)|Settings_] ), !,  % taxlog as default
-    Settings2 = [query(null, true), example(null, [])|Settings1]. % a hack to stop the loop when query is empty
+    Settings2 = [query(null, true), example(null, []), abducible(true,true)|Settings1]. % a hack to stop the loop when query is empty
 
 included_files(Settings2, RestoredDictEntries, CollectedRules) :-
     member(in_files(ModuleNames), Settings2),   % include all those files and get additional DictEntries before ordering
@@ -522,6 +523,13 @@ statement(Statement) -->
     {(Body = [] -> Statement = [if(it_is_illegal(Event, T), true)]; 
       Statement = [if(it_is_illegal(Event, T), Body)])},!. 
 
+% it is unknown whether 
+statement(Statement) -->
+    it_is_unknown_whether_, spaces_or_newlines(_), 
+    literal_([], Map1, Abducible), body_(Body, Map1, _), period,
+    {(Body = [] -> Statement = [abducible(Abducible, true)]; 
+      Statement = [abducible(Abducible, Body)])},!.
+
 % a fact or a rule
 statement(Statement) --> currentLine(L), 
     literal_([], Map1, Head), body_(Body, Map1, _), period,  
@@ -541,6 +549,11 @@ assumptions_([A|R]) -->
         spaces_or_newlines(_),  rule_([], _, A), !, assumptions_(R).
 assumptions_([]) --> 
         spaces_or_newlines(_), []. 
+
+rule_(InMap, InMap, Rule) -->
+    it_is_unknown_whether_, spaces_or_newlines(_), 
+    literal_([], Map1, Abducible), body_(Body, Map1, _), period,
+    {(Body = [] -> Rule = (abducible(Abducible, true):-true); Rule = (abducible(Abducible, Body):-true))},!.
 
 rule_(InMap, OutMap, Rule) --> 
     literal_(InMap, Map1, Head), body_(Body, Map1, OutMap), period,  
@@ -629,26 +642,6 @@ more_conds(Ind0, _, Ind3, Map1, MapN, [ind(Ind2), Op, Cond2|RestMapped]) -->
     %{print_message(informational, "~w"-[Conditions])}, !,
     more_conds(Ind0, Ind2, Ind3, Map2, MapN, RestMapped). 
 more_conds(_, Ind, Ind, Map, Map, [], L, L).  
-
-% three conditions look ahead
-%more_conds(Ind0, Ind1, Ind4, Map1, MapN, C1, RestMapped, In1, Out) :-
-%     newline(In1, In2), spaces(Ind2, In2, In3), Ind0=<Ind2, operator(Op1, In3, In4), condition(C2, Ind1, Map1, Map2, In4, In5), 
-%     newline(In5, In6), spaces(Ind3, In6, In7), Ind0=<Ind3, operator(Op2, In7, In8), condition(C3, Ind2, Map2, Map3, In8, In9), 
-%     adjust_op(Ind2, Ind3, C1, Op1, C2, Op2, C3, Conditions), !, 
-%     more_conds(Ind0, Ind3, Ind4, Map3, MapN, Conditions, RestMapped, In9, Out). 
-% % more_conds(PreviosInd, CurrentInd, MapIn, MapOut, InCond, OutConds)
-% more_conds(Ind0, Ind1, Ind, Map1, MapN, Cond, Conditions) --> 
-%     newline, spaces(Ind), {Ind0 =< Ind}, % if the new indentation is deeper, it goes on as before. 
-%     operator(Op), condition(Cond2, Ind, Map1, MapN),
-%     {add_cond(Op, Ind1, Ind, Cond, Cond2, Conditions)},  
-%     {print_message(informational, "~w"-[Conditions])}, !.
-% more_conds(Ind0, Ind1, Ind3, Map1, MapN, Cond, RestMapped) --> 
-%     newline, spaces(Ind2), {Ind0 =< Ind2}, % if the new indentation is deeper, it goes on as before. 
-%     operator(Op), condition(Cond2, Ind2, Map1, Map2),
-%     {add_cond(Op, Ind1, Ind2, Cond, Cond2, Conditions)},  !, 
-%     %{print_message(informational, "~w"-[Conditions])}, !,
-%     more_conds(Ind0, Ind2, Ind3, Map2, MapN, Conditions, RestMapped). 
-% more_conds(_, Ind, Ind, Map, Map, Cond, Cond, Rest, Rest).  
  
 % this naive definition of term is problematic
 % term_/4 or /6
@@ -894,6 +887,9 @@ observe_ --> [observe], spaces(_).
 
 it_is_illegal_that_  -->
     it_, [is], spaces(_), [illegal], spaces(_), [that], spaces(_).
+
+it_is_unknown_whether_ --> 
+    it_, [is], spaces(_), [unknown], spaces(_), [whether], spaces(_).
 
 /* --------------------------------------------------- Supporting code */
 % indentation code
@@ -2586,6 +2582,12 @@ dump(source_lang, String) :-
     source_lang(L) -> 
     with_output_to(string(String), portray_clause(source_lang(L))) ; String="". 
 
+% #abducible
+dump(abducibles_scasp, List, String) :-
+    findall(Term, ( member( abducible(Abducible, _), List), Abducible\=true, format(string(Term), "#abducible ~p", [Abducible]) ), Abds), 
+    with_output_to(string(String), forall(member(S, Abds), (term_string(T, S), portray_clause(T)))).
+
+
 dump(scasp_scenarios_queries, List, String) :- 
     findall( example(Name, Scenario), 
         (member( example(Name, Scenario), List)), Scenarios),
@@ -2600,7 +2602,9 @@ dump(scasp_scenarios_queries, List, String) :-
     with_output_to(string(StringScenarios),
         ( forall(member(example(S, [scenario(Scenario, _)]), Scenarios),
                 ( write("/* Scenario "), write(S), write("\n"), % simple comment not for PlDoc
-                  forall(member(Clause, Scenario), portray_clause(Clause)),
+                  forall((member(Clause, Scenario),Clause\=(abducible(_,_) :- _)), portray_clause(Clause)),
+                  forall((member(Clause, Scenario),Clause=(abducible(Abd,_) :- _)), 
+                        (format(string(String), "#abducible ~p", [Abd]), term_string(Term, String), portray_clause(Term))),
                   write("% */ \n")
                 )
             )
@@ -2647,7 +2651,8 @@ dump(all, Module, List, String) :-
 dump_scasp(Module, List, String) :-
 	dump(templates_scasp, StringTemplates), 
 	dump(rules, List, StringRules),
-    dump(scasp_scenarios_queries, List, StringQueriesScenarios), 
+    dump(scasp_scenarios_queries, List, StringQueriesScenarios),
+    dump(abducibles_scasp, List, StringAbds),  
     string_concat(":-module(\'", Module, Module01),
     string_concat(Module01, "\', []).\n", TopHeadString), 
     dump(source_lang, SourceLang), 
@@ -2657,8 +2662,9 @@ dump_scasp(Module, List, String) :-
                 ":- style_check(-singleton).\n:- set_prolog_flag(scasp_forall, prev).\n", SCAPSHeader),
     string_concat(TopMost, SCAPSHeader, Header), 
 	string_concat(Header, StringTemplates, HeadString), 
+    string_concat(HeadString, StringAbds, String0), 
     %string_concat(String1, "prolog_le(verified).\n", String2), % not need for scasp
-	string_concat(HeadString, StringRules, String1),
+	string_concat(String0, StringRules, String1),
     string_concat(String1, StringQueriesScenarios, String). 
 
 restore_dicts :- %trace, 

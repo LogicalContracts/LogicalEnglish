@@ -268,7 +268,7 @@ user:term_expansion(NiceTerm, ExpandedTerms) :-  % hook for LE extension
 			member(TT_,TaxlogTerms), 
 			(is_list(TT_)->member(TT,TT_);TT=TT_), % the LE translator generates a list of lists... and non lists
 			((member(target(prolog),TaxlogTerms);member(target(scasp),TaxlogTerms)) -> 
-				semantics2prolog(TT,_,PrologTerm) ; taxlog2prolog(TT,_,PrologTerm))
+				semantics2prolog(TT,_,PrologTerm);taxlog2prolog(TT,_,PrologTerm))
 			), ExpandedTerms_0) 
 		; ExpandedTerms_0 = []),
 	% to save as a separated file

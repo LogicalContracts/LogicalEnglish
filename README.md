@@ -67,6 +67,8 @@ Introduction and list of resources at [Advent of Logical English​​](https://
 
 ##  <a name='Releases'></a>Release Notes
 
+- [2022-05-12] Beta testing. Previous version [97abce7d4398f05c1f165e4a411a982b16f358bd](https://github.com/LogicalContracts/LogicalEnglish/commit/97abce7d4398f05c1f165e4a411a982b16f358bd)
+	- Activates #abducible to handle unknown information with sCASP in LE. 
 - [2022-05-05] Beta testing. Previous version: [d405af4da4fbeb170cd1cb1be333ff66c65a8d98](https://github.com/LogicalContracts/LogicalEnglish/commit/d405af4da4fbeb170cd1cb1be333ff66c65a8d98)
 	- Merging branch logical_languages with the latest extensions of LE syntax for sources in Italian, French and Spanish and targeting sCASP beside Prolog. Also, inclusion of other documents. 
 - [2021-11-23] Updating the roadmap. Previous version: [c4d67e9e0dbc54356473b284c9b72725c6504673](https://github.com/mcalejo/TaxKB/commit/c4d67e9e0dbc54356473b284c9b72725c6504673)

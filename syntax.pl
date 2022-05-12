@@ -93,6 +93,9 @@ semantics2prolog(if(H,B),neck(if)-[SpecH,SpecB],(H:-targetBody(B,false,_,'',[],3
 %semantics2prolog(mainGoal(G,Description),delimiter-[Spec,classify],(mainGoal(G,Description):-(_=1->true;GG))) :- !, % hack to avoid 'unreferenced' highlight in SWISH
 %    functor(G,F,N), functor(GG,F,N), % avoid "Singleton-marked variable appears more than once"
 %    taxlogBodySpec(G,Spec).
+semantics2prolog(abducible(Abd,Body),delimiter-[classify,classify],abducible(Abd,Body)) :-
+    pengine_self(SwishModule),
+    declare_facts_as_dynamic(SwishModule, [abducible(_,_)]), !. 
 semantics2prolog(example(T,Sequence),delimiter-[classify,Spec],example(T,Sequence)) :-  
     pengine_self(SwishModule),
     declare_facts_as_dynamic(SwishModule, [example(_,_)]), !, 
