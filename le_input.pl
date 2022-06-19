@@ -2111,7 +2111,7 @@ has_as_head_before([B|C], B, C).
 is_it_illegal(English, Scenario) :- % only event as possibly illegal for the time being
     (parsed -> true; fail), !, 
     translate_query(English, happens(Goal, T)), % later -->, Kbs),
-    %print_message(informational, "Goal Name: ~w"-[GoalName]),
+    %print_message(informational, "Goal Name: ~w"-[GoalName]),predef_
     pengine_self(SwishModule), %SwishModule:query(GoalName, Goal), 
     %extract_goal_command(Question, SwishModule, Goal, Command), 
     copy_term(Goal, CopyOfGoal), 
