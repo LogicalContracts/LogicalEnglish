@@ -501,3 +501,5 @@ query one is:
 /** <examples>
 ?- answer("query one with scenario one").
 ?- answer(one, with(one), le(E), R). 
+**/
+
