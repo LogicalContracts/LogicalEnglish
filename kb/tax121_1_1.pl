@@ -1,4 +1,4 @@
-:- module('tax121+https://www.law.cornell.edu/uscode/text/26/121',[]).
+:- module('tax121_1+https://www.law.cornell.edu/uscode/text/26/121',[]).
 
 en("the target language is: prolog. 
     
@@ -18,13 +18,10 @@ special rules for joint returns apply to *a taxpayer* and *a property*.
 *a person* is married to *an other person*. 
 neither *a taxpayer* nor *a spouse* are ineligible for the benefits of subsection a with respect to *a property* by reason of paragraph 3. 
 *a taxpayer* meets the ownership requirements of subsection a with respect to *a property*.
-*a taxpayer* meets the ownership requirements of subsection a with respect to *an exchange* of *a property* at *a date*.
 *a spouse* meets the use requirements of subsection a with respect to *a property*.
-*a taxpayer* meets the use requirements of subsection a with respect to *an exchange* of *a property* at *a date*.
-subsection a shall not apply to any sale or exchange of *a property* by *a person*.
-*a date* is included in *a period*. 
+subsection a shall not apply to any sale or exchange of *a property* by *a person*.  
 
-the knowledge base tax121 includes:
+the knowledge base tax121_1 includes:
     
 % (a) Exclusion
 % Gross income shall not include gain from the sale or exchange of property if, 
@@ -33,21 +30,13 @@ the knowledge base tax121 includes:
 % the taxpayer’s principal residence for periods aggregating 2 years or more.
 
 gross income of a taxpayer excludes gain from a sale or exchange of a property if
-    the taxpayer meets the ownership requirements of subsection a with respect to the sale or exchange of the property at a date
-    and the taxpayer meets the use requirements of subsection a with respect to the sale or exchange of the property at the date. 
-    
-a taxpayer meets the ownership requirements of subsection a with respect to a sale or exchange of a property at a date
-    if the sale or exchange of the property occurs at the date
-    and a 5-year period of 1825 days ends at the date 
+    the sale or exchange of the property occurs at a date
+    and a 5-year period of 1825 days ends at the date
     and the property has been owned by the taxpayer as residence for a property ownership set of periods
-    and the property ownership set as the taxpayer's principal residence aggregates to 2 years or more during the 5-year period.
-    
-a taxpayer meets the use requirements of subsection a with respect to a sale or exchange of a property at a date 
-    if the sale or exchange of the property occurs at the date
-    and a 5-year period of 1825 days ends at the date 
     and the property has been used by the taxpayer as residence for a property usage set of periods
+    and the property ownership set as the taxpayer's principal residence aggregates to 2 years or more during the 5-year period
     and the property usage set as the taxpayer's principal residence aggregates to 2 years or more during the 5-year period.   
-
+   
 a set as a person's principal residence aggregates to a top number of years or more during a bigger period if
     the set of periods aggregates to a number of years
     and the number >= the top number of
@@ -80,18 +69,17 @@ the amount of gain excluded for a taxpayer from a sale or exchange under subsect
 special rules for joint returns apply to a taxpayer and a property
     if the taxpayer is married to a spouse
     and the taxpayer meets the ownership requirements of subsection a with respect to the property
-    	or the spouse meets the ownership requirements of subsection a with respect to the property
-    and the taxpayer meets the use requirements of subsection a with respect to the property
-    and the spouse meets the use requirements of subsection a with respect to the property
-    and neither the taxpayer nor the spouse are ineligible for the benefits of subsection a with respect to the property by reason of paragraph 3.
+        or the spouse meets the use requirements of subsection a with respect to the property
+        or neither the taxpayer nor the spouse are ineligible for the benefits of subsection a with respect to the property by reason of paragraph 3.
 
+% simplified (it does not correctly discriminate ownership from usage yet)
 a person meets the ownership requirements of subsection a with respect to a property
-    if the person meets the ownership requirements of subsection a with respect to a sale or exchange of the property at a date.
+    if gross income of the person excludes gain from a sale or exchange of the property. 
 
 a person meets the use requirements of subsection a with respect to a property
-    if the person meets the use requirements of subsection a with respect to a sale or exchange of the property at a date. 
+    if gross income of the person excludes gain from a sale or exchange of the property. 
 
-neither a taxpayer nor a spouse are ineligible for the benefits of subsection a with respect to a property by reason of paragraph 3
+neither the taxpayer nor the spouse are ineligible for the benefits of subsection a with respect to the property by reason of paragraph 3
     if subsection a shall not apply to any sale or exchange of the property by the taxpayer
     and subsection a shall not apply to any sale or exchange of the property by the spouse.
 %
@@ -117,8 +105,8 @@ subsection a shall not apply to any sale or exchange of a property by a taxpayer
     and gross income of the taxpayer excludes gain from the other sale or exchange of the property.
       
 scenario one is:
-    the sale of the house occurs at 2022-06-20.
-	the big period of 1825 days ends at 2022-06-20.
+    the sale of the house occurs at 2022-01-01.
+	the big period of 1825 days ends at 2022-01-01.
     the house has been owned by the taxpayer as residence for the first part of periods. 
     the house has been used by the taxpayer as residence for the second part of periods.
     the first part of periods aggregates to 2 of years. 
