@@ -15,10 +15,10 @@ gross income of *a taxpayer* excludes gain from *an exchange* of *a property* at
 the amount of gain excluded for *a taxpayer* from *a sale or exchange* under subsection (a) shall not exceed *an amount*. 
 special rules for joint returns apply to *a taxpayer* and *a property*. 
 *a person* is married to *an other person*. 
-both *a taxpayer* and *a spouse* are eligible for the benefits of subsection (a) with respect to *an exchange* of *a property* by reason of paragraph 3. 
+neither *a taxpayer* nor *a spouse* are ineligible for the benefits of subsection (a) with respect to *an exchange* of *a property* by reason of paragraph 3. 
 *a taxpayer* meets the ownership requirements of subsection (a) with respect to *an exchange* of *a property* at *a date*.
 *a taxpayer* meets the use requirements of subsection (a) with respect to *an exchange* of *a property* at *a date*.
-subsection (a) shall apply to *a sale or exchange* of *a property* by *a person*.
+subsection (a) shall not apply to *a sale or exchange* of *a property* by *a person*.
 *a date* is included in *a period*. 
 *a property* has been owned by *a taxpayer* for periods aggregating *a number* years or more during *a period*.
 *a property* has been used by *a taxpayer* as principal residence for periods aggregating *a number* years or more during *a period*.
@@ -35,7 +35,9 @@ the knowledge base tax121_3 includes:
 
 gross income of a taxpayer excludes gain from a sale or exchange of a property at a date if
     the taxpayer meets the ownership requirements of subsection (a) with respect to the sale or exchange of the property at the date
-    and the taxpayer meets the use requirements of subsection (a) with respect to the sale or exchange of the property at the date. 
+    and the taxpayer meets the use requirements of subsection (a) with respect to the sale or exchange of the property at the date
+    and it is not the case that
+    	subsection (a) shall not apply to the sale or exchange of the property by the taxpayer.
     
 a taxpayer meets the ownership requirements of subsection (a) with respect to a sale or exchange of a property at a date
     if the sale or exchange of the property occurs at the date
@@ -87,11 +89,11 @@ special rules for joint returns apply to a taxpayer and a property
     	or the spouse meets the ownership requirements of subsection (a) with respect to the sale or exchange of the property at the date
     and the taxpayer meets the use requirements of subsection (a) with respect to the sale or exchange of the property at the date
     and the spouse meets the use requirements of subsection (a) with respect to the sale or exchange of the property at the date
-    and both the taxpayer and the spouse are eligible for the benefits of subsection (a) with respect to the sale or exchange of the property by reason of paragraph 3.
+    and neither the taxpayer nor the spouse are ineligible for the benefits of subsection (a) with respect to the sale or exchange of the property by reason of paragraph 3.
 
-both a taxpayer and a spouse are eligible for the benefits of subsection (a) with respect to a sale or exchange of a property by reason of paragraph 3
-    if subsection (a) shall apply to the sale or exchange of the property by the taxpayer
-    and subsection (a) shall apply to the sale or exchange of the property by the spouse.
+neither a taxpayer nor a spouse are ineligible for the benefits of subsection (a) with respect to a sale or exchange of a property by reason of paragraph 3
+    if subsection (a) shall not apply to the sale or exchange of the property by the taxpayer
+    and subsection (a) shall not apply to the sale or exchange of the property by the spouse.
 %
 % (B) Other joint returns
 % 
@@ -107,14 +109,13 @@ both a taxpayer and a spouse are eligible for the benefits of subsection (a) wit
 % during the 2-year period ending on the date of such sale or exchange, 
 % there was any other sale or exchange by the taxpayer to which subsection (a) applied.
 
-subsection (a) shall apply to a sale or exchange of a property by a taxpayer
+subsection (a) shall not apply to a sale or exchange of a property by a taxpayer
     if the sale or exchange of the property occurs at a date
-    and it is not the case that
-        an other sale or exchange of a second or the same property occurs at a second date
-    	and the other sale or exchange is different from the sale or exchange
-    	and a period of 2 years ends at the date
-    	and the second date is included in the period
-    	and gross income of the taxpayer excludes gain from the other sale or exchange of the second or the same property at the second date. 
+    and an other sale or exchange of a second or the same property occurs at a second date
+    and the other sale or exchange is different from the sale or exchange
+    and a period of 2 years ends at the date
+    and the second date is included in the period
+    and gross income of the taxpayer excludes gain from the other sale or exchange of the second or the same property at the second date. 
       
 scenario one is:
     the sale of the house occurs at 2022-06-20.
@@ -166,7 +167,7 @@ query two is:
     the amount of gain excluded for the taxpayer from which sale under subsection (a) shall not exceed which amount. 
 
 query three is:
-    subsection (a) shall apply to which sale or exchange of which property by which taxpayer.
+    subsection (a) shall not apply to which sale or exchange of which property by which taxpayer.
 ").
 
 /** <examples>
