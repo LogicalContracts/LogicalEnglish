@@ -1,4 +1,4 @@
-:- module('tax121+https://www.law.cornell.edu/uscode/text/26/121',[]).
+:- module('tax121_3+https://www.law.cornell.edu/uscode/text/26/121',[]).
 
 en("the target language is: prolog. 
     
@@ -25,7 +25,7 @@ subsection (a) shall apply to *a sale or exchange* of *a property* by *a person*
 *a set* of periods of *a taxpayer* owing *a property* aggregates to *a number* of years.
 *a set* of periods of *a taxpayer* using *a property* as principal residence aggregates to *a number* of years.
 
-the knowledge base tax121 includes:
+the knowledge base tax121_3 includes:
     
 % (a) Exclusion
 % Gross income shall not include gain from the sale or exchange of property if, 
