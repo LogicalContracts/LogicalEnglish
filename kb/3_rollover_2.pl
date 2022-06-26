@@ -170,4 +170,5 @@ query three is:
 
 /** <examples>
 ?- answer("one with Andrew email Feb 4 2021"). 
+?- answer(one,with('Andrew email Feb 4 2021'), le(E), R).
 */
