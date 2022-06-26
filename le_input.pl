@@ -138,7 +138,8 @@ document(Translation, In, Rest) :-
     (source_lang(_L) -> retractall(source_lang(_)) ; true),
     phrase(header(Settings), In, AfterHeader), !, %print_message(informational, "Declarations completed: ~w"-[Settings]), 
     phrase(content(Content), AfterHeader, Rest), 
-    append(Settings, Content, Translation), !,  
+    append(Settings, Content, Original), !,
+    append(Original, [if(is_(A,B), (nonvar(B), is(A,B)))], Translation), % adding def of is_2 last!  
     assertz(parsed). 
 
 % header parses all the declarations and assert them into memory to be invoked by the rules. 
@@ -2103,9 +2104,6 @@ must_not_be(A,B) :- not(must_be(A,B)).
 
 has_as_head_before([B|C], B, C). 
 
-% Basic definition based on Prolog's builtin
-is_(A,B) :- nonvar(B), A is B. 
-
 % see reasoner.pl
 %before(A,B) :- nonvar(A), nonvar(B), number(A), number(B), A < B. 
 
@@ -2463,7 +2461,7 @@ show(rules) :- % trace,
     findall((Pred :- Body), 
         (dict(PredicateElements, _, _),  PredicateElements\=[], Pred=..PredicateElements,
         clause(SwishModule:Pred, Body_), unwrapBody(Body_, Body)), Predicates),
-    forall(member(Clause, Predicates), portray_clause(Clause)).
+    forall(member(Clause, [(is_(A,B) :- (nonvar(B), is(A,B)))|Predicates]), portray_clause(Clause)).
 
 % 
 %(op2tokens(Pred, _, OpTokens) -> % Fixing binary predicates for scasp

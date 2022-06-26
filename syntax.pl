@@ -82,11 +82,13 @@ taxlog2prolog(query(Name,Goal),delimiter-[classify,classify],query(Name,Goal)).
 
 % extending to cover new structural changes at semantical level
 
-semantics2prolog(if(N,H,B),neck(if)-[SpecH,SpecB],(H:-targetBody(B,false,_,'',[],NN))) :- !, % for testing N
+semantics2prolog(if(N,H,B),neck(if)-[SpecH,SpecB],(H:-targetBody(B,false,_,'',[],NN))) :- !, % working rule with line number
     NN is N + 3, % correction to linecount
     taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB).
-semantics2prolog(if(H,B),neck(if)-[SpecH,SpecB],(H:-targetBody(B,false,_,'',[],3))) :- !,
-    taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB).
+semantics2prolog(if(H,B),neck(if)-[SpecH,SpecB],(H:-targetBody(B,false,_,'',[],3))) :- !, % pre-settings without line numbers
+    taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB),
+    pengine_self(SwishModule),
+    declare_facts_as_dynamic(SwishModule, [H]). 
 %semantics2prolog(if(H,B),neck(if)-[SpecH,SpecB],(H:-B)) :- !,
 %    SpecH=classify, SpecB=classify. 
     %taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB).
