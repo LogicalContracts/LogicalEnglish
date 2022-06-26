@@ -111,9 +111,9 @@ query three is:
 :- use_module(kp_loader).
 :- use_module(library(prolog_stack)).
 :- thread_local text_size/1, error_notice/4, dict/3, meta_dict/3, example/2, local_dict/3, local_meta_dict/3,
-                last_nl_parsed/1, kbname/1, happens/2, initiates/3, terminates/3, is_type/1,
+                last_nl_parsed/1, kbname/1, happens/2, initiates/3, terminates/3, is_type/1, is_/2, 
                 predicates/1, events/1, fluents/1, metapredicates/1, parsed/0, source_lang/1, including/0, just_saved_scasp/2. 
-:- discontiguous statement/3, declaration/4, _:example/2, _:query/2. 
+:- discontiguous statement/3, declaration/4, _:example/2, _:query/2, _:is_/2. 
 
 % Main clause: text_to_logic(+String,-Clauses) is det
 % Errors are added to error_notice 
@@ -211,7 +211,7 @@ process_types_dict(Dictionary, Type_entries) :-
         member((_Name-Type), Types), 
         process_types_or_names([Type], GoalElements, Types, TypeWords),
         concat_atom(TypeWords, '_', Word), Word\=''), Templates), 
-    setof(is_type(Ty), member(Ty, Templates), Type_entries).
+    (Templates\=[] -> setof(is_type(Ty), member(Ty, Templates), Type_entries) ; Type_entries = []).
 
 % Experimental rules for reordering of templates
 % order_templates/2
@@ -2066,7 +2066,7 @@ predef_dict([=, T1, T2], [thing_1-thing, thing_2-thing], [T1, is, equal, to, T2]
 predef_dict([isbefore, T1, T2], [time1-time, time2-time], [T1, is, before, T2]). % see reasoner.pl before/2
 predef_dict([isafter, T1, T2], [time1-time, time2-time], [T1, is, after, T2]).  % see reasoner.pl before/2
 predef_dict([member, Member, List], [member-object, list-list], [Member, is, in, List]).
-predef_dict([is, A, B], [term-term, expression-expression], [A, is, B]). % builtin Prolog assignment
+predef_dict([is_, A, B], [term-term, expression-expression], [A, is, B]). % builtin Prolog assignment
 % predefined entries:
 %predef_dict([assert,Information], [info-clause], [this, information, Information, ' has', been, recorded]).
 predef_dict([\=@=, T1, T2], [thing_1-thing, thing_2-thing], [T1, \,=,@,=, T2]).
@@ -2102,6 +2102,9 @@ must_be_nonvar(A) :- nonvar(A).
 must_not_be(A,B) :- not(must_be(A,B)). 
 
 has_as_head_before([B|C], B, C). 
+
+% Basic definition based on Prolog's builtin
+is_(A,B) :- nonvar(B), A is B. 
 
 % see reasoner.pl
 %before(A,B) :- nonvar(A), nonvar(B), number(A), number(B), A < B. 
