@@ -1,4 +1,5 @@
 const SERVER_URL = "http://localhost:3050/taxkbapi";
+//const SERVER_URL = "https://le.logicalcontracts.com/taxkbapi";
 const MY_TOKEN = "myToken123";
 
 import axios from 'axios';
@@ -51,7 +52,6 @@ async function main(){
     console.log(`\n\nPROLOG predicates for KB ${result.data.kb}:`);
     console.log(result.data.predicates);
     console.log("\nThe PROLOG test examples:");
-    console.log(JSON.stringify(result.data.examples));
     for (var example of result.data.examples){
         console.log(` Example ${example.name}:`);
         for (var scenario of example.scenarios){

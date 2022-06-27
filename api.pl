@@ -55,6 +55,7 @@ handle_api(Request) :-
     http_read_json_dict(Request, Payload, [value_string_as(atom)]),
     %asserta(my_request(Request)), % for debugging
     print_message(informational,"Request Payload: ~w"-[Payload]),
+    assertion(Payload.token=='myToken123'),
     (entry_point(Payload,Result)->true;Result=_{error:"Goal failed"}),
     print_message(informational,"returning: ~w"-[Result]),
     reply_json_dict(Result).
