@@ -35,6 +35,9 @@ limitations under the License.
 :- use_module('spacy/spacy.pl').
 :- use_module(drafter).
 :- use_module(kp_loader).
+:- use_module(syntax).
+:- use_module(reasoner,[taxlogWrapper/10]).
+:- use_module(le_input,[text_to_logic/2]).
 
 :- if(current_module(swish)). %%%%% On SWISH:
 
@@ -51,7 +54,9 @@ start_api_server(Port) :- http_server(http_dispatch, [port(Port)]).
 handle_api(Request) :-
     http_read_json_dict(Request, Payload, [value_string_as(atom)]),
     %asserta(my_request(Request)), % for debugging
+    print_message(informational,"Request Payload: ~w"-[Payload]),
     (entry_point(Payload,Result)->true;Result=_{error:"Goal failed"}),
+    print_message(informational,"returning: ~w"-[Result]),
     reply_json_dict(Result).
 
 % Define our adhoc REST API; more general Prolog querying at
@@ -78,12 +83,38 @@ entry_point(R, _{results:Results}) :- get_dict(operation,R,query), !,
         ), Results).
 
 % Example:
-%  curl --header "Content-Type: application/json" --request POST --data '{"operation":"draft", "pageURL":"http://mysite/page1#section2",  "content":[{"url":"http://mysite/page1#section2!chunk1", "text":"john flies by instruments"}, {"url":"http://mysite/page1#section2!chunk2", "text":"miguel drives with gusto"}]}' http://localhost:3050/taxkbapi% 
+%  curl --header "Content-Type: application/json" --request POST --data '{"operation":"draft", "pageURL":"http://mysite/page1#section2",  "content":[{"url":"http://mysite/page1#section2!chunk1", "text":"john flies by instruments"}, {"url":"http://mysite/page1#section2!chunk2", "text":"miguel drives with gusto"}]}' http://localhost:3050/taxkbapi
 % {operation:draft, pageURL:U, content:Items} --> {pageURL:U, draft:PrologText}
 %   each item is a {url:..,text:...} 
-entry_point(R, _{pageURL:R.pageURL, draft:Draft}) :- get_dict(operation,R,draft), !, 
+entry_point(R, _{pageURL:ThePage, draft:Draft}) :- get_dict(operation,R,draft), !, 
     load_content(R.content),
+    ThePage = R.pageURL,
     draft_string(R.pageURL,Draft).
+
+% Example:
+%  curl --header "Content-Type: application/json" --request POST --data '{"operation":"le2prolog", "le":"http://mysite/page1#section2"}' http://localhost:3050/taxkbapi
+% Translates a LE program to a Prolog program
+entry_point(R, _{prolog:Program, kb:KB, predicates:Predicates, examples:Examples}) :- get_dict(operation,R,le2prolog), !, 
+    text_to_logic(R.le,X), 
+    findall(Prolog, (
+        member(T,X), semantics2prolog(T,_,Prolog_), 
+        ((Prolog_=(Head:-RawBody), taxlogWrapper(RawBody,_,_,_,Body,_,_,_,_,_)) -> Prolog=(Head:-Body) 
+            ; Prolog=Prolog_)
+        ),Terms),
+    with_output_to(string(Program),forall(member(Term,Terms), portray_clause(Term) ) ),
+
+    (member(kbname(KB),X)->true;KB=null),
+    (member(predicates(Preds),X) -> findall(Pred,(member(Pred_,Preds), term_string(Pred_,Pred)),Predicates); Predicates=[]),
+
+    findall(_{name:Name, scenarios:Scenarios}, (
+        member(example(Name,Scenarios_),X), Name\==null,
+        findall( _{assertion:Assertion,clauses:ScenarioProgram},(
+            member(scenario(Clauses_,Assertion_),Scenarios_),
+            term_string(Assertion_,Assertion),
+            with_output_to(string(ScenarioProgram), forall(member(Clause_,Clauses_), portray_clause(Clause_)))
+            ), Scenarios)
+        ),Examples).
+    %TODO: verify if JD initializes parsed etc
 
 
 %makeBindingsDict(+NameTermPairs,-NameTermDict)

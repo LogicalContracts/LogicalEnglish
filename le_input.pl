@@ -82,7 +82,7 @@ query three is:
 */
 
 :- module(le_input, 
-    [document/3, le_taxlog_translate/4, 
+    [document/3, le_taxlog_translate/4, text_to_logic/2,
     op(1000,xfy,user:and),  % to support querying
     op(800,fx,user:resolve), % to support querying
     op(800,fx,user:answer), % to support querying
