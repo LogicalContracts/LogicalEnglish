@@ -92,8 +92,7 @@ entry_point(R, _{pageURL:ThePage, draft:Draft}) :- get_dict(operation,R,draft), 
     ThePage = R.pageURL,
     draft_string(R.pageURL,Draft).
 
-% Example:
-%  curl --header "Content-Type: application/json" --request POST --data '{"operation":"le2prolog", "le":"http://mysite/page1#section2"}' http://localhost:3050/taxkbapi
+% Example: see Javascript example in clientExample/
 % Translates a LE program to a Prolog program
 entry_point(R, _{prolog:Program, kb:KB, predicates:Predicates, examples:Examples}) :- get_dict(operation,R,le2prolog), !, 
     text_to_logic(R.le,X), 
