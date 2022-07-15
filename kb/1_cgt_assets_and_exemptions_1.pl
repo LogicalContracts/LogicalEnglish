@@ -1,8 +1,11 @@
-:-module('1_cgt_assets_and_exemptions+https://www.ato.gov.au/Individuals/Capital-gains-tax/List-of-cgt-assets-and-exemptions/',[]).
+:-module('1_cgt_assets_and_exemptions_1+https://www.ato.gov.au/Individuals/Capital-gains-tax/List-of-cgt-assets-and-exemptions/',[]).
 
 en("the target language is: prolog. 
     
 the templates are:
+
+  % *a thing* is a *a type*. 
+  % *a thing* is an *a type*.
   *an asset* is a CGT asset.
   *an asset* is a CGT exempt asset.
   *an asset* is a pre-date CGT asset.
@@ -104,32 +107,8 @@ the templates are:
   *a thing* is a rare folio. 
   *a thing* is a manuscript. 
   *a thing* is a book. 
-  part of *an asset* has been rent out.
-  part of *an asset* is used for business.
-  *an asset* is on more than *a number* hectares of land.
-  *an owner* of *an asset* is a foreigner.
-  *an owner* does not satify the requirement. 
-  *a vehicle* carries a load of *a weight* in tonnes.
-  *a vehicle* carries up to *a number* of passengers.
-  *a taxpayer* pays CGT for *an asset* on *a date*. 
 
-
-the knowledge base cgt_assets_and_exemptions includes:
-
-a taxpayer pays CGT for an asset on a date
-  if the asset is a CGT asset
-  and the asset is a property
-  and the taxpayer is the owner of the asset
-  and the asset is being sold on the date
-      or the asset is being transfer on the date. 
-
-% Assets acquired before 20 September 1985
-%
-% Assets you acquired before 20 September 1985 are exempt from CGT.
-an asset is a CGT exempt asset
-  if the asset is a CGT asset
-  and the asset was acquired at a date
-  and the date is before 1985-09-20. 
+the knowledge base cgt_assets_and_exemptions_1 includes:
 
 % A CGT asset is:
 % (a) any kind of property; or
@@ -178,24 +157,11 @@ a thing is a real state asset
   or the thing is a farm. 
 
 % Main residence is a CGT exempt asset if it is used purely for personal use.
-% However, CGT may apply if:
-%     you rent out part of it
-%     you use it for business
-%     it is on more than 2 hectares of land
-%     you are a foreign resident and you do not satisfy the requirements 
-% of the life events test at the time the 'CGT event' happens.
 an asset is a CGT exempt asset
   if the asset is used purely for personal use purposes
-  and the asset is a main residence
-  and it is not the case that
-    part of the asset has been rent out
-    or part of the asset is used for business
-    or the asset is on more than 2 hectares of land
-    or the owner of the asset is a foreigner
-       and the owner does not satify the requirement. 
+  and the asset is a main residence.
 
 % Granny flat is a CGT exempt asset if an eligible granny flat arrangement is created, varied or terminated.
-% what about? https://www.ato.gov.au/individuals/capital-gains-tax/property-and-capital-gains-tax/granny-flat-arrangements-and-cgt/
 an asset is a CGT exempt asset
   if the asset is a granny flat
   and an arrangement for the asset is created
@@ -220,19 +186,10 @@ a thing is a share or a unit or similar investments
   or the thing is a stapled security
   or the thing is a cryptocurrency. 
 
-% ??????????????????????????????????????????????????????????????????????????????????????????????????????
-% CGT applies to shares, units and similar investments when a 'CGT event' happens. 
-% This includes when you sell them or receive a distribution (other than a dividend) from a managed fund.
-
 % Cryptocurrency is a CGT exempt asset if it is used for the purchase of items for personal consumption.
 an asset is a CGT exempt asset
   if the asset is a cryptocurrency
   and the asset is used for the purchase of items for personal consumption.
-
-% ???????????????????????????????????????????????????????????????????????????????????????????????????????????
-% CGT may apply when you dispose of your crypto assets.
-% If your crypto is a personal use asset, capital gains or losses from disposing of it may be exempt from CGT. 
-% Crypto is a personal use asset if it is kept or used mainly to purchase items for personal use or consumption.
 
 % Personal use assets list
 % boats
@@ -280,34 +237,22 @@ a thing is a collectable asset
   or the thing is a manuscript
   or the thing is a book. 
 
-% If an entity makes a capital loss on disposal of a collectable then 
-% that loss can only be offset against a capital gain on the disposal of a collectable.
+% If an entity makes a capital loss on disposal of a collectable then that loss can only be offset against a capital gain on the disposal of a collectable.
 
 % Intangibles assets list
 % Leases
 % goodwill
 % licences
 % contractual rights
-a thing is an intangible asset
+a thing is a intangible asset
   if the thing is a lease
   or the thing is a goodwill
   or the thing is a license
   or the thing is a contractual right. 
 
-a taxpayer pays CGT for an asset on a date
-  if the asset is a CGT asset
-  and the asset is an intangible asset
-  and the taxpayer is the owner of the asset
-  and an event happens to the asset on the date
-  and the event is a CGT event.   
+% A foreign currency transaction is a CGT event if 'entity' makes a gain on disposal of that foreign currency due to an exchange rate fluctuation between time of acquisition and time of disposal.
 
-% what about https://www.ato.gov.au/individuals/capital-gains-tax/cgt-events/
-
-% A foreign currency transaction is a CGT event if 'entity' makes a gain on disposal of that 
-% foreign currency due to an exchange rate fluctuation between time of acquisition and time of disposal.
-
-% A foreign currency transaction is a CGT event if 'entity' makes a loss on disposal of that 
-% foreign currency due to an exchange rate fluctuation between time of acquisition and time of disposal.
+% A foreign currency transaction is a CGT event if 'entity' makes a loss on disposal of that foreign currency due to an exchange rate fluctuation between time of acquisition and time of disposal.
 
 % Depreciating assets list
 % business equipment
@@ -326,14 +271,6 @@ a thing is is rental property plant or equipment
 an asset is a CGT exempt asset
   if the asset is a depreciating asset
   and the asset is used soley for taxable income generating purposes.
-
-% A car is defined as a motor vehicle that carries a load of less than 1 tonne and fewer than 9 passengers.
-a vehicle is a CGT exempt asset
-  if the vehicle is a motor vehicle
-  and the vehicle carries a load of a weight in tonnes
-  and the weight < 1
-  and the vehicle carries up to a number of passengers
-  and the number < 9. 
 
 % A motor vehicle is a CGT exempt asset if it is used purely for personal use purposes.
 an asset is a CGT exempt asset
@@ -487,9 +424,6 @@ query two is:
 
 query three is:
   which asset is a pre-date CGT asset. 
-
-query four is:
-  which taxpayer pays CGT for which asset on which date. 
 
 "). 
 

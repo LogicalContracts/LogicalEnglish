@@ -1,4 +1,4 @@
-:-module('1_net_asset_value_test_2+https://www.ato.gov.au/law/view/document?docid=PAC/19970038/152-20',[]).
+:-module('1_net_asset_value_test_2_2+https://www.ato.gov.au/law/view/document?docid=PAC/19970038/152-20',[]).
 
 en("the target language is: prolog. 
     % inspired by https://www.ato.gov.au/Business/Small-business-entity-concessions/Concessions/CGT-concessions/Maximum-net-asset-value-test/
@@ -35,10 +35,10 @@ the templates are:
     *an asset* in *a set* of *an entity* has *an amount* as liability.
     *a percentage* is reasonable as stated by paragraph 118-190 with respect to *an asset*.
     for *a fraction* out of *a number* times *a section* percent *an asset* was used for producing assessable income.
-    *a percentage* for *an asset*'s assesable income. 
-    *a first entity* controls *a second entity*.
 
-the knowledge base 1_net_asset_value_test_2 includes:
+
+
+the knowledge base 1_net_asset_value_test_2_2 includes:
 
 % Maximum net asset value test
 % 
@@ -217,41 +217,26 @@ an asset must be included under subsection 2A
 
 an asset in a set of an entity has an amount as its market value 
     if the entity is an individual
-    and the asset is a dwelling
     and a percentage is reasonable as stated by paragraph 118-190 with respect to the asset
     and a basic amount is the market value of the asset
     and the amount is the basic amount * the percentage / 100. 
 
 an asset in a set of an entity has an amount as liability
     if the entity is an individual
-    and the asset is a dwelling
     and a percentage is reasonable as stated by paragraph 118-190 with respect to the asset
     and a basic amount is a liability of the asset
     and the amount is the basic amount * the percentage / 100. 
 
-an amount is reasonable as stated by paragraph 118-190 with respect to a given asset
+an amount is reasonable as stated by paragraph 118-190 with respect to an asset
     if  the amount is the sum of each percentage such that
-        the percentage for the given asset's assesable income.
-
-a percentage for a asset's assesable income
-    if  for a fraction out of a number times a section percent the asset was used for producing assessable income
-    and the percentage is the section * the fraction / the number. 
+        for a fraction out of a number times a section percent the asset was used for producing assessable income
+        and the percentage is the section * the fraction / the number. 
 
 %A tax payer satisfies maximum net asset value test at a date
 A tax payer satisfies maximum net asset value test
     if the net value of the CGT assets of the tax payer is a value
     and the value =< 6000000.
 
-% https://www.ato.gov.au/Business/Small-business-entity-concessions/Concessions/CGT-concessions/Connected-entities/
-% An entity is connected with another entity if:
-% 
-%    either entity controls the other entity, or
-%    both entities are controlled by the same third entity.
-an entity is connected with an other entity
-    if the entity controls the other entity
-    or the other entity controls the entity
-    or a third entity controls the entity
-        and the third entity controls the other entity. 
 
 % https://www.ato.gov.au/Business/Small-business-entity-concessions/Concessions/CGT-concessions/Maximum-net-asset-value-test/
 %
@@ -422,7 +407,6 @@ scenario Lana is:
     50000 is the market value of land.
     200000 is the market value of goodwill.
     100000 is the market value of stock.
-    50000 is the market value of plant.
     50000 is the market value of boat.
     600000 is the market value of home. 
     20000 is a liability of boat.
@@ -430,25 +414,12 @@ scenario Lana is:
     home is a dwelling.
     boat is being used solely for the personal use and enjoyment of Lana or Lana's affiliate. 
 
-% -- https://www.ato.gov.au/Business/Small-business-entity-concessions/Concessions/CGT-concessions/Connected-entities/
-% Example 5
-
-% Olivia and Jill conduct a professional practice in partnership. As they each have a 50 percent
-% interest in the partnership, they each control the partnership. Therefore, the partnership is 
-% connected with each partner, and Olivia and Jill are each connected with the partnership.
-scenario Olivia and Jill is:
-    Olivia controls the partnership.
-    Jill controls the partnership. 
-
 
 query one is:
     which payer satisfies maximum net asset value test. 
 
 query two is:
     the net value of the CGT assets of which entity is which amount.
-
-query three is:
-    which partner is connected with which other partner. 
 
 "). 
 
@@ -461,7 +432,4 @@ query three is:
 ?- answer(two, with('Ben')).
 ?- answer(one, with('Cool Tool Pty Ltd'), le(R), An).
 ?- answer(two, with('Cool Tool Pty Ltd')).
-?- answer(two, with('Lana')).
-?- answer(one, with('Lana'), le(R), An).
-?- answer(three, with('Olivia and Jill')).
 */
