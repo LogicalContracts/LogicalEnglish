@@ -1,13 +1,5 @@
 /* le_input: a prolog module with predicates to translate from an 
-extended version of Logical English into the Prolog or Taxlog
-programming languages.   
-
-Copyright [2021] Initial copyright holders by country: 
-LodgeIT (AU), AORA Law (UK), Bob Kowalski (UK), Miguel Calejo (PT), Jacinto Dávila (VE)
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+extended version of Logical English into the Prolog or Taxlogtemplate_decl
 
    http://www.apache.org/licenses/LICENSE-2.0
 
@@ -83,6 +75,7 @@ query three is:
 
 :- module(le_input, 
     [document/3, le_taxlog_translate/4, text_to_logic/2,
+    predicate_decl/4,
     op(1000,xfy,user:and),  % to support querying
     op(800,fx,user:resolve), % to support querying
     op(800,fx,user:answer), % to support querying
