@@ -112,6 +112,14 @@ the templates are:
   *a vehicle* carries a load of *a weight* in tonnes.
   *a vehicle* carries up to *a number* of passengers.
   *a taxpayer* pays CGT for *an asset* on *a date*. 
+  *a taxpayer* is the owner of *an asset*. 
+  *an event* happens to *an asset* on *a date*. 
+  *an event* is a CGT event. 
+  *an event* is about a foreign currency transaction.
+  *an event* is for disposal of *an asset*.
+  *a taxpayer* is the owner of the asset.
+  *a taxpayer* exchanges *an asset* for *an amount* of *a currency* on *a date*
+  *an event* happens to *an asset* on *a date*.   
 
 
 the knowledge base cgt_assets_and_exemptions includes:
@@ -305,6 +313,12 @@ a taxpayer pays CGT for an asset on a date
 
 % A foreign currency transaction is a CGT event if 'entity' makes a gain on disposal of that 
 % foreign currency due to an exchange rate fluctuation between time of acquisition and time of disposal.
+an event is a CGT event 
+  if the event is about a foreign currency transaction
+  and the event is for disposal of an asset
+  and a taxpayer is the owner of the asset
+  and the taxpayer exchanges the asset for an amount of a destination currency on a date
+  and the event happens to the asset on the date. 
 
 % A foreign currency transaction is a CGT event if 'entity' makes a loss on disposal of that 
 % foreign currency due to an exchange rate fluctuation between time of acquisition and time of disposal.
