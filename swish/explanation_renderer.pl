@@ -61,9 +61,11 @@ explanationLEHTML(u(G,Ref,_,_,_,[]),[li(title="Unknown",["~w ?"-[NG],Navigator])
     clauseNavigator(Ref,Navigator).
 %explanationHTML(unknown(at(G,K)),[li([style="color:blue",title="Unknown"],a(href=K,"~w"-[G]))]).
 % explanationHTML(unknown(at(G,K)),[li([p("UNKNOWN: ~w"-[G]),p(i(K))])]).
-explanationLEHTML(f(G,Ref,_,_,_,C),[li(title="Failed goal",[span(style="color:red","It is NOT the case that: ~w ~~"-[NG]),Navigator]), ul(CH)]) :- 
+explanationLEHTML(f(G,Ref,_,_,_,C),[li(title="Failed goal",[span(style="color:red","It cannot be proved for a certain case that: ~w ~~"-[NG]),Navigator]), Because, ul(CH)]) :- 
     niceModule(G,NG),
-    clauseNavigator(Ref,Navigator), explanationLEHTML(C,CH).
+    clauseNavigator(Ref,Navigator), explanationLEHTML(C,CH), 
+    % print_message(informational, "C: .. ~w ... ~w"-[C, CH]), 
+    (CH\=[] -> (C=[s(_,_,_,_,_,[])] -> Because = 'although' ;  Because = 'because'); Because='').
 %explanationHTML(at(G,K),[li(style="color:green",a(href=K,"~w"-[G]))]).
 %explanationHTML(at(G,K),[li([p("~w"-[G]),p(i(K))])]).
 explanationLEHTML([C1|Cn],CH) :- explanationLEHTML(C1,CH1), explanationLEHTML(Cn,CHn), append(CH1,CHn,CH).

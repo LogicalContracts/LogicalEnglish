@@ -117,9 +117,11 @@ the templates are:
   *an event* is a CGT event. 
   *an event* is about a foreign currency transaction.
   *an event* is for disposal of *an asset*.
-  *a taxpayer* is the owner of the asset.
-  *a taxpayer* exchanges *an asset* for *an amount* of *a currency* on *a date*
-  *an event* happens to *an asset* on *a date*.   
+  *a taxpayer* is the owner of *an asset*.
+  *a taxpayer* exchanges *an asset* for *an amount* of *a currency* on *a date*.
+  *an event* happens to *an asset* on *a date*. 
+  *an asset* is being sold on *a date*.
+  *an asset* is being transfer on *a date*.    
 
 
 the knowledge base cgt_assets_and_exemptions includes:
@@ -304,7 +306,6 @@ a thing is an intangible asset
 
 a taxpayer pays CGT for an asset on a date
   if the asset is a CGT asset
-  and the asset is an intangible asset
   and the taxpayer is the owner of the asset
   and an event happens to the asset on the date
   and the event is a CGT event.   
@@ -492,6 +493,14 @@ an asset is a CGT exempt asset
 % • the method statements in s 102-5 ITAA97 (net capital gain) and s 102-10 ITAA97 (net
 % capital loss) (see below).  
 
+scenario cryptoevent is:
+  the event is about a foreign currency transaction.
+  the event is for disposal of 1 bitcoin. 
+  the taxpayer is the owner of 1 bitcoin.
+  1 bitcoin is a cryptocurrency.
+  the taxpayer exchanges 1 bitcoin for 20000 of dollars on 2022-07-15.
+  the event happens to 1 bitcoin on 2022-07-15. 
+
 % Check if your assets are subject to CGT, exempt, or pre-date CGT.
 query one is:
   which thing is a CGT asset.
@@ -509,7 +518,7 @@ query four is:
 
 /** <examples>
  * 
-?- answer('Colin', with('Colin'), le(R), An). 
+?- answer(four, with(cryptoevent), le(E), R).
 ?- show prolog.
-?- answer(one, with('Colin')).
+?- answer(four, with(cryptoevent)).
 */  
