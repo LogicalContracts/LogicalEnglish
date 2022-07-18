@@ -161,10 +161,10 @@ fix_settings(Settings_, Settings2) :-
 
 included_files(Settings2, RestoredDictEntries, CollectedRules) :-
     member(in_files(ModuleNames), Settings2),   % include all those files and get additional DictEntries before ordering
-    %print_message(informational, "Module Names ~w\n"-[ModuleNames]),
+    print_message(informational, "Module Names ~w\n"-[ModuleNames]),
     assertz(including), !, % cut to prevent escaping failure of load_all_files
-    load_all_files(ModuleNames, RestoredDictEntries, CollectedRules). 
-    %print_message(informational, "Restored Entries ~w\n"-[RestoredDictEntries]). 
+    load_all_files(ModuleNames, RestoredDictEntries, CollectedRules), 
+    print_message(informational, "Restored Entries ~w\n"-[RestoredDictEntries]). 
 included_files(_, [], []). 
 
 %load_all_files/2
@@ -172,11 +172,14 @@ included_files(_, [], []).
 %and produces the list of entries that must be added to the dictionaries
 load_all_files([], [], []).
 load_all_files([Name|R], AllDictEntries, AllRules) :- 
-    split_module_name(Name, File, URL), 
+    print_message(informational, "Loading ~w"-[Name]),
+    split_module_name(Name, File, URL),  
+    print_message(informational, "File ~w URL ~w"-[File, URL]),
     concat(File, "-prolog", Part1), concat(Part1, ".pl", Filename),  
-    (URL\=''->atomic_list_concat([File,'-prolog', '+', URL], NewName); atomic_list_concat([File,'-prolog'], NewName)), 
+    (URL\=''->atomic_list_concat([File,'-prolog', '+', URL], NewName); atomic_list_concat([File,'-prolog'], NewName)),
+    print_message(informational, "File ~w FullName ~w"-[Filename, NewName]),
     load_named_file(Filename, NewName, true), !, 
-    %print_message(informational, "the dictionaries of ~w being restored into module ~w"-[SwishModule]),
+    print_message(informational, "the dictionaries of ~w being restored into module ~w"-[NewName]),
     (NewName:local_dict(_,_,_) -> findall(dict(A,B,C), NewName:local_dict(A,B,C), ListDict) ; ListDict = []),
     (NewName:local_meta_dict(_,_,_) -> findall(meta_dict(A,B,C), NewName:local_meta_dict(A,B,C), ListMetaDict); ListMetaDict = []),
     append(ListDict, ListMetaDict, DictEntries), 
@@ -376,8 +379,8 @@ list_of_meta_predicates_decl(_, _, Rest, _) :-
     fail.
 
 list_of_files([]) --> spaces_or_newlines(_), next_section, !.
-list_of_files([Filename|Rout]) --> spaces_or_newlines(_), extract_constant([',', '.'], NameWords), comma_or_period, list_of_files(Rout), !,
-    {name_as_atom(NameWords, Filename)}.
+list_of_files([Filename|Rout]) --> spaces_or_newlines(_), extract_string([Filename]), list_of_files(Rout), !.
+    %{name_as_atom(NameWords, Filename)}.
 list_of_files(_, Rest, _) :- 
     asserterror('LE error found in a file to include ', Rest), 
     fail.
@@ -1599,6 +1602,18 @@ extract_constant(SW, [Word|RestName], [Word|RestOfWords],  NextWords) :-
     %is_a_type(Word),
     %not(determiner(Word)), % no determiners inside constants!
     extract_constant(SW, RestName, RestOfWords, NextWords).
+
+%extract_string/3
+extract_string([], [], []) :- !.
+extract_string([], [newline(A)|RestOfWords], [newline(A)|RestOfWords]):- !.
+extract_string([String], InWords, NextWords) :-
+    extract_all_string([newline(_)], Words, InWords, NextWords),
+    concat_atom(Words, '', String). 
+
+extract_all_string(StopWords, [], [Word|RestOfWords], RestOfWords) :-
+    member(Word, StopWords), !. 
+extract_all_string(StopWords, [Word|RestString], [Word|RestOfWords], NextWords) :-
+    extract_all_string(StopWords, RestString, RestOfWords, NextWords ). 
 
 % extract_list/6
 % extract_list(+StopWords, -List, +Map1, -Map2, +[Word|PossibleLiteral], -NextWords),

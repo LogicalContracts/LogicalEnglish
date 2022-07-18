@@ -37,6 +37,13 @@ the templates are:
     for *a fraction* out of *a number* times *a section* percent *an asset* was used for producing assessable income.
     *a percentage* for *an asset*'s assesable income. 
     *a first entity* controls *a second entity*.
+    *an entity* owns *a number* percent of *an asset* in *a second entity*.
+    *an asset* is a share.
+    the commissioner is satisfied that *a situation*. 
+    *an entity* is controlled by *a second entity*. 
+    all shares carry the same voting rights. 
+    the commissioner is satisfied that *a solution*.
+    *an entity* is affiliate of *a second entity*.
 
 the knowledge base 1_net_asset_value_test_2 includes:
 
@@ -253,6 +260,31 @@ an entity is connected with an other entity
     or a third entity controls the entity
         and the third entity controls the other entity. 
 
+% An entity controls another entity if it or its affiliate (or all of them together):
+%
+%     owns, or has the right to acquire ownership of, interests in the other entity 
+%     that give the right to receive at least 40% (the control percentage) of  
+%         any distribution of income or capital by the other entity, or
+%         if the other entity is a partnership, the net income of the partnership or
+     
+%     if the other entity is a company, owns, or has the right to acquire ownership of, 
+% equity interests in the company that give at least 40% of the voting power in the company.
+
+
+% If an entity's control percentage in another entity is at least 40% but less than 50%, 
+% the Commissioner may determine that the first entity does not control the other entity if he 
+% is satisfied that a third entity (not including any affiliates of the first entity) controls the other entity. 
+a first entity controls a second entity
+    if the first entity owns a number percent of the shares in the second entity
+        and all shares carry the same voting rights 
+        and the number >= 50
+            or the number < 50
+                and the number > 40
+                and the commissioner is satisfied that
+                    the second entity is controlled by a third entity
+                and it is not the case that
+                    the third entity is affiliate of the first entity. 
+
 % https://www.ato.gov.au/Business/Small-business-entity-concessions/Concessions/CGT-concessions/Maximum-net-asset-value-test/
 %
 % Example 1
@@ -441,6 +473,22 @@ scenario Olivia and Jill is:
     Jill controls the partnership. 
 
 
+% Example 7
+%
+% Lachlan owns 48 percent of the shares in Ayoubi Art Supplies. He plays no part in the day-to-day or 
+% strategic decision-making of the business. Daniel owns 42 percent of the shares in the company. 
+% The remaining 10 percent of shares are beneficially owned by a third shareholder who does not take 
+% part in the management of the business. All shares carry the same voting rights and Daniel makes 
+% all day-to-day and strategic decisions for the company. Even though Lachlan owns 48 percent of 
+% the shares in Ayoubi Art Supplies, he would not be taken to control the company if the 
+% Commissioner was satisfied that the company is controlled by Daniel.   
+scenario Ayoubi Art Supplies is:
+    Lachlan owns 48 percent of the shares in Ayoubi Art Supplies. 
+    Daniel owns 42 percent of the shares in Ayoubi Art Supplies. 
+    the shares is a share. 
+    the commissioner is satisfied that
+        Ayoubi Art Supplies is controlled by Daniel. 
+
 query one is:
     which payer satisfies maximum net asset value test. 
 
@@ -449,6 +497,9 @@ query two is:
 
 query three is:
     which partner is connected with which other partner. 
+
+query four is:
+    which first entity controls which second entity.
 
 "). 
 
@@ -464,4 +515,7 @@ query three is:
 ?- answer(two, with('Lana')).
 ?- answer(one, with('Lana'), le(R), An).
 ?- answer(three, with('Olivia and Jill')).
+?- answer(three, with('Olivia and Jill'), le(R), An).
+?- answer(four, with('Ayoubi Art Supplies')).
+?- answer(four, with('Ayoubi Art Supplies'), le(R), An).
 */

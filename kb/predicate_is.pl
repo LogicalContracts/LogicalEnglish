@@ -5,7 +5,7 @@ en("the target language is: prolog.
 the templates are:
     *an A* is the sum of *a B* plus *a C*. 
 
-the knowledge base includes:
+the knowledge base predicate_is includes:
     man is person. 
     
     an A is the sum of a B plus a C if A is B+C. 

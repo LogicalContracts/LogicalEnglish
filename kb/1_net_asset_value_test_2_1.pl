@@ -1,4 +1,4 @@
-:-module('1_net_asset_value_test_2+https://www.ato.gov.au/law/view/document?docid=PAC/19970038/152-20',[]).
+:-module('1_net_asset_value_test_2_1+https://www.ato.gov.au/law/view/document?docid=PAC/19970038/152-20',[]).
 
 en("the target language is: prolog. 
     % inspired by https://www.ato.gov.au/Business/Small-business-entity-concessions/Concessions/CGT-concessions/Maximum-net-asset-value-test/
@@ -33,7 +33,7 @@ the templates are:
     *an asset* is a policy of insurance on the life of an individual.
 
 
-the knowledge base 1_net_asset_value_test_2 includes:
+the knowledge base 1_net_asset_value_test_2_1 includes:
 
 % The net value of the CGT assets of an entity is the amount (whether positive, negative or nil) 
 % obtained by subtracting from the sum of the *market values of those assets the sum of:

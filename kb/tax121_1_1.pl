@@ -1,4 +1,4 @@
-:- module('tax121_1+https://www.law.cornell.edu/uscode/text/26/121',[]).
+:- module('tax121_1_1+https://www.law.cornell.edu/uscode/text/26/121',[]).
 
 en("the target language is: prolog. 
     
@@ -21,7 +21,7 @@ neither *a taxpayer* nor *a spouse* are ineligible for the benefits of subsectio
 *a spouse* meets the use requirements of subsection a with respect to *a property*.
 subsection a shall not apply to any sale or exchange of *a property* by *a person*.  
 
-the knowledge base tax121_1 includes:
+the knowledge base tax121_1_1 includes:
     
 % (a) Exclusion
 % Gross income shall not include gain from the sale or exchange of property if, 
