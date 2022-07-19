@@ -4,24 +4,24 @@
 %https://www.ato.gov.au/general/capital-gains-tax/small-business-cgt-concessions/basic-conditions-for-the-small-business-cgt-concessions/affiliates/
 %
 
-the predicates are:
-    a term must not be a variable,
-    a term must be nonvar,
-    an entity has affiliated with an affiliate at a date,
-    a date is not before a second date, 
-    an affiliate is an individual or is a company,
-    an affiliate is a trust,
-    an affiliate is a partnership,
-    an affiliate is a superannuation fund,
-    an affiliate acts in accordance with directions from an entity,
-    an affiliate acts in concert with an entity,
-    an affiliate is affiliated per older legislation with an entity,
-    an entity is a trust,
-    an entity is a trust according to other legislation,
-    an entity is a partnership,
-    an entity is a partnership according to other legislation,
-    an entity is a superannuation fund, 
-    an entity is a superannuation fund according to other legislation.
+the templates are:
+    *a term* must not be a variable.
+    *a term* must be nonvar.
+    *an entity* has affiliated with *an affiliate* at *a date*.
+    *a date* is not before *a second date*. 
+    *an affiliate* is an individual or is a company.
+    *an affiliate* is a trust.
+    *an affiliate* is a partnership.
+    *an affiliate* is a superannuation fund.
+    *an affiliate* acts in accordance with directions from *an entity*.
+    *an affiliate* acts in concert with *an entity*.
+    *an affiliate* is affiliated per older legislation with *an entity*.
+    *an entity* is a trust.
+    *an entity* is a trust according to other legislation.
+    *an entity* is a partnership.
+    *an entity* is a partnership according to other legislation.
+    *an entity* is a superannuation fund. 
+    *an entity* is a superannuation fund according to other legislation.
 
 the knowledge base includes:
 a term must not be a variable 

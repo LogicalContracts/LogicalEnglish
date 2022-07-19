@@ -43,7 +43,14 @@ the templates are:
     *an entity* is controlled by *a second entity*. 
     all shares carry the same voting rights. 
     the commissioner is satisfied that *a solution*.
-    *an entity* is affiliate of *a second entity*.
+    *an entity* is affiliate of *a second entity*. 
+    *an affiliate* is an individual.
+    *an affiliate* is a company.
+    *an affiliate* is a trust.
+    *an affiliate* is a partnership.
+    *an affiliate* is a superannuation fund.
+    *an affiliate* acts in accordance with directions from *an entity*.
+    *an affiliate* acts in concert with *an entity*.
 
 the knowledge base 1_net_asset_value_test_2 includes:
 
@@ -276,14 +283,31 @@ an entity is connected with an other entity
 % is satisfied that a third entity (not including any affiliates of the first entity) controls the other entity. 
 a first entity controls a second entity
     if the first entity owns a number percent of the shares in the second entity
-        and all shares carry the same voting rights 
-        and the number >= 50
-            or the number < 50
-                and the number > 40
-                and the commissioner is satisfied that
+    and the first entity is different from the second entity
+    and all shares carry the same voting rights 
+    and the number >= 50
+        or the number < 50
+           and the number > 40
+           and it is not the case that    
+    			the commissioner is satisfied that
                     the second entity is controlled by a third entity
-                and it is not the case that
-                    the third entity is affiliate of the first entity. 
+    			and the first entity is different from the third entity
+           and it is not the case that
+               the third entity is affiliate of the first entity. 
+
+% adapted from previous affiliates LE document example:
+an entity is affiliate of an affiliate 
+    if the entity is different from the affiliate
+    and the affiliate is an individual 
+        or the affiliate is a company
+    and it is not the case that 
+        the affiliate is a trust
+    and it is not the case that 
+        the affiliate is a partnership
+    and it is not the case that 
+        the affiliate is a superannuation fund
+    and the affiliate acts in accordance with directions from the entity
+        or the affiliate acts in concert with the entity.
 
 % https://www.ato.gov.au/Business/Small-business-entity-concessions/Concessions/CGT-concessions/Maximum-net-asset-value-test/
 %
@@ -462,12 +486,7 @@ scenario Lana is:
     home is a dwelling.
     boat is being used solely for the personal use and enjoyment of Lana or Lana's affiliate. 
 
-% -- https://www.ato.gov.au/Business/Small-business-entity-concessions/Concessions/CGT-concessions/Connected-entities/
-% Example 5
-
-% Olivia and Jill conduct a professional practice in partnership. As they each have a 50 percent
-% interest in the partnership, they each control the partnership. Therefore, the partnership is 
-% connected with each partner, and Olivia and Jill are each connected with the partnership.
+    or the affiliate acts in concert with the entity.
 scenario Olivia and Jill is:
     Olivia controls the partnership.
     Jill controls the partnership. 
@@ -483,8 +502,13 @@ scenario Olivia and Jill is:
 % the shares in Ayoubi Art Supplies, he would not be taken to control the company if the 
 % Commissioner was satisfied that the company is controlled by Daniel.   
 scenario Ayoubi Art Supplies is:
+    Lachlan is an individual.
+    Daniel is an individual.
+    Ayoubi Art Supplies is a company. 
     Lachlan owns 48 percent of the shares in Ayoubi Art Supplies. 
-    Daniel owns 42 percent of the shares in Ayoubi Art Supplies. 
+    Daniel owns 42 percent of the shares in Ayoubi Art Supplies.
+    Ayoubi Art Supplies acts in accordance with directions from Daniel.
+    all shares carry the same voting rights.     
     the shares is a share. 
     the commissioner is satisfied that
         Ayoubi Art Supplies is controlled by Daniel. 
