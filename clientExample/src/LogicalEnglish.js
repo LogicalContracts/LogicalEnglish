@@ -53,6 +53,16 @@ async function loadString(LE){
         }, axiosConfig)).data;
 }
 
+// [{name:"is_the_father_of",arity:2,tuples: [['George','Elizabeth'], ['George','Margareth']], incremental:false }]
+// TODO: use templae argument names as object fields/keys
+async function loadFactsAndQuery(sessionModule,facts,goal='true',vars=[]){
+    return (await axios.post(SERVER_URL,{
+        token:MY_TOKEN, operation: "loadFactsAndQuery", 
+        sessionModule:sessionModule,
+        facts: facts, goal:goal, vars:vars
+        }, axiosConfig)).data;
+}
+
 async function main(){
     // console.log("LOGICAL ENGLISH:");
     // console.log(LE);
@@ -89,6 +99,17 @@ async function main(){
     var result3 = await loadString(LE);
 
     console.log("Overall result 3:"); console.log(JSON.stringify(result3,null,4));
+
+    var result4 = await loadFactsAndQuery(result3.sessionModule, [
+            "is_a_British_citizen_on('Alice','2021-10-09')", 
+            "is_born_in_on('John','the_UK','2021-10-09')", // HACK: 'the_UK'....
+            "is_the_mother_of('Alice','John')",
+            "is_after_commencement('2021-10-09')"
+        ],
+        "acquires_British_citizenship_on(Person,Date)",
+        ["Person","Date"]
+    );
+    console.log("Overall result 4:"); console.log(JSON.stringify(result4,null,4));
 
 }
 main();

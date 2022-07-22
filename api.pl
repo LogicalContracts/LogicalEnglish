@@ -57,6 +57,8 @@ set_le_program_module(M) :- var(M), !, gensym(leSessionModule, M), set_le_progra
 set_le_program_module(M) :- 
     retractall(le_program_module(_)), assert(le_program_module(M)).
 
+safe_module(M) :- sub_atom(M,0,_,_,leSessionModule), !.
+
 safe_file(F) :- sub_atom(F,_,_,_,'/moreExamples/').
 
 
@@ -131,6 +133,7 @@ le2prologTerms(LE,KB,Clauses,Preds,Examples) :-
             ), Scenarios)
         ),Examples).
 
+% consider hacking assert(myDeclaredModule_(M)) to support taxlog target, for explanations etc
 
 entry_point(R, _{sessionModule:M, kb:KB, predicates:Predicates, examples:Examples, language:Lang}) :- get_dict(operation,R,load), !, 
     set_le_program_module(M),
@@ -155,27 +158,32 @@ entry_point(R, _{sessionModule:M, kb:KB, predicates:Predicates, examples:Example
                 ) 
             )    
         )
-    ).
+    ),
+    % For LE, make predicates dynamic so we can query them all
+    (nonvar(Preds) -> forall(member(Pred,Preds), (functor(Pred,F,N), M:dynamic(F/N))) ; true).
+
+entry_point(R, _{results:Solutions}) :- get_dict(operation,R,loadFactsAndQuery), !, 
+    assertion(safe_module(R.sessionModule)),
+    forall(member(Fact_,R.facts),(
+        term_string(Fact,Fact_),
+        assertion( \+ functor(Fact,':-',_) ),
+        R.sessionModule:assert(Fact)
+        )),
+    (get_dict(goal,R,Goal_) -> (
+        assertion(is_list(R.vars)),
+        format(string(QVS),"(~a)-(~w)",[Goal_,R.vars]), term_string(Goal-Vars_,QVS),
+        findall(Vars, (R.sessionModule:Goal, toJSON(Vars_,Vars)), Solutions)
+    ) ; true).
 
 
-
-
-entry_point(R,Result) :- get_dict(operation,R,load), !,
-        Result_ = _{session:UUID, friendlyName:KBname, language:Language, languages:Languages},
-        (get_dict(previousSession,R,UUID) -> (getSessionModule(UUID,Module),Errors_=[]) ; 
-         get_dict(sessionState,R,SessionState) -> (restoreSession(SessionState,Module,UUID),Errors_=[]) ; (
-                get_dict(kb,R,KB__),
-                (is_list(KB__)->KB_=KB__;KB_=[KB__]),
-                krt_examples_dir(ED), 
-                findall(KB,( member(A_KB,KB_), format(string(KB),"~a/~a",[ED,A_KB]), assertion(safe_file(KB)) ), KBs),
-                initAndLoad(KBs,Errors_,Module),
-                createSession(Module,UUID)
-                )),
-        friendlyKBname(Module,KBname),
-        print_message(informational,"Module: ~w"-[Module]),
-        language(Language), languages(Languages),
-        findall(ES, (member(Error,Errors_), term_string(Error,ES)),Errors),
-        (Errors=[] -> Result=Result_ ; put_dict(error,Result_,Errors,Result)).
+toJSON([T1|Tn],[J1|Jn]) :- !, toJSON(T1,J1), toJSON(Tn,Jn).
+toJSON([],[]) :- !.
+toJSON(T,J) :- atomic(T), !, T=J.
+toJSON(D,J) :- is_dict(D), !, 
+        dict_pairs(D,Tag,Pairs), 
+        findall(Key-ValueJ,(member(Key-Value,Pairs), toJSON(Value,ValueJ)), JPairs),
+        dict_pairs(J,Tag,JPairs).
+toJSON(T,J) :- term_string(T,J).
 
 
 
