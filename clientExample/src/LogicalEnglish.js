@@ -39,28 +39,56 @@ query one is:
 which person acquires British citizenship on which date.
 `;
 
-async function main(){
-    console.log("LOGICAL ENGLISH:");
-    console.log(LE);
+async function loadFile(ServerFile){
+    return (await axios.post(SERVER_URL,{
+        token:MY_TOKEN, operation: "load", 
+        file: ServerFile
+        }, axiosConfig)).data;
+}
 
-    console.log("Translating to PROLOG...");
-
-    var result = await axios.post(SERVER_URL,{
-        token:MY_TOKEN, operation: "le2prolog", 
+async function loadString(LE){
+    return (await axios.post(SERVER_URL,{
+        token:MY_TOKEN, operation: "load", 
         le: LE
-        }, axiosConfig);
-    console.log(`\n\nPROLOG predicates for KB ${result.data.kb}:`);
-    console.log(result.data.predicates);
-    console.log("\nThe PROLOG test examples:");
-    for (var example of result.data.examples){
-        console.log(` Example ${example.name}:`);
-        for (var scenario of example.scenarios){
-            console.log("% for the following clauses this goal must succeed: "+scenario.assertion);
-            console.log(scenario.clauses);
-        }
-    }
-    console.log("\nThe PROLOG clauses:");
-    console.log(result.data.prolog);
+        }, axiosConfig)).data;
+}
+
+async function main(){
+    // console.log("LOGICAL ENGLISH:");
+    // console.log(LE);
+
+    // console.log("Translating to PROLOG...");
+
+    // var result = await axios.post(SERVER_URL,{
+    //     token:MY_TOKEN, operation: "le2prolog", 
+    //     le: LE
+    //     }, axiosConfig);
+    // console.log("Overall result:"); console.log(JSON.stringify(result.data,null,4));
+
+    // console.log(`\n\nPROLOG predicates for KB ${result.data.kb}:`);
+    // console.log(result.data.predicates);
+    // console.log("\nThe PROLOG test examples:");
+    // for (var example of result.data.examples){
+    //     console.log(` Example ${example.name}:`);
+    //     for (var scenario of example.scenarios){
+    //         console.log("% for the following clauses this goal must succeed: "+scenario.assertion);
+    //         console.log(scenario.clauses);
+    //     }
+    // }
+    // console.log("\nThe PROLOG clauses:");
+    // console.log(result.data.prolog);
+
+    console.log("\nNow loading LE from a server file:");
+
+    var result2 = await loadFile('/Users/mc/git/LogicalEnglish/moreExamples/citizenship.le');
+
+    console.log("Overall result 2:"); console.log(JSON.stringify(result2,null,4));
+
+    console.log("\nNow loading LE from a client string:");
+
+    var result3 = await loadString(LE);
+
+    console.log("Overall result 3:"); console.log(JSON.stringify(result3,null,4));
 
 }
 main();

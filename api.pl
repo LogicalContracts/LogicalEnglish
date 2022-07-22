@@ -50,15 +50,27 @@ start_api_server :- start_api_server(3050).
 start_api_server(Port) :- http_server(http_dispatch, [port(Port)]).
 :- endif.
 
+% Session module management
+:- thread_local le_program_module/1. % the default, "user" module, where module-less KRT files get loaded into
+% May generate new module name:
+set_le_program_module(M) :- var(M), !, gensym(leSessionModule, M), set_le_program_module(M).
+set_le_program_module(M) :- 
+    retractall(le_program_module(_)), assert(le_program_module(M)).
+
+safe_file(F) :- sub_atom(F,_,_,_,'/moreExamples/').
+
+
 :- http_handler('/taxkbapi', handle_api, []).  % this defines a web server endpoint
 handle_api(Request) :-
     http_read_json_dict(Request, Payload, [value_string_as(atom)]),
     %asserta(my_request(Request)), % for debugging
-    print_message(informational,"Request Payload: ~w"-[Payload]),
+    %print_message(informational,"Request Payload: ~w"-[Payload]),
     assertion(Payload.token=='myToken123'),
     (entry_point(Payload,Result)->true;Result=_{error:"Goal failed"}),
-    print_message(informational,"returning: ~w"-[Result]),
+    %print_message(informational,"returning: ~w"-[Result]),
     reply_json_dict(Result).
+
+:- discontiguous api:entry_point/2.
 
 % Define our adhoc REST API; more general Prolog querying at
 %  https://pengines.swi-prolog.org/docs/documentation.html (Javascript) or
@@ -95,16 +107,20 @@ entry_point(R, _{pageURL:ThePage, draft:Draft}) :- get_dict(operation,R,draft), 
 % Example: see Javascript example in clientExample/
 % Translates a LE program to a Prolog program
 entry_point(R, _{prolog:Program, kb:KB, predicates:Predicates, examples:Examples}) :- get_dict(operation,R,le2prolog), !, 
-    text_to_logic(R.le,X), 
+    le2prologTerms(R.le,KB,Terms,Preds,Examples),
+    with_output_to(string(Program),forall(member(Term,Terms), portray_clause(Term) ) ),
+    findall(Pred,(member(Pred_,Preds), term_string(Pred_,Pred)),Predicates).
+
+%TODO: verify if JD initializes parsed etc correctly; they may be prone to threading bugs under the web server thread pool
+le2prologTerms(LE,KB,Clauses,Preds,Examples) :-
+    text_to_logic(LE,X), 
     findall(Prolog, (
         member(T,X), semantics2prolog(T,_,Prolog_), 
         ((Prolog_=(Head:-RawBody), taxlogWrapper(RawBody,_,_,_,Body,_,_,_,_,_)) -> Prolog=(Head:-Body) 
             ; Prolog=Prolog_)
-        ),Terms),
-    with_output_to(string(Program),forall(member(Term,Terms), portray_clause(Term) ) ),
-
+        ),Clauses),
     (member(kbname(KB),X)->true;KB=null),
-    (member(predicates(Preds),X) -> findall(Pred,(member(Pred_,Preds), term_string(Pred_,Pred)),Predicates); Predicates=[]),
+    (member(predicates(Preds),X) -> true; Preds=[]),
 
     findall(_{name:Name, scenarios:Scenarios}, (
         member(example(Name,Scenarios_),X), Name\==null,
@@ -114,7 +130,53 @@ entry_point(R, _{prolog:Program, kb:KB, predicates:Predicates, examples:Examples
             with_output_to(string(ScenarioProgram), forall(member(Clause_,Clauses_), portray_clause(Clause_)))
             ), Scenarios)
         ),Examples).
-    %TODO: verify if JD initializes parsed etc
+
+
+entry_point(R, _{sessionModule:M, kb:KB, predicates:Predicates, examples:Examples, language:Lang}) :- get_dict(operation,R,load), !, 
+    set_le_program_module(M),
+    print_message(informational,"Created module ~w"-[M]),
+
+    (get_dict(le,R,LE) -> (
+            Lang=le,
+            le2prologTerms(LE,KB,Clauses,Preds,Examples),
+            findall(Pred,(member(Pred_,Preds), term_string(Pred_,Pred)),Predicates),
+            forall(member(Clause,Clauses),M:assert(Clause))
+        ) ; (
+            assertion(safe_file(R.file)),
+            (sub_atom(R.file,_,_,0,'le') -> (
+                    Lang=le,
+                    read_file_to_string(R.file,LE,[]),
+                    le2prologTerms(LE,KB,Clauses,Preds,Examples),
+                    findall(Pred,(member(Pred_,Preds), term_string(Pred_,Pred)),Predicates),
+                    forall(member(Clause,Clauses),M:assert(Clause))
+                ) ; (
+                    Lang=prolog,
+                    load_files(R.file,[module(M)])
+                ) 
+            )    
+        )
+    ).
+
+
+
+
+entry_point(R,Result) :- get_dict(operation,R,load), !,
+        Result_ = _{session:UUID, friendlyName:KBname, language:Language, languages:Languages},
+        (get_dict(previousSession,R,UUID) -> (getSessionModule(UUID,Module),Errors_=[]) ; 
+         get_dict(sessionState,R,SessionState) -> (restoreSession(SessionState,Module,UUID),Errors_=[]) ; (
+                get_dict(kb,R,KB__),
+                (is_list(KB__)->KB_=KB__;KB_=[KB__]),
+                krt_examples_dir(ED), 
+                findall(KB,( member(A_KB,KB_), format(string(KB),"~a/~a",[ED,A_KB]), assertion(safe_file(KB)) ), KBs),
+                initAndLoad(KBs,Errors_,Module),
+                createSession(Module,UUID)
+                )),
+        friendlyKBname(Module,KBname),
+        print_message(informational,"Module: ~w"-[Module]),
+        language(Language), languages(Languages),
+        findall(ES, (member(Error,Errors_), term_string(Error,ES)),Errors),
+        (Errors=[] -> Result=Result_ ; put_dict(error,Result_,Errors,Result)).
+
 
 
 %makeBindingsDict(+NameTermPairs,-NameTermDict)

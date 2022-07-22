@@ -126,7 +126,7 @@ text_to_logic(String_, Translation) :-
 
 % document/3 (or document/1 in dcg)
 document(Translation, In, Rest) :- 
-    (parsed -> retract(parsed); true), 
+    (parsed -> retractall(parsed); true), 
     (including -> retract(including); true), 
     (source_lang(_L) -> retractall(source_lang(_)) ; true),
     phrase(header(Settings), In, AfterHeader), !, %print_message(informational, "Declarations completed: ~w"-[Settings]), 
