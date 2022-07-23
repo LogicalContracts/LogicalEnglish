@@ -108,8 +108,8 @@ entry_point(R, _{pageURL:ThePage, draft:Draft}) :- get_dict(operation,R,draft), 
 
 % Example: see Javascript example in clientExample/
 % Translates a LE program to a Prolog program
-entry_point(R, _{prolog:Program, kb:KB, predicates:Predicates, examples:Examples}) :- get_dict(operation,R,le2prolog), !, 
-    le2prologTerms(R.le,KB,Terms,Preds,Examples),
+entry_point(R, _{prolog:Program, kb:KB, predicates:Predicates, examples:Examples, target:Target}) :- get_dict(operation,R,le2prolog), !, 
+    le2prologTerms(R.le,KB,Terms,Preds,Examples,Target),
     with_output_to(string(Program),forall(member(Term,Terms), portray_clause(Term) ) ),
     findall(Pred,(member(Pred_,Preds), term_string(Pred_,Pred)),Predicates).
 

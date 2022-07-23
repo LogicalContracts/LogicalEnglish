@@ -63,35 +63,35 @@ async function loadFactsAndQuery(sessionModule,facts,goal='true',vars=[]){
 }
 
 async function main(){
-    // console.log("LOGICAL ENGLISH:");
-    // console.log(LE);
+    console.log("LOGICAL ENGLISH:");
+    console.log(LE);
 
-    // console.log("Translating to PROLOG...");
+    console.log("Translating to PROLOG...");
 
-    // var result = await axios.post(SERVER_URL,{
-    //     token:MY_TOKEN, operation: "le2prolog", 
-    //     le: LE
-    //     }, axiosConfig);
-    // console.log("Overall result:"); console.log(JSON.stringify(result.data,null,4));
+    var result = await axios.post(SERVER_URL,{
+        token:MY_TOKEN, operation: "le2prolog", 
+        le: LE
+        }, axiosConfig);
+    console.log("Overall result:"); console.log(JSON.stringify(result.data,null,4));
 
-    // console.log(`\n\nPROLOG predicates for KB ${result.data.kb}:`);
-    // console.log(result.data.predicates);
-    // console.log("\nThe PROLOG test examples:");
-    // for (var example of result.data.examples){
-    //     console.log(` Example ${example.name}:`);
-    //     for (var scenario of example.scenarios){
-    //         console.log("% for the following clauses this goal must succeed: "+scenario.assertion);
-    //         console.log(scenario.clauses);
-    //     }
-    // }
-    // console.log("\nThe PROLOG clauses:");
-    // console.log(result.data.prolog);
+    console.log(`\n\nPROLOG predicates for KB ${result.data.kb}:`);
+    console.log(result.data.predicates);
+    console.log("\nThe PROLOG test examples:");
+    for (var example of result.data.examples){
+        console.log(` Example ${example.name}:`);
+        for (var scenario of example.scenarios){
+            console.log("% for the following clauses this goal must succeed: "+scenario.assertion);
+            console.log(scenario.clauses);
+        }
+    }
+    console.log("\nThe PROLOG clauses:");
+    console.log(result.data.prolog);
 
-    // console.log("\nNow loading LE from a server file:");
+    console.log("\nNow loading LE from a server file:");
 
-    // var result2 = await loadFile('/Users/mc/git/LogicalEnglish/moreExamples/citizenship.le');
+    var result2 = await loadFile('/Users/mc/git/LogicalEnglish/moreExamples/citizenship.le');
 
-    // console.log("Overall result 2:"); console.log(JSON.stringify(result2,null,4));
+    console.log("Overall result 2:"); console.log(JSON.stringify(result2,null,4));
 
     console.log("\nNow loading LE from a client string:");
 
