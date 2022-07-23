@@ -55,6 +55,7 @@ P on T at URL if Body --> P :- targetBody(Body,true,T,URL,[],LE_line or taxlog)
 P at URL if Body  -->  P :- targetBody(Body,false,_,URL,[],LE_line or taxlog)
 */
 
+taxlog2prolog(if(_LineNumber,H,B), Spec, New) :- !, taxlog2prolog(if(H,B),Spec,New). % hack for LogicalEnglish
 taxlog2prolog(if(function(Call,Result),Body), neck(if)-[delimiter-[head(meta,Call),classify],SpecB], (function(Call,Result):-Body)) :- !,
     taxlogBodySpec(Body,SpecB).
 taxlog2prolog(if(at(on(H,T),Url),B), neck(if)-[delimiter-[delimiter-[SpecH,classify],classify],SpecB], (H:-targetBody(B,true,T,Url,[],taxlog))) :- !,

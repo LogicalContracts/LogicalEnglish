@@ -6,7 +6,7 @@ import axios from 'axios';
 const axiosConfig = {/*headers:{'Access-Control-Allow-Origin':'*'}*/};
 
 const LE = `
-the target language is: prolog.
+the target language is: taxlog.
 
 the templates are:
 *a person* acquires British citizenship on *a date*.
@@ -53,8 +53,7 @@ async function loadString(LE){
         }, axiosConfig)).data;
 }
 
-// [{name:"is_the_father_of",arity:2,tuples: [['George','Elizabeth'], ['George','Margareth']], incremental:false }]
-// TODO: use templae argument names as object fields/keys
+// TODO: variant using template argument names as object fields/keys
 async function loadFactsAndQuery(sessionModule,facts,goal='true',vars=[]){
     return (await axios.post(SERVER_URL,{
         token:MY_TOKEN, operation: "loadFactsAndQuery", 
@@ -88,11 +87,11 @@ async function main(){
     // console.log("\nThe PROLOG clauses:");
     // console.log(result.data.prolog);
 
-    console.log("\nNow loading LE from a server file:");
+    // console.log("\nNow loading LE from a server file:");
 
-    var result2 = await loadFile('/Users/mc/git/LogicalEnglish/moreExamples/citizenship.le');
+    // var result2 = await loadFile('/Users/mc/git/LogicalEnglish/moreExamples/citizenship.le');
 
-    console.log("Overall result 2:"); console.log(JSON.stringify(result2,null,4));
+    // console.log("Overall result 2:"); console.log(JSON.stringify(result2,null,4));
 
     console.log("\nNow loading LE from a client string:");
 

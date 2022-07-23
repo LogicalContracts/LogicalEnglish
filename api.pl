@@ -114,12 +114,17 @@ entry_point(R, _{prolog:Program, kb:KB, predicates:Predicates, examples:Examples
     findall(Pred,(member(Pred_,Preds), term_string(Pred_,Pred)),Predicates).
 
 %TODO: verify if JD initializes parsed etc correctly; they may be prone to threading bugs under the web server thread pool
-le2prologTerms(LE,KB,Clauses,Preds,Examples) :-
+le2prologTerms(LE,KB,Clauses,Preds,Examples,Target) :-
     text_to_logic(LE,X), 
+    (member(target(prolog),X) -> Target=prolog ; Target=taxlog),
     findall(Prolog, (
-        member(T,X), semantics2prolog(T,_,Prolog_), 
-        ((Prolog_=(Head:-RawBody), taxlogWrapper(RawBody,_,_,_,Body,_,_,_,_,_)) -> Prolog=(Head:-Body) 
-            ; Prolog=Prolog_)
+        member(T,X), 
+        (Target==prolog -> (
+            semantics2prolog(T,_,Prolog_),
+            ((Prolog_=(Head:-RawBody), taxlogWrapper(RawBody,_,_,_,Body,_,_,_,_,_)) -> Prolog=(Head:-Body) ; Prolog=Prolog_)
+            ) ; 
+            taxlog2prolog(T,_,Prolog)
+            )
         ),Clauses),
     (member(kbname(KB),X)->true;KB=null),
     (member(predicates(Preds),X) -> true; Preds=[]),
@@ -133,36 +138,40 @@ le2prologTerms(LE,KB,Clauses,Preds,Examples) :-
             ), Scenarios)
         ),Examples).
 
-% consider hacking assert(myDeclaredModule_(M)) to support taxlog target, for explanations etc
-
-entry_point(R, _{sessionModule:M, kb:KB, predicates:Predicates, examples:Examples, language:Lang}) :- get_dict(operation,R,load), !, 
+entry_point(R, _{sessionModule:M, kb:KB, predicates:Predicates, examples:Examples, language:Lang, target:Target}) :- get_dict(operation,R,load), !, 
     set_le_program_module(M),
     print_message(informational,"Created module ~w"-[M]),
 
     (get_dict(le,R,LE) -> (
             Lang=le,
-            le2prologTerms(LE,KB,Clauses,Preds,Examples),
-            findall(Pred,(member(Pred_,Preds), term_string(Pred_,Pred)),Predicates),
+            le2prologTerms(LE,KB,Clauses,Preds,Examples,Target),
+            findall(Pred,(member(Pred_,Preds), toJSON(Pred_,Pred)),Predicates),
             forall(member(Clause,Clauses),M:assert(Clause))
         ) ; (
             assertion(safe_file(R.file)),
             (sub_atom(R.file,_,_,0,'le') -> (
                     Lang=le,
                     read_file_to_string(R.file,LE,[]),
-                    le2prologTerms(LE,KB,Clauses,Preds,Examples),
-                    findall(Pred,(member(Pred_,Preds), term_string(Pred_,Pred)),Predicates),
+                    le2prologTerms(LE,KB,Clauses,Preds,Examples,Target),
+                    findall(Pred,(member(Pred_,Preds), toJSON(Pred_,Pred)),Predicates),
                     forall(member(Clause,Clauses),M:assert(Clause))
                 ) ; (
-                    Lang=prolog,
+                    Lang=prolog, Target=prolog,
                     load_files(R.file,[module(M)])
                 ) 
             )    
         )
     ),
-    % For LE, make predicates dynamic so we can query them all
+    M:assert(target_executor(Target)),
+    (Target==taxlog -> M:assert(myDeclaredModule_(M)) ; true),
+    % For LE, make predicates dynamic so we can query them all:
     (nonvar(Preds) -> forall(member(Pred,Preds), (functor(Pred,F,N), M:dynamic(F/N))) ; true).
 
-entry_point(R, _{results:Solutions}) :- get_dict(operation,R,loadFactsAndQuery), !, 
+hack_module_for_taxlog(M) :-  
+    retractall(kp_loader:module_api_hack(_)),
+    assert(kp_loader:module_api_hack(M)).
+
+entry_point(R, _{answers:Solutions, result:Result}) :- get_dict(operation,R,loadFactsAndQuery), !, 
     assertion(safe_module(R.sessionModule)),
     forall(member(Fact_,R.facts),(
         term_string(Fact,Fact_),
@@ -172,7 +181,22 @@ entry_point(R, _{results:Solutions}) :- get_dict(operation,R,loadFactsAndQuery),
     (get_dict(goal,R,Goal_) -> (
         assertion(is_list(R.vars)),
         format(string(QVS),"(~a)-(~w)",[Goal_,R.vars]), term_string(Goal-Vars_,QVS),
-        findall(Vars, (R.sessionModule:Goal, toJSON(Vars_,Vars)), Solutions)
+        (R.sessionModule:target_executor(prolog) -> (
+            findall(_{bindings:Vars}, (R.sessionModule:Goal, toJSON(Vars_,Vars)), Solutions),
+            (Solutions=[] -> Result=false ; Result=true)
+            ) ;(
+            % taxlog:
+            hack_module_for_taxlog(R.sessionModule),
+            findall(Vars+Result+E, (
+                query_with_facts(at(Goal,R.sessionModule),[/*??*/],unknowns(_),taxlog(taxlogExplanation(E_)),Result), 
+                makeExplanationTree(E_,E),
+                toJSON(Vars_,Vars)
+                ),Pairs
+            ),
+            (member(_+unknown+_,Pairs) -> Result=unknown; Pairs=[] -> Result=false; Result=true),
+            findall(_{bindings:Vars,explanation:E},member(Vars+_+E,Pairs),Solutions)
+            )
+        )
     ) ; true).
 
 

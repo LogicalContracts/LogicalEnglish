@@ -1,6 +1,6 @@
 :- module(_,[
     loaded_kp/1, all_kps_loaded/0, all_kps_loaded/1, kp_dir/1, taxkb_dir/1, kp_location/3, kp/1, must_succeed/2, must_succeed/1,
-    shouldMapModule/2, moduleMapping/2, myDeclaredModule/1, system_predicate/1,
+    shouldMapModule/2, module_api_hack/1, moduleMapping/2, myDeclaredModule/1, system_predicate/1,
     discover_kps_in_dir/1, discover_kps_in_dir/0, discover_kps_gitty/0, setup_kp_modules/0, load_kps/0,
     load_gitty_files/1, load_gitty_files/0, save_gitty_files/1, save_gitty_files/0, delete_gitty_file/1, update_gitty_file/3,
     xref_all/0, xref_clean/0, print_kp_predicates/0, print_kp_predicates/1, reset_errors/0, my_xref_defined/3, url_simple/2,
@@ -120,9 +120,12 @@ all_kps_loaded(KP):-
     print_message(informational,"Loading Knowledge Page(s)..(~w)"-[KP]),
     forall(kp(KP),loaded_kp(KP)).
 
+:- thread_local module_api_hack/1.
+
 %! loaded_kp(++KnowledgePageName) is nondet.
 %
 %  loads the knowledge page, failing if it cannot
+loaded_kp(Name) :- module_api_hack(Name), !.
 loaded_kp(Name) :- must_be(nonvar,Name), shouldMapModule(_,Name), !. % SWISH module already loaded 
 loaded_kp(Name) :- \+ kp_location(Name,_,_), !, 
     (\+ reported_missing_kp(Name) -> (
@@ -514,6 +517,7 @@ pengines:prepare_module(Module, swish, _Options) :-
 % ...OR there WAS,  although it no longer exists
 shouldMapModule(From,To) :- myDeclaredModule(From), kp(From), myCurrentModule(To), !, 
     (moduleMapping(From,To)->true;(assert(moduleMapping(From,To)))).
+
 :- dynamic moduleMapping/2. % Nice module->transient SWISH module; remembers previous mappings, to support UI navigation later, e.g. from explanations
 
 
