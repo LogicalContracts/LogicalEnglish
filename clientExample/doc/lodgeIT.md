@@ -1,6 +1,6 @@
 # Examples from LodgeIT
 
-1. [CGT Assets and Exemptions](../../kb/1_cgt_assets_and_exemptions.pl): A Capital Gain Tax, CGT, asset is (a) any kind of property; or (b) a legal or equitable right that is not property. This document is a first approximation to a computational model of related concepts. It is based on the [List of CGT assets and exemptions](https://www.ato.gov.au/Individuals/Capital-gains-tax/List-of-cgt-assets-and-exemptions/) from the Australian Tax Office. This document can be used to answer questions such as:
+1. [CGT Assets and Exemptions](../../kb/1_cgt_assets_and_exemptions.pl): A Capital Gain Tax, CGT, asset is (a) any kind of property; or (b) a legal or equitable right that is not property. This document is a first approximation to a computational model of related concepts. It is based on the [List of CGT assets and exemptions](https://www.ato.gov.au/Individuals/Capital-gains-tax/List-of-cgt-assets-and-exemptions/) from the Australian Tax Office. The document can be used to answer questions such as:
 
     1.1. [which thing is a CGT asset](https://github.com/LogicalContracts/LogicalEnglish/blob/b36ce6e39ccc6ca29ab62397f7f1a5ab7799b8f7/kb/1_cgt_assets_and_exemptions.pl#L506).
 
