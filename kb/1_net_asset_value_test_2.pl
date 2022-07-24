@@ -486,7 +486,12 @@ scenario Lana is:
     home is a dwelling.
     boat is being used solely for the personal use and enjoyment of Lana or Lana's affiliate. 
 
-    or the affiliate acts in concert with the entity.
+%   Example 5
+%
+ % Olivia and Jill conduct a professional practice in partnership. 
+ % As they each have a 50% interest in the partnership, they each control 
+ % the partnership. Therefore, the partnership is connected with each partner, 
+ % and Olivia and Jill are each connected with the partnership.
 scenario Olivia and Jill is:
     Olivia controls the partnership.
     Jill controls the partnership. 
