@@ -8,7 +8,7 @@ But the VSC extension can be obtained directly from within VSC. As the author ex
 
 We want to encourage our friends to test it and, if you are so kind, report the experiences here:
 
-[https://forms.gle/buqffxcvsKT63wiJ7](https://forms.gle/buqffxcvsKT63wiJ7)
+[https://docs.google.com/forms/d/e/1FAIpQLSeYH3D_6Lc8F0DB7Z1lvqmRaqBgYYFqxr6NtFAgx1Ffa510Bw/viewform](https://docs.google.com/forms/d/e/1FAIpQLSeYH3D_6Lc8F0DB7Z1lvqmRaqBgYYFqxr6NtFAgx1Ffa510Bw/viewform)
 
 # TaxLog and Logical English projects - PRELIMINARY
 
