@@ -1,3 +1,15 @@
+# Latest (New LE EDITOR mode for VSC):
+
+We are happy to announce that we are inviting for testing of the new LE editor mode for the Visual Studio Code Editor, VSC, developed by Nikolai Merritt, as his MSc project at Imperial College. The whole code is here:
+
+[https://github.com/nikolaimerritt/LogicalEnglish](https://github.com/nikolaimerritt/LogicalEnglish)
+
+But the VSC extension can be obtained directly from within VSC. As the author explains: "Installing the extension is now very simple. Having installed Visual Studio Code, from the 'extensions' icon on the left bar, and search for "logical-english-vscode". (The extension comes up if you search for "logical english" or similar, but gets buried under lots of less new extensions.) It can also be found here [https://marketplace.visualstudio.com/items?itemName=NikolaiMerritt.logical-english-vscode](https://marketplace.visualstudio.com/items?itemName=NikolaiMerritt.logical-english-vscode)"
+
+We want to encourage our friends to test it and, if you are so kind, report the experiences here:
+
+[https://docs.google.com/forms/d/e/1FAIpQLSeYH3D_6Lc8F0DB7Z1lvqmRaqBgYYFqxr6NtFAgx1Ffa510Bw/viewform](https://docs.google.com/forms/d/e/1FAIpQLSeYH3D_6Lc8F0DB7Z1lvqmRaqBgYYFqxr6NtFAgx1Ffa510Bw/viewform)
+
 # TaxLog and Logical English projects - PRELIMINARY
 
 For more about TaxLog see [TaxLog.md](TaxLog.md) file.

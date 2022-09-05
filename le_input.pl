@@ -775,7 +775,7 @@ or_ --> [o].  % italian and spanish
 or_ --> [ou]. % french
 
 not_ --> [it], spaces(_), [is], spaces(_), [not], spaces(_), [the], spaces(_), [case], spaces(_), [that], spaces(_). 
-not_ --> [non], spaces(_), [è], spaces(_), [provato], spaces(_), [che], spaces(_). % italian
+not_ --> [non], spaces(_), [risulta], spaces(_), [che], spaces(_). % italian
 not_ --> [ce], spaces(_), [n],[A],[est], spaces(_), [pas], spaces(_), [le], spaces(_), [cas], spaces(_), [que], spaces(_), {atom_string(A, "'")}. % french
 not_ --> [no], spaces(_), [es], spaces(_), [el], spaces(_), [caso], spaces(_), [que], spaces(_).  % spanish
 
@@ -892,6 +892,9 @@ it_is_unknown_whether_ -->
 
 it_is_unknown_whether_ --> 
     it_, [is], spaces(_), [unknown], spaces(_), [that], spaces(_).
+
+it_is_unknown_whether_ --> 
+    [non], spaces(_), [è], spaces(_), [noto], spaces(_), [se], spaces(_). % italian
 
 /* --------------------------------------------------- Supporting code */
 % indentation code
@@ -2596,6 +2599,10 @@ dump(source_lang, String) :-
     source_lang(L) -> 
     with_output_to(string(String), portray_clause(source_lang(L))) ; String="". 
 
+dump(source_lang_scasp, String) :-
+    source_lang(L) -> 
+    with_output_to(string(String), portray_clause(:- set_prolog_flag(scasp_lang, L))) ; String="".     
+
 % #abducible
 dump(abducibles_scasp, List, String) :-
     findall(Term, ( member( abducible(Abducible, _), List), Abducible\=true, format(string(Term), "#abducible ~p", [Abducible]) ), Abds), 
@@ -2669,10 +2676,10 @@ dump_scasp(Module, List, String) :-
     dump(abducibles_scasp, List, StringAbds),  
     string_concat(":-module(\'", Module, Module01),
     string_concat(Module01, "\', []).\n", TopHeadString), 
-    dump(source_lang, SourceLang), 
+    dump(source_lang_scasp, SourceLang), 
     string_concat(TopHeadString, SourceLang, TopMost), 
     % headers for scasp
-    string_concat("% s(CASP) Programming \n:- use_module(library(scasp)).\n% Uncomment to suppress warnings\n%:- style_check(-discontiguous).\n",
+    string_concat("% s(CASP) Programming \n:- use_module(library(scasp)).\n% Uncomment to suppress warnings\n:- style_check(-discontiguous).\n",
                 ":- style_check(-singleton).\n:- set_prolog_flag(scasp_forall, prev).\n", SCAPSHeader),
     string_concat(TopMost, SCAPSHeader, Header), 
 	string_concat(Header, StringTemplates, HeadString), 
