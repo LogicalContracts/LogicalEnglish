@@ -814,9 +814,11 @@ for_all_cases_in_which_ --> spaces_or_newlines(_), [for], spaces(_), [all], spac
 for_all_cases_in_which_ --> spaces_or_newlines(_), [pour], spaces(_), [tous], spaces(_), [les], spaces(_), [cas], spaces(_), [o],[ù], spaces(_).  % french 
 for_all_cases_in_which_ --> spaces_or_newlines(_), [per], spaces(_), [tutti], spaces(_), [i], spaces(_), [casi], spaces(_), [in], spaces(_), [cui], spaces(_).  % italian 
 for_all_cases_in_which_ --> spaces_or_newlines(_), [en], spaces(_), [todos], spaces(_), [los], spaces(_), [casos], spaces(_), [en], spaces(_), [los], spaces(_), [que], spaces(_).  % spanish 
+for_all_cases_in_which_ --> spaces_or_newlines(_), [en], spaces(_), [cualquier], spaces(_), [caso], spaces(_), [en], spaces(_), [el], spaces(_), [que], spaces(_).  % spanish 
 
 it_is_the_case_that_ --> [it], spaces(_), [is], spaces(_), [the], spaces(_), [case], spaces(_), [that], spaces(_).
 it_is_the_case_that_ --> [es], spaces(_), [el], spaces(_), [caso], spaces(_), [que], spaces(_).  % spanish
+it_is_the_case_that_ --> [es], spaces(_), [también], spaces(_), [el], spaces(_), [caso], spaces(_), [que], spaces(_).  % spanish
 it_is_the_case_that_ --> [c], [A], [est], spaces(_), [le], spaces(_), [cas], spaces(_), [que], spaces(_), {atom_string(A, "'")}. % french
 it_is_the_case_that_ --> [è], spaces(_), [provato], spaces(_), [che], spaces(_). % italian
 
