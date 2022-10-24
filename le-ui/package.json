@@ -1,0 +1,43 @@
+{
+  "name": "le-ui",
+  "displayName": "LE UI",
+  "description": "VSCode User Interface for the Logical English Query Machinery on SWISH",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.72.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:le-ui.helloWorld",
+    "onCommand:le-ui.run"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [{
+      "command": "le-ui.helloWorld",
+      "title": "Hello World"
+    }, {
+      "command": "le-ui.run",
+      "title": "Run LE"
+    }
+  ]
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "pretest": "npm run lint",
+    "test": "node ./test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.72.0",
+    "@types/glob": "^8.0.0",
+    "@types/mocha": "^10.0.0",
+    "@types/node": "16.x",
+    "eslint": "^8.24.0",
+    "glob": "^8.0.3",
+    "mocha": "^10.0.0",
+    "typescript": "^4.8.4",
+    "@vscode/test-electron": "^2.1.5"
+  }
+}
