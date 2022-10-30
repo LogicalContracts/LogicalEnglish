@@ -21,6 +21,12 @@
     }, {
       "command": "le-ui.run",
       "title": "Run LE"
+    },  {
+      "command": "le-ui.showSelectionCount",
+      "title": "Text Selection"
+    }, {
+      "command": "le-ui.query",
+      "title": "Query LE"
     }
   ]
   },

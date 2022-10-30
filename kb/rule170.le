@@ -1,0 +1,46 @@
+the templates are:
+    *A vehicle* is permitted to enter *a junction* at *a time*. 
+    *A vehicle* have watched *a junction* until *a time*. 
+    there are users crossing *a junction* at *a time*.
+    there is a safe gap between *a vehicle* and any user approaching *a junction* at *a time*.
+    *a vehicle* have watched *a junction* before *a time*.
+    *a user* has no visual of *a vehicle* at *a time*.
+    *a user* of *a type* is approaching *a junction* from *a position* at *a time*.     	
+    there is a safe gap between *a user* and *a vehicle* and *a junction* at *a time*.
+    *a user* will reach *a junction* at *a time*.
+    *a vehicle* will cross *a junction* at *a time*. 
+    *a time* is clearly before *a second time* plus some security margin.
+
+the knowledge base rule170 includes:
+    A vehicle is permitted to enter a junction at a time if
+    	the vehicle have watched the junction before the time
+    and it is not the case that
+    	there are users crossing the junction at the time
+    and there is a safe gap between the vehicle and any user approaching the junction at the time. 
+
+there is a safe gap between a vehicle and any user approaching a junction at a time if
+    for all cases in which
+        a user of a type is approaching the junction from a position at the time
+    it is the case that
+    	there is a safe gap between the user and the vehicle and the junction at the time. 
+
+scenario one is:
+    av1 have watched junction01 before 2.
+    there is a safe gap between av1 and any user approaching junction01 at 2. 
+
+query one is:
+    which vehicle is permitted to enter which junction at which time. 
+
+% watch out for cyclists, motorcyclists and pedestrians including 
+% powered wheelchairs/mobility scooter users as they are not always easy to see. 
+% Be aware that they may not have seen or heard you if you are approaching from behind  
+scenario b1 is:
+    user1 will reach j1 at 4.
+    v1 will cross j1 at 2.
+    0 is clearly before 2 plus some security margin.
+    there is a safe gap between a user and a vehicle and a junction at a time T if 
+        and the user will reach the junction at a time T1
+        and the vehicle will cross the junction at a time T2
+        and T2 is clearly before T1 plus some security margin 
+        and T is before T1.
+
