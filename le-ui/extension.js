@@ -78,7 +78,7 @@ function activate(context) {
 
 	let newcommand = vscode.commands.registerCommand('le-ui.run', function () {
 		// The code you place here will be executed every time your command is executed
-		leWebViewPanel = vscode.window.createWebviewPanel('ViewPanel','LE Answers', {preserveFocus: true, viewColumn: 1});
+		leWebViewPanel = vscode.window.createWebviewPanel('ViewPanel','LE Greetings', {preserveFocus: true, viewColumn: 1});
 		// leWebViewPanel.webview.postMessage(
 		// 	leWebViewPanel.webview.postMessage({
 		// 		type: 'update',
@@ -95,6 +95,7 @@ function activate(context) {
 
 	let newInputcommand = vscode.commands.registerCommand('le-ui.query', function () {
 		// The code you place here will be executed every time your command is executed
+		leWebViewPanel = vscode.window.createWebviewPanel('ViewPanel','LE Answers', {preserveFocus: true, viewColumn: 1});
 
 		// Display a message box to the user
 		vscode.window.showInputBox().then((value) => {leQuery=value})
@@ -177,30 +178,30 @@ async function loadFactsAndQuery(sessionModule,facts,goal='true',vars=[]){
 
 async function main(){
     console.log("LOGICAL ENGLISH:");
-    console.log(LETest);
+    //console.log(LETest);
 
-    console.log("Translating to PROLOG...");
+    // console.log("Translating to PROLOG...");
 
-    var result = await axios.post(SERVER_URL,{
-        token:MY_TOKEN, operation: "le2prolog", 
-        le: LETest
-        }, axiosConfig);
-    console.log("Overall result:"); console.log(JSON.stringify(result.data,null,4));
+    // var result = await axios.post(SERVER_URL,{
+    //     token:MY_TOKEN, operation: "le2prolog", 
+    //     le: LETest
+    //     }, axiosConfig);
+    //console.log("Overall result:"); console.log(JSON.stringify(result.data,null,4));
 
-    console.log(`\n\nPROLOG predicates for KB ${result.data.kb}:`);
-    console.log(result.data.predicates);
-    console.log("\nThe PROLOG test examples:");
-    for (var example of result.data.examples){
-        console.log(` Example ${example.name}:`);
-        for (var scenario of example.scenarios){
-            console.log("% for the following clauses this goal must succeed: "+scenario.assertion);
-            console.log(scenario.clauses);
-        }
-    }
-    console.log("\nThe PROLOG clauses:");
-    console.log(result.data.prolog);
+    //console.log(`\n\nPROLOG predicates for KB ${result.data.kb}:`);
+    //console.log(result.data.predicates);
+    //console.log("\nThe PROLOG test examples:");
+    //for (var example of result.data.examples){
+    //    console.log(` Example ${example.name}:`);
+    //    for (var scenario of example.scenarios){
+    //        console.log("% for the following clauses this goal must succeed: "+scenario.assertion);
+    //        console.log(scenario.clauses);
+    //    }
+    //}
+    //console.log("\nThe PROLOG clauses:");
+    // console.log(result.data.prolog);
 
-	leWebViewPanel.webview.html = result.data.prolog;
+	//leWebViewPanel.webview.html = result.data.prolog;
 
     // console.log("\nNow loading LE from a server file:");
 
@@ -208,25 +209,27 @@ async function main(){
 
     // console.log("Overall result 2:"); console.log(JSON.stringify(result2,null,4));
 
-    // console.log("\nNow loading LE from a client string:");
+ 	console.log("\nNow loading LE from a client string:");
 
-    // var result3 = await loadString(LETest);
+    var result3 = await loadString(LETest);
 
     // console.log("Overall result 3:"); console.log(JSON.stringify(result3,null,4));
 
-    // var result4 = await loadFactsAndQuery(result3.sessionModule, [
-    //         "is_a_British_citizen_on('Alice','2021-10-09')", 
-    //         "is_born_in_on('John','the_UK','2021-10-09')", // HACK: 'the_UK'....
-    //         "is_the_mother_of('Alice','John')",
-    //         "is_after_commencement('2021-10-09')"
-    //     ],
-    //     "acquires_British_citizenship_on(Person,Date)",
-    //     ["Person","Date"]
-    // );
-    // console.log("Overall result 4:"); console.log(JSON.stringify(result4,null,4));
+    var result4 = await loadFactsAndQuery(result3.sessionModule, [
+             "is_a_British_citizen_on('Alice','2021-10-09')", 
+             "is_born_in_on('John','the_UK','2021-10-09')", // HACK: 'the_UK'....
+             "is_the_mother_of('Alice','John')",
+             "is_after_commencement('2021-10-09')"
+         ],
+         "acquires_British_citizenship_on(Person,Date)",
+         ["Person","Date"]
+    );
+    //console.log("Overall result 4:"); console.log(JSON.stringify(result4,null,4));
+	let success = await vscode.commands.executeCommand('workbench.action.splitEditor');
+
+	leWebViewPanel.webview.html = JSON.stringify(result4,null,4);
 
 }
-//main();
 
 module.exports = {
 	activate,
