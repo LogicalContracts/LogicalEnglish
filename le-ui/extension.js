@@ -7,7 +7,7 @@ const SERVER_URL = "http://localhost:3050/taxkbapi";
 const MY_TOKEN = "myToken123";
 
 const LETest = `
-the target language is: taxlog.
+the target language is: prolog.
 
 the templates are:
 *a person* acquires British citizenship on *a date*.
@@ -50,6 +50,7 @@ const vscode = require('vscode');
 let myStatusBarItem; 
 let leQuery = '';
 let leWebViewPanel;
+let prologWebViewPanel;
 // let processQuery; 
 
 // This method is called when your extension is activated
@@ -67,44 +68,34 @@ function activate(context) {
 	// The command has been defined in the package.json file
 	// Now provide the implementation of the command with  registerCommand
 	// The commandId parameter must match the command field in package.json
-	let disposable = vscode.commands.registerCommand('le-ui.helloWorld', function () {
-		// The code you place here will be executed every time your command is executed
+	// let disposable = vscode.commands.registerCommand('le-ui.helloWorld', function () {
+	// 	// The code you place here will be executed every time your command is executed
 
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from LE UI!');
-	});
+	// 	// Display a message box to the user
+	// 	vscode.window.showInformationMessage('Hello World from LE UI!');
+	// });
 
-	context.subscriptions.push(disposable);
+	// context.subscriptions.push(disposable);
 
-	let newcommand = vscode.commands.registerCommand('le-ui.run', function () {
-		// The code you place here will be executed every time your command is executed
-		leWebViewPanel = vscode.window.createWebviewPanel('ViewPanel','LE Greetings', {preserveFocus: true, viewColumn: 1});
-		// leWebViewPanel.webview.postMessage(
-		// 	leWebViewPanel.webview.postMessage({
-		// 		type: 'update',
-		// 		text: 'Hello, friend of LE!',
-		// 	}))
+	// let newcommand = vscode.commands.registerCommand('le-ui.run', function () {
+	// 	// The code you place here will be executed every time your command is executed
+	// 	leWebViewPanel = vscode.window.createWebviewPanel('ViewPanel','LE Greetings', {preserveFocus: true, viewColumn: 1});
+	// 	// leWebViewPanel.webview.postMessage(
+	// 	// 	leWebViewPanel.webview.postMessage({
+	// 	// 		type: 'update',
+	// 	// 		text: 'Hello, friend of LE!',
+	// 	// 	}))
 
-		leWebViewPanel.webview.html = "Hello, friend of LE!"
+	// 	leWebViewPanel.webview.html = "Hello, friend of LE!"
 
-		// Display a message box to the user
-		vscode.window.showInformationMessage('LE runs!');
-	});
+	// 	// Display a message box to the user
+	// 	vscode.window.showInformationMessage('LE runs!');
+	// });
 
-	context.subscriptions.push(newcommand);
+	// context.subscriptions.push(newcommand);
 
 	let newInputcommand = vscode.commands.registerCommand('le-ui.query', function () {
-		// The code you place here will be executed every time your command is executed
-		leWebViewPanel = vscode.window.createWebviewPanel('ViewPanel','LE Answers', {preserveFocus: true, viewColumn: 1});
-
-		// Display a message box to the user
-		vscode.window.showInputBox().then((value) => {leQuery=value})
-		console.log('Querying', leQuery)
-
-		// processQuery = new vscode.ProcessExecution('ls')
-		// console.log('Process', processQuery.process.valueOf)
 		main()
-
 	});
 
 	context.subscriptions.push(newInputcommand);
@@ -177,15 +168,32 @@ async function loadFactsAndQuery(sessionModule,facts,goal='true',vars=[]){
 }
 
 async function main(){
-    console.log("LOGICAL ENGLISH:");
+	let success = await vscode.commands.executeCommand('workbench.action.splitEditor');
+
+	var source = vscode.window.activeTextEditor.document.getText();
+
+    //console.log("Translating to PROLOG...", source.toString());
+
+	// Display a message box to the user
+	//vscode.window.showInputBox().then((value) => {leQuery=value})
+	//console.log('Querying', leQuery)
+
+	var input = await showInputBox();
+
+    console.log("Querying LOGICAL ENGLISH:", input);
     //console.log(LETest);
 
-    // console.log("Translating to PROLOG...");
+	prologWebViewPanel = vscode.window.createWebviewPanel('ViewPanel','LE2Prolog.pl', {preserveFocus: true, viewColumn: 2});
 
-    // var result = await axios.post(SERVER_URL,{
-    //     token:MY_TOKEN, operation: "le2prolog", 
-    //     le: LETest
-    //     }, axiosConfig);
+	var translated = await axios.post(SERVER_URL,{
+        token:MY_TOKEN, operation: "le2prolog", 
+        le: source
+        }, axiosConfig);
+
+	prologWebViewPanel.webview.html = translated.data.prolog;
+
+	leWebViewPanel = vscode.window.createWebviewPanel('ViewPanel','LE Answers', {preserveFocus: true, viewColumn: 2});
+
     //console.log("Overall result:"); console.log(JSON.stringify(result.data,null,4));
 
     //console.log(`\n\nPROLOG predicates for KB ${result.data.kb}:`);
@@ -213,6 +221,8 @@ async function main(){
 
     var result3 = await loadString(LETest);
 
+	//var inter = await showInputBox();
+
     // console.log("Overall result 3:"); console.log(JSON.stringify(result3,null,4));
 
     var result4 = await loadFactsAndQuery(result3.sessionModule, [
@@ -225,11 +235,28 @@ async function main(){
          ["Person","Date"]
     );
     //console.log("Overall result 4:"); console.log(JSON.stringify(result4,null,4));
-	let success = await vscode.commands.executeCommand('workbench.action.splitEditor');
 
 	leWebViewPanel.webview.html = JSON.stringify(result4,null,4);
 
 }
+
+/**
+ * Shows an input box using window.showInputBox().
+ */
+async function showInputBox() {
+	const result = await vscode.window.showInputBox({
+		value: 'abcdef',
+		valueSelection: [2, 4],
+		placeHolder: 'For example a query. But not: 123',
+		validateInput: text => {
+			vscode.window.showInformationMessage(`Validating: ${text}`);
+			return text === '123' ? 'Not 123!' : null;
+		}
+	});
+	vscode.window.showInformationMessage(`Got: ${result}`);
+	return result
+}
+
 
 module.exports = {
 	activate,

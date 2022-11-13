@@ -11,6 +11,7 @@
   ],
   "activationEvents": [
     "onCommand:le-ui.helloWorld",
+    "onCommand:le-ui.query",
     "onCommand:le-ui.run"
   ],
   "main": "./extension.js",
@@ -19,15 +20,16 @@
       "command": "le-ui.helloWorld",
       "title": "Hello World"
     }, {
+      "command": "le-ui.query",
+      "title": "Query LE"
+    },
+    {
       "command": "le-ui.run",
       "title": "Run LE"
     },  {
       "command": "le-ui.showSelectionCount",
       "title": "Text Selection"
-    }, {
-      "command": "le-ui.query",
-      "title": "Query LE"
-    }
+    } 
   ]
   },
   "scripts": {
