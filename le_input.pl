@@ -96,7 +96,8 @@ query three is:
     op(1150, fx, abducible),
     dictionary/3, meta_dictionary/3,
     translate_goal_into_LE/2, name_as_atom/2, parsed/0, source_lang/1, 
-    dump/4, dump/3, dump/2, dump_scasp/3, split_module_name/3
+    dump/4, dump/3, dump/2, dump_scasp/3, split_module_name/3,
+    prepare_query/6
     ]).
 :- use_module('./tokenize/prolog/tokenize.pl').
 :- use_module(library(pengines)).
@@ -2262,7 +2263,7 @@ answer(English, Arg, E, Result) :- %trace,
 % prepare_query(+English, +Arguments, -Module, -Goal, -Facts, -Command)
 prepare_query(English, Arg, SwishModule, Goal, Facts, Command) :- %trace, 
     %restore_dicts, 
-    pengine_self(SwishModule), 
+    var(SwishModule), pengine_self(SwishModule), !, 
     (translate_command(SwishModule, English, GoalName, Goal, PreScenario) -> true 
     ; ( print_message(error, "Don't understand this question: ~w "-[English]), !, fail ) ), % later -->, Kbs),
     copy_term(Goal, CopyOfGoal),  
@@ -2276,6 +2277,24 @@ prepare_query(English, Arg, SwishModule, Goal, Facts, Command) :- %trace,
     %print_message(informational, "Facts: ~w"-[Facts]), 
     extract_goal_command(Goal, SwishModule, _InnerGoal, Command), !.  
     %print_message(informational, "Command: ~w"-[Command]). 
+
+% prepare_query(+English, +Arguments, +Module, -Goal, -Facts, -Command)
+prepare_query(_, _, SwishModule, _, _, Command) :- %trace, 
+    %restore_dicts, 
+    nonvar(SwishModule), 
+    % (translate_command(SwishModule, English, GoalName, Goal, PreScenario) -> true 
+    % ; ( print_message(error, "Don't understand this question: ~w "-[English]), !, fail ) ), % later -->, Kbs),
+    Command = hello. 
+    % copy_term(Goal, CopyOfGoal),  
+    % translate_goal_into_LE(CopyOfGoal, RawGoal), name_as_atom(RawGoal, EnglishQuestion), 
+    % ((Arg = with(ScenarioName), PreScenario=noscenario) -> Scenario=ScenarioName; Scenario=PreScenario),
+    % show_question(GoalName, Scenario, EnglishQuestion), 
+    % %print_message(informational, "Scenario: ~w"-[Scenario]),
+    % (Scenario==noscenario -> Facts = [] ; 
+    %     (SwishModule:example(Scenario, [scenario(Facts, _)]) -> 
+    %         true;  print_message(error, "Scenario: ~w does not exist"-[Scenario]))),
+    % %print_message(informational, "Facts: ~w"-[Facts]), 
+    % extract_goal_command(Goal, SwishModule, _InnerGoal, Command), !.  
 
 show_question(GoalName, Scenario, NLQuestion) :- pengine_self(M),   
     (M:source_lang(en) -> print_message(informational, "Query ~w with ~w: ~w"-[GoalName, Scenario, NLQuestion]); true),
@@ -2426,8 +2445,10 @@ translate_command(SwishModule, English_String, GoalName, Goals, Scenario) :- %tr
     tokenize(English_String, Tokens, [cased(true), spaces(true), numbers(false)]),
     unpack_tokens(Tokens, UTokens), 
     clean_comments(UTokens, CTokens),
-    phrase(command_(GoalName, Scenario), CTokens),
-    ( SwishModule:query(GoalName, Goals) -> true; (print_message(informational, "No goal named: ~w"-[GoalName]), fail) ), !. 
+    phrase(command_(GoalName, Scenario), CTokens), 
+    with_output_to(string(Out), listing(SwishModule:_)),
+    Goals = [GoalName, Scenario, Out]. 
+    % ( SwishModule:query(GoalName, Goals) -> true; (print_message(informational, "No goal named: ~w"-[GoalName]), fail) ), !. 
 
 translate_command(_, English_String, GoalName, Goals, Scenario) :-
     tokenize(English_String, Tokens, [cased(true), spaces(true), numbers(false)]),

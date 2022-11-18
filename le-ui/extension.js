@@ -40,6 +40,42 @@ query one is:
 which person acquires British citizenship on which date.
 `;
 
+const LETest2 = `
+the target language is: prolog. 
+
+the templates are:
+*a dragon* smokes.
+*a dragon* is a parent of *a dragon*.
+*a dragon* is healthy.
+*a dragon* is happy.
+
+the knowledge base dragon includes:
+
+a dragon smokes if 
+an other dragon is a parent of the dragon
+and the other dragon smokes.
+
+A dragon is healthy if it is not the case that
+the dragon smokes.
+
+A dragon is happy if for all cases in which 
+the dragon is a parent of an other dragon
+it is the case that 
+the other dragon is healthy.
+
+scenario one is:
+
+bob is a dragon.
+alice is a dragon.
+alice is a parent of bob.
+
+query happy is:
+
+which dragon is happy.
+
+query healthy is:
+which dragon is healthy.`;
+
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 const vscode = require('vscode');
@@ -160,15 +196,58 @@ async function loadString(LE){
 
 // TODO: variant using template argument names as object fields/keys
 async function loadFactsAndQuery(sessionModule,facts,goal='true',vars=[]){
-    return (await axios.post(SERVER_URL,{
-        token:MY_TOKEN, operation: "loadFactsAndQuery", 
-        sessionModule:sessionModule,
-        facts: facts, goal:goal, vars:vars
-        }, axiosConfig)).data;
+	let result 
+	console.log('starting loadFactsAndQuery', sessionModule, facts, goal, vars)
+	try {
+		result = await axios.post(SERVER_URL,{
+			token:MY_TOKEN, operation: "loadFactsAndQuery", 
+			sessionModule:sessionModule,
+			facts: facts, goal:goal, vars:vars
+			}, axiosConfig)
+		return result.data
+	} catch (e) {
+		console.log('loadFactAndQuery error', e)
+		console.log(`Goal:${goal} with facts:${facts} failed!`)
+	}
+    return `Goal:${goal} with facts:${facts} failed!`;
+}
+
+async function le_answer(sessionModule,facts,goal='true',vars=[]){
+	let result 
+	try {
+		result = await axios.post(SERVER_URL,{
+			token:MY_TOKEN, operation: "answeringQuery", 
+			sessionModule:sessionModule,
+			facts: facts, goal:goal, vars:vars
+			}, axiosConfig)
+		return result.data
+	} catch (e) {
+		console.log('loadFactAndAnswer error', e)
+		console.log(`Goal:${goal} with facts:${facts} failed!`)
+	}
+    return `Goal:${goal} with facts:${facts} failed!`;
+}
+
+// Adding direct connecction with the LE's query machinery
+async function le_answer_(sessionModule,query,scenario){
+	let result
+	try {
+		result = await axios.post(SERVER_URL,{
+			token:MY_TOKEN, operation: "answeringQuery", 
+			sessionModule:sessionModule,
+			query:query,
+			scenario:scenario
+			}, axiosConfig)
+		return result.data
+	} catch (e) {
+		console.log('loadFactAndAnswer error', e)
+		console.log(`Query:${query} with Scenario:${scenario} failed!`)
+	}
+    return `Query:${query} with scenario:${scenario} failed!`;
 }
 
 async function main(){
-	let success = await vscode.commands.executeCommand('workbench.action.splitEditor');
+	//let success = await vscode.commands.executeCommand('workbench.action.splitEditor');
 
 	var source = vscode.window.activeTextEditor.document.getText();
 
@@ -178,66 +257,70 @@ async function main(){
 	//vscode.window.showInputBox().then((value) => {leQuery=value})
 	//console.log('Querying', leQuery)
 
-	var input = await showInputBox();
+	// var input = await showInputBox();
 
-    console.log("Querying LOGICAL ENGLISH:", input);
+    //console.log("Querying LOGICAL ENGLISH:", input);
     //console.log(LETest);
 
-	prologWebViewPanel = vscode.window.createWebviewPanel('ViewPanel','LE2Prolog.pl', {preserveFocus: true, viewColumn: 2});
+	prologWebViewPanel = vscode.window.createWebviewPanel('ViewPanel','LE -> Prolog', {preserveFocus: true, viewColumn: 2});
 
 	var translated = await axios.post(SERVER_URL,{
         token:MY_TOKEN, operation: "le2prolog", 
         le: source
         }, axiosConfig);
 
-	prologWebViewPanel.webview.html = translated.data.prolog;
+	console.log('Translation le to prolog', translated)
+
+	prologWebViewPanel.webview.html = getWebviewPrologContent(translated.data.prolog);
 
 	leWebViewPanel = vscode.window.createWebviewPanel('ViewPanel','LE Answers', {preserveFocus: true, viewColumn: 2});
 
     //console.log("Overall result:"); console.log(JSON.stringify(result.data,null,4));
 
+	var result3 = await loadString(source);
+
+	// console.log('loaded', LETest)
+
+	// var result4 = await loadFactsAndQuery(result3.sessionModule, [
+	// 	"is_a_parent_of('Alice','Bob')"],
+    //     "is_happy(Dragon)",
+    //     ["Dragon"]
+    // );
+
+	// var result4 = await loadFactsAndQuery(result3.sessionModule, [
+	// 	"is_a_parent_of('Alice','Bob')"],
+    //     "is_a_parent_of(Parent, Child)",
+    //     ["Parent", "Child"]
+    // );
+
+	var result4 = await le_answer(result3.sessionModule, [
+		"is_a_parent_of('Alice','Bob')"],
+        "is_a_parent_of(Parent, Child)",
+        ["Parent", "Child"]
+    );
+
+	// var result4 = await le_answer_(result3.sessionModule, input, 'one');
+
     //console.log(`\n\nPROLOG predicates for KB ${result.data.kb}:`);
     //console.log(result.data.predicates);
-    //console.log("\nThe PROLOG test examples:");
-    //for (var example of result.data.examples){
-    //    console.log(` Example ${example.name}:`);
-    //    for (var scenario of example.scenarios){
-    //        console.log("% for the following clauses this goal must succeed: "+scenario.assertion);
-    //        console.log(scenario.clauses);
-    //    }
-    //}
-    //console.log("\nThe PROLOG clauses:");
-    // console.log(result.data.prolog);
-
-	//leWebViewPanel.webview.html = result.data.prolog;
-
-    // console.log("\nNow loading LE from a server file:");
-
-    // var result2 = await loadFile('/Users/mc/git/LogicalEnglish/moreExamples/citizenship.le');
-
-    // console.log("Overall result 2:"); console.log(JSON.stringify(result2,null,4));
-
- 	console.log("\nNow loading LE from a client string:");
-
-    var result3 = await loadString(LETest);
+    //console.log("\nThe PROLOG test examples:");>
 
 	//var inter = await showInputBox();
 
     // console.log("Overall result 3:"); console.log(JSON.stringify(result3,null,4));
 
-    var result4 = await loadFactsAndQuery(result3.sessionModule, [
-             "is_a_British_citizen_on('Alice','2021-10-09')", 
-             "is_born_in_on('John','the_UK','2021-10-09')", // HACK: 'the_UK'....
-             "is_the_mother_of('Alice','John')",
-             "is_after_commencement('2021-10-09')"
-         ],
-         "acquires_British_citizenship_on(Person,Date)",
-         ["Person","Date"]
-    );
-    //console.log("Overall result 4:"); console.log(JSON.stringify(result4,null,4));
+    // var result4 = await loadFactsAndQuery(result3.sessionModule, [
+    //          "is_a_British_citizen_on('Alice','2021-10-09')", 
+    //          "is_born_in_on('John','the_UK','2021-10-09')", // HACK: 'the_UK'....
+    //          "is_the_mother_of('Alice','John')",
+    //          "is_after_commencement('2021-10-09')"
+    //      ],
+    //      "acquires_British_citizenship_on(Person,Date)",
+    //      ["Person","Date"]
+    // );
+    // console.log("Overall result 4:"); console.log(JSON.stringify(result4,null,4));
 
-	leWebViewPanel.webview.html = JSON.stringify(result4,null,4);
-
+	leWebViewPanel.webview.html = getWebviewPrologContent(JSON.stringify(result4,null,4));
 }
 
 /**
@@ -245,7 +328,7 @@ async function main(){
  */
 async function showInputBox() {
 	const result = await vscode.window.showInputBox({
-		value: 'abcdef',
+		value: 'one',
 		valueSelection: [2, 4],
 		placeHolder: 'For example a query. But not: 123',
 		validateInput: text => {
@@ -257,6 +340,20 @@ async function showInputBox() {
 	return result
 }
 
+function getWebviewPrologContent(prolog) {
+
+	return `<!DOCTYPE html>
+  <html lang="en">
+  <head>
+	  <meta charset="UTF-8">
+	  <meta name="viewport" content="width=device-width, initial-scale=2.0">
+	  <title>Prolog</title>
+  </head>
+  <body>
+	  <pre>${prolog}</pre>
+  </body>
+  </html>`;
+  }
 
 module.exports = {
 	activate,

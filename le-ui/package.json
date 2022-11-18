@@ -7,7 +7,7 @@
     "vscode": "^1.72.0"
   },
   "categories": [
-    "Other"
+    "Programming Languages"
   ],
   "activationEvents": [
     "onCommand:le-ui.helloWorld",
@@ -21,7 +21,9 @@
       "title": "Hello World"
     }, {
       "command": "le-ui.query",
-      "title": "Query LE"
+      "title": "Query LE",
+      "category": "Logical English",
+      "icon": "$(book)"
     },
     {
       "command": "le-ui.run",
@@ -30,7 +32,14 @@
       "command": "le-ui.showSelectionCount",
       "title": "Text Selection"
     } 
-  ]
+  ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "le-ui.query"
+        }
+      ]
+    }
   },
   "scripts": {
     "lint": "eslint .",
