@@ -131,7 +131,7 @@ function activate(context) {
 	// context.subscriptions.push(newcommand);
 
 	let newInputcommand = vscode.commands.registerCommand('le-ui.query', function () {
-		main()
+		main(context)
 	});
 
 	context.subscriptions.push(newInputcommand);
@@ -246,7 +246,7 @@ async function le_answer_(sessionModule,query,scenario){
     return `Query:${query} with scenario:${scenario} failed!`;
 }
 
-async function main(){
+async function main(context){
 	//let success = await vscode.commands.executeCommand('workbench.action.splitEditor');
 
 	var source = vscode.window.activeTextEditor.document.getText();
@@ -257,7 +257,7 @@ async function main(){
 	//vscode.window.showInputBox().then((value) => {leQuery=value})
 	//console.log('Querying', leQuery)
 
-	// var input = await showInputBox();
+	//var input = await showInputBox();
 
     //console.log("Querying LOGICAL ENGLISH:", input);
     //console.log(LETest);
@@ -273,7 +273,21 @@ async function main(){
 
 	prologWebViewPanel.webview.html = getWebviewPrologContent(translated.data.prolog);
 
-	leWebViewPanel = vscode.window.createWebviewPanel('ViewPanel','LE Answers', {preserveFocus: true, viewColumn: 2});
+	leWebViewPanel = vscode.window.createWebviewPanel('ViewPanel',
+		'LE Answers', {preserveFocus: true, viewColumn: 2, }, {enableScripts: true});
+
+	// Handle messages from the webview
+	leWebViewPanel.webview.onDidReceiveMessage(
+        message => {
+          switch (message.command) {
+            case 'alert':
+              vscode.window.showErrorMessage(message.text);
+              return;
+          }
+        },
+        undefined,
+        context.subscriptions
+      );
 
     //console.log("Overall result:"); console.log(JSON.stringify(result.data,null,4));
 
@@ -293,13 +307,13 @@ async function main(){
     //     ["Parent", "Child"]
     // );
 
-	var result4 = await le_answer(result3.sessionModule, [
-		"is_a_parent_of('Alice','Bob')"],
-        "is_a_parent_of(Parent, Child)",
-        ["Parent", "Child"]
-    );
+	// var result4 = await le_answer(result3.sessionModule, [
+	// 	"is_a_parent_of('Alice','Bob')"],
+    //     "is_a_parent_of(Parent, Child)",
+    //     ["Parent", "Child"]
+    // );
 
-	// var result4 = await le_answer_(result3.sessionModule, input, 'one');
+	var result4 = await le_answer_(result3.sessionModule, 'happy', 'one');
 
     //console.log(`\n\nPROLOG predicates for KB ${result.data.kb}:`);
     //console.log(result.data.predicates);
@@ -320,7 +334,8 @@ async function main(){
     // );
     // console.log("Overall result 4:"); console.log(JSON.stringify(result4,null,4));
 
-	leWebViewPanel.webview.html = getWebviewPrologContent(JSON.stringify(result4,null,4));
+	// leWebViewPanel.webview.html = getWebviewPrologContent(JSON.stringify(result4,null,4));
+	leWebViewPanel.webview.html = getWebviewLEGUI(JSON.stringify(result4,null,4))
 }
 
 /**
@@ -353,6 +368,68 @@ function getWebviewPrologContent(prolog) {
 	  <pre>${prolog}</pre>
   </body>
   </html>`;
+  }
+
+  function getWebviewLEGUI(answer) {
+	return `<!DOCTYPE html>
+  <html lang="en">
+  <head>
+	  <meta charset="UTF-8">
+	  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+	  <title>Logical English GUI</title>
+  </head>
+  <body>
+	  <h2>Logical English GUI</h2>
+	  <label>Query</label><br>
+	  <textarea placeholder="Enter some text" name="query" /></textarea> <br>
+	  <label>Scenario</label><br>
+	  <input id="scenario" placeholder="Enter some text" name="scenario" /> <br>
+	  <label>Answers</label><br>
+	  <p id="values">
+	  <pre>${answer}</pre></p> <br>
+	  <p id="scene">here</p> <br>
+	  
+	  <button>Run</button>
+
+	  <script>
+		  (function() {
+			  const vscode = acquireVsCodeApi();
+			  //const query = document.getElementById('input-query');
+			  
+			  const input = document.querySelector('textarea');
+			  const scenario = document.querySelector('input');
+			  const log = document.getElementById('values');
+			  const log2 = document.getElementById('scene');
+
+			  var tempQuery = '';
+			  var tempScenario = '';
+
+			  input.addEventListener('input', updateValueQuery);
+			  scenario.addEventListener('input', updateValueScenario);
+
+			  function updateValueQuery(e) {
+  					log.textContent = e.target.value;
+					tempQuery = e.target.value; 
+				}
+
+			  function updateValueScenario(e) {
+					log2.textContent = e.target.value;
+					tempScenario = e.target.value; 
+			  }
+
+			  const button = document.querySelector('button');
+
+			  button.addEventListener('click', (event) => {	
+				//button.textContent = \`Running count: \${event.detail}\`;
+				vscode.postMessage({
+					command: 'alert',
+					text:  'Query: '+tempQuery + ' with Scenario ' + tempScenario +' '+ button.textContent
+				})
+				});
+		  }())
+	  </script>
+  </body>
+  </html>`;  
   }
 
 module.exports = {

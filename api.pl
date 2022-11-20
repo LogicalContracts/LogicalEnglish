@@ -204,7 +204,7 @@ entry_point(R, _{answers:R, result:tested}) :- get_dict(operation,R,answeringQue
     % assert(le_input:parsed), 
     % le_input:answer(happy, with(one), Response), retractall(le_input:parsed). 
 
-entry_point(R, _{answers:Solutions, result:Result}) :- get_dict(operation,R,loadFactsAndQuery), !, 
+entry_point(R, _{facts:R.facts, goal: QVS, answers:Solutions, result:Result}) :- get_dict(operation,R,loadFactsAndQuery), !, 
     print_message(informational,"loadFactsAndQuery: ~w"-[R]), 
     assertion(safe_module(R.sessionModule)),
     forall(member(Fact_,R.facts),(
