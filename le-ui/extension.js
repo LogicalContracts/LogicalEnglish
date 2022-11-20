@@ -84,14 +84,15 @@ const vscode = require('vscode');
 //console.log(vscode.window)
 
 let myStatusBarItem; 
-let leQuery = '';
 let leWebViewPanel;
 let prologWebViewPanel;
-// let processQuery; 
+var currentQuery = '';
+var currentScenario = '';
+var currentAnswer = '';
+var currentExplanation = '';
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
-
 /**
  * @param {vscode.ExtensionContext} context
  */
@@ -157,6 +158,19 @@ function activate(context) {
 
 	// update status bar item once at start
 	updateStatusBarItem();
+
+	// A new command to consumate query
+	// context.subscriptions.push(
+	// 	vscode.commands.registerCommand('le-ui.doQuery', () => {
+	// 	  if (!leWebViewPanel) {
+	// 		return;
+	// 	  }
+	
+	// 	  // Send a message to our webview.
+	// 	  // You can send any JSON serializable data.
+	// 	  leWebViewPanel.webview.postMessage({ command: 'query' });
+	// 	})
+	// );
 }
 
 // This method is called when your extension is deactivated
@@ -240,10 +254,23 @@ async function le_answer_(sessionModule,query,scenario){
 			}, axiosConfig)
 		return result.data
 	} catch (e) {
-		console.log('loadFactAndAnswer error', e)
+		console.log('answeringQuery error', e)
 		console.log(`Query:${query} with Scenario:${scenario} failed!`)
 	}
     return `Query:${query} with scenario:${scenario} failed!`;
+}
+
+async function doQuery(serverModule, query, scenario) {
+	var result = await le_answer_(serverModule, query, scenario);
+	currentAnswer = JSON.stringify(result,null,4);
+
+	if (!leWebViewPanel) {
+        return;
+      }
+
+      // Send a message to our webview.
+      // You can send any JSON serializable data.
+      leWebViewPanel.webview.postMessage({ command: 'answer', text: currentAnswer});
 }
 
 async function main(context){
@@ -256,7 +283,7 @@ async function main(context){
 	// Display a message box to the user
 	//vscode.window.showInputBox().then((value) => {leQuery=value})
 	//console.log('Querying', leQuery)
-
+	
 	//var input = await showInputBox();
 
     //console.log("Querying LOGICAL ENGLISH:", input);
@@ -273,17 +300,33 @@ async function main(context){
 
 	prologWebViewPanel.webview.html = getWebviewPrologContent(translated.data.prolog);
 
+	// Create GUI
 	leWebViewPanel = vscode.window.createWebviewPanel('ViewPanel',
 		'LE Answers', {preserveFocus: true, viewColumn: 2, }, {enableScripts: true});
+	// Load source document on the server
+	var loaded = await loadString(source);
+	// Open GUI panel and wait for the query
+	leWebViewPanel.webview.html = getWebviewLEGUI()
 
 	// Handle messages from the webview
 	leWebViewPanel.webview.onDidReceiveMessage(
         message => {
           switch (message.command) {
             case 'alert':
-              vscode.window.showErrorMessage(message.text);
-              return;
+              	vscode.window.showErrorMessage(message.text);
+              	return;
+			case 'query':
+				currentQuery = message.text; 
+				doQuery(loaded.sessionModule, currentQuery, currentScenario);
+				return
+			case 'scenario':
+				currentScenario = message.text;
+				return
+			case 'answer':
+				currentAnswer = message.text;
+				return
           }
+	
         },
         undefined,
         context.subscriptions
@@ -291,7 +334,11 @@ async function main(context){
 
     //console.log("Overall result:"); console.log(JSON.stringify(result.data,null,4));
 
-	var result3 = await loadString(source);
+	// get the query and the scenario out of the LEGUI
+
+	// Send the query to the server and catch the answer
+
+	// update the GUI with the answer
 
 	// console.log('loaded', LETest)
 
@@ -313,7 +360,7 @@ async function main(context){
     //     ["Parent", "Child"]
     // );
 
-	var result4 = await le_answer_(result3.sessionModule, 'happy', 'one');
+	// var result4 = await le_answer_(result3.sessionModule, 'happy', 'one');
 
     //console.log(`\n\nPROLOG predicates for KB ${result.data.kb}:`);
     //console.log(result.data.predicates);
@@ -335,7 +382,7 @@ async function main(context){
     // console.log("Overall result 4:"); console.log(JSON.stringify(result4,null,4));
 
 	// leWebViewPanel.webview.html = getWebviewPrologContent(JSON.stringify(result4,null,4));
-	leWebViewPanel.webview.html = getWebviewLEGUI(JSON.stringify(result4,null,4))
+	// leWebViewPanel.webview.html = getWebviewLEGUI(JSON.stringify(result4,null,4))
 }
 
 /**
@@ -370,7 +417,7 @@ function getWebviewPrologContent(prolog) {
   </html>`;
   }
 
-  function getWebviewLEGUI(answer) {
+  function getWebviewLEGUI() {
 	return `<!DOCTYPE html>
   <html lang="en">
   <head>
@@ -381,15 +428,15 @@ function getWebviewPrologContent(prolog) {
   <body>
 	  <h2>Logical English GUI</h2>
 	  <label>Query</label><br>
-	  <textarea placeholder="Enter some text" name="query" /></textarea> <br>
+	  <textarea placeholder="Enter some query" name="query" /></textarea> <br>
 	  <label>Scenario</label><br>
-	  <input id="scenario" placeholder="Enter some text" name="scenario" /> <br>
-	  <label>Answers</label><br>
-	  <p id="values">
-	  <pre>${answer}</pre></p> <br>
-	  <p id="scene">here</p> <br>
+	  <input id="scenario" placeholder="Enter some scenario" name="scenario" /> <br><br>
+	  query <p id="values"></p>
+	  with scenario <p id="scene"></p> <br>
 	  
-	  <button>Run</button>
+	  <button>Run</button><br><br>
+	  <label>Answers</label><br>
+	  <pre id="answer"></pre><br>
 
 	  <script>
 		  (function() {
@@ -400,6 +447,7 @@ function getWebviewPrologContent(prolog) {
 			  const scenario = document.querySelector('input');
 			  const log = document.getElementById('values');
 			  const log2 = document.getElementById('scene');
+			  const log3 = document.getElementById('answer');
 
 			  var tempQuery = '';
 			  var tempScenario = '';
@@ -421,10 +469,29 @@ function getWebviewPrologContent(prolog) {
 
 			  button.addEventListener('click', (event) => {	
 				//button.textContent = \`Running count: \${event.detail}\`;
+								
+				vscode.postMessage({
+					command: 'scenario',
+					text:  tempScenario
+				})				
+				vscode.postMessage({
+					command: 'query',
+					text:  tempQuery
+				})
 				vscode.postMessage({
 					command: 'alert',
 					text:  'Query: '+tempQuery + ' with Scenario ' + tempScenario +' '+ button.textContent
 				})
+				});
+
+				// Handle the message inside the webview
+				window.addEventListener('message', event => {
+					const message = event.data; // The JSON data our extension sent
+					switch (message.command) {
+						case 'answer':
+							log3.textContent = message.text
+							break;
+					}
 				});
 		  }())
 	  </script>

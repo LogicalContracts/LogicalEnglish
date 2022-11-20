@@ -187,17 +187,18 @@ entry_point(R, _{sessionModule:M, kb:KB,
     (Target==taxlog -> M:assert(myDeclaredModule_(M)) ; true),
     % For LE, make predicates dynamic so we can query them all:
     (nonvar(Preds) -> forall(member(Pred,Preds), (functor(Pred,F,N), M:dynamic(F/N))) ; true),
-    print_message(informational,"load finished "-[]).
+    %with_output_to(string(Report), (listing(M:_), listing(le_input:_))), 
+    print_message(informational,"load finished\n \n\n"-[]).
 
 hack_module_for_taxlog(M) :-  
     retractall(kp_loader:module_api_hack(_)),
     assert(kp_loader:module_api_hack(M)).
 
 % adding an direct entry point
-entry_point(R, _{answers:R, result:tested}) :- get_dict(operation,R,answeringQuery), !, %trace
-    print_message(informational,"answeringQuery: ~w"-[R]). 
-    % assertion(safe_module(R.sessionModule)).
-    % call_answer(happy, with(one), R.sessionModule, Answer). 
+entry_point(R, _{answer:Answer, result:ok}) :- get_dict(operation,R,answeringQuery), !, %trace
+    print_message(informational,"answering Query: ~w with ~w "-[R.query, R.scenario]), 
+    assertion(safe_module(R.sessionModule)),
+    call_answer(R.query, with(R.scenario), R.sessionModule, Answer). 
     % term_string(Requests, R.goal).
     % print_message(informational,"Attending ~w"-[Request]), 
     % % assertion(safe_module(R.sessionModule)) -> assert(parsed),

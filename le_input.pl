@@ -2279,14 +2279,15 @@ prepare_query(English, Arg, SwishModule, Goal, Facts, Command) :- %trace,
     %print_message(informational, "Command: ~w"-[Command]). 
 
 % prepare_query(+English, +Arguments, +Module, -Goal, -Facts, -Command)
-prepare_query(_, _, SwishModule, _, _, Command) :- %trace, 
+prepare_query(English, _, SwishModule, SwishModule, Goal, Command) :- %trace, 
     %restore_dicts, 
     nonvar(SwishModule), 
-    % (translate_command(SwishModule, English, GoalName, Goal, PreScenario) -> true 
-    % ; ( print_message(error, "Don't understand this question: ~w "-[English]), !, fail ) ), % later -->, Kbs),
-    Command = hello. 
-    % copy_term(Goal, CopyOfGoal),  
-    % translate_goal_into_LE(CopyOfGoal, RawGoal), name_as_atom(RawGoal, EnglishQuestion), 
+    (translate_command(SwishModule, English, GoalName, Goal, PreScenario) -> true 
+     ; ( print_message(error, "Don't understand this question: ~w "-[English]), !, fail ) ), % later -->, Kbs),
+    copy_term(Goal, CopyOfGoal),
+    print_message(informational, "prepare_query translated ~w into goal ~w \n as ~w \n with scenario ~w\n "-[English,GoalName,Goal,PreScenario]), 
+    translate_goal_into_LE(CopyOfGoal, RawGoal), name_as_atom(RawGoal, EnglishQuestion),
+    Command = EnglishQuestion. 
     % ((Arg = with(ScenarioName), PreScenario=noscenario) -> Scenario=ScenarioName; Scenario=PreScenario),
     % show_question(GoalName, Scenario, EnglishQuestion), 
     % %print_message(informational, "Scenario: ~w"-[Scenario]),
@@ -2324,13 +2325,16 @@ translate_goal_into_LE(aggregate_all(sum(V),Conditions,R), [R,is,the,sum,of,each
     translate_goal_into_LE(Conditions, Answer), !.
 translate_goal_into_LE(not(G), [it,is,not,the,case,that,'\n', '\t'|Answer]) :- 
     translate_goal_into_LE(G, Answer), !.
-translate_goal_into_LE(Goal, ProcessedWordsAnswers) :-  
+translate_goal_into_LE(Goal, ProcessedWordsAnswers) :- 
+    %print_message(informational, "translated_goal_into_LE: (meta) from  ~w\n"-[Goal]), 
     Goal =.. [Pred|GoalElements], meta_dictionary([Pred|GoalElements], Types, WordsAnswer),
-    process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), !. 
-translate_goal_into_LE(Goal, ProcessedWordsAnswers) :-  
-    Goal =.. [Pred|GoalElements], dictionary([Pred|GoalElements], Types, WordsAnswer),
-    %print_message(informational, "from  ~w to ~w "-[Goal, ProcessedWordsAnswers]), 
-    process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), !.
+    process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), !,
+    print_message(informational, "translated_goal_into_LE: from  ~w to ~w "-[Goal, ProcessedWordsAnswers]). 
+translate_goal_into_LE(Goal, ProcessedWordsAnswers) :- 
+    %print_message(informational, "translated_goal_into_LE: from  ~w\n"-[Goal]),  
+    Goal =.. [Pred|GoalElements], dictionary([Pred|GoalElements], Types, WordsAnswer), 
+    process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), !,
+    print_message(informational, "translated_goal_into_LE: from  ~w to ~w "-[Goal, ProcessedWordsAnswers]).
 translate_goal_into_LE(happens(Goal,T), Answer) :-    % simple goals do not return a list, just a literal
     Goal =.. [Pred|GoalElements], dictionary([Pred|GoalElements], Types, WordsAnswer), 
     process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), 
@@ -2446,9 +2450,7 @@ translate_command(SwishModule, English_String, GoalName, Goals, Scenario) :- %tr
     unpack_tokens(Tokens, UTokens), 
     clean_comments(UTokens, CTokens),
     phrase(command_(GoalName, Scenario), CTokens), 
-    with_output_to(string(Out), listing(SwishModule:_)),
-    Goals = [GoalName, Scenario, Out]. 
-    % ( SwishModule:query(GoalName, Goals) -> true; (print_message(informational, "No goal named: ~w"-[GoalName]), fail) ), !. 
+    ( SwishModule:query(GoalName, Goals) -> true; (print_message(informational, "No goal named: ~w"-[GoalName]), fail) ), !. 
 
 translate_command(_, English_String, GoalName, Goals, Scenario) :-
     tokenize(English_String, Tokens, [cased(true), spaces(true), numbers(false)]),
