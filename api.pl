@@ -204,7 +204,7 @@ entry_point(R, _{answer:AnswerJSON, result:ok}) :- get_dict(operation,R,answerin
     print_message(informational,"answering Query: ~w with ~w\n"-[R.query, R.scenario]), 
     assertion(safe_module(R.sessionModule)),
     term_string(Scenario, R.scenario), 
-    call_answer(R.query, with(Scenario), R.sessionModule, Answer),
+    call_answer(R.query, with(Scenario), R.sessionModule, Answer), !, 
     term_string(Answer, AnswerJSON).  
     % term_string(Requests, R.goal).
     % print_message(informational,"Attending ~w"-[Request]), 
@@ -242,12 +242,14 @@ entry_point(R, _{facts:R.facts, goal: QVS, answers:Solutions, result:Result}) :-
     ) ; true).
 
 call_answer(English, Arg, SwishModule, Command) :- %trace, 
-    prepare_query(English, Arg, SwishModule, Goal, Facts, Command), 
-    setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
-            catch_with_backtrace(Command, Error, print_message(error, Error)), 
-            %catch(Command, Error, ( print_message(error, Error), fail ) ), 
+    prepare_query(English, Arg, SwishModule, Goal, Facts, Command), !, 
+    print_message(informational, "call_answer: about to call ~w\n"-[Command]), 
+    setup_call_catcher_cleanup(le_input:assert_facts(SwishModule, Facts), 
+            % with_output_to(string(Out), listing(SwishModule:_)), 
+            % catch_with_backtrace(Command, Error, print_message(error, Error)), 
+            catch(Command, Error, ( print_message(error, Error), fail ) ), 
             _Result, 
-            retract_facts(SwishModule, Facts)). 
+            le_input:retract_facts(SwishModule, Facts)). 
     %le_input:translate_goal_into_LE(Goal, RawAnswer), le_input:name_as_atom(RawAnswer, EnglishAnswer). 
 
 toJSON([T1|Tn],[J1|Jn]) :- !, toJSON(T1,J1), toJSON(Tn,Jn).

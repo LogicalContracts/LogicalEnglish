@@ -97,7 +97,7 @@ query three is:
     dictionary/3, meta_dictionary/3,
     translate_goal_into_LE/2, name_as_atom/2, parsed/0, source_lang/1, 
     dump/4, dump/3, dump/2, dump_scasp/3, split_module_name/3,
-    prepare_query/6
+    prepare_query/6, assert_facts/2, retract_facts/2
     ]).
 :- use_module('./tokenize/prolog/tokenize.pl').
 :- use_module(library(pengines)).
