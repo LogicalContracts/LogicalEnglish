@@ -5,6 +5,7 @@ the templates are:
 *a dragon* is a parent of *a dragon*.
 *a dragon* is healthy.
 *a dragon* is happy.
+*a creature* is a dragon. 
 
 the knowledge base dragon includes:
 
@@ -15,7 +16,9 @@ and the other dragon smokes.
 A dragon is healthy if it is not the case that
 the dragon smokes.
 
-A dragon is happy if for all cases in which 
+A dragon is happy 
+if the dragon is a dragon
+and for all cases in which 
 the dragon is a parent of an other dragon
 it is the case that 
 the other dragon is healthy.
