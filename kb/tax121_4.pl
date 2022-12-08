@@ -24,12 +24,9 @@ subsection (a) shall not apply to *a sale or exchange* of *a property* by *a per
 *a property* has been used by *a taxpayer* as principal residence for periods aggregating *a number* years or more during *a period*.
 *a set* of periods of *a taxpayer* owing *a property* aggregates to *a number* of years.
 *a set* of periods of *a taxpayer* using *a property* as principal residence aggregates to *a number* of years.
-subsection (a) applies to *a sale or exchange* of *a property* by *a taxpayer* at *a date*. 
-the amount of gain to be excluded for *a taxpayer* from *a sale or exchange* under subsection (a) is *an amount*.  
-the received income for *a sale or exchange* is *an amount*. 
 
-the knowledge base tax121 includes:    
-
+the knowledge base tax121 includes:
+    
 % (a) Exclusion
 % Gross income shall not include gain from the sale or exchange of property if, 
 % during the 5-year period ending on the date of the sale or exchange, 
@@ -37,9 +34,6 @@ the knowledge base tax121 includes:
 % the taxpayer’s principal residence for periods aggregating 2 years or more.
 
 gross income of a taxpayer excludes gain from a sale or exchange of a property at a date if
-    subsection (a) applies to the sale or exchange of the property by the taxpayer at the date. 
-
-subsection (a) applies to a sale or exchange of a property by a taxpayer at a date if
     the taxpayer meets the ownership requirements of subsection (a) with respect to the sale or exchange of the property at the date
     and the taxpayer meets the use requirements of subsection (a) with respect to the sale or exchange of the property at the date
     and it is not the case that
@@ -121,19 +115,10 @@ subsection (a) shall not apply to a sale or exchange of a property by a taxpayer
     and the other sale or exchange is different from the sale or exchange
     and a period of 2 years ends at the date
     and the second date is included in the period
-    and subsection (a) applies to the other sale or exchange of the second or the same property by the taxpayer at the second date. 
-
-the amount of gain to be excluded for a taxpayer from a sale or exchange under subsection (a) is an amount G
-    if the received income for the sale or exchange is an amount I
-    and the amount of gain excluded for the taxpayer from the sale or exchange under subsection (a) shall not exceed a cap
-    and     the cap >= I
-            and G is I
-        or  the cap < I 
-            and G is the cap.
-
+    and gross income of the taxpayer excludes gain from the other sale or exchange of the second or the same property at the second date. 
+      
 scenario one is:
     the sale of the house occurs at 2022-06-20.
-    the received income for the sale is 300000.
 	the given period of 5 years ends at 2022-06-20.
     first set of periods of the taxpayer owing the house aggregates to 2 of years.
     first set of periods is contained in the given period. 
@@ -142,7 +127,6 @@ scenario one is:
 
 scenario two is:
     the sale of the house occurs at 2022-06-20.
-    the received income for the sale is 300000.
 	the given period of 5 years ends at 2022-06-20.
     the testing period of 2 years ends at 2022-06-20.
     the taxpayer is married to the spouse. 
@@ -155,7 +139,6 @@ scenario two is:
     
 scenario three is:
     the sale of the house occurs at 2022-06-20.
-    the received income for the sale is 300000.
 	the given period of 5 years ends at 2022-06-20.
     the testing period of 2 years ends at 2022-06-20.
     the taxpayer is married to the spouse. 
@@ -185,9 +168,6 @@ query two is:
 
 query three is:
     subsection (a) shall not apply to which sale or exchange of which property by which taxpayer.
-
-query four is:
-    the amount of gain to be excluded for which taxpayer from which sale under subsection (a) is which amount. 
 ").
 
 /** <examples>
@@ -195,7 +175,6 @@ query four is:
 ?- answer("query two with scenario one").
 ?- answer(one, with(one), le(E), R). 
 ?- answer(two, with(one), le(E), R). 
-?- answer(four, with(one), le(E), R). 
 ?- answer("query two with scenario two").
 ?- answer(two, with(two), le(E), R).
 ?- answer(three, with(three), le(E), R).

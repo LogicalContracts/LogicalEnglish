@@ -25,6 +25,9 @@ limitations under the License.
 :- use_module(library(http/http_files)).
 :- use_module(library(pengines)).
 :- use_module(pengine_sandbox:library(pengines)).
+:- use_module(library(sandbox)).
+
+:- multifile sandbox:safe_primitive/1.
 
 :- use_module(library(http/http_json)).
 :- use_module(library(http/json)).
@@ -295,3 +298,6 @@ handle_api_draft(Request) :-
     format(string(NewEditor),"/p/~a",[Filename]),
     http_redirect(see_other,NewEditor,Request).    
 
+sanbox:safe_primitive(le_input:dict(_,_,_)).
+sanbox:safe_primitive(user:current_module(_)). 
+sanbox:safe_primitive(user:dict(_,_,_)).

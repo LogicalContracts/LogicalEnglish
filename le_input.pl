@@ -120,9 +120,9 @@ text_to_logic(String_, Translation) :-
     unpack_tokens(Tokens, UTokens), 
     clean_comments(UTokens, CTokens), !, 
     %print_message(informational, "Tokens: ~w"-[CTokens]), 
-    phrase(document(Translation), CTokens),
-    with_output_to(string(Report), listing(dict/3)),
-    print_message(informational, "Dictionaries in memory after loading and parsing ~w\n"-[Report]). 
+    phrase(document(Translation), CTokens).
+    %with_output_to(string(Report), listing(dict/3)),
+    %print_message(informational, "Dictionaries in memory after loading and parsing ~w\n"-[Report]). 
     %( phrase(document(Translation), CTokens) -> 
     %    ( print_message(informational, "Translation: ~w"-[Translation]) )
     %;   ( print_message(informational, "Translation failed: ~w"-[CTokens]), Translation=[], fail)). 
@@ -2285,20 +2285,20 @@ prepare_query(English, Arg, SwishModule, Goal, Facts, Command) :- %trace,
     %restore_dicts, 
     nonvar(SwishModule),
     with_output_to(string(Report), listing(dict/3)),
-    print_message(informational, "prepare_query (1): Dictionaries in memory ~w\n"-[Report]),  
+    %print_message(informational, "prepare_query (1): Dictionaries in memory ~w\n"-[Report]),  
     translate_command(SwishModule, English, GoalName, Goal, PreScenario),
     copy_term(Goal, CopyOfGoal),
-    print_message(informational, "prepare_query (2): translated ~w into goalname ~w goal ~w with scenario ~w\n "-[English,GoalName,Goal,PreScenario]), 
+    %print_message(informational, "prepare_query (2): translated ~w into goalname ~w goal ~w with scenario ~w\n "-[English,GoalName,Goal,PreScenario]), 
     translate_goal_into_LE(CopyOfGoal, RawGoal), name_as_atom(RawGoal, EnglishQuestion),
     ((Arg = with(ScenarioName), PreScenario=noscenario) -> Scenario=ScenarioName; Scenario=PreScenario),
     show_question(GoalName, Scenario, EnglishQuestion),  
-    print_message(informational, "prepare_query (3): Scenario: ~w"-[Scenario]), 
+    %print_message(informational, "prepare_query (3): Scenario: ~w"-[Scenario]), 
     (Scenario==noscenario -> Facts = [] ; 
         (SwishModule:example(Scenario, [scenario(Facts, _)]) -> 
             true;  print_message(error, "prepare_query: Scenario: ~w does not exist"-[Scenario]))), 
-    print_message(informational, "prepare_query (4): Facts: ~w Goal: ~w Module: ~w\n "-[Facts, Goal, SwishModule]),  
-    extract_goal_command(Goal, SwishModule, _InnerGoal, Command), !,
-    print_message(informational, "prepare_query (5): Ready from ~w the command ~w\n"-[English, Command]).  
+    %print_message(informational, "prepare_query (4): Facts: ~w Goal: ~w Module: ~w\n "-[Facts, Goal, SwishModule]),  
+    extract_goal_command(Goal, SwishModule, _InnerGoal, Command), !.
+    %print_message(informational, "prepare_query (5): Ready from ~w the command ~w\n"-[English, Command]).  
 
 prepare_query(English, _, _, _, _, _) :- 
     print_message(error, "prepare_query: Don't understand this question: ~w "-[English]). 
@@ -2334,13 +2334,13 @@ translate_goal_into_LE(not(G), [it,is,not,the,case,that,'\n', '\t'|Answer]) :-
 translate_goal_into_LE(Goal, ProcessedWordsAnswers) :- 
     %print_message(informational, "translated_goal_into_LE: (meta) from  ~w\n"-[Goal]), 
     Goal =.. [Pred|GoalElements], meta_dictionary([Pred|GoalElements], Types, WordsAnswer),
-    process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), !,
-    print_message(informational, "translated_goal_into_LE: from  ~w to ~w "-[Goal, ProcessedWordsAnswers]). 
+    process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), !.
+    %print_message(informational, "translated_goal_into_LE: from  ~w to ~w "-[Goal, ProcessedWordsAnswers]). 
 translate_goal_into_LE(Goal, ProcessedWordsAnswers) :- 
     %print_message(informational, "translated_goal_into_LE: from  ~w\n"-[Goal]),  
     Goal =.. [Pred|GoalElements], dictionary([Pred|GoalElements], Types, WordsAnswer), 
-    process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), !,
-    print_message(informational, "translated_goal_into_LE: from  ~w to ~w "-[Goal, ProcessedWordsAnswers]).
+    process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), !.
+    %print_message(informational, "translated_goal_into_LE: from  ~w to ~w "-[Goal, ProcessedWordsAnswers]).
 translate_goal_into_LE(happens(Goal,T), Answer) :-    % simple goals do not return a list, just a literal
     Goal =.. [Pred|GoalElements], dictionary([Pred|GoalElements], Types, WordsAnswer), 
     process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), 

@@ -1,8 +1,12 @@
+// @ts-nocheck
 //import axios from 'axios';
 const axios = require('axios');
+var $ = require( "jquery" );
+const Pengine = require('./pengines');
 const axiosConfig = {/*headers:{'Access-Control-Allow-Origin':'*'}*/};
 
 const SERVER_URL = "http://localhost:3050/taxkbapi";
+const PENGINE_URL = "http://localhost:3050/pengine";
 //const SERVER_URL = "https://le.logicalcontracts.com/taxkbapi";
 const MY_TOKEN = "myToken123";
 
@@ -304,7 +308,42 @@ async function main(context){
 	leWebViewPanel = vscode.window.createWebviewPanel('ViewPanel',
 		'LE Answers', {preserveFocus: true, viewColumn: 2, }, {enableScripts: true});
 	// Load source document on the server
-	var loaded = await loadString(source);
+	//var loaded = await loadString(source);
+
+	let le_string = 'en(\"'+source+'\").'
+
+	var pengine = new Pengine({ server: PENGINE_URL,
+		src_text: le_string, 
+		oncreate: handleCreate,
+		//onprompt: handlePrompt,
+		onoutput: handleOutput,
+		onsuccess: showAnswer,
+		onfailure: reportFailure
+	});
+
+	function handleCreate() {
+		//pengine.ask('member(X, [1,2,3])',[]);
+		//pengine.ask('assert(parsed)', []);
+		//pengine.ask('le_input:pre_is_type(X)', []); 
+		//pengine.ask('assert(parsed), show(prolog)');
+		pengine.ask('le_input:dict(A,B,C)'); 
+		//pengine.ask('listing');
+		//console.log(this.id, 'answer', ans);
+	}
+	function handlePrompt() {
+		pengine.input(prompt(this.data));
+	}
+	function handleOutput() {
+		//$('#out').html(this.data);
+		console.log('pengine answering:', this.data)
+	}
+	function showAnswer() {
+		console.log('Answer from pengine', this.id, ' is ', this.data);
+	}
+	function reportFailure() {
+		console.log('pengine', this.id, 'failed'); 
+	}
+
 	// Open GUI panel and wait for the query
 	leWebViewPanel.webview.html = getWebviewLEGUI()
 
@@ -437,6 +476,9 @@ function getWebviewPrologContent(prolog) {
 	  <button>Run</button><br><br>
 	  <label>Answers</label><br>
 	  <pre id="answer"></pre><br>
+
+	  <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+      <script src="https://pengines.swi-prolog.org/pengine/pengines.js"></script>
 
 	  <script>
 		  (function() {
