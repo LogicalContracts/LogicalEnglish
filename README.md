@@ -1,5 +1,5 @@
 # Latest (New LE EDITOR mode for VSC):
-
+:-)
 We are happy to announce that we are inviting for testing of the new LE editor mode for the Visual Studio Code Editor, VSC, developed by Nikolai Merritt, as his MSc project at Imperial College. The whole code is here:
 
 [https://github.com/nikolaimerritt/LogicalEnglish](https://github.com/nikolaimerritt/LogicalEnglish)
