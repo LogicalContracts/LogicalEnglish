@@ -292,6 +292,7 @@ gitPullMyBranch(KeyLocation) :- taxkb_dir(RepoDir), gitPullMyBranch(RepoDir,KeyL
 
 gitPullMyBranch:- gitPullMyBranch(_KeyLocation).
 
+
 % strip leading and trailing whitespace from atom or string
 strip(Atom, Stripped) :- 
 	atom(Atom),
@@ -313,17 +314,6 @@ whitespace([32|L],L).
 whitespace([9|L],L).
 whitespace([10|L],L).
 
-
-% Danger zone: self-updating for Docker containers
-pullMyBranchAndRestartContainer :- 
-	(user_is_admin -> true ; throw("Go away, mere mortal! "-[])),
-	% gitPullMyBranch,
-	krt_engine:gitPullMyBranch('/app/myGithubKey'),
-	getenv('HOSTNAME',ContainerID), 
-	print_message(warning,"RESTARTING container ~w NOW... assuming automatic Docker with --restart always"-[ContainerID]),
-	sleep(3), halt. % assumes that the docker container restarts immediately ;-)
-
-sandbox:safe_primitive(user:pullMyBranchAndRestartContainer) :- user_is_admin.
 
 
 % This at the end, as it activates the term expansion (no harm done otherwise, just some performance..):
