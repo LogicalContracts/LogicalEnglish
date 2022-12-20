@@ -16,19 +16,20 @@ Running for testing a server in developer machine:
     HACK: before the next command, setupo some dir in your host for swish data, and do this once (notice that the source dir does NOT exist on your host, 
     but it will exist inside the container):
     
-         ln -s /app/swish/config-enabled /Users/mc/taxlog_swish_data
+         ln -s /app/swish/config-enabled /Users/mc/TaxKB_swish_data
 
-docker run -it -p 8082:3050 -v /Users/mc/taxlog_swish_data:/data  -v /Users/mc/git/LogicalEnglish:/app -e LOAD_KB=true  --memory="300m" logicalcontracts/swish-xmas2022-multi
+docker run -it -p 8082:3050 -v /Users/mc/TaxKB_swish_data:/data  -v /Users/mc/git/LogicalEnglish:/app -e LOAD_KB=true  --memory="300m" logicalcontracts/swish-xmas2022-multi
 
 Add --bash to the end if you want to peek inside the container.
 
 
 On Ubuntu server:
 
-    chown -R 1000:1000 /home/ubuntu/taxlog_swish_data
+    chown -R 1000:1000 /home/ubuntu/TaxKB_swish_data
 
 In  particular, it's important that the data subdirectory's user is not root, because it is used to run SWISH and thus interact woth the filesystem
 
 And finally:
+docker run -it -p 8082:3050 -v /home/ubuntu/TaxKB_swish_data:/data:rw -v /home/ubuntu/LogicalEnglish:/app:rw -e LOAD_KB=true --memory="300m"  logicalcontracts/swish-xmas2022-multi
 
-docker run -d --restart always -p 8082:3050 -v /home/ubuntu/taxlog_swish_data:/data:rw -v /home/ubuntu/LogicalEnglish:/app:rw -e LOAD_KB=true --memory="300m"  logicalcontracts/swish-xmas2022-multi
+docker run -d --restart always -p 8082:3050 -v /home/ubuntu/TaxKB_swish_data:/data:rw -v /home/ubuntu/LogicalEnglish:/app:rw -e LOAD_KB=true --memory="300m"  logicalcontracts/swish-xmas2022-multi

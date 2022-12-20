@@ -253,6 +253,79 @@ serve_taxkb_resources(Request) :-
 % Wire our colouring logic into SWI's:
 prolog_colour:term_colours(T,C) :- taxlog2prolog(T,C,_).
 
+
+current_user(User,Email) :- 
+    pengine_user(U), get_dict(user,U,User), Email_=U.user_info.email, atom_string(Email,Email_).
+
+user_is_admin :- (allow_anonymous_powerful_ops ; current_user(_U,E), admin_user(E) ), !. 
+
+:- multifile user:admin_user/1. % email atom
+
+allow_anonymous_powerful_ops :- getenv('ANONYMOUS_POWER',true). 
+
+% Github deploy key setup: 
+% ssh-keygen -t ed25519 -C "mc@logicalcontracts.com"
+%  (generate key; indicate a known file location such as myPrivateKey, with empty passPhrase )
+% use that as KeyLocation; the myPrivateKey file must be readable only by the user executing Prolog,
+% typically swishpersona in a docker container, uid 1000 (check /etc/passwd), e.g. you may have to
+%   sudo chown 1000:1000 myGithubKey
+% check result with
+%   ls -l -n myGithubKey
+% BEWARE of security risk with StrictHostKeyChecking check below
+% BEWARE: when given a key location, running this may mess up your git/ssh system authentication... a simple ssh-add seems to fix it
+gitPullMyBranch(RepoDir,KeyLocation) :-
+    user:user_is_admin,
+    (nonvar(KeyLocation) -> 
+        format(atom(SSHcmd),'ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ~a -F /dev/null',[KeyLocation]),
+        git([config,'core.sshCommand',SSHcmd],[directory(RepoDir),output(OutC)]),
+        string_codes(ConfigOut,OutC), print_message(informational,"Configured git: ~w"-[ConfigOut])
+        ; 
+        true),
+    git(['rev-parse','--abbrev-ref','HEAD'],[directory(RepoDir),output(OutB)]), string_codes(Branch_,OutB),
+    strip(Branch_,Branch),
+    print_message(informational,"Pulling branch ~a..."-[Branch]),
+    git(['pull','--ff-only'],[directory(RepoDir),output(OutP)]),
+    string_codes(Pulled,OutP),
+    print_message(informational,"~a"-[Pulled]).
+
+gitPullMyBranch(KeyLocation) :- taxkb_dir(RepoDir), gitPullMyBranch(RepoDir,KeyLocation).
+
+gitPullMyBranch:- gitPullMyBranch(_KeyLocation).
+
+% strip leading and trailing whitespace from atom or string
+strip(Atom, Stripped) :- 
+	atom(Atom),
+	!,
+	atom_codes(Atom,Codes), strip_common(Codes,StrippedCodes), atom_codes(Stripped,StrippedCodes).
+strip(String, Stripped) :- 
+	string(String),
+	string_codes(String,Codes), strip_common(Codes,StrippedCodes), string_codes(Stripped,StrippedCodes).
+
+strip_common(Codes,StrippedCodes) :- strip_prefix(Codes,Codes1), strip_suffix(Codes1,StrippedCodes).
+	
+strip_prefix(Codes,Stripped) :- whitespace(Codes,Codes1), !, strip_prefix(Codes1,Stripped).
+strip_prefix(Codes,Codes).
+
+strip_suffix(Codes,Stripped) :- whitespace(W,[]), append(Codes1,W,Codes), !, strip_suffix(Codes1,Stripped).
+strip_suffix(Codes,Codes).
+
+whitespace([32|L],L).
+whitespace([9|L],L).
+whitespace([10|L],L).
+
+
+% Danger zone: self-updating for Docker containers
+pullMyBranchAndRestartContainer :- 
+	(user_is_admin -> true ; throw("Go away, mere mortal! "-[])),
+	% gitPullMyBranch,
+	krt_engine:gitPullMyBranch('/app/myGithubKey'),
+	getenv('HOSTNAME',ContainerID), 
+	print_message(warning,"RESTARTING container ~w NOW... assuming automatic Docker with --restart always"-[ContainerID]),
+	sleep(3), halt. % assumes that the docker container restarts immediately ;-)
+
+sandbox:safe_primitive(user:pullMyBranchAndRestartContainer) :- user_is_admin.
+
+
 % This at the end, as it activates the term expansion (no harm done otherwise, just some performance..):
 % first term expansion to support en/1 
 %user:term_expansion(NiceTerm,'$source_location'(File, Line):ExpandedTerms) :- 
