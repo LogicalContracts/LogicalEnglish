@@ -18,7 +18,8 @@ which can be used on the new command interface of LE on SWISH
 */
 
 :- module(le_answer, 
-    [le_taxlog_translate/4,
+    [le_taxlog_translate/4, 
+    translate_goal_into_LE/2, 
     op(1000,xfy,user:and),  % to support querying
     op(800,fx,user:resolve), % to support querying
     op(800,fx,user:answer), % to support querying
@@ -829,3 +830,4 @@ sandbox:safe_primitive(le_answer:answer( _EnText, _Scenario)).
 sandbox:safe_primitive(le_answer:answer( _EnText, _Scenario, _Result)).
 sandbox:safe_primitive(le_answer:answer( _EnText, _Scenario, _Explanation, _Result)).
 sandbox:safe_primitive(le_answer:le_taxlog_translate( _EnText, _File, _Baseline, _Terms)).
+sandbox:safe_primitive(le_answer:translate_goal_into_LE(_,_)). 

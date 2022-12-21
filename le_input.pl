@@ -2185,7 +2185,7 @@ proper_det(_, a).
 
 % ---------------------------------------------------------------- sandbox
 
-sanbox:safe_primitive(le_input:source_lang(_)).
-sanbox:safe_primitive(le_input:is_type(_)).
-sanbox:safe_primitive(le_input:dict(_,_,_)).
-sanbox:safe_primitive(le_input:meta_dict(_,_,_)).
+sandbox:safe_primitive(le_input:source_lang(_)).
+sandbox:safe_primitive(le_input:is_type(_)).
+sandbox:safe_primitive(le_input:dict(_,_,_)).
+sandbox:safe_primitive(le_input:meta_dict(_,_,_)).
