@@ -3,6 +3,10 @@
 <div class="nb-cell markdown" name="md1">
 # Logical English, [LE](https://github.com/LogicalContracts/LogicalEnglish/blob/main/le_handbook.pdf)
 
+```eval
+:- welcome(M), format("&lt;p&gt;&lt;i&gt;~a&lt;/i&gt;&lt;/p&gt;",[M]).
+```
+
 ## the British Nationality Act Example
 </div>
 

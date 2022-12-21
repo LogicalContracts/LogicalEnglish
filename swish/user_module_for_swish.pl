@@ -315,6 +315,14 @@ whitespace([9|L],L).
 whitespace([10|L],L).
 
 
+welcome(M) :-
+    taxkb_dir(D), 
+    git_shortlog(D,Short,[]), Short=[git_log(Hash,_,When,_,_,_,_,_)|_],
+    sub_atom(Hash,0,7,_,ShortHash),
+	format(string(M),'Logical English open version ~a, dated ~a.',[ShortHash,When]).
+
+sandbox:safe_primitive(user:welcome(_)). 
+
 
 % This at the end, as it activates the term expansion (no harm done otherwise, just some performance..):
 % first term expansion to support en/1 
