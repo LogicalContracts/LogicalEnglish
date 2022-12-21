@@ -94,6 +94,7 @@ var currentQuery = '';
 var currentScenario = '';
 var currentAnswer = '';
 var currentExplanation = '';
+var runningPengine; 
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -277,6 +278,45 @@ async function doQuery(serverModule, query, scenario) {
       leWebViewPanel.webview.postMessage({ command: 'answer', text: currentAnswer});
 }
 
+async function runPengine(le_string, query, scenario) {
+
+	runningPengine = new Pengine({ server: PENGINE_URL,
+		//src_text: le_string, 
+		oncreate: handleCreate,
+		//onprompt: handlePrompt,
+		onoutput: handleOutput,
+		onsuccess: showAnswer,
+		onfailure: reportFailure
+	});
+
+	function handleCreate() {
+		//pengine.ask('member(X, [1,2,3])',[]);
+		//pengine.ask('assert(parsed)', []);
+		//pengine.ask('le_input:pre_is_type(X)', []); 
+		//pengine.ask('assert(parsed), show(prolog)');
+		//pengine.ask('le_input:dict(A,B,C)'); 
+		//runningPengine.ask(`le_taxlog_translate( ${le_string}, File, BaseLine, Terms)`);
+		runningPengine.ask("parse_and_query("+le_string+", "+query+", "+scenario+", Answer)");
+		//pengine.ask('listing');
+		//console.log(this.id, 'answer', ans);
+	}
+	function handlePrompt() {
+		runningPengine.input(prompt(this.data));
+	}
+	function handleOutput() {
+		//$('#out').html(this.data);
+		currentAnswer = this.data
+		console.log('pengine answering:', this.data)
+	}
+	function showAnswer() {
+		console.log('Answer from pengine', this.id, ' is ', this.data);
+	}
+	function reportFailure() {
+		console.log('pengine', this.id, 'failed'); 
+	}
+
+}
+
 async function main(context){
 	//let success = await vscode.commands.executeCommand('workbench.action.splitEditor');
 
@@ -310,39 +350,7 @@ async function main(context){
 	// Load source document on the server
 	//var loaded = await loadString(source);
 
-	let le_string = 'en(\"'+source+'\").'
-
-	var pengine = new Pengine({ server: PENGINE_URL,
-		src_text: le_string, 
-		oncreate: handleCreate,
-		//onprompt: handlePrompt,
-		onoutput: handleOutput,
-		onsuccess: showAnswer,
-		onfailure: reportFailure
-	});
-
-	function handleCreate() {
-		//pengine.ask('member(X, [1,2,3])',[]);
-		//pengine.ask('assert(parsed)', []);
-		//pengine.ask('le_input:pre_is_type(X)', []); 
-		//pengine.ask('assert(parsed), show(prolog)');
-		pengine.ask('le_input:dict(A,B,C)'); 
-		//pengine.ask('listing');
-		//console.log(this.id, 'answer', ans);
-	}
-	function handlePrompt() {
-		pengine.input(prompt(this.data));
-	}
-	function handleOutput() {
-		//$('#out').html(this.data);
-		console.log('pengine answering:', this.data)
-	}
-	function showAnswer() {
-		console.log('Answer from pengine', this.id, ' is ', this.data);
-	}
-	function reportFailure() {
-		console.log('pengine', this.id, 'failed'); 
-	}
+	let le_string = 'en(\"'+source+'\")'
 
 	// Open GUI panel and wait for the query
 	leWebViewPanel.webview.html = getWebviewLEGUI()
@@ -355,14 +363,18 @@ async function main(context){
               	vscode.window.showErrorMessage(message.text);
               	return;
 			case 'query':
-				currentQuery = message.text; 
-				doQuery(loaded.sessionModule, currentQuery, currentScenario);
+				currentQuery = message.text;
+				runPengine(le_string, currentQuery, currentScenario) 
+				//doQuery(loaded.sessionModule, currentQuery, currentScenario);
 				return
 			case 'scenario':
 				currentScenario = message.text;
 				return
 			case 'answer':
 				currentAnswer = message.text;
+				return
+			case 'next':
+				if(runningPengine) currentAnswer = runningPengine.next();
 				return
           }
 	

@@ -34,6 +34,7 @@ limitations under the License.
     op(700,xfx,user:after),
     taxlog2prolog/3,
     semantics2prolog/3,
+    semantics2prolog2/3,
     current_source/1
     ]).
 
@@ -42,6 +43,14 @@ limitations under the License.
 :- use_module(library(prolog_xref)).
 :- use_module(library(prolog_colour)).
 :- use_module(library(pengines)).
+
+
+:- if(current_module(swish)). 
+:- use_module('le_swish.pl'). % module to handle the gitty filesystem
+:- else.
+:- use_module('le_local.pl'). % module to handle the local filesystem 
+:- endif.
+
 
 /*
 Transforms source rules into our "no time on heads" representation, using a body wrapper to carry extra information:
@@ -54,6 +63,51 @@ Admissible variants with a specific URL:
 P on T at URL if Body --> P :- targetBody(Body,true,T,URL,[],LE_line or taxlog)
 P at URL if Body  -->  P :- targetBody(Body,false,_,URL,[],LE_line or taxlog)
 */
+
+semantics2prolog2(if(N,H,B),neck(if)-[],(H:-targetBody(B,false,_,'',[],NN))) :- !, % working rule with line number
+    NN is N + 3. % correction to linecount
+    %taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB).
+semantics2prolog2(if(H,B),neck(if)-[],(H:-targetBody(B,false,_,'',[],3))) :- !. % pre-settings without line numbers
+    %taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB),
+    %this_capsule(SwishModule),
+    %declare_facts_as_dynamic(SwishModule, [H]). 
+%semantics2prolog2(if(H,B),neck(if)-[SpecH,SpecB],(H:-B)) :- !,
+%    SpecH=classify, SpecB=classify. 
+    %taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB).
+%semantics2prolog2(mainGoal(G,Description),delimiter-[Spec,classify],(mainGoal(G,Description):-(_=1->true;GG))) :- !, % hack to avoid 'unreferenced' highlight in SWISH
+%    functor(G,F,N), functor(GG,F,N), % avoid "Singleton-marked variable appears more than once"
+%    taxlogBodySpec(G,Spec).
+semantics2prolog2(abducible(Abd,Body),delimiter-[classify,classify],abducible(Abd,Body)) :- !. 
+    % this_capsule(SwishModule),
+    % declare_facts_as_dynamic(SwishModule, [abducible(_,_)]), !. 
+semantics2prolog2(example(T,Sequence),delimiter-[classify,Spec],example(T,Sequence)) :- !, 
+    % this_capsule(SwishModule),
+    % declare_facts_as_dynamic(SwishModule, [example(_,_)]), !, 
+    Spec = classify. % just a hack - scenarioSequenceSpec must be different for prolog's scenarios
+    %(Sequence==[]->Spec=classify ; (Spec=list-SeqSpec, scenarioSequenceSpec(Sequence,SeqSpec))).
+semantics2prolog2(query(Name,Goal),delimiter-[classify,classify],query(Name,Goal)) :- !.
+    % this_capsule(SwishModule),
+    % declare_facts_as_dynamic(SwishModule, [query(_,_)]), !. 
+semantics2prolog2(metapredicates(Assumptions), delimiter-[classify,classify],metapredicates([N])) :- !,
+    % this_capsule(SwishModule), 
+    lists:length(Assumptions,N).
+    % declare_facts_as_dynamic(SwishModule, Assumptions), !. 
+semantics2prolog2(predicates(Assumptions), delimiter-[classify,classify],predicates([N])) :- !,
+    % this_capsule(SwishModule), 
+    lists:length(Assumptions,N).
+    % declare_facts_as_dynamic(SwishModule, Assumptions), !. 
+    %print_message(informational, "asserted: ~w"-[Assumptions]).
+semantics2prolog2(events(Assumptions), delimiter-[classify,classify],events([N])) :- !, 
+    % this_capsule(SwishModule), 
+    lists:length(Assumptions,N). 
+    % declare_facts_as_dynamic(SwishModule, [happens(_,_), initiates(_,_,_), terminates(_,_,_)|Assumptions]), !.
+semantics2prolog2(fluents(Assumptions), delimiter-[classify,classify],fluents([N])) :- !, 
+    % this_capsule(SwishModule), 
+    lists:length(Assumptions,N). 
+    % declare_facts_as_dynamic(SwishModule, [it_is_illegal(_,_)|Assumptions]), !.
+semantics2prolog2(target(T), delimiter-[classify,classify],target(T)). 
+    % this_capsule(SwishModule), 
+    % declare_facts_as_dynamic(SwishModule, [just_saved_scasp(_, _)]), !. 
 
 taxlog2prolog(if(_LineNumber,H,B), Spec, New) :- !, taxlog2prolog(if(H,B),Spec,New). % hack for LogicalEnglish
 taxlog2prolog(if(function(Call,Result),Body), neck(if)-[delimiter-[head(meta,Call),classify],SpecB], (function(Call,Result):-Body)) :- !,
@@ -88,7 +142,7 @@ semantics2prolog(if(N,H,B),neck(if)-[SpecH,SpecB],(H:-targetBody(B,false,_,'',[]
     taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB).
 semantics2prolog(if(H,B),neck(if)-[SpecH,SpecB],(H:-targetBody(B,false,_,'',[],3))) :- !, % pre-settings without line numbers
     taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB),
-    pengine_self(SwishModule),
+    this_capsule(SwishModule),
     declare_facts_as_dynamic(SwishModule, [H]). 
 %semantics2prolog(if(H,B),neck(if)-[SpecH,SpecB],(H:-B)) :- !,
 %    SpecH=classify, SpecB=classify. 
@@ -97,31 +151,31 @@ semantics2prolog(if(H,B),neck(if)-[SpecH,SpecB],(H:-targetBody(B,false,_,'',[],3
 %    functor(G,F,N), functor(GG,F,N), % avoid "Singleton-marked variable appears more than once"
 %    taxlogBodySpec(G,Spec).
 semantics2prolog(abducible(Abd,Body),delimiter-[classify,classify],abducible(Abd,Body)) :-
-    pengine_self(SwishModule),
+    this_capsule(SwishModule),
     declare_facts_as_dynamic(SwishModule, [abducible(_,_)]), !. 
 semantics2prolog(example(T,Sequence),delimiter-[classify,Spec],example(T,Sequence)) :-  
-    pengine_self(SwishModule),
+    this_capsule(SwishModule),
     declare_facts_as_dynamic(SwishModule, [example(_,_)]), !, 
     Spec = classify. % just a hack - scenarioSequenceSpec must be different for prolog's scenarios
     %(Sequence==[]->Spec=classify ; (Spec=list-SeqSpec, scenarioSequenceSpec(Sequence,SeqSpec))).
 semantics2prolog(query(Name,Goal),delimiter-[classify,classify],query(Name,Goal)) :-
-    pengine_self(SwishModule),
+    this_capsule(SwishModule),
     declare_facts_as_dynamic(SwishModule, [query(_,_)]), !. 
 semantics2prolog(metapredicates(Assumptions), delimiter-[classify,classify],metapredicates([N])) :- 
-    pengine_self(SwishModule), lists:length(Assumptions,N),
+    this_capsule(SwishModule), lists:length(Assumptions,N),
     declare_facts_as_dynamic(SwishModule, Assumptions), !. 
 semantics2prolog(predicates(Assumptions), delimiter-[classify,classify],predicates([N])) :- 
-    pengine_self(SwishModule), lists:length(Assumptions,N),
+    this_capsule(SwishModule), lists:length(Assumptions,N),
     declare_facts_as_dynamic(SwishModule, Assumptions), !. 
     %print_message(informational, "asserted: ~w"-[Assumptions]).
 semantics2prolog(events(Assumptions), delimiter-[classify,classify],events([N])) :- 
-    pengine_self(SwishModule), lists:length(Assumptions,N),
+    this_capsule(SwishModule), lists:length(Assumptions,N),
     declare_facts_as_dynamic(SwishModule, [happens(_,_), initiates(_,_,_), terminates(_,_,_)|Assumptions]), !.
 semantics2prolog(fluents(Assumptions), delimiter-[classify,classify],fluents([N])) :-
-    pengine_self(SwishModule), lists:length(Assumptions,N),
+    this_capsule(SwishModule), lists:length(Assumptions,N),
     declare_facts_as_dynamic(SwishModule, [it_is_illegal(_,_)|Assumptions]), !.
 semantics2prolog(target(T), delimiter-[classify,classify],target(T)) :- 
-    pengine_self(SwishModule), 
+    this_capsule(SwishModule), 
     declare_facts_as_dynamic(SwishModule, [just_saved_scasp(_, _)]), !. 
 
 % assuming one example -> one scenario -> one list of facts. % deprecated

@@ -512,7 +512,7 @@ pengines:prepare_module(Module, swish, _Options) :-
     % this seems to hold always, but commenting it out just in case...: assertion( \+ myCurrentModule(_)),
     setup_kp_module(Module),
     assert(myCurrentModule(Module)).
-    % should we perhaps use pengine_self...??
+    % should we perhaps use this_capsule...??
 % there is (just arrived from the SWISH editor) a fresher version To of the declared module From
 % ...OR there WAS,  although it no longer exists
 shouldMapModule(From,To) :- myDeclaredModule(From), kp(From), myCurrentModule(To), !, 

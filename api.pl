@@ -40,7 +40,8 @@ limitations under the License.
 :- use_module(kp_loader).
 :- use_module(syntax).
 :- use_module(reasoner,[taxlogWrapper/10]).
-:- use_module(le_input,[text_to_logic/2, prepare_query/6]).
+:- use_module(le_answer, [parse_and_query/4, prepare_query/6]). 
+:- use_module(le_input,[text_to_logic/2]).
 :- use_module(library(prolog_stack)).
 
 :- if(current_module(swish)). %%%%% On SWISH:
@@ -245,7 +246,7 @@ entry_point(R, _{facts:R.facts, goal: QVS, answers:Solutions, result:Result}) :-
     ) ; true).
 
 call_answer(English, Arg, SwishModule, Command) :- %trace, 
-    prepare_query(English, Arg, SwishModule, Goal, Facts, Command), !, 
+    prepare_query(English, Arg, SwishModule,_Goal, Facts, Command), !, 
     print_message(informational, "call_answer: about to call ~w\n"-[Command]), 
     setup_call_catcher_cleanup(le_input:assert_facts(SwishModule, Facts), 
             % with_output_to(string(Out), listing(SwishModule:_)), 
@@ -298,6 +299,6 @@ handle_api_draft(Request) :-
     format(string(NewEditor),"/p/~a",[Filename]),
     http_redirect(see_other,NewEditor,Request).    
 
-sanbox:safe_primitive(le_input:dict(_,_,_)).
-sanbox:safe_primitive(user:current_module(_)). 
-sanbox:safe_primitive(user:dict(_,_,_)).
+% sanbox:safe_primitive(le_input:dict(_,_,_)).
+% sanbox:safe_primitive(user:current_module(_)). 
+% sanbox:safe_primitive(user:dict(_,_,_)).

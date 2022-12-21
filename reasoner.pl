@@ -27,7 +27,7 @@ limitations under the License.
 :- use_module(library(aggregate)).
 
 :- use_module(kp_loader).
-:- use_module(le_input).
+:- use_module(le_answer).
 
 :- thread_local do_not_fail_undefined_preds/0. 
 
@@ -736,9 +736,9 @@ sandbox:safe_primitive(reasoner:render_questions(_,_)).
 
 :- use_module(swish(lib/html_output),[html/1]). 
 % hack to avoid SWISH errors:
-myhtml(H) :-  pengine_self(SwishModule), SwishModule:html(H).
+myhtml(H) :-  this_capsule(SwishModule), SwishModule:html(H).
 
-kbModule(M) :- pengine_self(M).
+kbModule(M) :- this_capsule(M).
 
 
 :- else. % On command-line SWI-Prolog, no user restrictions:
