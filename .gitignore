@@ -2,3 +2,5 @@ data
 backupdata
 clientExample/node_modules
 leGithubPullKey
+le-ui/node_modules
+**/node_modules

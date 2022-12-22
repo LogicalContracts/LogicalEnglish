@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		},
+		{
+			"path": "../../TaxKB"
+		},
+		{
+			"path": "../../swish"
+		},
+		{
+			"path": "../../sCASP"
+		}
+	],
+	"settings": {}
+}
