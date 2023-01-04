@@ -12,8 +12,11 @@ limitations under the License.
 
 :- module(le_swish, 
     [load_file_module/3, 
-     this_capsule/1
+     this_capsule/1,
+     portray_clause_ind/1
     ]).
+
+:- use_module(library(pengines_sandbox)). 
 
 :- multifile sandbox:safe_primitive/1.
 
@@ -26,4 +29,8 @@ load_file_module(FileName, ModuleName, Flag) :-
 this_capsule(M) :-
    pengine_self(M).
 
+portray_clause_ind(Clause) :- 
+   write(Clause). 
 
+sandbox:safe_primitive(write(_)). 
+sandbox:safe_primitive(writeq(_)). 

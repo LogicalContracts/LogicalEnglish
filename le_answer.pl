@@ -43,7 +43,11 @@ which can be used on the new command interface of LE on SWISH
     le_expanded_terms/2
     ]).
 
-:- multifile sandbox:safe_primitive/1.
+%:- use_module(library(sandbox)).
+:- use_module(library(pengines_sandbox)). 
+
+%:- multifile sandbox:safe_primitive/1.
+%:- multifile sandbox:safe_meta/2.
 
 :- use_module('le_input.pl').  
 :- use_module('syntax.pl').
@@ -381,7 +385,7 @@ show(rules) :- % trace,
     findall((Pred :- Body), 
         (dict(PredicateElements, _, _),  PredicateElements\=[], Pred=..PredicateElements,
         clause(SwishModule:Pred, Body_), unwrapBody(Body_, Body)), Predicates),
-    forall(member(Clause, [(is_(A,B) :- (nonvar(B), is(A,B)))|Predicates]), portray_clause(Clause)).
+    forall(member(Clause, [(is_(A,B) :- (nonvar(B), is(A,B)))|Predicates]), portray_clause_ind(Clause)).
 
 % 
 %(op2tokens(Pred, _, OpTokens) -> % Fixing binary predicates for scasp
@@ -396,19 +400,19 @@ show(metarules) :- % trace,
     findall((Pred :- Body), 
         (meta_dict(PredicateElements, _, _), PredicateElements\=[], 
          Pred=..PredicateElements, clause(SwishModule:Pred, Body_), unwrapBody(Body_, Body)), Predicates),
-    forall(member(Clause, Predicates), portray_clause(Clause)).
+    forall(member(Clause, Predicates), portray_clause_ind(Clause)).
 
 show(queries) :- % trace, 
     this_capsule(SwishModule), 
     findall((query(A,B) :- true), 
         (clause(SwishModule:query(A,B), _)), Predicates),
-    forall(member(Clause, Predicates), portray_clause(Clause)).
+    forall(member(Clause, Predicates), portray_clause_ind(Clause)).
 
 show(scenarios) :- % trace, 
     this_capsule(SwishModule), 
     findall((example(A,B) :- true), 
         (clause(SwishModule:example(A,B), _)), Predicates),
-    forall(member(Clause, Predicates), portray_clause(Clause)).
+    forall(member(Clause, Predicates), portray_clause_ind(Clause)).
 
 show(templates) :-
     findall(EnglishAnswer, 
@@ -454,7 +458,7 @@ show(scasp, with(Q, S)) :-
     clause(SwishModule:query(Q,Query), _),
     clause(SwishModule:example(S, [scenario(Scenario, _)]), _),
     %print_message(informational, "% scenario ~w ."-[List]),
-    forall(member(Clause, Scenario), portray_clause(Clause)),
+    forall(member(Clause, Scenario), portray_clause_ind(Clause)),
     print_message(informational, "/** <examples>\n?- ? ~w .\n **/ "-[Query]).
 
 show(scasp, with(Q)) :-
@@ -472,10 +476,10 @@ targetBody(G, false, _, '', [], _) :-
 
 dump(templates, String) :-
     findall(local_dict(Prolog, NamesTypes, Templates), (le_input:dict(Prolog, NamesTypes, Templates)), PredicatesDict),
-    with_output_to(string(String01), forall(member(Clause1, PredicatesDict), portray_clause(Clause1))),
+    with_output_to(string(String01), forall(member(Clause1, PredicatesDict), portray_clause_ind(Clause1))),
     (PredicatesDict==[] -> string_concat("local_dict([],[],[]).\n", String01, String1); String1 = String01), 
     findall(local_meta_dict(Prolog, NamesTypes, Templates), (le_input:meta_dict(Prolog, NamesTypes, Templates)), PredicatesMeta),
-    with_output_to(string(String02), forall(member(Clause2, PredicatesMeta), portray_clause(Clause2))),
+    with_output_to(string(String02), forall(member(Clause2, PredicatesMeta), portray_clause_ind(Clause2))),
     (PredicatesMeta==[] -> string_concat("local_meta_dict([],[],[]).\n", String02, String2); String2 = String02), 
     string_concat(String1, String2, String). 
 
@@ -504,16 +508,16 @@ dump(templates_scasp, String) :-
 
 dump(source_lang, String) :-
     le_input:source_lang(L) -> 
-    with_output_to(string(String), portray_clause(source_lang(L))) ; String="". 
+    with_output_to(string(String), portray_clause_ind(source_lang(L))) ; String="". 
 
 dump(source_lang_scasp, String) :-
     le_input:source_lang(L) -> 
-    with_output_to(string(String), portray_clause(:- set_prolog_flag(scasp_lang, L))) ; String="".     
+    with_output_to(string(String), portray_clause_ind(:- set_prolog_flag(scasp_lang, L))) ; String="".     
 
 % #abducible
 dump(abducibles_scasp, List, String) :-
     findall(Term, ( member( abducible(Abducible, _), List), Abducible\=true, format(string(Term), "#abducible ~p", [Abducible]) ), Abds), 
-    with_output_to(string(String), forall(member(S, Abds), (term_string(T, S), portray_clause(T)))).
+    with_output_to(string(String), forall(member(S, Abds), (term_string(T, S), portray_clause_ind(T)))).
 
 
 dump(scasp_scenarios_queries, List, String) :- 
@@ -530,9 +534,9 @@ dump(scasp_scenarios_queries, List, String) :-
     with_output_to(string(StringScenarios),
         ( forall(member(example(S, [scenario(Scenario, _)]), Scenarios),
                 ( write("/* Scenario "), write(S), write("\n"), % simple comment not for PlDoc
-                  forall((member(Clause, Scenario),Clause\=(abducible(_,_) :- _)), portray_clause(Clause)),
+                  forall((member(Clause, Scenario),Clause\=(abducible(_,_) :- _)), portray_clause_ind(Clause)),
                   forall((member(Clause, Scenario),Clause=(abducible(Abd,_) :- _)), 
-                        (format(string(String), "#abducible ~p", [Abd]), term_string(Term, String), portray_clause(Term))),
+                        (format(string(String), "#abducible ~p", [Abd]), term_string(Term, String), portray_clause_ind(Term))),
                   write("% */ \n")
                 )
             )
@@ -549,17 +553,17 @@ dump(scasp_scenarios_queries, List, String) :-
 dump(rules, List, String) :- %trace, 
     findall((Pred :- Body), 
         (member( (Pred :- Body_), List), unwrapBody(Body_, Body)), Predicates),
-    with_output_to(string(String), forall(member(Clause, Predicates), portray_clause(Clause))).
+    with_output_to(string(String), forall(member(Clause, Predicates), portray_clause_ind(Clause))).
 
 dump(queries, List, String) :- 
     findall( query(Name, Query), 
         (member( query(Name, Query), List)), Predicates),
-    with_output_to(string(String), forall(member(Clause, Predicates), portray_clause(Clause))).
+    with_output_to(string(String), forall(member(Clause, Predicates), portray_clause_ind(Clause))).
 
 dump(scenarios, List, String) :- 
     findall( example(Name, Scenario), 
         (member( example(Name, Scenario), List)), Predicates),
-    with_output_to(string(String), forall(member(Clause, Predicates), portray_clause(Clause))).
+    with_output_to(string(String), forall(member(Clause, Predicates), portray_clause_ind(Clause))).
 
 dump(all, Module, List, String) :-
     %print_message(informational, " To dump all"),
@@ -650,7 +654,6 @@ write_functors_to_string([F/N|R], Previous, StringFunctors) :- !,
     write_functors_to_string(R, Previous, NextString), 
     with_output_to(string(StringF), format("~p/~d, ", [F,N])),
     string_concat(StringF, NextString, StringFunctors). 
-
 
 %%% ------------------------------------------------ Swish Interface to logical english
 %% based on logicalcontracts' lc_server.pl
@@ -823,6 +826,9 @@ non_expanded_terms(TaxlogTerms, ExpandedTerms) :-
         ExpandedTerms = ExpandedTerms_2. 
 
 
+
+%sandbox:safe_meta(term_singletons(X,Y), [X,Y]).
+
 sandbox:safe_primitive(le_answer:answer( _EnText)).
 sandbox:safe_primitive(le_answer:show( _Something)).
 sandbox:safe_primitive(le_answer:show( _Something, _With)).
@@ -831,3 +837,6 @@ sandbox:safe_primitive(le_answer:answer( _EnText, _Scenario, _Result)).
 sandbox:safe_primitive(le_answer:answer( _EnText, _Scenario, _Explanation, _Result)).
 sandbox:safe_primitive(le_answer:le_taxlog_translate( _EnText, _File, _Baseline, _Terms)).
 sandbox:safe_primitive(le_answer:translate_goal_into_LE(_,_)). 
+sandbox:safe_primitive(current_output(_)). 
+
+%sandbox:safe_primitive(term_singletons(_,_)).  % this would not work as term_singletons/2 is an undefined, C-based primitive

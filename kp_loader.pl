@@ -466,6 +466,11 @@ sandbox:safe_primitive(kp_loader:print_kp_predicates(_)).
 sandbox:safe_primitive(kp_loader:load_gitty_files). %TODO: this should be restricted to power users
 sandbox:safe_primitive(kp_loader:save_gitty_files).
 sandbox:safe_primitive(kp_loader:all_kps_loaded).
+sandbox:safe_primitive(web_storage:open_gittystore(_)).
+sandbox:safe_primitive(gitty:gitty_file(_, _, _)).
+sandbox:safe_primitive(gitty:load_commit(_,_,_)). 
+sandbox:safe_primitive(gitty:gitty_update(_, _, _, _, _)). 
+%sandbox:safe_primitive(open_null_stream(_)). 
 
 
 %%%% assist editor navigation; cf. swish/web/js/codemirror/mode/prolog/prolog_server.js
@@ -552,4 +557,6 @@ update_gitty_file(_,_,_) :- throw('this only works on SWISH ').
 
 knowledgePagesGraph(_,_) :- throw('this only works on SWISH').
 knowledgePagesGraph(_) :- throw('this only works on SWISH').
+gitty_file(_,_,_) :- throw('this only works in SWISH gitty'). 
+gitty_update(_, _, _, _, _) :- throw('this only works in SWISH gitty'). 
 :- endif.

@@ -12,7 +12,8 @@ limitations under the License.
 
 :- module(le_local, 
     [load_file_module/3, 
-     this_capsule/1
+     this_capsule/1,
+     portray_clause_ind/1
     ]).
 
 load_file_module(FileName, FileName, _) :-
@@ -21,3 +22,5 @@ load_file_module(FileName, FileName, _) :-
 this_capsule(M) :-
    current_module(M). 
 
+portray_clause_ind(Clause) :- 
+    portray_clause(Clause). 
