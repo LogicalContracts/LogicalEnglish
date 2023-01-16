@@ -13,14 +13,25 @@ limitations under the License.
 :- module(le_local, 
     [load_file_module/3, 
      this_capsule/1,
-     portray_clause_ind/1
+     portray_clause_ind/1,
+     update_file/3,
+     myDeclaredModule/1
     ]).
 
 load_file_module(FileName, FileName, _) :-
    load_files([FileName], [module(FileName)]). 
 
-this_capsule(M) :-
-   current_module(M). 
+this_capsule(user).
+   %thread_self(M). % current_module(M) messes it up
 
 portray_clause_ind(Clause) :- 
     portray_clause(Clause). 
+
+:- multifile kp_loader:myDeclaredModule/1.
+
+myDeclaredModule(user). 
+
+update_file(NewFileName, _, String) :-
+   open(NewFileName, write, Stream, []),
+   write(Stream, String),
+   close(Stream).

@@ -13,7 +13,9 @@ limitations under the License.
 :- module(le_swish, 
     [load_file_module/3, 
      this_capsule/1,
-     portray_clause_ind/1
+     portray_clause_ind/1,
+     update_file/3, 
+     myDeclaredModule/1
     ]).
 
 :- use_module(library(pengines_sandbox)). 
@@ -22,15 +24,21 @@ limitations under the License.
 
 :- use_module(library(pengines)).
 :- use_module(kp_loader).
+:- use_module(api). 
 
 load_file_module(FileName, ModuleName, Flag) :-
    load_named_file(FileName, ModuleName, Flag). 
 
 this_capsule(M) :-
+   %le_program_module(M). 
    pengine_self(M).
 
 portray_clause_ind(Clause) :- 
-   write(Clause). 
+   portray_clause(Clause). 
 
+update_file(NewFileName, URL, String) :-
+   update_gitty_file(NewFileName, URL, String). 
+
+sandbox:safe_primitive(prolog_listing:portray_clause(_)).
 sandbox:safe_primitive(write(_)). 
 sandbox:safe_primitive(writeq(_)). 

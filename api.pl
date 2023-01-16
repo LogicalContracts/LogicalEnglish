@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-:- module(_ThisFileName,[start_api_server/0]).
+:- module(_ThisFileName,[start_api_server/0, set_le_program_module/1, le_program_module/1]).
 
 % API for client apps to use the reasoner and drafter
 
@@ -51,7 +51,7 @@ start_api_server :- print_message(informational,"No need to start API server, SW
 :- else. % On command-line SWI-Prolog, no user restrictions:
 
 % Need to call thi to respond to REST API requests:
-start_api_server :- start_api_server(3052).
+start_api_server :- start_api_server(3050).
 start_api_server(Port) :- http_server(http_dispatch, [port(Port)]).
 :- endif.
 

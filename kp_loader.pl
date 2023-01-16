@@ -470,8 +470,9 @@ sandbox:safe_primitive(web_storage:open_gittystore(_)).
 sandbox:safe_primitive(gitty:gitty_file(_, _, _)).
 sandbox:safe_primitive(gitty:load_commit(_,_,_)). 
 sandbox:safe_primitive(gitty:gitty_update(_, _, _, _, _)). 
-%sandbox:safe_primitive(open_null_stream(_)). 
-
+sandbox:safe_primitive(gitty:size_in_bytes(_,_)). 
+sandbox:safe_primitive(gitty:save_object(_,_,_,_)).
+sandbox:safe_primitive(gitty:gitty_create(_,_,_,_,_)).
 
 %%%% assist editor navigation; cf. swish/web/js/codemirror/mode/prolog/prolog_server.js
 

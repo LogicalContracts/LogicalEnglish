@@ -10,81 +10,10 @@ const PENGINE_URL = "http://localhost:3050/pengine";
 //const SERVER_URL = "https://le.logicalcontracts.com/taxkbapi";
 const MY_TOKEN = "myToken123";
 
-const LETest = `
-the target language is: prolog.
-
-the templates are:
-*a person* acquires British citizenship on *a date*.
-*a person* is born in *a place* on *a date*,
-*a date* is after commencement,
-*a person* is the mother of *a person*,
-*a person* is the father of *a person*,
-*a person* is a British citizen on *a date*,
-*a person* is settled in the UK on *a date*,
-*a person* says that *a sentence*,
-*a person* is authorised to determine fatherhood.
-
-the knowledge base citizenship includes:
-a person acquires British citizenship on a date
-if the person is born in the UK on the date
-and the date is after commencement
-and an other person is the mother of the person
-    or the other person is the father of the person
-and the other person is a British citizen on the date
-    or the other person is settled in the UK on the date.
-
-scenario alice is:
-John is born in the UK on 2021-10-09.
-2021-10-09 is after commencement.
-Alice is the mother of John.
-Alice is a British citizen on 2021-10-09.
-        
-query one is:
-    
-which person acquires British citizenship on which date.
-`;
-
-const LETest2 = `
-the target language is: prolog. 
-
-the templates are:
-*a dragon* smokes.
-*a dragon* is a parent of *a dragon*.
-*a dragon* is healthy.
-*a dragon* is happy.
-
-the knowledge base dragon includes:
-
-a dragon smokes if 
-an other dragon is a parent of the dragon
-and the other dragon smokes.
-
-A dragon is healthy if it is not the case that
-the dragon smokes.
-
-A dragon is happy if for all cases in which 
-the dragon is a parent of an other dragon
-it is the case that 
-the other dragon is healthy.
-
-scenario one is:
-
-bob is a dragon.
-alice is a dragon.
-alice is a parent of bob.
-
-query happy is:
-
-which dragon is happy.
-
-query healthy is:
-which dragon is healthy.`;
-
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 const vscode = require('vscode');
 //import vscode from 'vscode';
-
 //console.log(vscode.window)
 
 let myStatusBarItem; 
@@ -93,6 +22,7 @@ let prologWebViewPanel;
 var currentQuery = '';
 var currentScenario = '';
 var currentAnswer = '';
+var currentMore = false; 
 var currentExplanation = '';
 var runningPengine; 
 
@@ -164,18 +94,6 @@ function activate(context) {
 	// update status bar item once at start
 	updateStatusBarItem();
 
-	// A new command to consumate query
-	// context.subscriptions.push(
-	// 	vscode.commands.registerCommand('le-ui.doQuery', () => {
-	// 	  if (!leWebViewPanel) {
-	// 		return;
-	// 	  }
-	
-	// 	  // Send a message to our webview.
-	// 	  // You can send any JSON serializable data.
-	// 	  leWebViewPanel.webview.postMessage({ command: 'query' });
-	// 	})
-	// );
 }
 
 // This method is called when your extension is deactivated
@@ -199,85 +117,6 @@ function getNumberOfSelectedLines(editor) {
 	return lines;
 }
 
-async function loadFile(ServerFile){
-    return (await axios.post(SERVER_URL,{
-        token:MY_TOKEN, operation: "load", 
-        file: ServerFile
-        }, axiosConfig)).data;
-}
-
-async function loadString(LE){
-    return (await axios.post(SERVER_URL,{
-        token:MY_TOKEN, operation: "load", 
-        le: LE
-        }, axiosConfig)).data;
-}
-
-// TODO: variant using template argument names as object fields/keys
-async function loadFactsAndQuery(sessionModule,facts,goal='true',vars=[]){
-	let result 
-	console.log('starting loadFactsAndQuery', sessionModule, facts, goal, vars)
-	try {
-		result = await axios.post(SERVER_URL,{
-			token:MY_TOKEN, operation: "loadFactsAndQuery", 
-			sessionModule:sessionModule,
-			facts: facts, goal:goal, vars:vars
-			}, axiosConfig)
-		return result.data
-	} catch (e) {
-		console.log('loadFactAndQuery error', e)
-		console.log(`Goal:${goal} with facts:${facts} failed!`)
-	}
-    return `Goal:${goal} with facts:${facts} failed!`;
-}
-
-async function le_answer(sessionModule,facts,goal='true',vars=[]){
-	let result 
-	try {
-		result = await axios.post(SERVER_URL,{
-			token:MY_TOKEN, operation: "answeringQuery", 
-			sessionModule:sessionModule,
-			facts: facts, goal:goal, vars:vars
-			}, axiosConfig)
-		return result.data
-	} catch (e) {
-		console.log('loadFactAndAnswer error', e)
-		console.log(`Goal:${goal} with facts:${facts} failed!`)
-	}
-    return `Goal:${goal} with facts:${facts} failed!`;
-}
-
-// Adding direct connecction with the LE's query machinery
-async function le_answer_(sessionModule,query,scenario){
-	let result
-	try {
-		result = await axios.post(SERVER_URL,{
-			token:MY_TOKEN, operation: "answeringQuery", 
-			sessionModule:sessionModule,
-			query:query,
-			scenario:scenario
-			}, axiosConfig)
-		return result.data
-	} catch (e) {
-		console.log('answeringQuery error', e)
-		console.log(`Query:${query} with Scenario:${scenario} failed!`)
-	}
-    return `Query:${query} with scenario:${scenario} failed!`;
-}
-
-async function doQuery(serverModule, query, scenario) {
-	var result = await le_answer_(serverModule, query, scenario);
-	currentAnswer = JSON.stringify(result,null,4);
-
-	if (!leWebViewPanel) {
-        return;
-      }
-
-      // Send a message to our webview.
-      // You can send any JSON serializable data.
-      leWebViewPanel.webview.postMessage({ command: 'answer', text: currentAnswer});
-}
-
 async function runPengine(le_string, query, scenario) {
 
 	runningPengine = new Pengine({ server: PENGINE_URL,
@@ -296,20 +135,22 @@ async function runPengine(le_string, query, scenario) {
 		//pengine.ask('assert(parsed), show(prolog)');
 		//pengine.ask('le_input:dict(A,B,C)'); 
 		//runningPengine.ask(`le_taxlog_translate( ${le_string}, File, BaseLine, Terms)`);
-		runningPengine.ask("parse_and_query("+le_string+", "+query+", "+scenario+", Answer)");
+		runningPengine.ask("parse_and_query("+le_string+", "+query+", with("+scenario+"), Answer)");
 		//pengine.ask('listing');
 		//console.log(this.id, 'answer', ans);
 	}
-	function handlePrompt() {
-		runningPengine.input(prompt(this.data));
-	}
+	// function handlePrompt() {
+	// 	runningPengine.input(prompt(this.data));
+	// }
 	function handleOutput() {
 		//$('#out').html(this.data);
-		currentAnswer = this.data
-		console.log('pengine answering:', this.data)
+		//console.log('pengine answering:', this.data, ' are there more? ', this.more)
 	}
 	function showAnswer() {
-		console.log('Answer from pengine', this.id, ' is ', this.data);
+		currentAnswer = this.data[0].Answer; // pick the first answer only
+		currentMore = this.more
+		console.log('Answer from pengine', this.id, ' is ', this.data, ' more? ', this.more);
+		leWebViewPanel.webview.postMessage({ command: 'answer', text: currentAnswer });
 	}
 	function reportFailure() {
 		console.log('pengine', this.id, 'failed'); 
@@ -322,16 +163,8 @@ async function main(context){
 
 	var source = vscode.window.activeTextEditor.document.getText();
 
-    //console.log("Translating to PROLOG...", source.toString());
-
 	// Display a message box to the user
 	//vscode.window.showInputBox().then((value) => {leQuery=value})
-	//console.log('Querying', leQuery)
-	
-	//var input = await showInputBox();
-
-    //console.log("Querying LOGICAL ENGLISH:", input);
-    //console.log(LETest);
 
 	prologWebViewPanel = vscode.window.createWebviewPanel('ViewPanel','LE -> Prolog', {preserveFocus: true, viewColumn: 2});
 
@@ -344,6 +177,8 @@ async function main(context){
 
 	prologWebViewPanel.webview.html = getWebviewPrologContent(translated.data.prolog);
 
+	prologWebViewPanel.webview.postMessage({ command: 'refactor' });
+
 	// Create GUI
 	leWebViewPanel = vscode.window.createWebviewPanel('ViewPanel',
 		'LE Answers', {preserveFocus: true, viewColumn: 2, }, {enableScripts: true});
@@ -355,102 +190,39 @@ async function main(context){
 	// Open GUI panel and wait for the query
 	leWebViewPanel.webview.html = getWebviewLEGUI()
 
+	//leWebViewPanel.webview.postMessage({ command: 'answer', text: 'hello' });
+
 	// Handle messages from the webview
 	leWebViewPanel.webview.onDidReceiveMessage(
         message => {
           switch (message.command) {
             case 'alert':
               	vscode.window.showErrorMessage(message.text);
+	  			//leWebViewPanel.webview.postMessage({ command: 'answer', text: 'hello' });
               	return;
 			case 'query':
 				currentQuery = message.text;
-				runPengine(le_string, currentQuery, currentScenario) 
-				//doQuery(loaded.sessionModule, currentQuery, currentScenario);
+				console.log('Query being processed', currentQuery)
+				runPengine(le_string, currentQuery, currentScenario)      
 				return
 			case 'scenario':
 				currentScenario = message.text;
-				return
-			case 'answer':
-				currentAnswer = message.text;
-				return
+				console.log('Scenario being processed', currentScenario)
+			 	return
 			case 'next':
-				if(runningPengine) currentAnswer = runningPengine.next();
+			 	if(runningPengine&&currentMore) currentAnswer = JSON.stringify(runningPengine.next());
+			 	else {
+			 		console.log("No more answers");
+			 		currentAnswer = "No more"
+			 	}
+				leWebViewPanel.webview.postMessage({ command: 'answer', text: currentAnswer });
 				return
           }
-	
         },
         undefined,
         context.subscriptions
       );
 
-    //console.log("Overall result:"); console.log(JSON.stringify(result.data,null,4));
-
-	// get the query and the scenario out of the LEGUI
-
-	// Send the query to the server and catch the answer
-
-	// update the GUI with the answer
-
-	// console.log('loaded', LETest)
-
-	// var result4 = await loadFactsAndQuery(result3.sessionModule, [
-	// 	"is_a_parent_of('Alice','Bob')"],
-    //     "is_happy(Dragon)",
-    //     ["Dragon"]
-    // );
-
-	// var result4 = await loadFactsAndQuery(result3.sessionModule, [
-	// 	"is_a_parent_of('Alice','Bob')"],
-    //     "is_a_parent_of(Parent, Child)",
-    //     ["Parent", "Child"]
-    // );
-
-	// var result4 = await le_answer(result3.sessionModule, [
-	// 	"is_a_parent_of('Alice','Bob')"],
-    //     "is_a_parent_of(Parent, Child)",
-    //     ["Parent", "Child"]
-    // );
-
-	// var result4 = await le_answer_(result3.sessionModule, 'happy', 'one');
-
-    //console.log(`\n\nPROLOG predicates for KB ${result.data.kb}:`);
-    //console.log(result.data.predicates);
-    //console.log("\nThe PROLOG test examples:");>
-
-	//var inter = await showInputBox();
-
-    // console.log("Overall result 3:"); console.log(JSON.stringify(result3,null,4));
-
-    // var result4 = await loadFactsAndQuery(result3.sessionModule, [
-    //          "is_a_British_citizen_on('Alice','2021-10-09')", 
-    //          "is_born_in_on('John','the_UK','2021-10-09')", // HACK: 'the_UK'....
-    //          "is_the_mother_of('Alice','John')",
-    //          "is_after_commencement('2021-10-09')"
-    //      ],
-    //      "acquires_British_citizenship_on(Person,Date)",
-    //      ["Person","Date"]
-    // );
-    // console.log("Overall result 4:"); console.log(JSON.stringify(result4,null,4));
-
-	// leWebViewPanel.webview.html = getWebviewPrologContent(JSON.stringify(result4,null,4));
-	// leWebViewPanel.webview.html = getWebviewLEGUI(JSON.stringify(result4,null,4))
-}
-
-/**
- * Shows an input box using window.showInputBox().
- */
-async function showInputBox() {
-	const result = await vscode.window.showInputBox({
-		value: 'one',
-		valueSelection: [2, 4],
-		placeHolder: 'For example a query. But not: 123',
-		validateInput: text => {
-			vscode.window.showInformationMessage(`Validating: ${text}`);
-			return text === '123' ? 'Not 123!' : null;
-		}
-	});
-	vscode.window.showInformationMessage(`Got: ${result}`);
-	return result
 }
 
 function getWebviewPrologContent(prolog) {
@@ -463,12 +235,12 @@ function getWebviewPrologContent(prolog) {
 	  <title>Prolog</title>
   </head>
   <body>
-	  <pre>${prolog}</pre>
+	  <pre>${prolog}</pre>    
   </body>
   </html>`;
   }
 
-  function getWebviewLEGUI() {
+function getWebviewLEGUI() {
 	return `<!DOCTYPE html>
   <html lang="en">
   <head>
@@ -482,47 +254,54 @@ function getWebviewPrologContent(prolog) {
 	  <textarea placeholder="Enter some query" name="query" /></textarea> <br>
 	  <label>Scenario</label><br>
 	  <input id="scenario" placeholder="Enter some scenario" name="scenario" /> <br><br>
-	  query <p id="values"></p>
+	  <!-- query <p id="values"></p>
 	  with scenario <p id="scene"></p> <br>
+	  -->
 	  
-	  <button>Run</button><br><br>
-	  <label>Answers</label><br>
-	  <pre id="answer"></pre><br>
-
+	  <button id="run">Run</button><button id="next">Next</button><br><br>
+	  <label>Answers</label><br><br><br>
+	  <h4 id="answer0"></h4><br><br>
+	  
 	  <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
       <script src="https://pengines.swi-prolog.org/pengine/pengines.js"></script>
 
 	  <script>
-		  (function() {
-			  const vscode = acquireVsCodeApi();
-			  //const query = document.getElementById('input-query');
+	  	const log3 = document.getElementById('answer0');
+
+		function switchNext() {
+			  document.getElementById('next').style.visibility = 'visible';
+		}
+		
+		(function() {
+			const vscode = acquireVsCodeApi();
+			//const query = document.getElementById('input-query');
 			  
-			  const input = document.querySelector('textarea');
-			  const scenario = document.querySelector('input');
-			  const log = document.getElementById('values');
-			  const log2 = document.getElementById('scene');
-			  const log3 = document.getElementById('answer');
+			const input = document.querySelector('textarea');
+			const scenario = document.querySelector('input');
+			//const log = document.getElementById('values');
+			//const log2 = document.getElementById('scene');
+			document.getElementById('next').style.visibility = 'hidden';
 
-			  var tempQuery = '';
-			  var tempScenario = '';
+			var tempQuery = '';
+			var tempScenario = '';
 
-			  input.addEventListener('input', updateValueQuery);
-			  scenario.addEventListener('input', updateValueScenario);
+			input.addEventListener('input', updateValueQuery);
+			scenario.addEventListener('input', updateValueScenario);
 
-			  function updateValueQuery(e) {
-  					log.textContent = e.target.value;
+			function updateValueQuery(e) {
+  					//log.textContent = e.target.value;
 					tempQuery = e.target.value; 
-				}
+			}
 
-			  function updateValueScenario(e) {
-					log2.textContent = e.target.value;
+			function updateValueScenario(e) {
+					//log2.textContent = e.target.value;
 					tempScenario = e.target.value; 
-			  }
+			}
 
-			  const button = document.querySelector('button');
+			const button = document.getElementById('run');
 
-			  button.addEventListener('click', (event) => {	
-				//button.textContent = \`Running count: \${event.detail}\`;
+			button.addEventListener('click', (event) => {	
+				//button.textContent = \`Running: \${event.detail}\`;
 								
 				vscode.postMessage({
 					command: 'scenario',
@@ -536,22 +315,37 @@ function getWebviewPrologContent(prolog) {
 					command: 'alert',
 					text:  'Query: '+tempQuery + ' with Scenario ' + tempScenario +' '+ button.textContent
 				})
-				});
+			});
 
-				// Handle the message inside the webview
-				window.addEventListener('message', event => {
-					const message = event.data; // The JSON data our extension sent
-					switch (message.command) {
-						case 'answer':
-							log3.textContent = message.text
-							break;
-					}
-				});
-		  }())
+			const next = document.getElementById('next');
+
+			next.addEventListener('click', (event) => {
+							
+				vscode.postMessage({
+					command: 'next',
+					text: next.textContent
+				})
+			});
+		}());
+
+		window.addEventListener('message', event => {
+
+            const message = event.data; // The JSON data our extension sent
+
+            switch (message.command) {
+                // case 'refactor':
+                //     log3.textContent = Math.ceil(100 * 0.5);
+                //     break;
+				case 'answer':
+					log3.textContent = message.text;
+					switchNext();
+					return; 
+            }
+        });
 	  </script>
   </body>
   </html>`;  
-  }
+}
 
 module.exports = {
 	activate,

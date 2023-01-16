@@ -99,7 +99,9 @@ query three is:
     this_capsule/1, tokenize/3, unpack_tokens/2, clean_comments/2,
     query_/2, extract_constant/4, spaces/3, name_as_atom/2, process_types_or_names/4,
     matches_name/4, matches_type/4, delete_underscore/2, add_determiner/2, proper_det/2,
-    portray_clause_ind/1
+    portray_clause_ind/1, order_templates/2, process_types_dict/2,
+    assertall/1,asserted/1, 
+    update_file/3, myDeclaredModule/1
     ]).
 
 :- multifile sandbox:safe_primitive/1.
@@ -156,13 +158,14 @@ header(Settings, In, Next) :-
     fix_settings(Settings_, Settings2), 
     RulesforErrors = [(text_size(TextSize))|Settings2], % is text_size being used? % asserting the Settings too! predicates, events and fluents
     included_files(Settings2, RestoredDictEntries, CollectedRules), 
-    append(Settings2, CollectedRules, Settings),  % sending rules for term expansion
+    append(Settings2, CollectedRules, Settings), 
     append(DictEntries, RestoredDictEntries, AllDictEntries), 
     order_templates(AllDictEntries, OrderedEntries), 
     process_types_dict(OrderedEntries, Types), 
     %print_message(informational, "types ~w rules ~w"-[Types, CollectedRules]),
     append(OrderedEntries, RulesforErrors, SomeRules),
     append(SomeRules, Types, MRules), 
+    %print_message(informational, "rules ~w"-[MRules]),
     assertall(MRules), !. % asserting contextual information
 header(_, Rest, _) :- 
     asserterror('LE error in the header ', Rest), 
@@ -1508,7 +1511,7 @@ op_stop([ (on),
         (=),
         (=),
         (;),
-        (as),
+        %(as),
         (is),
         (=),
         @,
@@ -2190,3 +2193,5 @@ sandbox:safe_primitive(le_input:source_lang(_)).
 sandbox:safe_primitive(le_input:is_type(_)).
 sandbox:safe_primitive(le_input:dict(_,_,_)).
 sandbox:safe_primitive(le_input:meta_dict(_,_,_)).
+sandbox:safe_primitive(le_input:assertall(_)).
+sandbox:safe_primitive(le_input:asserted(_)). 
