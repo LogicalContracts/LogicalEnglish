@@ -26,6 +26,18 @@ limitations under the License.
 :- use_module(library(pengines)).
 :- use_module(pengine_sandbox:library(pengines)).
 :- use_module(library(sandbox)).
+:- use_module(library(http/http_digest)).  % to activate digest authorization options
+
+% :- multifile pengines:authentication_hook/3.
+
+% pengines:authentication_hook(_Request, _, User).
+
+% :- multifile http:authenticate_client/2.
+
+% http:authenticate_client("http://localhost:3050/pengine", Action) :-
+%     print_message(informational, " Authenticate client ~w "-[Action]). 
+
+% previous modules
 
 :- multifile sandbox:safe_primitive/1.
 
@@ -66,7 +78,7 @@ safe_module(M) :- sub_atom(M,0,_,_,leSessionModule), !.
 
 safe_file(F) :- sub_atom(F,_,_,_,'/moreExamples/').
 
-
+% handler for the original api
 :- http_handler('/taxkbapi', handle_api, []).  % this defines a web server endpoint
 handle_api(Request) :-
     http_read_json_dict(Request, Payload, [value_string_as(atom)]),

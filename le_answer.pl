@@ -39,18 +39,48 @@ which can be used on the new command interface of LE on SWISH
     op(1150, fx, show),
     op(1150, fx, abducible),
     dump/4, dump/3, dump/2, dump_scasp/3, split_module_name/3,
-    prepare_query/6, assert_facts/2, retract_facts/2, parse_and_query/4,
+    prepare_query/6, assert_facts/2, retract_facts/2, parse_and_query/6,
     le_expanded_terms/2, show/1, source_lang/1, targetBody/6
     ]).
 
 %:- use_module(library(sandbox)).
 :- use_module(library(pengines_sandbox)). 
 
+% required for sCASP justification (from ~/git/swish/pack/sCASP/examples)
+
+:- use_module(library(scasp)).
+:- use_module(library(scasp/html)).
+:- use_module(library(scasp/output)).
+:- use_module(library(scasp/json)).
+
+:- use_module(library(http/http_server)).
+:- use_module(library(http/html_write)).
+:- use_module(library(http/js_write)).
+:- use_module(library(http/html_head)).
+:- use_module(library(http/http_path)).
+:- use_module(library(http/http_error)).
+:- use_module(library(http/jquery)).
+:- use_module(library(http/http_dispatch)).
+:- use_module(library(dcg/high_order)).
+:- use_module(library(http/term_html)).
+:- use_module(library(http/http_json)).
+:- use_module(library(http/http_client)).
+:- use_module(library(http/http_host)).
+
 %:- multifile sandbox:safe_primitive/1.
 %:- multifile sandbox:safe_meta/2.
 
 :- use_module('le_input.pl').  
 :- use_module('syntax.pl').
+
+:- multifile http:location/3.
+:- dynamic   http:location/3.
+
+% Does justification tree needs this?
+
+http:location(scasp, root(scasp), []).
+%http:location(js,    scasp(js),   []).
+%http:location(css,   scasp(css),  []).
     
 :- discontiguous statement/3, declaration/4, _:example/2, _:query/2, _:is_/2. 
 
@@ -198,6 +228,24 @@ answer(English, Arg, E, Result) :- %trace,
 
 % prepare_query/6
 % prepare_query(+English, +Arguments, -Module, -Goal, -Facts, -Command)
+% prepare_query(English, Arg, SwishModule, Goal, Facts, Command) :- %trace, 
+%     %restore_dicts, 
+%     pengine_self(SwishModule), 
+%     (translate_command(SwishModule, English, GoalName, Goal, PreScenario) -> true 
+%     ; ( print_message(error, "Don't understand this question: ~w "-[English]), !, fail ) ), % later -->, Kbs),
+%     copy_term(Goal, CopyOfGoal),  
+%     translate_goal_into_LE(CopyOfGoal, RawGoal), name_as_atom(RawGoal, EnglishQuestion), 
+%     ((Arg = with(ScenarioName), PreScenario=noscenario) -> Scenario=ScenarioName; Scenario=PreScenario),
+%     show_question(GoalName, Scenario, EnglishQuestion), 
+%     %print_message(informational, "Scenario: ~w"-[Scenario]),
+%     (Scenario==noscenario -> Facts = [] ; 
+%         (SwishModule:example(Scenario, [scenario(Facts, _)]) -> 
+%             true;  print_message(error, "Scenario: ~w does not exist"-[Scenario]))),
+%     %print_message(informational, "Facts: ~w"-[Facts]), 
+%     extract_goal_command(Goal, SwishModule, _InnerGoal, Command), !.  
+%     %print_message(informational, "Command: ~w"-[Command]).
+
+% prepare_query(+English, +Arguments, -Module, -Goal, -Facts, -Command)
 prepare_query(English, Arg, SwishModule, Goal, Facts, Command) :- %trace, 
     %restore_dicts, 
     var(SwishModule), this_capsule(SwishModule), !, 
@@ -343,7 +391,7 @@ translate_command(SwishModule, English_String, GoalName, Goals, Scenario) :- %tr
     unpack_tokens(Tokens, UTokens), 
     clean_comments(UTokens, CTokens),
     phrase(command_(GoalName, Scenario), CTokens), 
-    print_message(informational, "GoalName ~w SwishModule ~w"-[GoalName, SwishModule]), 
+    %print_message(informational, "GoalName ~w SwishModule ~w"-[GoalName, SwishModule]), 
     ( SwishModule:query(GoalName, Goals) -> true; (print_message(informational, "No goal named: ~w"-[GoalName]), fail) ), !. 
 
 translate_command(_, English_String, GoalName, Goals, Scenario) :-
@@ -617,7 +665,8 @@ restore_dicts :- %trace,
     assertall(MRules), !. % asserting contextual information
 
 restore_dicts(DictEntries) :- %trace, 
-    myDeclaredModule(SwishModule),
+    %myDeclaredModule(SwishModule),
+    this_capsule(SwishModule), 
     %SwishModule=user,
     %print_message(informational, "the dictionaries are being restored into module ~w"-[SwishModule]),
     (SwishModule:local_dict(_,_,_) -> findall(dict(A,B,C), SwishModule:local_dict(A,B,C), ListDict) ; ListDict = []),
@@ -791,7 +840,7 @@ le_expanded_terms(TaxlogTerms, ExpandedTerms) :-
 
 :- multifile kp_loader:myDeclaredModule_/1. 
 
-parse_and_query(Document, Question, Scenario, Answer) :-
+parse_and_query(File, Document, Question, Scenario, Answer, Results) :-
 	%context_module(user), % LE programs are in the user module
 	%prolog_load_context(source,File), % atom_prefix(File,'pengine://'), % process only SWISH windows
 	%prolog_load_context(term_position,TP), stream_position_data(line_count,TP,Line),
@@ -801,13 +850,14 @@ parse_and_query(Document, Question, Scenario, Answer) :-
     %api:set_le_program_module(M),
     %M:assert(myDeclaredModule_(M)), 
     %print_message(informational, "Expanded to be asserted on ~w "-[M]), 
-	non_expanded_terms(M, TaxlogTerms, ExpandedTerms),
+	non_expanded_terms(File, TaxlogTerms, ExpandedTerms),
     %print_message(informational, "Expanded to be asserted on ~w this ~w"-[M, ExpandedTerms]), 
     %forall(member(T, ExpandedTerms), (assertz(M:T), print_message(informational, "Asserted ~w"-[M:T]))),  % simulating term expansion
     %kp_loader:assert(myDeclaredModule_(user)), 
     %myDeclaredModule(M),
-    forall(member(T, [(:-module(M,[]))|ExpandedTerms]), assertz(M:T)), % simulating term expansion
-    answer( Question, Scenario, Answer). 
+    forall(member(T, [(:-module(File,[]))|ExpandedTerms]), assertz(M:T)), % simulating term expansion
+    answer( Question, Scenario, Answer),
+    with_output_to(string(Results), reply(html, M:Question, 1, [scasp{ query: Question, answer: Answer, tree: query-[p(a)-[]]}])). 
 
 % non_expanded_terms/2 is just as the one above, but with semantics2prolog2 instead of semantics2prolog that has many other dependencies. 
 non_expanded_terms(Name, TaxlogTerms, ExpandedTerms) :-
@@ -849,6 +899,36 @@ non_expanded_terms(Name, TaxlogTerms, ExpandedTerms) :-
         ExpandedTerms_2 = [just_saved_scasp(NewFileName, NewModule)|ExpandedTerms_1] ) ; ExpandedTerms_2 = ExpandedTerms_1),
         ExpandedTerms = ExpandedTerms_2. 
 
+
+%!  reply(+Format, :Query, +TotalTime, +Results)
+
+reply(html, M:_Query, TotalTime, Results) =>
+    reply_html_page([],
+                    \results(Results, M, TotalTime)).
+
+/*******************************
+ *        HTML GENERATION	*
+ *******************************/
+
+results([], _, Time) -->
+    !,
+    html(h3('No models (~3f sec)'-[Time.cpu])).
+results(Results, M, _Time) -->
+    sequence(result(M), Results).
+
+result(M, Result) -->
+    html(div(class(result),
+             [ h3('Result #~D (~3f sec)'-[Result.answer, Result.time.cpu]),
+               \justification_section(M:Result)
+             ])).
+
+justification_section(M:Results) -->
+    { Tree = Results.get(tree) },
+    !,
+    html_justification_tree(M:Tree, []).
+justification_section(_) -->
+    [].
+
 %sandbox:safe_meta(term_singletons(X,Y), [X,Y]).
 
 sandbox:safe_primitive(le_answer:answer( _EnText)).
@@ -862,6 +942,6 @@ sandbox:safe_primitive(le_answer:translate_goal_into_LE(_,_)).
 sandbox:safe_primitive(le_answer:dump_scasp(_,_,_)). 
 sandbox:safe_primitive(current_output(_)). 
 sandbox:safe_primitive(le_answer:(show _)). 
-sandbox:safe_primitive(le_answer:parse_and_query(_,_,_,_)).
+sandbox:safe_primitive(le_answer:parse_and_query(_,_,_,_,_,_)).
 
 %sandbox:safe_primitive(term_singletons(_,_)).  % this would not work as term_singletons/2 is an undefined, C-based primitive

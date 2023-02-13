@@ -1,0 +1,55 @@
+:- module('unvaccinated+http://tests.com',[]).
+
+en("the target language is: prolog.
+
+the templates are:
+
+*an eventuality* is prohibited,
+*a person* attends *a meeting*,
+*a person* is unvaccinated,
+*a meeting* is excused,
+*a person* has an obligation that *an eventuality*,
+An arrest warrant is issued for *a person*,
+*a person* pays *an amount*.
+*a person* is notified that *a message*.
+
+the knowledge base unvaccinated includes:
+
+A meeting is prohibited 
+    if a person attends the meeting
+	and the person is unvaccinated
+	and it is not the case that 
+    	the meeting is excused.
+    
+A person has an obligation that the person pays £100 
+	if the person attends a meeting 
+   	and the meeting is prohibited
+     and the person is notified that the meeting is prohibited.
+
+An arrest warrant is issued for a person
+	if the person has an obligation that the person pays an amount
+	and it is not the case that 
+		the person pays the amount.
+		
+scenario one is:
+    Boris attends christmas party.
+    Novak attends christmas party.
+	Novak is unvaccinated.
+    Novak is notified that christmas party is prohibited.
+    Novak pays £100.
+
+scenario two is:
+    Boris attends christmas party.
+    Novak attends christmas party.
+	Novak is unvaccinated.
+    Boris is notified that christmas party is prohibited.
+    Novak pays £100.
+	Boris pays £1000.
+  
+query one is:
+    which person has an obligation that which eventuality.
+    
+query two is:
+    An arrest warrant is issued for which person.
+
+").

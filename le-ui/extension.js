@@ -19,6 +19,7 @@ const vscode = require('vscode');
 let myStatusBarItem; 
 let leWebViewPanel;
 let prologWebViewPanel;
+var currentFile = '';
 var currentQuery = '';
 var currentScenario = '';
 var currentAnswer = '';
@@ -117,9 +118,9 @@ function getNumberOfSelectedLines(editor) {
 	return lines;
 }
 
-async function runPengine(le_string, query, scenario) {
+async function runPengine(filename, le_string, query, scenario) {
 
-	runningPengine = new Pengine({ server: PENGINE_URL,
+	runningPengine = new Pengine({ server: PENGINE_URL,  authorization:"digest(jacinto, '123')", //authenticate:true, authorization:"basic(jacinto, 123)", 
 		//src_text: le_string, 
 		oncreate: handleCreate,
 		//onprompt: handlePrompt,
@@ -135,7 +136,7 @@ async function runPengine(le_string, query, scenario) {
 		//pengine.ask('assert(parsed), show(prolog)');
 		//pengine.ask('le_input:dict(A,B,C)'); 
 		//runningPengine.ask(`le_taxlog_translate( ${le_string}, File, BaseLine, Terms)`);
-		runningPengine.ask("parse_and_query("+le_string+", "+query+", with("+scenario+"), Answer)");
+		runningPengine.ask("parse_and_query("+filename+", "+le_string+", "+query+", with("+scenario+"), Answer, Explanation)");
 		//pengine.ask('listing');
 		//console.log(this.id, 'answer', ans);
 	}
@@ -148,6 +149,7 @@ async function runPengine(le_string, query, scenario) {
 	}
 	function showAnswer() {
 		currentAnswer = this.data[0].Answer; // pick the first answer only
+		//currentExplanation = this.data[0].Explanation; 
 		currentMore = this.more
 		console.log('Answer from pengine', this.id, ' is ', this.data, ' more? ', this.more);
 		leWebViewPanel.webview.postMessage({ command: 'answer', text: currentAnswer });
@@ -162,6 +164,8 @@ async function main(context){
 	//let success = await vscode.commands.executeCommand('workbench.action.splitEditor');
 
 	var source = vscode.window.activeTextEditor.document.getText();
+	var filename = vscode.window.activeTextEditor.document.fileName;
+	currentFile = filename.substring(filename.lastIndexOf('/')+1, filename.lastIndexOf('.'));
 
 	// Display a message box to the user
 	//vscode.window.showInputBox().then((value) => {leQuery=value})
@@ -175,7 +179,7 @@ async function main(context){
 
 	console.log('Translation le to prolog', translated)
 
-	prologWebViewPanel.webview.html = getWebviewPrologContent(translated.data.prolog);
+	prologWebViewPanel.webview.html = getWebviewPrologContent(translated.data.prolog, filename);
 
 	prologWebViewPanel.webview.postMessage({ command: 'refactor' });
 
@@ -203,7 +207,7 @@ async function main(context){
 			case 'query':
 				currentQuery = message.text;
 				console.log('Query being processed', currentQuery)
-				runPengine(le_string, currentQuery, currentScenario)      
+				runPengine(currentFile, le_string, currentQuery, currentScenario)      
 				return
 			case 'scenario':
 				currentScenario = message.text;
@@ -225,16 +229,17 @@ async function main(context){
 
 }
 
-function getWebviewPrologContent(prolog) {
+function getWebviewPrologContent(prolog, filename) {
 
 	return `<!DOCTYPE html>
   <html lang="en">
   <head>
 	  <meta charset="UTF-8">
 	  <meta name="viewport" content="width=device-width, initial-scale=2.0">
-	  <title>Prolog</title>
+	  <title>${filename} in Prolog</title>
   </head>
   <body>
+	  % from ${filename}
 	  <pre>${prolog}</pre>    
   </body>
   </html>`;
@@ -343,6 +348,7 @@ function getWebviewLEGUI() {
             }
         });
 	  </script>
+
   </body>
   </html>`;  
 }

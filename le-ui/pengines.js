@@ -46,7 +46,7 @@
  * if initial query has finished.
  * @param {Int} [options.chunk=1] Provide answers in chunks of this
  * size.
- * @param {String} [options.applicatio="pengine_sandbox"] Application in
+ * @param {String} [options.application="pengine_sandbox"] Application in
  * which to execute the query.
  * @param {Function} [options.oncreate]
  * @param {Function} [options.onsuccess]
@@ -120,7 +120,9 @@ function Pengine(options) {
 		"ask",
 		"template",
 		"chunk",
-		"destroy"
+		"destroy", 
+    "authorization"
+    //"authenticate"
 	      ]);
 
   if ( options.id ) {				/* re-attaching */
@@ -128,17 +130,26 @@ function Pengine(options) {
     Pengine.alive.push(this);
     this.pull_response();
   } else {
+    console.log('Pengine create', JSON.stringify(createOptions));
     Pengine.network.ajax(this.options.server + '/create',
 	   { contentType: "application/json; charset=utf-8",
 	     dataType: "json",
 	     data: JSON.stringify(createOptions),
 	     type: "POST",
+      //  username: "jacinto",
+      //  password: "123",
 	     success: function(obj) {
 	       that.process_response(obj);
 	     },
 	     error: function(jqXHR, textStatus, errorThrown) {
 	       that.error(jqXHR, textStatus, errorThrown);
 	     }
+      //  beforeSend: function (xhr) {
+      //   var username = 'jacinto';
+      //   var password = '123';
+      //   var base64    = `Digest username=${username}, password=${password}`;
+      //   xhr.setRequestHeader("Authorization", base64);
+      //  }
 	   });
   }
 
