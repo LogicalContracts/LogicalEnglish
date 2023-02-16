@@ -1,0 +1,69 @@
+:- module('axiome-data-cover',[]).
+
+en("the target language is: prolog.
+
+the templates are:
+we will pay *a cost*.
+*a cost* is in respect of *a claim*. 
+*a claim* corresponds to *a cover*.
+we will not pay *a cost*. 
+we will not cover *a claim*.
+*a claim* is directly or indirectly caused by or contributed to by or resulting from or arising out of or in connection with *a reason*. 
+*a claim* is under *a cover*. 
+
+the knowledge base axiome data cover includes:
+
+we will pay a cost
+if the cost is in respect of a claim
+and the claim corresponds to Data protection cover
+and it is not the case that
+    we will not pay the cost.
+
+we will not pay a cost 
+if  the cost is in respect of a claim
+and the claim corresponds to Data protection cover
+and it is not the case that 
+        the cost is equal to amounts of compensation which you are ordered to pay or which you might reasonably be expected to pay by a court having jurisdiction
+        or the cost is equal to the cost of the process of registration when the application has not been refused or withdrawn under Data Protection legislation within the policy territories.
+
+we will not cover a claim 
+if the claim is directly or indirectly caused by or contributed to by or resulting from or arising out of or in connection with a reason
+and the reason is equal to any cyber act or cyber incident including but not limited to any action taken in controlling or preventing or suppressing or remediating any cyber act or cyber incident
+        or the reason is equal to loss of use or reduction in functionality or repair or replacement or restoration or reproduction or loss or theft or distortion or erasure or corruption or alteration of any data including any amount pertaining to the value of such data
+        or the reason is equal to failure of electronic or electromechanical data processing or electronically controlled equipment or data to correctly recognise any given date or to process data or to operate properly due to failure to recognise any given date
+and it is not the case that
+      the claim is equal to bodily injury
+      or  the claim is equal to physical damage to material property
+      or  the claim is under the Data Protection cover of this section directly or indirectly caused by or contributed to by or resulting from or arising out of or in connection with any cyber act or cyber incident.
+
+scenario one is:
+    expenses is in respect of claim 001.
+    claim 001 corresponds to Data protection cover. 
+
+scenario two is:
+    amounts of compensation which you are ordered to pay or which you might reasonably be expected to pay by a court having jurisdiction is in respect of claim 002.
+    claim 002 corresponds to Data protection cover. 
+
+scenario three is:
+    claim 003 is directly or indirectly caused by or contributed to by or resulting from or arising out of or in connection with any cyber act or cyber incident including but not limited to any action taken in controlling or preventing or suppressing or remediating any cyber act or cyber incident.     
+
+scenario four is:
+    bodily injury is directly or indirectly caused by or contributed to by or resulting from or arising out of or in connection with failure of electronic or electromechanical data processing or electronically controlled equipment or data to correctly recognise any given date or to process data or to operate properly due to failure to recognise any given date. 
+ 
+query pay is:
+    we will pay which cost.
+
+query nopay is:
+    we will not pay which cost.
+
+query nocover is:
+    we will not cover which claim.     
+
+").
+
+/** <examples>
+?- answer(pay, with(two), le(E), R). 
+?- answer(nocover, with(four), le(E), R). 
+?- answer cover with three. 
+*/
+

@@ -39,7 +39,7 @@ which can be used on the new command interface of LE on SWISH
     op(1150, fx, show),
     op(1150, fx, abducible),
     dump/4, dump/3, dump/2, dump_scasp/3, split_module_name/3,
-    prepare_query/6, assert_facts/2, retract_facts/2, parse_and_query/6,
+    prepare_query/6, assert_facts/2, retract_facts/2, parse_and_query/5, parse_and_query_and_explanation/5,
     le_expanded_terms/2, show/1, source_lang/1, targetBody/6
     ]).
 
@@ -48,37 +48,43 @@ which can be used on the new command interface of LE on SWISH
 
 % required for sCASP justification (from ~/git/swish/pack/sCASP/examples)
 
-:- use_module(library(scasp)).
-:- use_module(library(scasp/html)).
-:- use_module(library(scasp/output)).
-:- use_module(library(scasp/json)).
+% :- use_module(library(scasp)).
+% :- use_module(library(scasp/html)).
+% :- use_module(library(scasp/output)).
+% :- use_module(library(scasp/json)).
 
-:- use_module(library(http/http_server)).
-:- use_module(library(http/html_write)).
-:- use_module(library(http/js_write)).
-:- use_module(library(http/html_head)).
-:- use_module(library(http/http_path)).
-:- use_module(library(http/http_error)).
-:- use_module(library(http/jquery)).
-:- use_module(library(http/http_dispatch)).
-:- use_module(library(dcg/high_order)).
-:- use_module(library(http/term_html)).
-:- use_module(library(http/http_json)).
-:- use_module(library(http/http_client)).
-:- use_module(library(http/http_host)).
+% :- use_module(library(http/http_server)).
+% :- use_module(library(http/html_write)).
+% :- use_module(library(http/js_write)).
+% :- use_module(library(http/html_head)).
+% :- use_module(library(http/http_path)).
+% :- use_module(library(http/http_error)).
+% :- use_module(library(http/jquery)).
+% :- use_module(library(http/http_dispatch)).
+% :- use_module(library(dcg/high_order)).
+% :- use_module(library(http/term_html)).
+% :- use_module(library(http/http_json)).
+% :- use_module(library(http/http_client)).
+% :- use_module(library(http/http_host)).
 
 %:- multifile sandbox:safe_primitive/1.
 %:- multifile sandbox:safe_meta/2.
 
 :- use_module('le_input.pl').  
 :- use_module('syntax.pl').
+:- use_module('reasoner.pl'). 
+
+% html libs
+:- use_module(library(http/html_write)).
+:- use_module(library(http/term_html)).
+:- use_module(library(http/js_write)).
 
 :- multifile http:location/3.
 :- dynamic   http:location/3.
 
 % Does justification tree needs this?
 
-http:location(scasp, root(scasp), []).
+%http:location(scasp, root(scasp), []).
 %http:location(js,    scasp(js),   []).
 %http:location(css,   scasp(css),  []).
     
@@ -222,7 +228,7 @@ answer(English, Arg, E, Result) :- %trace,
     extract_goal_command(Goal, SwishModule, InnerGoal, _Command),
     (Scenario==noscenario -> Facts = [] ; SwishModule:example(Scenario, [scenario(Facts, _)])), !, 
     setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
-            catch((true, query(at(InnerGoal, Module),_,E,Result)), Error, ( print_message(error, Error), fail ) ), 
+            catch((true, reasoner:query(at(InnerGoal, Module),_,E,Result)), Error, ( print_message(error, Error), fail ) ), 
             _Result, 
             retract_facts(SwishModule, Facts)). 
 
@@ -429,6 +435,7 @@ scenario_or_empty_ --> spaces(_).
  
 % show/1
 show(prolog) :-
+    print_message(informational, "About to show prolog code"), 
     show(metarules), 
     show(rules),
     show(queries),
@@ -721,6 +728,7 @@ prolog_colour:term_colours(en_decl(_Text),lps_delimiter-[classify]). % let 'en_d
 
 
 user:(answer Query with Scenario):- 
+    print_message(informational,"le_answer:answer ~w with ~w"-[Query, Scenario]), 
     answer(Query,with(Scenario)). 
 user: (répondre Query avec Scenario):-
     answer(Query,with(Scenario)).
@@ -738,8 +746,8 @@ user:answer( EnText, Scenario) :- answer( EnText, Scenario).
 user:answer( EnText, Scenario, Result) :- answer( EnText, Scenario, Result).
 user:answer( EnText, Scenario, E, Result) :- answer( EnText, Scenario, E, Result).
 
-user:(show Something) :- 
-    le_answer:show(Something). 
+%user:(show Something) :- 
+%    le_answer:show(Something). 
 
 user:(show(Something, With) ):- 
     le_answer:show(Something, With). 
@@ -758,23 +766,24 @@ user:has_as_head_before(List, Head, Rest) :- has_as_head_before(List, Head, Rest
 
 user:op_stop(StopWords) :- op_stop(StopWords). 
 
-user:targetBody(G, B, X, S, L, R) :- targetBody(G, B, X, S, L, R). 
+%user:targetBody(G, B, X, S, L, R) :- targetBody(G, B, X, S, L, R). 
 
 user:restore_dicts :- restore_dicts.
 
 % user:source_lang(L) :- source_lang(L). 
 
-%le_taxlog_translate( EnText, Terms) :- le_taxlog_translate( EnText, someFile, 1, Terms).
+le_taxlog_translate( EnText, Terms) :- le_taxlog_translate( EnText, someFile, 1, Terms).
 
 % Baseline is the line number of the start of Logical English text
 le_taxlog_translate( en(Text), File, BaseLine, Terms) :-
-    text_to_logic(Text, Terms) -> true; showErrors(File,BaseLine). 
+    %print_message(informational,"en( ~w )"-[Text]), 
+    le_input:text_to_logic(Text, Terms) -> true; showErrors(File,BaseLine). 
 le_taxlog_translate( fr(Text), File, BaseLine, Terms) :-
-    text_to_logic(Text, Terms) -> true; showErrors(File,BaseLine). 
+    le_input:text_to_logic(Text, Terms) -> true; showErrors(File,BaseLine). 
 le_taxlog_translate( it(Text), File, BaseLine, Terms) :-
-    text_to_logic(Text, Terms) -> true; showErrors(File,BaseLine). 
+    le_input:text_to_logic(Text, Terms) -> true; showErrors(File,BaseLine). 
 le_taxlog_translate( es(Text), File, BaseLine, Terms) :-
-    text_to_logic(Text, Terms) -> true; showErrors(File,BaseLine).
+    le_input:text_to_logic(Text, Terms) -> true; showErrors(File,BaseLine).
 le_taxlog_translate( prolog_le(verified), _, _, prolog_le(verified)) :- %trace, % running from prolog file
     assertz(le_input:parsed), this_capsule(M),  
     assertz(M:just_saved_scasp(null, null)), 
@@ -788,10 +797,10 @@ combine_list_into_string([HS|RestS], Previous, OutS) :-
     string_concat(Previous, HS, NewS),
     combine_list_into_string(RestS, NewS, OutS).
 
-user:showtaxlog :- showtaxlog.
-user:is_type(T) :- is_type(T).
-user:dict(A,B,C) :- dict(A,B,C).
-user:meta_dict(A,B,C) :- meta_dict(A,B,C). 
+%user:showtaxlog :- showtaxlog.
+%user:is_type(T) :- is_type(T).
+%user:dict(A,B,C) :- dict(A,B,C).
+%user:meta_dict(A,B,C) :- meta_dict(A,B,C). 
 
 showtaxlog:-
     % ?????????????????????????????????????????
@@ -840,7 +849,9 @@ le_expanded_terms(TaxlogTerms, ExpandedTerms) :-
 
 :- multifile kp_loader:myDeclaredModule_/1. 
 
-parse_and_query(File, Document, Question, Scenario, Answer, Results) :-
+parse_and_query(File, Document, Question, Scenario, AnswerExplanation) :-
+    %print_message(informational, "parse_and_query ~w ~w ~w ~w"-[File, Document, Question, Scenario]),
+    %Answer = 'respuesta + explanation'. 
 	%context_module(user), % LE programs are in the user module
 	%prolog_load_context(source,File), % atom_prefix(File,'pengine://'), % process only SWISH windows
 	%prolog_load_context(term_position,TP), stream_position_data(line_count,TP,Line),
@@ -856,8 +867,16 @@ parse_and_query(File, Document, Question, Scenario, Answer, Results) :-
     %kp_loader:assert(myDeclaredModule_(user)), 
     %myDeclaredModule(M),
     forall(member(T, [(:-module(File,[]))|ExpandedTerms]), assertz(M:T)), % simulating term expansion
-    answer( Question, Scenario, Answer),
-    with_output_to(string(Results), reply(html, M:Question, 1, [scasp{ query: Question, answer: Answer, tree: query-[p(a)-[]]}])). 
+    answer( Question, Scenario, AnswerExplanation). 
+
+parse_and_query_and_explanation(File, Document, Question, Scenario, Answer) :-
+    le_taxlog_translate(Document, _, 1, TaxlogTerms),
+    this_capsule(M), 
+	non_expanded_terms(File, TaxlogTerms, ExpandedTerms),
+    assert(kp_loader:module_api_hack(M)), 
+    forall(member(T, [(:-module(File,[]))|ExpandedTerms]), assertz(M:T)), % simulating term expansion
+    answer( Question, Scenario, le(le_Explanation(AnswerExplanation)), _R),
+    produce_html_explanation(le_Explanation(AnswerExplanation), Answer). 
 
 % non_expanded_terms/2 is just as the one above, but with semantics2prolog2 instead of semantics2prolog that has many other dependencies. 
 non_expanded_terms(Name, TaxlogTerms, ExpandedTerms) :-
@@ -899,35 +918,30 @@ non_expanded_terms(Name, TaxlogTerms, ExpandedTerms) :-
         ExpandedTerms_2 = [just_saved_scasp(NewFileName, NewModule)|ExpandedTerms_1] ) ; ExpandedTerms_2 = ExpandedTerms_1),
         ExpandedTerms = ExpandedTerms_2. 
 
+clean_explanation([], []) :- !. 
+clean_explanation([s(P,_Ref, _Source, _, _, R)|RestConj], [s(P, RR)|NewConj]) :- 
+    clean_explanation(R, RR), clean_explanation(RestConj, NewConj). 
+clean_explanation([f(P,_Ref, _Source, _, _, R)|RestConj], [f(P, RR)|NewConj]) :- 
+    clean_explanation(R, RR), clean_explanation(RestConj, NewConj).
 
-%!  reply(+Format, :Query, +TotalTime, +Results)
+produce_html_explanation(le_Explanation(Trees), Explanation) :-
+    explanationLEHTML(Trees,HTML), 
+    phrase(html( 
+		div([ 'data-render'('An explanation')],[
+            div([],HTML)
+		]) 
+	), ExplanationInHtml),
+    with_output_to(string(Explanation), print_html(ExplanationInHtml)). 
 
-reply(html, M:_Query, TotalTime, Results) =>
-    reply_html_page([],
-                    \results(Results, M, TotalTime)).
-
-/*******************************
- *        HTML GENERATION	*
- *******************************/
-
-results([], _, Time) -->
-    !,
-    html(h3('No models (~3f sec)'-[Time.cpu])).
-results(Results, M, _Time) -->
-    sequence(result(M), Results).
-
-result(M, Result) -->
-    html(div(class(result),
-             [ h3('Result #~D (~3f sec)'-[Result.answer, Result.time.cpu]),
-               \justification_section(M:Result)
-             ])).
-
-justification_section(M:Results) -->
-    { Tree = Results.get(tree) },
-    !,
-    html_justification_tree(M:Tree, []).
-justification_section(_) -->
-    [].
+explanationLEHTML(s(G,_Ref,_,_,_,C),[li(title="Rule inference step",["It is the case that: ", b("~w"-[G]), " as proved by", Navigator]), Because, ul(CH)]) :- 
+    Navigator=' a rule', explanationLEHTML(C,CH), (CH\=[] -> Because = 'because'; Because=''). 
+explanationLEHTML(u(G,_Ref,_,_,_,[]),[li(title="Unknown",["~w ?"-[G],Navigator])]) :- Navigator=' a hypothesis'. 
+explanationLEHTML(f(G,_Ref,_,_,_,C),[li(title="Failed goal",[span(style="color:red","There is no enough evidence that: ~w ~~"-[G]),Navigator]), Because, ul(CH)]) :- 
+    Navigator=' in the rules', explanationLEHTML(C,CH), 
+    %print_message(informational, "G vs C: ~w .. ~w ... ~w"-[G, C, CH]), 
+    (CH\=[] -> (C=[s(_,_,_,_,_,[])] -> Because = 'although' ;  Because = 'because'); Because=''). % this is filtered out before (reasoner.pl)
+explanationLEHTML([C1|Cn],CH) :- explanationLEHTML(C1,CH1), explanationLEHTML(Cn,CHn), append(CH1,CHn,CH).
+explanationLEHTML([],[]).
 
 %sandbox:safe_meta(term_singletons(X,Y), [X,Y]).
 
@@ -942,6 +956,8 @@ sandbox:safe_primitive(le_answer:translate_goal_into_LE(_,_)).
 sandbox:safe_primitive(le_answer:dump_scasp(_,_,_)). 
 sandbox:safe_primitive(current_output(_)). 
 sandbox:safe_primitive(le_answer:(show _)). 
-sandbox:safe_primitive(le_answer:parse_and_query(_,_,_,_,_,_)).
+sandbox:safe_primitive(le_answer:parse_and_query(_,_,_,_,_)).
+sandbox:safe_primitive(le_answer:parse_and_query_and_explanation(_,_,_,_,_)). 
+sandbox:safe_primitive(kp_loader:module_api_hack(_)).
 
 %sandbox:safe_primitive(term_singletons(_,_)).  % this would not work as term_singletons/2 is an undefined, C-based primitive

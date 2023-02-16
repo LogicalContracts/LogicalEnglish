@@ -120,7 +120,7 @@ function getNumberOfSelectedLines(editor) {
 
 async function runPengine(filename, le_string, query, scenario) {
 
-	runningPengine = new Pengine({ server: PENGINE_URL,  authorization:"digest(jacinto, '123')", //authenticate:true, authorization:"basic(jacinto, 123)", 
+	runningPengine = new Pengine({ server: PENGINE_URL,  //authorization:"digest(jacinto, '123')", //authenticate:true, authorization:"basic(jacinto, 123)", 
 		//src_text: le_string, 
 		oncreate: handleCreate,
 		//onprompt: handlePrompt,
@@ -130,15 +130,17 @@ async function runPengine(filename, le_string, query, scenario) {
 	});
 
 	function handleCreate() {
-		//pengine.ask('member(X, [1,2,3])',[]);
+		//runningPengine.ask('member(Answer, [1,2,3])',[]);
 		//pengine.ask('assert(parsed)', []);
 		//pengine.ask('le_input:pre_is_type(X)', []); 
 		//pengine.ask('assert(parsed), show(prolog)');
 		//pengine.ask('le_input:dict(A,B,C)'); 
 		//runningPengine.ask(`le_taxlog_translate( ${le_string}, File, BaseLine, Terms)`);
-		runningPengine.ask("parse_and_query("+filename+", "+le_string+", "+query+", with("+scenario+"), Answer, Explanation)");
+		//console.log("parse_and_query("+filename+", "+le_string+", "+query+", with("+scenario+"), Answer, Explanation)");
+		runningPengine.ask("le_answer:parse_and_query_and_explanation("+filename+", "+le_string+", "+query+", with("+scenario+"), Answer)");
+		//runningPengine.ask("parse_and_query(1, 2, 3, with(4), Answer)", []);
 		//pengine.ask('listing');
-		//console.log(this.id, 'answer', ans);
+		//console.log('answer', this);
 	}
 	// function handlePrompt() {
 	// 	runningPengine.input(prompt(this.data));

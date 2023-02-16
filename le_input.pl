@@ -133,6 +133,7 @@ text_to_logic(String_, Translation) :-
     clean_comments(UTokens, CTokens), !, 
     %print_message(informational, "Tokens: ~w"-[CTokens]), 
     phrase(document(Translation), CTokens).
+    %print_message(informational, "Translation: ~w"-[Translation]). 
     %with_output_to(string(Report), listing(dict/3)),
     %print_message(informational, "Dictionaries in memory after loading and parsing ~w\n"-[Report]). 
     %( phrase(document(Translation), CTokens) -> 

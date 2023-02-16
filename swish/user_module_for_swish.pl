@@ -40,15 +40,15 @@ swish_config:config(include_alias,	example).
 % the above facts must come before this...:
 :- use_module('../../swish/swish').
 
-:- use_module(library(http/http_dispatch)).
-:- use_module(swish(lib/plugin/login)).
+%:- use_module(library(http/http_dispatch)).
+%:- use_module(swish(lib/plugin/login)).
 :- use_module(library(pengines)). % used only under SWISH
 
 :- use_module(library(http/html_write)).
 :- use_module(swish(lib/page)).
 
-% :- prolog_load_context(directory, D), atomic_list_concat([D,/,passwd],F), set_setting(swish_http_authenticate:password_file,F), format("Password file at ~a~n",[F]).
-% :- use_module(swish(lib/authenticate)).
+%:- prolog_load_context(directory, D), atomic_list_concat([D,/,passwd],F), set_setting(swish_http_authenticate:password_file,F), format("Password file at ~a~n",[F]).
+%:- use_module(swish(lib/authenticate)).
 
 :- use_module('../syntax.pl').
 :- use_module('../kp_loader.pl').
@@ -263,8 +263,8 @@ user:term_expansion(NiceTerm, ExpandedTerms) :-  % hook for LE extension
 	prolog_load_context(source,File), % atom_prefix(File,'pengine://'), % process only SWISH windows
 	prolog_load_context(term_position,TP), stream_position_data(line_count,TP,Line),
 	%print_message(informational, "current file ~w"-[File]), 
-	le_taxlog_translate(NiceTerm,File,Line,TaxlogTerms),
-	le_expanded_terms(TaxlogTerms, ExpandedTerms).
+	le_answer:le_taxlog_translate(NiceTerm,File,Line,TaxlogTerms),
+	le_answer:le_expanded_terms(TaxlogTerms, ExpandedTerms).
 
 	
 user:term_expansion(T,NT) :- taxlog2prolog(T,_,NT).

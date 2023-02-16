@@ -26,7 +26,7 @@ limitations under the License.
 :- use_module(library(pengines)).
 :- use_module(pengine_sandbox:library(pengines)).
 :- use_module(library(sandbox)).
-:- use_module(library(http/http_digest)).  % to activate digest authorization options
+%:- use_module(library(http/http_digest)).  % to activate digest authorization options
 
 % :- multifile pengines:authentication_hook/3.
 
@@ -52,7 +52,7 @@ limitations under the License.
 :- use_module(kp_loader).
 :- use_module(syntax).
 :- use_module(reasoner,[taxlogWrapper/10]).
-:- use_module(le_answer, [parse_and_query/4, prepare_query/6]). 
+:- use_module(le_answer, [parse_and_query/5, prepare_query/6]). 
 :- use_module(le_input,[text_to_logic/2]).
 :- use_module(library(prolog_stack)).
 

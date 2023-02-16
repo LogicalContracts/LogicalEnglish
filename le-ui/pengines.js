@@ -121,7 +121,7 @@ function Pengine(options) {
 		"template",
 		"chunk",
 		"destroy", 
-    "authorization"
+    //"authorization"
     //"authenticate"
 	      ]);
 
@@ -140,10 +140,10 @@ function Pengine(options) {
       //  password: "123",
 	     success: function(obj) {
 	       that.process_response(obj);
-	     },
-	     error: function(jqXHR, textStatus, errorThrown) {
-	       that.error(jqXHR, textStatus, errorThrown);
 	     }
+	    //  error: function(jqXHR, textStatus, errorThrown) {
+	    //    that.error(jqXHR, textStatus, errorThrown);
+	    //  }
       //  beforeSend: function (xhr) {
       //   var username = 'jacinto';
       //   var password = '123';
