@@ -221,14 +221,14 @@ answer(English, Arg, EnglishAnswer) :- %trace,
 % answer(+English, with(+Scenario), -Explanations, -Result) :-
 % answer(at(English, Module), Arg, E, Result) :- %trace,
 answer(English, Arg, E, Result) :- %trace, 
-    le_input:parsed, myDeclaredModule(Module), 
+    le_input:parsed, %myDeclaredModule(Module), 
     this_capsule(SwishModule), 
     translate_command(SwishModule, English, _, Goal, PreScenario), 
     ((Arg = with(ScenarioName), PreScenario=noscenario) -> Scenario=ScenarioName; Scenario=PreScenario), 
     extract_goal_command(Goal, SwishModule, InnerGoal, _Command),
     (Scenario==noscenario -> Facts = [] ; SwishModule:example(Scenario, [scenario(Facts, _)])), !, 
     setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
-            catch((true, reasoner:query(at(InnerGoal, Module),_,E,Result)), Error, ( print_message(error, Error), fail ) ), 
+            catch((true, reasoner:query(at(InnerGoal, SwishModule),_,E,Result)), Error, ( print_message(error, Error), fail ) ), 
             _Result, 
             retract_facts(SwishModule, Facts)). 
 
@@ -870,13 +870,19 @@ parse_and_query(File, Document, Question, Scenario, AnswerExplanation) :-
     answer( Question, Scenario, AnswerExplanation). 
 
 parse_and_query_and_explanation(File, Document, Question, Scenario, Answer) :-
+    %print_message(informational, "parse_and_query and explanation ~w ~w ~w ~w"-[File, Document, Question, Scenario]),
     le_taxlog_translate(Document, _, 1, TaxlogTerms),
     this_capsule(M), 
 	non_expanded_terms(File, TaxlogTerms, ExpandedTerms),
-    assert(kp_loader:module_api_hack(M)), 
+    %M:assertz(myDeclaredModule_(File)), % to enable the reasoner
+    M:assertz(kp_loader:module_api_hack(M)), 
     forall(member(T, [(:-module(File,[]))|ExpandedTerms]), assertz(M:T)), % simulating term expansion
-    answer( Question, Scenario, le(le_Explanation(AnswerExplanation)), _R),
-    produce_html_explanation(le_Explanation(AnswerExplanation), Answer). 
+    %kp_loader:loaded_kp(Answer). 
+    reasoner:query(at(is_happy(A), M),_,E,Answer). 
+    %print_message(informational, " Asserted ~w"-[ExpandedTerms]), 
+    %answer( Question, Scenario, Answer). 
+    %answer( Question, Scenario, _, Answer).
+    %produce_html_explanation(le_Explanation(AnswerExplanation), Answer). 
 
 % non_expanded_terms/2 is just as the one above, but with semantics2prolog2 instead of semantics2prolog that has many other dependencies. 
 non_expanded_terms(Name, TaxlogTerms, ExpandedTerms) :-

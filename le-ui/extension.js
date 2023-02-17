@@ -157,7 +157,7 @@ async function runPengine(filename, le_string, query, scenario) {
 		leWebViewPanel.webview.postMessage({ command: 'answer', text: currentAnswer });
 	}
 	function reportFailure() {
-		console.log('pengine', this.id, 'failed'); 
+		console.log('pengine', this.id, 'failed', this); 
 	}
 
 }
