@@ -344,7 +344,8 @@ function getWebviewLEGUI() {
                 //     log3.textContent = Math.ceil(100 * 0.5);
                 //     break;
 				case 'answer':
-					log3.textContent = message.text;
+					//log3.textContent = message.text;
+					log3.innerHTML = message.text; 
 					switchNext();
 					return; 
             }

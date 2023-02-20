@@ -72,6 +72,7 @@ which can be used on the new command interface of LE on SWISH
 
 :- use_module('le_input.pl').  
 :- use_module('syntax.pl').
+:- use_module('api.pl'). 
 :- use_module('reasoner.pl'). 
 
 % html libs
@@ -875,14 +876,18 @@ parse_and_query_and_explanation(File, Document, Question, Scenario, Answer) :-
     this_capsule(M), 
 	non_expanded_terms(File, TaxlogTerms, ExpandedTerms),
     %M:assertz(myDeclaredModule_(File)), % to enable the reasoner
-    M:assertz(kp_loader:module_api_hack(M)), 
+    %M:assertz(kp_loader:module_api_hack(M)), 
+    M:assertz(myDeclaredModule_(File)),  
     forall(member(T, [(:-module(File,[]))|ExpandedTerms]), assertz(M:T)), % simulating term expansion
-    %kp_loader:loaded_kp(Answer). 
-    reasoner:query(at(is_happy(A), M),_,E,Answer). 
+    forall(member(T, [is_a_dragon(bob), is_a_dragon(alice), is_a_parent_of(alice, bob)]), assertz(M:T)), % simulating facts addition
+    %kp_loader:loaded_kp(Answer).
+    hack_module_for_taxlog(M), 
+    reasoner:query(at(is_happy(A), M),_,le(LE_Explanation),_), 
     %print_message(informational, " Asserted ~w"-[ExpandedTerms]), 
     %answer( Question, Scenario, Answer). 
     %answer( Question, Scenario, _, Answer).
-    %produce_html_explanation(le_Explanation(AnswerExplanation), Answer). 
+    %with_output_to(string(Answer), write(LE_Explanation)). 
+    produce_html_explanation(LE_Explanation, Answer). 
 
 % non_expanded_terms/2 is just as the one above, but with semantics2prolog2 instead of semantics2prolog that has many other dependencies. 
 non_expanded_terms(Name, TaxlogTerms, ExpandedTerms) :-
