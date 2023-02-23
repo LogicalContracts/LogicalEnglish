@@ -254,8 +254,61 @@ function getWebviewLEGUI() {
 	  <meta charset="UTF-8">
 	  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 	  <title>Logical English GUI</title>
+	  <style>
+	  ul, #myUL, #myUL2 {
+		list-style-type: none;
+	  }
+
+	  #myUL {
+		margin: 0;
+		padding: 0;
+	  }
+
+	.box {
+	cursor: pointer;
+	-webkit-user-select: none; /* Safari 3.1+ */
+	-moz-user-select: none; /* Firefox 2+ */
+	-ms-user-select: none; /* IE 10+ */
+	user-select: none;
+	}
+
+	.box::before {
+		content: "\\2610";
+		color: black;
+		display: inline-block;
+		margin-right: 6px;
+	  }
+
+	  .leaf {
+		cursor: pointer;
+		-webkit-user-select: none; /* Safari 3.1+ */
+		-moz-user-select: none; /* Firefox 2+ */
+		-ms-user-select: none; /* IE 10+ */
+		user-select: none;
+	  }
+	  
+	  .leaf::before {
+		content: "\\2618";
+		color: black;
+		display: inline-block;
+		margin-right: 6px;
+	  }
+	  
+	  .check-box::before {
+		content: "\\2611"; 
+		color: dodgerblue;
+	  }
+	  
+	  .nested {
+		display: none;
+	  }
+	  
+	  .active {
+		display: block;
+	  }	  
+	  </style>
   </head>
-  <body>
+  <body>>
 	  <h2>Logical English GUI</h2>
 	  <label>Query</label><br>
 	  <textarea placeholder="Enter some query" name="query" /></textarea> <br>
@@ -267,16 +320,34 @@ function getWebviewLEGUI() {
 	  
 	  <button id="run">Run</button><button id="next">Next</button><br><br>
 	  <label>Answers</label><br><br><br>
-	  <h4 id="answer0"></h4><br><br>
+	  <!-- h4 id="answer0"></h4><br><br>
+	  -->
+
+	  <ul id="myUL">		
+	  </ul>  	
+	  
+	  <br>
 	  
 	  <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
       <script src="https://pengines.swi-prolog.org/pengine/pengines.js"></script>
 
 	  <script>
-	  	const log3 = document.getElementById('answer0');
+	  	const log3 = document.getElementById('myUL');
 
 		function switchNext() {
 			  document.getElementById('next').style.visibility = 'visible';
+		}
+
+		function toggling() {
+			var toggler = document.getElementsByClassName("box");
+			var i;
+	
+			for (i = 0; i < toggler.length; i++) {
+				toggler[i].addEventListener("click", function() {
+					this.parentElement.querySelector(".nested").classList.toggle("active");
+					this.classList.toggle("check-box");
+				});
+			}
 		}
 		
 		(function() {
@@ -346,6 +417,7 @@ function getWebviewLEGUI() {
 				case 'answer':
 					//log3.textContent = message.text;
 					log3.innerHTML = message.text; 
+					toggling();
 					switchNext();
 					return; 
             }

@@ -584,8 +584,8 @@ expand_explanation_refs_le([Node|Nodes],Facts, [NewNode|NewNodes]) :-
             %expand_explanation_refs(Children,Facts,NewChildren),
             %AllNodes = [NewNode|NewNodes]
             )
-        ;   ( %print_message(informational, "Can't translate ~w"-[X]), 
-              Output='it is still untranslated: '(X) )
+        ;   ( %print_message(informational, "Can't translate ~w"-[X]),
+              term_string('Prolog Expression'(X), Output) )
         )
     ;         %AllNodes = NewNodes
         Output = 'it is a fact'

@@ -879,13 +879,13 @@ parse_and_query_and_explanation(File, Document, Question, Scenario, Answer) :-
     %M:assertz(kp_loader:module_api_hack(M)), 
     M:assertz(myDeclaredModule_(File)),  
     forall(member(T, [(:-module(File,[]))|ExpandedTerms]), assertz(M:T)), % simulating term expansion
-    forall(member(T, [is_a_dragon(bob), is_a_dragon(alice), is_a_parent_of(alice, bob)]), assertz(M:T)), % simulating facts addition
+    %forall(member(T, [is_a_dragon(bob), is_a_dragon(alice), is_a_parent_of(alice, bob)]), assertz(M:T)), % simulating facts addition
     %kp_loader:loaded_kp(Answer).
     hack_module_for_taxlog(M), 
-    reasoner:query(at(is_happy(A), M),_,le(LE_Explanation),_), 
+    %reasoner:query(at(is_happy(A), M),_,le(LE_Explanation),_), 
     %print_message(informational, " Asserted ~w"-[ExpandedTerms]), 
     %answer( Question, Scenario, Answer). 
-    %answer( Question, Scenario, _, Answer).
+    answer( Question, Scenario, le(LE_Explanation), _Result), 
     %with_output_to(string(Answer), write(LE_Explanation)). 
     produce_html_explanation(LE_Explanation, Answer). 
 
@@ -937,21 +937,33 @@ clean_explanation([f(P,_Ref, _Source, _, _, R)|RestConj], [f(P, RR)|NewConj]) :-
 
 produce_html_explanation(le_Explanation(Trees), Explanation) :-
     explanationLEHTML(Trees,HTML), 
-    phrase(html( 
-		div([ 'data-render'('An explanation')],[
-            div([],HTML)
-		]) 
-	), ExplanationInHtml),
+    % phrase(html( 
+	% 	div([ 'data-render'('An explanation')],[
+    %         div([], ul(id="myUL", HTML))
+	% 	]) 
+	% ), ExplanationInHtml),
+    phrase(html(HTML), ExplanationInHtml),
     with_output_to(string(Explanation), print_html(ExplanationInHtml)). 
 
-explanationLEHTML(s(G,_Ref,_,_,_,C),[li(title="Rule inference step",["It is the case that: ", b("~w"-[G]), " as proved by", Navigator]), Because, ul(CH)]) :- 
-    Navigator=' a rule', explanationLEHTML(C,CH), (CH\=[] -> Because = 'because'; Because=''). 
+explanationLEHTML(s(G,_Ref,_,_,_,C),[li(title="Rule inference",[span(class=Class," "), b(G)|RestTree])]) :- 
+    %Navigator=' a rule', 
+    explanationLEHTML(C,CH), 
+    (CH\=[] -> 
+        ( RestTree =  ul(class="nested", ['because'|CH]), Class = "box" )
+    ;   ( RestTree = [], Class = "leaf" )
+    ). 
 explanationLEHTML(u(G,_Ref,_,_,_,[]),[li(title="Unknown",["~w ?"-[G],Navigator])]) :- Navigator=' a hypothesis'. 
-explanationLEHTML(f(G,_Ref,_,_,_,C),[li(title="Failed goal",[span(style="color:red","There is no enough evidence that: ~w ~~"-[G]),Navigator]), Because, ul(CH)]) :- 
-    Navigator=' in the rules', explanationLEHTML(C,CH), 
+explanationLEHTML(f(G,_Ref,_,_,_,C),[li(title="Failed goal",[span([class=Class, style="color:red"],["There is no definitive evidence that ", b(G)])|RestTree])]) :- 
+    %Navigator=' in the rules', 
+    explanationLEHTML(C,CH), 
     %print_message(informational, "G vs C: ~w .. ~w ... ~w"-[G, C, CH]), 
-    (CH\=[] -> (C=[s(_,_,_,_,_,[])] -> Because = 'although' ;  Because = 'because'); Because=''). % this is filtered out before (reasoner.pl)
-explanationLEHTML([C1|Cn],CH) :- explanationLEHTML(C1,CH1), explanationLEHTML(Cn,CHn), append(CH1,CHn,CH).
+    %(CH\=[] -> (C=[s(_,_,_,_,_,[])] -> Because = 'although' ;  Because = 'because'); Because=''). % this is filtered out before (reasoner.pl)
+    (CH\=[] -> 
+        ( RestTree =  ul(class="nested", ['because'|CH]), Class = "box" )
+    ;   ( RestTree = [], Class = "leaf" )
+    ).
+explanationLEHTML([C1|Cn],CH) :- explanationLEHTML(C1,CH1), explanationLEHTML(Cn,CHn), (CHn\=[] -> Joint = ['and '|CHn]; Joint = CHn), append(CH1,Joint,CH).
+    %append(CH1,CHn,CH).
 explanationLEHTML([],[]).
 
 %sandbox:safe_meta(term_singletons(X,Y), [X,Y]).

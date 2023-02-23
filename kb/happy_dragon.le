@@ -13,8 +13,10 @@ a dragon smokes if
 an other dragon is a parent of the dragon
 and the other dragon smokes.
 
-A dragon is healthy if it is not the case that
-the dragon smokes.
+A creature is healthy 
+    if the creature is a dragon
+    and it is not the case that
+    the creature smokes.
 
 A dragon is happy 
 if the dragon is a dragon
