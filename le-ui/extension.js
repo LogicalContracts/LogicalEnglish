@@ -6,11 +6,11 @@ const Pengine = require('./pengines');
 const axiosConfig = {/*headers:{'Access-Control-Allow-Origin':'*'}*/};
 
 const SERVER_URL = "http://localhost:3050/taxkbapi";
-const PENGINE_URL = "http://localhost:3050/pengine";
+var PENGINE_URL = "http://localhost:3050/pengine";
 //const SERVER_URL = "https://le.logicalcontracts.com/taxkbapi";
 const MY_TOKEN = "myToken123";
 
-// The module 'vscode' contains the VS Code extensibility API
+// The module 'vscode' contains the VS Code extensibility APIServerURL
 // Import the module and reference it with the alias vscode in your code below
 const vscode = require('vscode');
 //import vscode from 'vscode';
@@ -94,6 +94,10 @@ function activate(context) {
 
 	// update status bar item once at start
 	updateStatusBarItem();
+
+	const serverURL = vscode.workspace.getConfiguration().get('conf.view.url');
+	//console.log('configuration', serverURL)
+	PENGINE_URL = serverURL;
 
 }
 

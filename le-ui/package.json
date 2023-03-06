@@ -42,6 +42,16 @@
           "command": "le-ui.query"
         }
       ]
+    },
+    "configuration": {
+      "title": "LogicalEnglishGUI",
+      "properties": {
+        "conf.view.url": {
+          "type": "string",
+          "default": "http://localhost:3050/pengine",
+          "description": "Specifies the URL of the SWISH LE server"
+        }
+      }
     }
   },
   "scripts": {
