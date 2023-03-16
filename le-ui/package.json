@@ -16,6 +16,15 @@
   ],
   "main": "./extension.js",
   "contributes": {
+    "views": {
+      "explorer": [
+        {
+          "type": "webview",
+          "id": "le-ui.colorsView",
+          "name": "Logical English GUI"
+        }
+      ]
+    },
     "commands": [
       {
         "command": "le-ui.helloWorld",
@@ -34,7 +43,18 @@
       {
         "command": "le-ui.showSelectionCount",
         "title": "Text Selection"
-      }
+      }, 
+			{
+				"command": "le-ui.addColor",
+				"category": "Calico Colors",
+				"title": "Add Color"
+			},
+			{
+				"command": "le-ui.clearColors",
+				"category": "Calico Colors",
+				"title": "Clear Colors",
+				"icon": "$(clear-all)"
+			}
     ],
     "menus": {
       "editor/context": [

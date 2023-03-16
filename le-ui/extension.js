@@ -62,7 +62,7 @@ function activate(context) {
 	// 	leWebViewPanel.webview.html = "Hello, friend of LE!"
 
 	// 	// Display a message box to the user
-	// 	vscode.window.showInformationMessage('LE runs!');
+	vscode.window.showInformationMessage('LE runs!');
 	// });
 
 	// context.subscriptions.push(newcommand);
@@ -96,9 +96,131 @@ function activate(context) {
 	updateStatusBarItem();
 
 	const serverURL = vscode.workspace.getConfiguration().get('conf.view.url');
-	//console.log('configuration', serverURL)
+	console.log('configuration', serverURL)
 	PENGINE_URL = serverURL;
 
+	initWebView(); 
+
+	const provider = new ColorsViewProvider(context.extensionUri);
+
+	context.subscriptions.push(
+		vscode.window.registerWebviewViewProvider(ColorsViewProvider.viewType, provider));
+
+	context.subscriptions.push(
+		vscode.commands.registerCommand('calicoColors.addColor', () => {
+			provider.addColor();
+		}));
+
+	context.subscriptions.push(
+		vscode.commands.registerCommand('calicoColors.clearColors', () => {
+			provider.clearColors();
+		}));
+
+}
+
+class ColorsViewProvider extends vscode.WebviewViewProvider {
+
+	viewType = 'calicoColors.colorsView';
+
+ 	_view = vscode.WebviewView;
+
+	constructor(
+		var _extensionUri; //: vscode.Uri,
+	) { }
+
+	function resolveWebviewView(
+		webviewView, //: vscode.WebviewView,
+		context, //: vscode.WebviewViewResolveContext,
+		_token, //: vscode.CancellationToken,
+	) {
+		this._view = webviewView;
+
+		webviewView.webview.options = {
+			// Allow scripts in the webview
+			enableScripts: true,
+
+			localResourceRoots: [
+				this._extensionUri
+			]
+		};
+
+		webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
+
+		webviewView.webview.onDidReceiveMessage(data => {
+			switch (data.type) {
+				case 'colorSelected':
+					{
+						vscode.window.activeTextEditor?.insertSnippet(new vscode.SnippetString(`#${data.value}`));
+						break;
+					}
+			}
+		});
+	}
+
+	function addColor() {
+		if (this._view) {
+			this._view.show?.(true); // `show` is not implemented in 1.49 but is for 1.50 insiders
+			this._view.webview.postMessage({ type: 'addColor' });
+		}
+	}
+
+	function clearColors() {
+		if (this._view) {
+			this._view.webview.postMessage({ type: 'clearColors' });
+		}
+	}
+
+	function _getHtmlForWebview(webview) { //}: vscode.Webview) {
+		// Get the local path to main script run in the webview, then convert it to a uri we can use in the webview.
+		const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'main.js'));
+
+		// Do the same for the stylesheet.
+		const styleResetUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'reset.css'));
+		const styleVSCodeUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'vscode.css'));
+		const styleMainUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'main.css'));
+
+		// Use a nonce to only allow a specific script to be run.
+		const nonce = getNonce();
+
+		return `<!DOCTYPE html>
+			<html lang="en">
+			<head>
+				<meta charset="UTF-8">
+
+				<!--
+					Use a content security policy to only allow loading styles from our extension directory,
+					and only allow scripts that have a specific nonce.
+					(See the 'webview-sample' extension sample for img-src content security policy examples)
+				-->
+				<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';">
+
+				<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+				<link href="${styleResetUri}" rel="stylesheet">
+				<link href="${styleVSCodeUri}" rel="stylesheet">
+				<link href="${styleMainUri}" rel="stylesheet">
+
+				<title>Cat Colors</title>
+			</head>
+			<body>
+				<ul class="color-list">
+				</ul>
+
+				<button class="add-color-button">Add Color</button>
+
+				<script nonce="${nonce}" src="${scriptUri}"></script>
+			</body>
+			</html>`;
+	}
+}
+
+function getNonce() {
+	let text = '';
+	const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+	for (let i = 0; i < 32; i++) {
+		text += possible.charAt(Math.floor(Math.random() * possible.length));
+	}
+	return text;
 }
 
 // This method is called when your extension is deactivated
@@ -163,6 +285,56 @@ async function runPengine(filename, le_string, query, scenario) {
 	function reportFailure() {
 		console.log('pengine', this.id, 'failed', this); 
 	}
+
+}
+
+async function initWebView() {
+	// Create GUI
+	leWebViewPanel = vscode.window.createWebviewPanel('ViewPanel',
+	'LE Answers', {preserveFocus: true, viewColumn: 2, }, {enableScripts: true});
+
+	// Open GUI panel and wait for the query
+	leWebViewPanel.webview.html = getWebviewLEGUI()
+
+	// Handle messages from the webview
+	leWebViewPanel.webview.onDidReceiveMessage(
+	message => {
+	switch (message.command) {
+		case 'alert':
+			vscode.window.showErrorMessage(message.text);
+			//leWebViewPanel.webview.postMessage({ command: 'answer', text: 'hello' });
+			return;
+		case 'query':
+			var source = vscode.window.activeTextEditor.document.getText();
+			if (source) {
+				var filename = vscode.window.activeTextEditor.document.fileName;
+				currentFile = filename.substring(filename.lastIndexOf('/')+1, filename.lastIndexOf('.'));
+				let le_string = 'en(\"'+source+'\")'
+				currentQuery = message.text;
+				console.log('Query being processed', currentQuery)
+				runPengine(currentFile, le_string, currentQuery, currentScenario)
+			} else {
+				vscode.window.showErrorMessage("Open a LE document");
+			}      
+			return
+		case 'scenario':
+			currentScenario = message.text;
+			console.log('Scenario being processed', currentScenario)
+			return
+		case 'next':
+			if(runningPengine&&currentMore) currentAnswer = JSON.stringify(runningPengine.next());
+			else {
+				console.log("No more answers");
+				currentAnswer = "No more"
+			}
+			leWebViewPanel.webview.postMessage({ command: 'answer', text: currentAnswer });
+			return
+	}
+},
+undefined,
+context.subscriptions
+);
+
 
 }
 
