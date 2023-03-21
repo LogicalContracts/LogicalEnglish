@@ -10,6 +10,7 @@
     "Programming Languages"
   ],
   "activationEvents": [
+    "onView:le-ui.leGUI", 
     "onCommand:le-ui.helloWorld",
     "onCommand:le-ui.query",
     "onCommand:le-ui.run"
@@ -20,7 +21,7 @@
       "explorer": [
         {
           "type": "webview",
-          "id": "le-ui.colorsView",
+          "id": "le-ui.leGUI",
           "name": "Logical English GUI"
         }
       ]
