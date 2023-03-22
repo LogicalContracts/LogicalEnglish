@@ -36,35 +36,6 @@ function activate(context) {
 	// This line of code will only be executed once when your extension is activated
 	console.log('Congratulations, your extension "le-ui" is now active!');
 
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with  registerCommand
-	// The commandId parameter must match the command field in package.json
-	// let disposable = vscode.commands.registerCommand('le-ui.helloWorld', function () {
-	// 	// The code you place here will be executed every time your command is executed
-
-	// 	// Display a message box to the user
-	// 	vscode.window.showInformationMessage('Hello World from LE UI!');
-	// });
-
-	// context.subscriptions.push(disposable);
-
-	// let newcommand = vscode.commands.registerCommand('le-ui.run', function () {
-	// 	// The code you place here will be executed every time your command is executed
-	// 	leWebViewPanel = vscode.window.createWebviewPanel('ViewPanel','LE Greetings', {preserveFocus: true, viewColumn: 1});
-	// 	// leWebViewPanel.webview.postMessage(
-	// 	// 	leWebViewPanel.webview.postMessage({
-	// 	// 		type: 'update',
-	// 	// 		text: 'Hello, friend of LE!',
-	// 	// 	}))
-
-	// 	leWebViewPanel.webview.html = "Hello, friend of LE!"
-
-	// 	// Display a message box to the user
-	//vscode.window.showInformationMessage('LE runs!');
-	// });
-
-	// context.subscriptions.push(newcommand);
-
 	let newInputcommand = vscode.commands.registerCommand('le-ui.query', function () {
 		main(context)
 	});
@@ -98,35 +69,10 @@ function activate(context) {
 	console.log('configuration', serverURL)
 	PENGINE_URL = serverURL;
 
-	// initWebView(); 
-
-	// var thisProvider={
-    //     resolveWebviewView:function(thisWebview, thisWebviewContext, thisToken){
-    //         thisWebviewView.webview.options={enableScripts:true}
-    //         thisWebviewView.webview.html=leWebViewPanel.webview.html;
-    //     }
-    // };
-
-    // context.subscriptions.push(
-    //     vscode.commands.registerWebviewViewProvider("le-ui.leGUI", thisProvider));
-
-	// const provider = new LEViewProvider(context.extensionUri);
 	const provider = new LEViewProvider(context);
-
-	// const provider = new vscode.WebviewViewProvider(context.extensionUri);
 
 	context.subscriptions.push(
 		vscode.window.registerWebviewViewProvider("le-ui.leGUI", provider));
-
-	// context.subscriptions.push(
-	// 	vscode.commands.registerCommand('le-ui.addColor', () => {
-	// 		provider.addColor();
-	// 	}));
-
-	// context.subscriptions.push(
-	// 	vscode.commands.registerCommand('le-ui.clearColors', () => {
-	// 		provider.clearColors();
-	// 	}));
 
 }
 
@@ -218,10 +164,10 @@ class LEViewProvider { //extends vscode.WebviewViewProvider {
 				}
 			}, 
 		undefined,
-		this.context.subscriptions
+		context.subscriptions
 		);
 
-		console.log('resolved');
+		//console.log('resolved');
 	}
 
 	_getHtmlForWebview(webview) { //}: vscode.Webview) {
@@ -346,7 +292,7 @@ async function runPengine(currentWebView, filename, le_string, query, scenario) 
 	});
 
 	function handleCreate() {
-		console.log('creating runningPengine')
+		//console.log('creating runningPengine')
 		//runningPengine.ask('member(Answer, [1,2,3])',[]);
 		//pengine.ask('assert(parsed)', []);
 		//pengine.ask('le_input:pre_is_type(X)', []); 
@@ -375,57 +321,6 @@ async function runPengine(currentWebView, filename, le_string, query, scenario) 
 	function reportFailure() {
 		console.log('pengine', this.id, 'failed', this); 
 	}
-
-}
-
-async function initWebView() {
-	// Create GUI
-	leWebViewPanel = vscode.window.createWebviewPanel('ViewPanel',
-	'LE Answers', {preserveFocus: true, viewColumn: 2, }, {enableScripts: true});
-
-	// Open GUI panel and wait for the query
-	leWebViewPanel.webview.html = getWebviewLEGUI()
-
-	// Handle messages from the webview
-	leWebViewPanel.webview.onDidReceiveMessage(
-		message => {
-			switch (message.command) {
-				case 'alert':
-					vscode.window.showErrorMessage(message.text);
-					//leWebViewPanel.webview.postMessage({ command: 'answer', text: 'hello' });
-					return;
-				case 'query':
-					var source = vscode.window.activeTextEditor.document.getText();
-					if (source) {
-						var filename = vscode.window.activeTextEditor.document.fileName;
-						currentFile = filename.substring(filename.lastIndexOf('/')+1, filename.lastIndexOf('.'));
-						let le_string = 'en(\"'+source+'\")'
-						currentQuery = message.text;
-						console.log('Query being processed', currentQuery)
-						runPengine(leWebViewPanel, currentFile, le_string, currentQuery, currentScenario)
-					} else {
-						vscode.window.showErrorMessage("Open a LE document");
-					}      
-					return
-				case 'scenario':
-					currentScenario = message.text;
-					console.log('Scenario being processed', currentScenario)
-					return
-				case 'next':
-					if(runningPengine&&currentMore) currentAnswer = JSON.stringify(runningPengine.next());
-					else {
-						console.log("No more answers");
-						currentAnswer = "No more"
-					}
-					leWebViewPanel.webview.postMessage({ command: 'answer', text: currentAnswer });
-					return
-			}
-		},
-	undefined,
-	context.subscriptions
-	);
-
-
 }
 
 async function main(context){

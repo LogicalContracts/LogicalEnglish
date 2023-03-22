@@ -953,7 +953,7 @@ explanationLEHTML(s(G,_Ref,_,_,_,C),[li(title="Rule inference",[span(class=Class
     ;   ( RestTree = [], Class = "leaf" )
     ). 
 explanationLEHTML(u(G,_Ref,_,_,_,[]),[li(title="Unknown",["~w ?"-[G],Navigator])]) :- Navigator=' a hypothesis'. 
-explanationLEHTML(f(G,_Ref,_,_,_,C),[li(title="Failed goal",[span([class=Class, style="color:red"],["There is no definitive evidence that ", b(G)])|RestTree])]) :- 
+explanationLEHTML(f(G,_Ref,_,_,_,C),[li(title="Failed goal",[span(class=Class, " "), span(style="color:red","There is no definitive evidence that "), b(G)|RestTree])]) :- 
     %Navigator=' in the rules', 
     explanationLEHTML(C,CH), 
     %print_message(informational, "G vs C: ~w .. ~w ... ~w"-[G, C, CH]), 
