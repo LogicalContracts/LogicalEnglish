@@ -130,7 +130,7 @@ function Pengine(options) {
     Pengine.alive.push(this);
     this.pull_response();
   } else {
-    console.log('Pengine create', JSON.stringify(createOptions));
+    //console.log('Pengine create', JSON.stringify(createOptions));
     Pengine.network.ajax(this.options.server + '/create',
 	   { contentType: "application/json; charset=utf-8",
 	     dataType: "json",

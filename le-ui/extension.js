@@ -135,7 +135,7 @@ class LEViewProvider { //extends vscode.WebviewViewProvider {
 					case 'query':
 						//console.log('query received', message.text,  vscode.window.activeTextEditor.document.getText());
 						source = vscode.window.activeTextEditor.document.getText();
-						//console.log('the source is', source);
+						console.log('the source is undefined?', source==undefined);
 						if (source) {
 							//console.log('the source is', source);
 							filename = vscode.window.activeTextEditor.document.fileName;
@@ -154,7 +154,14 @@ class LEViewProvider { //extends vscode.WebviewViewProvider {
 						console.log('Scenario being processed', currentScenario)
 						return
 					case 'next':
-						if(runningPengine&&currentMore) currentAnswer = JSON.stringify(runningPengine.next());
+						if(runningPengine&&currentMore) {
+							let possibleAnswer = runningPengine.next(); 
+							if (possibleAnswer) currentAnswer = JSON.stringify(runningPengine.next());
+							else {
+								currentAnswer = "No more";
+								currentMore = false; 
+							}
+						}
 						else {
 							console.log("No more answers");
 							currentAnswer = "No more"
@@ -170,97 +177,17 @@ class LEViewProvider { //extends vscode.WebviewViewProvider {
 		//console.log('resolved');
 	}
 
-	_getHtmlForWebview(webview) { //}: vscode.Webview) {
-		// // Get the local path to main script run in the webview, then convert it to a uri we can use in the webview.
-		// const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'main.js'));
-
-		// // Do the same for the stylesheet.
-		// const styleResetUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'reset.css'));
-		// const styleVSCodeUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'vscode.css'));
-		// const styleMainUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'main.css'));
-
-		// // Use a nonce to only allow a specific script to be run.
-		// const nonce = getNonce();
-
+	_getHtmlForWebview(webview) { 
 		return getWebviewLEGUI(); 
-
-		// return `<!DOCTYPE html>
-		// 	<html lang="en">
-		// 	<head>
-		// 		<meta charset="UTF-8">
-
-		// 		<!--
-		// 			Use a content security policy to only allow loading styles from our extension directory,
-		// 			and only allow scripts that have a specific nonce.
-		// 			(See the 'webview-sample' extension sample for img-src content security policy examples)
-		// 		-->
-		// 		<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';">
-
-		// 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-		// 		<link href="${styleResetUri}" rel="stylesheet">
-		// 		<link href="${styleVSCodeUri}" rel="stylesheet">
-		// 		<link href="${styleMainUri}" rel="stylesheet">
-
-		// 		<title>Cat Colors</title>
-		// 	</head>
-		// 	<body>
-		// 		<ul class="color-list">
-		// 		</ul>
-
-		// 		<button class="add-color-button">Add Color</button>
-
-		// 		<script nonce="${nonce}" src="${scriptUri}"></script>
-		// 	</body>
-		// 	</html>`;
 	}
 
-	// runPengine(filename, le_string, query, scenario) {
-
-	// 	runningPengine = new Pengine({ server: PENGINE_URL,  //authorization:"digest(jacinto, '123')", //authenticate:true, authorization:"basic(jacinto, 123)", 
-	// 		//src_text: le_string, 
-	// 		oncreate: handleCreate,
-	// 		//onprompt: handlePrompt,
-	// 		onoutput: handleOutput,
-	// 		onsuccess: showAnswer,
-	// 		onfailure: reportFailure
-	// 	});
-	
-	// 	function handleCreate() {
-	// 		console.log('creating runningPengine')
-	// 		//runningPengine.ask('member(Answer, [1,2,3])',[]);
-	// 		//pengine.ask('assert(parsed)', []);
-	// 		//pengine.ask('le_input:pre_is_type(X)', []); 
-	// 		//pengine.ask('assert(parsed), show(prolog)');
-	// 		//pengine.ask('le_input:dict(A,B,C)'); 
-	// 		//runningPengine.ask(`le_taxlog_translate( ${le_string}, File, BaseLine, Terms)`);
-	// 		// console.log("le_answer:parse_and_query_and_explanation("+filename+", "+le_string+", "+query+", with("+scenario+"), Answer)");
-	// 		runningPengine.ask("le_answer:parse_and_query_and_explanation("+filename+", "+le_string+", "+query+", with("+scenario+"), Answer)");
-	// 		//runningPengine.ask("parse_and_query(1, 2, 3, with(4), Answer)", []);
-	// 		//pengine.ask('listing')
-	// 	}
-	// 	// function handlePrompt() {
-	// 	// 	runningPengine.input(prompt(this.data));
-	// 	// }
-	// 	function handleOutput() {
-	// 		//$('#out').html(this.data);
-	// 		//console.log('pengine answering:', this.data, ' are there more? ', this.more)
-	// 	}
-	// 	function showAnswer() {
-	// 		currentAnswer = this.data[0].Answer; // pick the first answer only
-	// 		//currentExplanation = this.data[0].Explanation; 
-	// 		currentMore = this.more
-	// 		console.log('Answer from pengine', this.id, ' is ', this.data, ' more? ', this.more);
-	// 		this._view.webview.postMessage({ command: 'answer', text: currentAnswer });
-	// 	}
-	// 	function reportFailure() {
-	// 		console.log('pengine', this.id, 'failed', this); 
-	// 	}
-	// }
 }
 
 // This method is called when your extension is deactivated
-function deactivate() {}
+function deactivate() {
+	runningPengine = false; // should it be null?
+	console.log('le-gui extension deactivated!'); 
+}
 
 function updateStatusBarItem() {
 	const n = getNumberOfSelectedLines(vscode.window.activeTextEditor);
@@ -282,6 +209,11 @@ function getNumberOfSelectedLines(editor) {
 
 async function runPengine(currentWebView, filename, le_string, query, scenario) {
 
+	if(runningPengine!=undefined) {
+		console.log('stoping previous Pengine', runningPengine); 
+		runningPengine.stop(); 
+	}
+
 	runningPengine = new Pengine({ server: PENGINE_URL,  //authorization:"digest(jacinto, '123')", //authenticate:true, authorization:"basic(jacinto, 123)", 
 		//src_text: le_string, 
 		oncreate: handleCreate,
@@ -292,7 +224,7 @@ async function runPengine(currentWebView, filename, le_string, query, scenario) 
 	});
 
 	function handleCreate() {
-		//console.log('creating runningPengine')
+		console.log('creating runningPengine')
 		//runningPengine.ask('member(Answer, [1,2,3])',[]);
 		//pengine.ask('assert(parsed)', []);
 		//pengine.ask('le_input:pre_is_type(X)', []); 
@@ -377,11 +309,18 @@ async function main(context){
 				console.log('Scenario being processed', currentScenario)
 			 	return
 			case 'next':
-			 	if(runningPengine&&currentMore) currentAnswer = JSON.stringify(runningPengine.next());
-			 	else {
-			 		console.log("No more answers");
-			 		currentAnswer = "No more"
-			 	}
+				if(runningPengine&&currentMore) {
+					let possibleAnswer = runningPengine.next(); 
+					if (possibleAnswer) currentAnswer = JSON.stringify(runningPengine.next());
+					else {
+						currentAnswer = "No more";
+						currentMore = false; 
+					}
+				}
+				else {
+					console.log("No more answers");
+					currentAnswer = "No more"
+				}
 				leWebViewPanel.webview.postMessage({ command: 'answer', text: currentAnswer });
 				return
           }
