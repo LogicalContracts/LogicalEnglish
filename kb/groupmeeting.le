@@ -1,0 +1,44 @@
+the target language is: prolog.
+
+the templates are:
+
+*a group* can have *a meeting* at *a time*.
+*a person* can join *a meeting* at *a time*.
+*a person* is a member of *a group*.
+*a person* is available at *a time* in *a timezone*. 
+*a time* is good for meetings. 
+
+the knowledge base groupmeeting includes:
+
+A group can have a meeting at a time 
+    if the time is good for meetings
+    and for all cases in which
+        a person is a member of the group
+        it is the case that 
+        the person can join the meeting at the time.
+
+A person can join the Friday meeting at a time 
+    if the person is a member of the Friday meeting group
+    and the person is available at the time in CET
+    and the time is 1400
+        or the time is 1830.  
+
+A person is a member of the Friday meeting group
+    if the person = Jacinto
+    or the person = Galileo
+    or the person = Bob.
+
+A person is available at a time in CET
+    if the person is available at a second time in VET
+    and the time is the second time + 500.
+
+Bob is available at 1400 in CET.
+Bob is available at 1830 in CET.
+Galileo is available at 1830 in CET.
+Jacinto is available at 1330 in VET. 
+
+1400 is good for meetings. 
+1830 is good for meetings. 
+    
+query one is:
+the Friday meeting group can have the Friday meeting at which time.

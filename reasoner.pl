@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-:- module(_ThisFileName,[query/4, query_with_facts/5, query_once_with_facts/5, explanation_node_type/2, render_questions/2,
+:- module(reasoner,[query/4, query_with_facts/5, query_once_with_facts/5, explanation_node_type/2, render_questions/2,
     run_examples/0, run_examples/1, myClause2/9, myClause/4, taxlogWrapper/10, niceModule/2, refToOrigin/2,
     isafter/2, is_not_before/2, isbefore/2, immediately_before/2, same_date/2, subtract_days/3, this_year/1, uk_tax_year/4, in/2,
     isExpressionFunctor/1, set_time_of_day/3, start_of_day/2, end_of_day/2, is_days_after/3, is_1_day_after/2, unparse_time/2
@@ -27,7 +27,7 @@ limitations under the License.
 :- use_module(library(aggregate)).
 
 :- use_module(kp_loader).
-:- use_module(le_input).
+:- use_module(le_answer).
 
 :- thread_local do_not_fail_undefined_preds/0. 
 
@@ -569,8 +569,11 @@ expand_explanation_refs_taxlog([Node|Nodes],Facts,[NewNode|NewNodes]) :- !,
 expand_explanation_refs_taxlog([],_,[]).
 
 expand_explanation_refs_le([Node|Nodes],Facts, [NewNode|NewNodes]) :-  
-    Node=..[Type,X,Module,Ref,Children], 
-    refToSourceAndOrigin(Ref,Source,Origin),
+    Node=..[Type,X0,Module,Ref,Children], 
+    ( Children=[s(L,M2,Ref2,[])], unifiable(X0, L, _) ->  % to filter final leaves
+        ( NextType = s, X = L, NextChildren = [], NextModule = M2, NextRef = Ref2 ) 
+    ;   ( NextType = Type, X = X0, NextChildren = Children, NextModule = Module, NextRef = Ref)),
+    refToSourceAndOrigin(NextRef,Source,Origin),
     %TODO: is the following test against facts necessary???:
     ((member(XX,Facts), variant(XX,X)) -> NewOrigin=userFact ; NewOrigin=Origin),
     (X\=[] -> 
@@ -581,15 +584,15 @@ expand_explanation_refs_le([Node|Nodes],Facts, [NewNode|NewNodes]) :-
             %expand_explanation_refs(Children,Facts,NewChildren),
             %AllNodes = [NewNode|NewNodes]
             )
-        ;   ( %print_message(informational, "Can't translate ~w"-[X]), 
-              Output='it is still untranslated'(X) )
+        ;   ( %print_message(informational, "Can't translate ~w"-[X]),
+              term_string('Prolog Expression'(X), Output) )
         )
     ;         %AllNodes = NewNodes
         Output = 'it is a fact'
     ),
     %translate_to_le(X, Output),      
-    NewNode=..[Type,Output,Ref,Module,Source,NewOrigin,NewChildren],
-    expand_explanation_refs_le(Children,Facts,NewChildren),
+    NewNode=..[NextType,Output,NextRef,NextModule,Source,NewOrigin,NewChildren],
+    expand_explanation_refs_le(NextChildren,Facts,NewChildren),
     expand_explanation_refs_le(Nodes,Facts,NewNodes).
 expand_explanation_refs_le([],_,[]). 
 
@@ -736,9 +739,9 @@ sandbox:safe_primitive(reasoner:render_questions(_,_)).
 
 :- use_module(swish(lib/html_output),[html/1]). 
 % hack to avoid SWISH errors:
-myhtml(H) :-  pengine_self(SwishModule), SwishModule:html(H).
+myhtml(H) :-  this_capsule(SwishModule), SwishModule:html(H).
 
-kbModule(M) :- pengine_self(M).
+kbModule(M) :- this_capsule(M).
 
 
 :- else. % On command-line SWI-Prolog, no user restrictions:

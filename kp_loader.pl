@@ -466,7 +466,13 @@ sandbox:safe_primitive(kp_loader:print_kp_predicates(_)).
 sandbox:safe_primitive(kp_loader:load_gitty_files). %TODO: this should be restricted to power users
 sandbox:safe_primitive(kp_loader:save_gitty_files).
 sandbox:safe_primitive(kp_loader:all_kps_loaded).
-
+sandbox:safe_primitive(web_storage:open_gittystore(_)).
+sandbox:safe_primitive(gitty:gitty_file(_, _, _)).
+sandbox:safe_primitive(gitty:load_commit(_,_,_)). 
+sandbox:safe_primitive(gitty:gitty_update(_, _, _, _, _)). 
+sandbox:safe_primitive(gitty:size_in_bytes(_,_)). 
+sandbox:safe_primitive(gitty:save_object(_,_,_,_)).
+sandbox:safe_primitive(gitty:gitty_create(_,_,_,_,_)).
 
 %%%% assist editor navigation; cf. swish/web/js/codemirror/mode/prolog/prolog_server.js
 
@@ -512,7 +518,7 @@ pengines:prepare_module(Module, swish, _Options) :-
     % this seems to hold always, but commenting it out just in case...: assertion( \+ myCurrentModule(_)),
     setup_kp_module(Module),
     assert(myCurrentModule(Module)).
-    % should we perhaps use pengine_self...??
+    % should we perhaps use this_capsule...??
 % there is (just arrived from the SWISH editor) a fresher version To of the declared module From
 % ...OR there WAS,  although it no longer exists
 shouldMapModule(From,To) :- myDeclaredModule(From), kp(From), myCurrentModule(To), !, 
@@ -552,4 +558,6 @@ update_gitty_file(_,_,_) :- throw('this only works on SWISH ').
 
 knowledgePagesGraph(_,_) :- throw('this only works on SWISH').
 knowledgePagesGraph(_) :- throw('this only works on SWISH').
+gitty_file(_,_,_) :- throw('this only works in SWISH gitty'). 
+gitty_update(_, _, _, _, _) :- throw('this only works in SWISH gitty'). 
 :- endif.

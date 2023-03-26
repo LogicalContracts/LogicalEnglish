@@ -1,0 +1,20 @@
+
+
+A group can have a meeting at a time 
+      if for all cases in which
+      a person is a member of the group
+      it is the case that 
+      the person can join the meeting at the time.
+
+A person can join the Friday meeting at a time 
+      if the person is a member of the Friday meeting group
+      and   the time is 14:00 CET.
+            or the time is 18:30 CET. 
+
+A person is a member of the Friday meeting group
+      if the person is Jacinto
+      or the person is Galileo
+      or the person is Bob.
+
+query one is:
+the Friday meeting group can have the Friday meeting at which time.

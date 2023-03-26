@@ -40,15 +40,15 @@ swish_config:config(include_alias,	example).
 % the above facts must come before this...:
 :- use_module('../../swish/swish').
 
-:- use_module(library(http/http_dispatch)).
-:- use_module(swish(lib/plugin/login)).
+%:- use_module(library(http/http_dispatch)).
+%:- use_module(swish(lib/plugin/login)).
 :- use_module(library(pengines)). % used only under SWISH
 
 :- use_module(library(http/html_write)).
 :- use_module(swish(lib/page)).
 
-% :- prolog_load_context(directory, D), atomic_list_concat([D,/,passwd],F), set_setting(swish_http_authenticate:password_file,F), format("Password file at ~a~n",[F]).
-% :- use_module(swish(lib/authenticate)).
+%:- prolog_load_context(directory, D), atomic_list_concat([D,/,passwd],F), set_setting(swish_http_authenticate:password_file,F), format("Password file at ~a~n",[F]).
+%:- use_module(swish(lib/authenticate)).
 
 :- use_module('../syntax.pl').
 :- use_module('../kp_loader.pl').
@@ -57,10 +57,11 @@ swish_config:config(include_alias,	example).
 :- use_module('../spacy/spacy.pl').
 :- use_module('../drafter.pl').
 :- use_module('../le_output.pl').
-:- use_module('../le_input.pl').
+:- use_module('../le_answer.pl').
+:- use_module('../le_input.pl'). 
 
 :- use_module(swish(lib/html_output),[html/1]).
-myhtml(H) :-  pengine_self(SwishModule), !, SwishModule:html(H).
+myhtml(H) :-  this_capsule(SwishModule), !, SwishModule:html(H).
 myhtml(Spec) :-  % for command line usage:
 	phrase(html(Spec), Tokens),
 	with_output_to(
@@ -333,35 +334,9 @@ user:term_expansion(NiceTerm, ExpandedTerms) :-  % hook for LE extension
 	prolog_load_context(source,File), % atom_prefix(File,'pengine://'), % process only SWISH windows
 	prolog_load_context(term_position,TP), stream_position_data(line_count,TP,Line),
 	%print_message(informational, "current file ~w"-[File]), 
-	le_taxlog_translate(NiceTerm,File,Line,TaxlogTerms),
-	(TaxlogTerms\=[]-> 
-			findall(PrologTerm, (
-			member(TT_,TaxlogTerms), 
-			(is_list(TT_)->member(TT,TT_);TT=TT_), % the LE translator generates a list of lists... and non lists
-			((member(target(prolog),TaxlogTerms);member(target(scasp),TaxlogTerms)) -> 
-				semantics2prolog(TT,_,PrologTerm);taxlog2prolog(TT,_,PrologTerm))
-			), ExpandedTerms_0) 
-		; ExpandedTerms_0 = []),
-	% to save as a separated file
-	(member(target(prolog),TaxlogTerms) -> 
-		( myDeclaredModule(Name),  % the module in the editor
-		split_module_name(Name, FileName, URL), 
-		atomic_list_concat([FileName,'-prolog','.pl'], NewFileName), 
-		(URL\=''->atomic_list_concat([FileName,'-prolog', '+', URL], NewModule); atomic_list_concat([FileName,'-prolog'], NewModule)), 
-		dump(all, NewModule, ExpandedTerms_0, String), 
-		update_gitty_file(NewFileName, URL, String),
-		ExpandedTerms_1 = [just_saved_scasp(null, null)|ExpandedTerms_0]) ; ExpandedTerms_1 = ExpandedTerms_0),
-	%print_message(informational, " Terms ~w"-[TaxlogTerms]), 
-	(member(target(scasp),TaxlogTerms) -> 
-		( myDeclaredModule(Name),  % the module in the editor
-		split_module_name(Name, FileName, URL), 
-		atomic_list_concat([FileName,'-scasp','.pl'], NewFileName), 
-		(URL\=''->atomic_list_concat([FileName,'-scasp', '+', URL], NewModule); atomic_list_concat([FileName,'-scasp'], NewModule)), 
-		%print_message(informational, "sCASP module name ~w"-[NewModule]), 
-		dump_scasp(NewModule, ExpandedTerms_0, String), 
-		%print_message(informational, "sCASP content to assert: ~w \n"-[String]), 
-		update_gitty_file(NewFileName, NewModule, String),
-		ExpandedTerms_2 = [just_saved_scasp(NewFileName, NewModule)|ExpandedTerms_1] ) ; ExpandedTerms_2 = ExpandedTerms_1),
-	ExpandedTerms = ExpandedTerms_2. 
+	le_answer:le_taxlog_translate(NiceTerm,File,Line,TaxlogTerms),
+	le_answer:le_expanded_terms(TaxlogTerms, ExpandedTerms).
+
+	
 user:term_expansion(T,NT) :- taxlog2prolog(T,_,NT).
 %user:term_expansion(T,NT) :- (member(target(prolog),T) -> semantics2prolog(T,_,NT) ; taxlog2prolog(T,_,NT)).
