@@ -101,7 +101,7 @@ query three is:
     matches_name/4, matches_type/4, delete_underscore/2, add_determiner/2, proper_det/2,
     portray_clause_ind/1, order_templates/2, process_types_dict/2,
     assertall/1,asserted/1, 
-    update_file/3, myDeclaredModule/1
+    update_file/3, myDeclaredModule/1, conditions/6
     ]).
 
 :- multifile sandbox:safe_primitive/1.

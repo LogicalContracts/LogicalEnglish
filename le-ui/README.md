@@ -1,31 +1,33 @@
 # le-ui README
 
-This is the README for your extension "le-ui". After writing up a brief description, we recommend including the following sections.
+[Logical English](https://github.com/LogicalContracts/LogicalEnglish/), LE, is a controlled form of natural language that can be used for programming and knowledge representation. 
+
+This extension "le-ui" provides a user interface within VSCODE to translate LE documents and queries into Prolog code that it is executed on a SWISH server (defined in the settings). The interaction occurs through a "webview" that is displayed as a collapsible tab in the Explorer view of Visual Studio. It could also be displayed as a side tab in the editor view, using a right-click, contextual-menu option. 
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+The extension provides a simple form with two input fields to query a LE document. Like this:
 
-For example if there is an image subfolder under your extension project workspace:
+![Logical English GUI](./images/le-ui.png)
 
-\!\[feature X\]\(images/feature-x.png\)
+> Tip: In the Query field, the user can write the name of one of the queries in the document or write a direct query for the system. 
+> Tip: The Scenario field must contain the name of a scenario, as described in the document, or being empty (meaning that no scenario is involved).  
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+To submit, simple press RUN. If the query has more than one answer, the botton NEXT will appear next to the RUN button. RUN NEXT produces an answer that is displayed in the space below. The tree of an *explanation* for the query is displayed by clicking on the small boxes next to each answer. 
 
 ## Requirements
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+A SWISH Prolog server must be up and running and must be referred to inside the extension as shown below. 
+
 
 ## Extension Settings
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
-
-For example:
-
 This extension contributes the following settings:
 
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+* `conf.view.url`: with the URL of the SWISH Prolog server that processes the document and answers the queries.
+
+![Logical English GUI Settings](./images/le-ui-settings.png)
+
 
 ## Known Issues
 
@@ -33,40 +35,19 @@ Calling out known issues can help limit users opening duplicate issues against y
 
 ## Release Notes
 
-Users appreciate release notes as you update your extension.
+Version 1.0.0 is a beta testing version. 
 
 ### 1.0.0
 
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
+Initial release of le-ui
 
 ---
 
-## Working with Markdown
-
-You can author your README using Visual Studio Code.  Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux)
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux)
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
 ## To run the extension
 
-Inside the editor, press F5. This will compile and run the extension in a new Extension Development Host window.
+This extension is self-activating (by opening the Explorer->LE-UI tab). 
 
-Run the Hello World command from the Command Palette (Ctrl+Shift+P) in the new window:
+Experimentally, it can also be run by activating a separate panel from the right-click, contextual menu over an open document. Or, run the LE-UI command from the Command Palette (Ctrl+Shift+P) in the new window:
 
 
-**Enjoy!**
+**Happy writing and querying!**

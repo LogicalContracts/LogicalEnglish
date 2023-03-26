@@ -5,7 +5,7 @@ const axios = require('axios');
 const Pengine = require('./pengines');
 const axiosConfig = {/*headers:{'Access-Control-Allow-Origin':'*'}*/};
 
-const SERVER_URL = "http://localhost:3050/taxkbapi";
+var SERVER_URL = "http://localhost:3050/taxkbapi";
 var PENGINE_URL = "http://localhost:3050/pengine";
 //const SERVER_URL = "https://le.logicalcontracts.com/taxkbapi";
 const MY_TOKEN = "myToken123";
@@ -65,9 +65,10 @@ function activate(context) {
 	updateStatusBarItem();
 
 	// recover the pengine's URL from the settings
-	const serverURL = vscode.workspace.getConfiguration().get('conf.view.url');
-	console.log('configuration', serverURL)
-	PENGINE_URL = serverURL;
+	// const serverURL = vscode.workspace.getConfiguration().get('conf.view.url');
+	// console.log('configuration', serverURL)
+	// PENGINE_URL = serverURL+'/pengine';
+	// SERVER_URL =  serverURL+"/taxkbapi"
 
 	const provider = new LEViewProvider(context);
 
@@ -135,14 +136,14 @@ class LEViewProvider { //extends vscode.WebviewViewProvider {
 					case 'query':
 						//console.log('query received', message.text,  vscode.window.activeTextEditor.document.getText());
 						source = vscode.window.activeTextEditor.document.getText();
-						console.log('the source is undefined?', source==undefined);
+						//console.log('the source is undefined?', source==undefined);
 						if (source) {
 							//console.log('the source is', source);
 							filename = vscode.window.activeTextEditor.document.fileName;
 							currentFile = filename.substring(filename.lastIndexOf('/')+1, filename.lastIndexOf('.'));
 							le_string = 'en(\"'+source+'\")'
-							currentQuery = message.text;
-							//console.log('Query being processed', currentQuery)
+							currentQuery = "\'"+message.text+"\'";
+							console.log('Query being processed', currentQuery)
 							runPengine(webviewView, currentFile, le_string, currentQuery, currentScenario)
 						} else {
 							//console.log('no source selected')
@@ -209,6 +210,12 @@ function getNumberOfSelectedLines(editor) {
 
 async function runPengine(currentWebView, filename, le_string, query, scenario) {
 
+	// recover the pengine's URL from the settings
+	const serverURL = vscode.workspace.getConfiguration().get('conf.view.url');
+	console.log('reading configuration', serverURL)
+	PENGINE_URL = serverURL+'/pengine';
+	SERVER_URL =  serverURL+"/taxkbapi"
+
 	if(runningPengine!=undefined) {
 		console.log('stoping previous Pengine', runningPengine); 
 		runningPengine.stop(); 
@@ -225,11 +232,6 @@ async function runPengine(currentWebView, filename, le_string, query, scenario) 
 
 	function handleCreate() {
 		console.log('creating runningPengine')
-		//runningPengine.ask('member(Answer, [1,2,3])',[]);
-		//pengine.ask('assert(parsed)', []);
-		//pengine.ask('le_input:pre_is_type(X)', []); 
-		//pengine.ask('assert(parsed), show(prolog)');
-		//pengine.ask('le_input:dict(A,B,C)'); 
 		//runningPengine.ask(`le_taxlog_translate( ${le_string}, File, BaseLine, Terms)`);
 		//console.log("le_answer:parse_and_query_and_explanation("+filename+", "+le_string+", "+query+", with("+scenario+"), Answer)");
 		runningPengine.ask("le_answer:parse_and_query_and_explanation("+filename+", "+le_string+", "+query+", with("+scenario+"), Answer)");
@@ -256,6 +258,12 @@ async function runPengine(currentWebView, filename, le_string, query, scenario) 
 }
 
 async function main(context){
+
+	// recover the pengine's URL from the settings
+	const serverURL = vscode.workspace.getConfiguration().get('conf.view.url');
+	console.log('configuration', serverURL)
+	SERVER_URL =  serverURL+"/taxkbapi"
+	
 	//let success = await vscode.commands.executeCommand('workbench.action.splitEditor');
 
 	var source = vscode.window.activeTextEditor.document.getText();
@@ -408,7 +416,7 @@ function getWebviewLEGUI() {
 	  }	  
 	  </style>
   </head>
-  <body>>
+  <body>
 	  <h2>Logical English GUI</h2>
 	  <label>Query</label><br>
 	  <textarea placeholder="Enter some query" name="query" /></textarea> <br>

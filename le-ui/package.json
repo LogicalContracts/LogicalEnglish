@@ -2,12 +2,18 @@
   "name": "le-ui",
   "displayName": "LE UI",
   "description": "VSCode User Interface for the Logical English Query Machinery on SWISH",
-  "version": "0.0.1",
+  "version": "1.0.0",
+  "publisher": "LogicalEnglishUI",
   "engines": {
     "vscode": "^1.72.0"
   },
+  "repository": { 
+    "type": "git", 
+    "url": "https://github.com/LogicalContracts/LogicalEnglish/le-ui" 
+  }, 
   "categories": [
-    "Programming Languages"
+    "Programming Languages",
+    "Other"
   ],
   "activationEvents": [
     "onView:le-ui.leGUI", 
@@ -28,10 +34,6 @@
     },
     "commands": [
       {
-        "command": "le-ui.helloWorld",
-        "title": "Hello World"
-      },
-      {
         "command": "le-ui.query",
         "title": "Query LE",
         "category": "Logical English",
@@ -44,18 +46,7 @@
       {
         "command": "le-ui.showSelectionCount",
         "title": "Text Selection"
-      }, 
-			{
-				"command": "le-ui.addColor",
-				"category": "Calico Colors",
-				"title": "Add Color"
-			},
-			{
-				"command": "le-ui.clearColors",
-				"category": "Calico Colors",
-				"title": "Clear Colors",
-				"icon": "$(clear-all)"
-			}
+      }
     ],
     "menus": {
       "editor/context": [
@@ -69,8 +60,18 @@
       "properties": {
         "conf.view.url": {
           "type": "string",
-          "default": "http://localhost:3050/pengine",
-          "description": "Specifies the URL of the SWISH LE server"
+          "default": "http://localhost:3050",
+          "description": "the URL of a SWISH LE server"
+        },
+        "conf.view.remote.url": {
+          "type": "string",
+          "default": "https://le.logicalcontracts.com",
+          "description": "(REMAINDER) the URL of the remote SWISH LE server"
+        }, 
+        "conf.view.local.url": {
+          "type": "string",
+          "default": "http://localhost:3050",
+          "description": "(REMAINDER) the URL of the local SWISH LE server"
         }
       }
     }

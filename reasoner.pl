@@ -571,8 +571,8 @@ expand_explanation_refs_taxlog([],_,[]).
 expand_explanation_refs_le([Node|Nodes],Facts, [NewNode|NewNodes]) :-  
     Node=..[Type,X0,Module,Ref,Children], 
     ( Children=[s(L,M2,Ref2,[])], unifiable(X0, L, _) ->  % to filter final leaves
-        ( X = L, NextChildren = [], NextModule = M2, NextRef = Ref2 ) 
-    ;   ( X = X0, NextChildren = Children, NextModule = Module, NextRef = Ref)),
+        ( NextType = s, X = L, NextChildren = [], NextModule = M2, NextRef = Ref2 ) 
+    ;   ( NextType = Type, X = X0, NextChildren = Children, NextModule = Module, NextRef = Ref)),
     refToSourceAndOrigin(NextRef,Source,Origin),
     %TODO: is the following test against facts necessary???:
     ((member(XX,Facts), variant(XX,X)) -> NewOrigin=userFact ; NewOrigin=Origin),
@@ -591,7 +591,7 @@ expand_explanation_refs_le([Node|Nodes],Facts, [NewNode|NewNodes]) :-
         Output = 'it is a fact'
     ),
     %translate_to_le(X, Output),      
-    NewNode=..[Type,Output,NextRef,NextModule,Source,NewOrigin,NewChildren],
+    NewNode=..[NextType,Output,NextRef,NextModule,Source,NewOrigin,NewChildren],
     expand_explanation_refs_le(NextChildren,Facts,NewChildren),
     expand_explanation_refs_le(Nodes,Facts,NewNodes).
 expand_explanation_refs_le([],_,[]). 
