@@ -127,8 +127,8 @@ moduleName2URL(URL, URL).
 :- initialization( (
 	(getenv('LOAD_KB',true) -> (
 		print_message(informational,"Updating SWISH storage with latest KB"-[]), load_gitty_files
-		) ; true),
-	discover_kps_gitty, setup_kp_modules, xref_all, 
+		) ; true), 
+	discover_kps_gitty, %setup_kp_modules, xref_all, 
 	current_prolog_flag(version_data,V), print_message(informational,V),
 	print_message(informational,"Ready on SWISH!"-[])
 )).

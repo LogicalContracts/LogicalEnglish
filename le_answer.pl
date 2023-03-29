@@ -256,7 +256,7 @@ answer(English, Arg, E, Result) :- %trace,
 prepare_query(English, Arg, SwishModule, Goal, Facts, Command) :- %trace, 
     %restore_dicts, 
     var(SwishModule), this_capsule(SwishModule), !, 
-    print_message(informational, "Module at prepare query ~w"-[SwishModule]), 
+    %print_message(informational, "Module at prepare query ~w"-[SwishModule]), 
     translate_command(SwishModule, English, GoalName, Goal, PreScenario),
     %print_message(informational, "SwisModule: ~w, English ~w, GoalName ~w, Goal ~w, Scenario ~w"-[SwishModule, English, GoalName, Goal, PreScenario]),
     copy_term(Goal, CopyOfGoal),  
@@ -268,8 +268,8 @@ prepare_query(English, Arg, SwishModule, Goal, Facts, Command) :- %trace,
         (SwishModule:example(Scenario, [scenario(Facts, _)]) -> 
             true;  print_message(error, "prepare_query: Scenario: ~w does not exist"-[Scenario]))),
     %print_message(informational, "Facts: ~w"-[Facts]), 
-    extract_goal_command(Goal, SwishModule, _InnerGoal, Command), !,  
-    print_message(informational, "Command: ~w"-[Command]). 
+    extract_goal_command(Goal, SwishModule, _InnerGoal, Command), !.   
+    %print_message(informational, "Command: ~w"-[Command]). 
 
 % prepare_query(+English, +Arguments, +Module, -Goal, -Facts, -Command)
 prepare_query(English, Arg, SwishModule, Goal, Facts, Command) :- %trace, 
@@ -385,7 +385,7 @@ escape_uppercased(Word, EscapedWord) :-
     name(EscapedWord, NewCodes).
 
 assert_facts(_, []) :- !. 
-assert_facts(SwishModule, [F|R]) :- nonvar(F),  print_message(informational, "asserting: ~w"-[SwishModule:F]),
+assert_facts(SwishModule, [F|R]) :- nonvar(F), % print_message(informational, "asserting: ~w"-[SwishModule:F]),
     assertz(SwishModule:F), assert_facts(SwishModule, R).
 
 retract_facts(_, []) :- !. 
@@ -729,7 +729,7 @@ prolog_colour:term_colours(en_decl(_Text),lps_delimiter-[classify]). % let 'en_d
 
 
 user:(answer Query with Scenario):- 
-    print_message(informational,"le_answer:answer ~w with ~w"-[Query, Scenario]), 
+    %print_message(informational,"le_answer:answer ~w with ~w"-[Query, Scenario]), 
     answer(Query,with(Scenario)). 
 user: (répondre Query avec Scenario):-
     answer(Query,with(Scenario)).

@@ -15,12 +15,6 @@
     "Programming Languages",
     "Other"
   ],
-  "activationEvents": [
-    "onView:le-ui.leGUI", 
-    "onCommand:le-ui.helloWorld",
-    "onCommand:le-ui.query",
-    "onCommand:le-ui.run"
-  ],
   "main": "./extension.js",
   "contributes": {
     "views": {
