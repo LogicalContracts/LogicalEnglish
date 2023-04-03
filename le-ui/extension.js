@@ -30,11 +30,23 @@ var runningPengine;
 /**
  * @param {vscode.ExtensionContext} context
  */
-function activate(context) {
+async function activate(context) {
+
+	const initServerURL = vscode.workspace.getConfiguration().get('conf.view.url');
+	console.log('Server configuration:', initServerURL);
+
+	try {
+		await checkServerAvailability(initServerURL);
+		console.log('Moving on...');
+		// Execute your other code here
+	} catch (error) {
+		console.log(error.message);
+		return; 
+	}
 
 	// Use the console to output diagnostic information (console.log) and errors (console.error)
 	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "le-ui" is now active!');
+	console.log('Congratulations!, your extension "le-ui" is now active!');
 
 	let newInputcommand = vscode.commands.registerCommand('le-ui.query', function () {
 		main(context)
@@ -535,6 +547,22 @@ function getWebviewLEGUI() {
   </body>
   </html>`;  
 }
+
+async function checkServerAvailability(url, retries = 10, interval = 5000) {
+	for (let i = 0; i < retries; i++) {
+	  try {
+		const response = await axios.get(url);
+		if (response.status === 200) {
+		  console.log('Server is available');
+		  return;
+		}
+	  } catch (error) {
+		console.log(`Server is not available: ${error.message}`);
+	  }
+	  await new Promise(resolve => setTimeout(resolve, interval));
+	}
+	throw new Error(`Server is not available after ${retries} retries`);
+  }
 
 module.exports = {
 	activate,

@@ -5,17 +5,17 @@
   "version": "1.0.0",
   "publisher": "LogicalEnglishUI",
   "engines": {
-    "vscode": "^1.72.0"
+    "vscode": "^1.75.0"
   },
-  "repository": { 
-    "type": "git", 
-    "url": "https://github.com/LogicalContracts/LogicalEnglish/le-ui" 
-  }, 
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/LogicalContracts/LogicalEnglish/le-ui"
+  },
   "categories": [
     "Programming Languages",
     "Other"
   ],
-  "main": "./extension.js",
+  "main": "./out/main.js",
   "contributes": {
     "views": {
       "explorer": [
@@ -61,7 +61,7 @@
           "type": "string",
           "default": "https://le.logicalcontracts.com",
           "description": "(REMAINDER) the URL of the remote SWISH LE server"
-        }, 
+        },
         "conf.view.local.url": {
           "type": "string",
           "default": "http://localhost:3050",
@@ -73,22 +73,32 @@
   "scripts": {
     "lint": "eslint .",
     "pretest": "npm run lint",
-    "test": "node ./test/runTest.js"
+    "test": "node ./test/runTest.js",
+    "vscode:prepublish": "npm run esbuild-base -- --minify",
+    "esbuild-base": "esbuild ./extension.js --bundle --outfile=out/main.js --external:vscode --format=cjs --platform=node",
+    "esbuild": "npm run esbuild-base -- --sourcemap --analyze",
+    "esbuild-watch": "npm run esbuild-base -- --sourcemap --watch",
+    "test-compile": "tsc -p ./"
   },
   "devDependencies": {
     "@types/glob": "^8.0.0",
     "@types/mocha": "^10.0.0",
     "@types/node": "16.x",
-    "@types/vscode": "^1.72.0",
+    "@types/vscode": "^1.75.0",
     "@vscode/test-electron": "^2.1.5",
     "axios": "^0.26.0",
+    "esbuild": "^0.17.15",
     "eslint": "^8.24.0",
     "glob": "^8.0.3",
     "mocha": "^10.0.0",
+    "najax": "^1.0.7",
+    "ts-loader": "^9.4.2",
     "typescript": "^4.8.4"
   },
   "dependencies": {
-    "jquery": "^3.6.1",
-    "najax": "^1.0.7"
+    "axios": "^0.26.0",
+    "browserify-zlib": "^0.2.0",
+    "eslint": "^8.24.0",
+    "glob": "^8.0.3"
   }
 }

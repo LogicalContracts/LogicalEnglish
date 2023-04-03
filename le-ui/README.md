@@ -1,4 +1,4 @@
-# le-ui README
+# Extension le-ui README
 
 [Logical English](https://github.com/LogicalContracts/LogicalEnglish/), LE, is a controlled form of natural language that can be used for programming and knowledge representation. 
 
