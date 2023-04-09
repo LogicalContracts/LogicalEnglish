@@ -112,6 +112,9 @@ The University of Bologna has actively supported the development of LE, in pursu
 
 ##  <a name='Releases'></a>Release Notes
 
+- [2023-04-09] Previous version [37dadce4c7916ed47c79c770ac575330d60f8f94](https://github.com/LogicalContracts/LogicalEnglish/commit/37dadce4c7916ed47c79c770ac575330d60f8f94)
+	- New VSC extension LE GUI  (with new JS API and collapsible explanations)
+	- Standalone LE
 - [2022-05-12] Beta testing. Previous version [97abce7d4398f05c1f165e4a411a982b16f358bd](https://github.com/LogicalContracts/LogicalEnglish/commit/97abce7d4398f05c1f165e4a411a982b16f358bd)
 	- Activates #abducible to handle unknown information with sCASP in LE. 
 - [2022-05-05] Beta testing. Previous version: [d405af4da4fbeb170cd1cb1be333ff66c65a8d98](https://github.com/LogicalContracts/LogicalEnglish/commit/d405af4da4fbeb170cd1cb1be333ff66c65a8d98)
