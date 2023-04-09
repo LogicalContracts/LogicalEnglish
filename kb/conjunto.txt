@@ -7,7 +7,7 @@ los predicados son:
 	*una cosa* es un conjunto,
 	*una cosa* pertenece a *un conjunto*.
 
-la base de conocimiento conjuntos incluye:
+la base de conocimiento conjunto incluye:
 
 un conjunto A es un subconjunto de un conjunto B
     si el conjunto A es un conjunto
@@ -18,26 +18,26 @@ un conjunto A es un subconjunto de un conjunto B
     	la cosa pertenece a el conjunto B. 
 
 escenario hechos es:
-	familia uno es un conjunto.
-	familia dos es un conjunto.
+	la familia uno es un conjunto.
+	la familia dos es un conjunto.
 
-	Roberto pertenece a familia uno.
-	Alicia pertenece a familia uno.
+	Roberto pertenece a la familia uno.
+	Alicia pertenece a la familia uno.
    
-	Alicia pertenece a familia dos.
+	Alicia pertenece a la familia dos.
       
 la pregunta subconjunto es:
- 	cuál primer conjunto es un subconjunto de cuál segundo conjunto.
+ 	cuál conjunto es un subconjunto de cuál otro conjunto.
     
 escenario listas es:
 	[Alicia, Roberto] es un conjunto.
 	[Alicia] es un conjunto.
 
 	una cosa pertenece a un conjunto
-    	if la cosa is in el conjunto.
+    if la cosa is in el conjunto.
 ").
 
 /** <examples>
 ?- show prolog.
-?- responde subconjunto con hechos.
+?- responde dos con dos.
 */

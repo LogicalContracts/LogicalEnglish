@@ -27,7 +27,7 @@ escenario hechos es:
 	Alicia pertenece a la familia dos.
       
 la pregunta subconjunto es:
- 	cuál primer conjunto es un subconjunto de cuál segundo conjunto.
+ 	cuál conjunto es un subconjunto de cuál otro conjunto.
     
 escenario listas es:
 	[Alicia, Roberto] es un conjunto.

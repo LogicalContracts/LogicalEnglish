@@ -1,22 +1,12 @@
-# Latest (New LE EDITOR mode for VSC):
+# Logical English
 
-We are happy to announce that we are inviting for testing of the new LE editor mode for the Visual Studio Code Editor, VSC, developed by Nikolai Merritt, as his MSc project at Imperial College. The whole code is here:
+[Logical English](https://github.com/LogicalContracts/LogicalEnglish/), LE, is a controlled form of natural language that can be used for programming and knowledge representation. 
 
-[https://github.com/nikolaimerritt/LogicalEnglish](https://github.com/nikolaimerritt/LogicalEnglish)
-
-But the VSC extension can be obtained directly from within VSC. As the author explains: "Installing the extension is now very simple. Having installed Visual Studio Code, from the 'extensions' icon on the left bar, and search for "logical-english-vscode". (The extension comes up if you search for "logical english" or similar, but gets buried under lots of less new extensions.) It can also be found here [https://marketplace.visualstudio.com/items?itemName=NikolaiMerritt.logical-english-vscode](https://marketplace.visualstudio.com/items?itemName=NikolaiMerritt.logical-english-vscode)"
-
-We want to encourage our friends to test it and, if you are so kind, report the experiences here:
-
-[https://docs.google.com/forms/d/e/1FAIpQLSeYH3D_6Lc8F0DB7Z1lvqmRaqBgYYFqxr6NtFAgx1Ffa510Bw/viewform](https://docs.google.com/forms/d/e/1FAIpQLSeYH3D_6Lc8F0DB7Z1lvqmRaqBgYYFqxr6NtFAgx1Ffa510Bw/viewform)
-
-# TaxLog and Logical English projects - PRELIMINARY
-
-For more about TaxLog see [TaxLog.md](TaxLog.md) file.
+It can also be regarded as syntactic sugar for Prolog, even though there is no exact match between existing Prolog implementations and LE. We are still searching for the best and more natural expressions for some critical concepts in knowledge representations, such as types, functions and composite terms in general.
 
 For a general Introduction to Logical English, LE, (in PDF): [Handbook](le_handbook.pdf). 
 
-See this [video](https://vimeo.com/643589682) introducing Logical English
+Also, you can watch this [video](https://vimeo.com/643589682) introducing Logical English. 
 
 For a more formal description of LE: [le_syntax.md](le_syntax.md)
 
@@ -32,6 +22,36 @@ Initial copyright holders by country: LodgeIT (AU), AORA Law (UK), Bob Kowalski 
 
 Special thanks to: Andrew Noble, Chris Mennell and Bruce Mennell
 
+# Tools for Writers of Logical English
+
+## LE EDITOR mode extension for Visual Studio Editor
+
+We are happy to announce the new LE editor mode for the Visual Studio Code Editor, VSC, developed by Nikolai Merritt, as his MSc project at Imperial College. The whole code is here:
+
+[https://github.com/nikolaimerritt/LogicalEnglish](https://github.com/nikolaimerritt/LogicalEnglish)
+
+But the VSC extension can be obtained directly from within VSC. As the author explains: "Installing the extension is now very simple. Having installed Visual Studio Code, from the 'extensions' icon on the left bar, and search for "logical-english-vscode". (The extension comes up if you search for "logical english" or similar, but gets buried under lots of less new extensions.) It can also be found here [https://marketplace.visualstudio.com/items?itemName=NikolaiMerritt.logical-english-vscode](https://marketplace.visualstudio.com/items?itemName=NikolaiMerritt.logical-english-vscode)"
+
+We want to encourage our friends to test it and, if you are so kind, report the experiences to us. 
+
+## LE GUI extension to access a SWISH LE Server from Visual Studio Editor 
+
+This extension [le-ui](./le-ui/README.md) provides a user interface within the Visual Studio Editor, VSC, to translate LE documents and queries into Prolog code that it is executed on a SWISH server (defined in VSC settings). The interaction occurs through a "webview" that is displayed as a collapsible tab in the Explorer view of Visual Studio. It could also be displayed as a side tab in the editor view, using a right-click, contextual-menu option. Follow the link above for details. 
+
+# Courseware
+
+Work in progress: Visit this collection of [self-teaching content on Logical English](./le_courseware.md).
+
+# History of Development
+
+## TaxLog and LPS
+
+Taxlog was the first implementation of purpose-specific, syntactic sugar for Prolog, under the umbrella of Logical English. Taxlog is still one fo the intented target for LE. However, the current implementation is not being maintained. For more about TaxLog see the [TaxLog.md](TaxLog.md) file.
+
+There was also a preliminary experiment in the search for Logical English, but not with Prolog as target, but for [LPS](http://lps.doc.ic.ac.uk/). That translator is still functional and can be referred as and tested here: 
+
+Dávila, J.: Rock-Paper-Scissors [https://demo.logicalcontracts.com/p/rps-gets.pl](https://demo.logicalcontracts.com/p/rps-gets.pl) (2017).
+
 ## Projects using LE
 
 ### [Accziom.com](https://accziom.com/logical-english/)
@@ -40,6 +60,20 @@ Introduction and list of resources at [Advent of Logical English​​](https://
 
 ### [University of Bologna](https://legalmachinelab.unibo.it/logicalenglish/)
 
+The University of Bologna has actively supported the development of LE, in pursue of the following stages and objectives of development:
+
+#### Stage 1 
+
+1. Test the VSC editor mode and language server for LE and test its integration with SWISH. We adapted VSC so that this standalone server can interact with a SWISH server running the LE parser, via a JS API, to post, query and publish LE documents on the SWISH server. 
+
+#### Stage 2
+
+1. Migrate the current implementation of LE to a WebAssembly Platform
+2. Further explore and enhance its treatment of common nouns as types. Verify its application to legal concepts. 
+3. Refactor the error reporting system with feedback from users.
+4. Complete the integration of LE with sCASP, including the integration with its explanations. 
+5. Fix bugs and answer issues in this repository. 
+6. Examine extensions to capture deontic reasoning and conflicts of legal rules.  
 
 ## Development RoadMap
 
@@ -47,7 +81,7 @@ Introduction and list of resources at [Advent of Logical English​​](https://
 2. *TESTING NOW* a. **Store LE translation as a prolog or a s(CASP) file** to be injected into SWISH storage (to appear in the SWISH file list).
 3. **Add a facility to name rules**, initially to refer to them in the explainer, but eventually to incorporate naming of rules with rule priorities, to deal with hierarchies of rules and exceptions. Note that the resulting implementation of defeasibility can be accomplished either by means of a meta-interpreter, or by compiling rule priorities into lower-level Prolog rules with explicit negative conditions.
 4. *TESTING NOW* **Add a facility for naming and combining knowledge bases**, with a view to obtaining some of the functionality of object-oriented systems, including inheritance and overriding.
-5. b. **Develop an editor for LE** with syntax and semantic highlighting, and error detection, as a separate editor project, preferably on JS Codemirror, using simple pengine calls to a SWISH server to assist the editing, and convert to different formats. 
+5. *TESTING NOW* b. **Develop an editor for LE** with syntax and semantic highlighting, and error detection, as a separate editor project, preferably on JS Codemirror, using simple pengine calls to a SWISH server to assist the editing, and convert to different formats. 
 6. c. AFTER (b) is done, add .le as a valid SWISH file type.
 7. **Add a treatment of common nouns as types**.
 8. Update older examples into the new syntax extensions. 
@@ -76,7 +110,6 @@ Introduction and list of resources at [Advent of Logical English​​](https://
 14. [permitted that](./kb/permitted%20that.pl) Example with metavariables. 
 15. [minicontractv2](./kb/minicontractv2.pl) A proposed format for an electronic contract. 
 
-
 ##  <a name='Releases'></a>Release Notes
 
 - [2022-05-12] Beta testing. Previous version [97abce7d4398f05c1f165e4a411a982b16f358bd](https://github.com/LogicalContracts/LogicalEnglish/commit/97abce7d4398f05c1f165e4a411a982b16f358bd)
@@ -101,6 +134,3 @@ Introduction and list of resources at [Advent of Logical English​​](https://
 	- Changes for error reporting inside conditions.
 	- New examples. 
 	
-
-
-

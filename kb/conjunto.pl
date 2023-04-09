@@ -17,27 +17,24 @@ un conjunto A es un subconjunto de un conjunto B
         es el caso que
     	la cosa pertenece a el conjunto B. 
 
-escenario uno es:
+escenario hechos es:
 	familia uno es un conjunto.
 	familia dos es un conjunto.
+
 	Roberto pertenece a la familia uno.
 	Alicia pertenece a la familia uno.
    
 	Alicia pertenece a la familia dos.
       
-la pregunta uno es:
- 	cuál primera familia es un subconjunto de cuál segunda familia.
+la pregunta subconjunto es:
+ 	cuál conjunto es un subconjunto de cuál otro conjunto.
     
-escenario dos es:
+escenario listas es:
 	[Alicia, Roberto] es un conjunto.
 	[Alicia] es un conjunto.
 
 	una cosa pertenece a un conjunto
     if la cosa is in el conjunto.
-    
-la pregunta dos es:
- 	cuál conjunto es un subconjunto de cuál segundo conjunto.
- 
 ").
 
 /** <examples>
