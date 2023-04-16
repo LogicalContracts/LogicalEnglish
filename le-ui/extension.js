@@ -155,7 +155,8 @@ class LEViewProvider { //extends vscode.WebviewViewProvider {
 							currentFile = filename.substring(filename.lastIndexOf('/')+1, filename.lastIndexOf('.'));
 							le_string = 'en(\"'+source+'\")'
 							currentQuery = "\'"+message.text+"\'";
-							console.log('Query being processed', currentQuery)
+							console.log('Query being processed', currentQuery);
+							//console.log('Query being processed', currentQuery, ' on ', le_string);
 							runPengine(webviewView, currentFile, le_string, currentQuery, currentScenario)
 						} else {
 							//console.log('no source selected')
@@ -243,12 +244,13 @@ async function runPengine(currentWebView, filename, le_string, query, scenario) 
 	});
 
 	function handleCreate() {
-		console.log('creating runningPengine')
+		console.log('creating runningPengine ->'+le_string+'<-');
 		//runningPengine.ask(`le_taxlog_translate( ${le_string}, File, BaseLine, Terms)`);
 		//console.log("le_answer:parse_and_query_and_explanation("+filename+", "+le_string+", "+query+", with("+scenario+"), Answer)");
 		runningPengine.ask("le_answer:parse_and_query_and_explanation("+filename+", "+le_string+", "+query+", with("+scenario+"), Answer)");
 		//runningPengine.ask("parse_and_query(1, 2, 3, with(4), Answer)", []);
 		//pengine.ask('listing')
+		console.log('Pengine created');
 	}
 	// function handlePrompt() {
 	// 	runningPengine.input(prompt(this.data));

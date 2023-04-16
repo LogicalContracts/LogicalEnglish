@@ -1,6 +1,4 @@
-:- module('012_subset+http://tests.com',[]).
-
-en("the target language is: prolog.
+the target language is: prolog.
 
 the templates are:
 	*a set* is a subset of *a set*,
@@ -28,20 +26,4 @@ scenario one is:
 query one is:
  	which first family is a subset of which second family.
     
-scenario two is:
-	[Alice, Bob] is a set.
-	[Alice] is a set.
 
-	a thing belongs to a set
-    if the thing is in the set.
-    
-query two is:
- 	which set is a subset of which other set.
-   
-").
-
-/** <examples>
-?- answer one with one.
-?- show prolog.
-?- answer two with two.
-*/

@@ -61,7 +61,7 @@ explanationLEHTML(u(G,Ref,_,_,_,[]),[li(title="Unknown",["~w ?"-[NG],Navigator])
     clauseNavigator(Ref,Navigator).
 %explanationHTML(unknown(at(G,K)),[li([style="color:blue",title="Unknown"],a(href=K,"~w"-[G]))]).
 % explanationHTML(unknown(at(G,K)),[li([p("UNKNOWN: ~w"-[G]),p(i(K))])]).
-explanationLEHTML(f(G,Ref,_,_,_,C),[li(title="Failed goal",[span(style="color:red","There is no enough evidence that: ~w ~~"-[NG]),Navigator]), Because, ul(CH)]) :- 
+explanationLEHTML(f(G,Ref,_,_,_,C),[li(title="Failed goal",[span(style="color:red","There is no evidence that: ~w ~~"-[NG]),Navigator]), Because, ul(CH)]) :- 
     niceModule(G,NG),
     clauseNavigator(Ref,Navigator), explanationLEHTML(C,CH), 
     %print_message(informational, "G vs C: ~w .. ~w ... ~w"-[G, C, CH]), 
