@@ -244,7 +244,7 @@ async function runPengine(currentWebView, filename, le_string, query, scenario) 
 	});
 
 	function handleCreate() {
-		console.log('creating runningPengine ->'+le_string+'<-');
+		//console.log('creating runningPengine ->'+le_string+'<-');
 		//runningPengine.ask(`le_taxlog_translate( ${le_string}, File, BaseLine, Terms)`);
 		//console.log("le_answer:parse_and_query_and_explanation("+filename+", "+le_string+", "+query+", with("+scenario+"), Answer)");
 		runningPengine.ask("le_answer:parse_and_query_and_explanation("+filename+", "+le_string+", "+query+", with("+scenario+"), Answer)");

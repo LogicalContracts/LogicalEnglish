@@ -208,7 +208,7 @@ answer(English, Arg, EnglishAnswer) :- %trace,
     % extract_goal_command(Goal, SwishModule, _InnerGoal, Command),
     % (Scenario==noscenario -> Facts = [] ; SwishModule:example(Scenario, [scenario(Facts, _)])), 
     %module(SwishModule), 
-    print_message(informational, "Calling ~w with ~w on ~w "-[Command, Facts, SwishModule]), 
+    %print_message(informational, "Calling ~w with ~w on ~w "-[Command, Facts, SwishModule]), 
     setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
             catch_with_backtrace(Command, Error, print_message(error, Error)), 
             %catch(Command, Error, ( print_message(error, Error), fail ) ), 
@@ -263,10 +263,10 @@ prepare_query(English, Arg, SwishModule, Goal, Facts, Command) :- %trace,
     translate_goal_into_LE(CopyOfGoal, RawGoal), name_as_atom(RawGoal, EnglishQuestion), 
     ((Arg = with(ScenarioName), PreScenario=noscenario) -> Scenario=ScenarioName; Scenario=PreScenario),
     show_question(GoalName, Scenario, EnglishQuestion), 
-    print_message(informational, "Scenario: ~w"-[Scenario]),
+    %print_message(informational, "Scenario: ~w"-[Scenario]),
     (Scenario==noscenario -> Facts = [] ; 
         (SwishModule:example(Scenario, [scenario(Facts, _)]) -> 
-            true;  print_message(error, "prepare_query: Scenario: ~w does not exist"-[Scenario]))),
+            true;  print_message(error, "Scenario: ~w does not exist"-[Scenario]))),
     %print_message(informational, "Facts: ~w"-[Facts]), 
     extract_goal_command(Goal, SwishModule, _InnerGoal, Command), !.   
     %print_message(informational, "Command: ~w"-[Command]). 
@@ -286,13 +286,13 @@ prepare_query(English, Arg, SwishModule, Goal, Facts, Command) :- %trace,
     %print_message(informational, "prepare_query (3): Scenario: ~w"-[Scenario]), 
     (Scenario==noscenario -> Facts = [] ; 
         (SwishModule:example(Scenario, [scenario(Facts, _)]) -> 
-            true;  print_message(error, "prepare_query: Scenario: ~w does not exist"-[Scenario]))), 
+            true;  print_message(error, "Scenario: ~w does not exist"-[Scenario]))), 
     %print_message(informational, "prepare_query (4): Facts: ~w Goal: ~w Module: ~w\n "-[Facts, Goal, SwishModule]),  
     extract_goal_command(Goal, SwishModule, _InnerGoal, Command), !.
     %print_message(informational, "prepare_query (5): Ready from ~w the command ~w\n"-[English, Command]).  
 
 prepare_query(English, _, _, _, _, _) :- 
-    print_message(error, "prepare_query: Don't understand this question: ~w "-[English]). 
+    print_message(error, "Don't understand this question: ~w "-[English]). 
 
 show_question(GoalName, Scenario, NLQuestion) :- (this_capsule(M); current_module(M)),   
     (M:source_lang(en) -> print_message(informational, "Query ~w with ~w: ~w"-[GoalName, Scenario, NLQuestion]); true),

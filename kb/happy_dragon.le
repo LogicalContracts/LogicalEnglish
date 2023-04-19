@@ -5,35 +5,35 @@ the templates are:
 *a dragon* is a parent of *a dragon*.
 *a dragon* is healthy.
 *a dragon* is happy.
-*a creature* is a dragon. 
+*a creature* is a dragon.
+
 
 the knowledge base dragon includes:
 
-a dragon smokes if 
-an other dragon is a parent of the dragon
-and the other dragon smokes.
+A creature smokes if 
+    an other creature is a parent of the creature
+    and the other creature is a dragon
+    and the other creature smokes.
 
 A creature is healthy 
     if the creature is a dragon
     and it is not the case that
     the creature smokes.
 
-A dragon is happy 
-if the dragon is a dragon
-and for all cases in which 
-the dragon is a parent of an other dragon
-it is the case that 
-the other dragon is healthy.
+A creature is happy 
+    if the creature is a dragon
+    and for all cases in which 
+        the creature is a parent of an other creature
+        it is the case that 
+        the other creature is healthy.
 
-scenario one is:
-
-bob is a dragon.
-alice is a dragon.
-alice is a parent of bob.
+scenario smoky is:
+    bob is a dragon.
+    alice is a dragon.
+    alice is a parent of bob.
 
 query happy is:
-
-which dragon is happy.
+    which dragon is happy.
 
 query healthy is:
-which dragon is healthy.
+    which dragon is healthy.

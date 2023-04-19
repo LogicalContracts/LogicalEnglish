@@ -1,11 +1,13 @@
-the target language is: prolog.
+:- module('subset',[]).
+
+en("the target language is: prolog.
 
 the templates are:
     *a set* is a subset of *a set*,
     *a thing* is a set,
     *a thing* belongs to *a set*.
 
-the knowledge base subset includes:
+the knowledge base sets includes:
 
 a set A is a subset of a set B
     if A is a set
@@ -33,4 +35,10 @@ scenario lists is:
 
     a thing belongs to a set
         if the thing is in the set.
+").
 
+/** <examples>
+?- answer subset with facts.
+?- answer subset with lists.
+?- show prolog.
+*/
