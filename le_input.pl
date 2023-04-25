@@ -739,15 +739,6 @@ condition(not(Conds), _, Map1, MapN) -->
 condition(Cond, _, Map1, MapN) -->  
     literal_(Map1, MapN, Cond), !. 
 
-%condition(assert(Prolog), _, Map1, MapN) -->
-%    this_information_, !, prolog_literal_(Prolog, Map1, MapN), has_been_recorded_. 
-
-% condition(-Cond, ?Ind, +InMap, -OutMap)
-% builtins have been included as predefined templates in the predef_dict
-%condition(InfixBuiltIn, _, Map1, MapN) --> 
-%    term_(Term, Map1, Map2), spaces_or_newlines(_), builtin_(BuiltIn), 
-%    spaces_or_newlines(_), expression_(Expression, Map2, MapN), !, {InfixBuiltIn =.. [BuiltIn, Term, Expression]}. 
-
 % error clause
 condition(_, _Ind, Map, Map, Rest, _) :- 
         asserterror('LE error found at a condition ', Rest), fail.
@@ -786,7 +777,7 @@ predicate_name_(Predicate) --> extract_constant([], NameWords), { name_predicate
 at_time(T, Map1, MapN) --> spaces_or_newlines(_), at_, expression_(T, Map1, MapN), spaces_or_newlines(_).
 
 spaces(N) --> [' '], !, spaces(M), {N is M + 1}.
-% todo: reach out for codemirror's configuration https://codemirror.net/doc/manual.html for tabSize
+% todo: reach out for codemirror s configuration https://codemirror.net/doc/manual.html for tabSize
 spaces(N) --> ['\t'], !, spaces(M), {N is M + 4}. % counting tab as four spaces (default in codemirror)
 spaces(0) --> []. 
 
@@ -849,8 +840,8 @@ times_ --> ['*'], spaces(_).
 bracket_open_ --> [A], spaces(_), {atom_string(A, "[")}.
 bracket_close --> [A], spaces(_), {atom_string(A, "]")}. 
 
-parentesis_open_ --> ['('], spaces(_).
-parentesis_close_ --> [A], spaces(_), {atom_string(A, ")")}. 
+parenthesis_open_ --> ['('], spaces(_).
+parenthesis_close_ --> [A], spaces(_), {atom_string(A, ")")}. 
 
 this_information_ --> [this], spaces(_), [information], spaces(_).
 
@@ -1110,7 +1101,7 @@ list_words_to_codes([Word|RestW], Out) :-
 
 remove_quotes([], []) :-!.
 remove_quotes([39|RestI], RestC) :- remove_quotes(RestI, RestC), !.
-% quick fix to remove parentesis and numbers too. 
+% quick fix to remove parentheses and numbers too. 
 remove_quotes([40, _, 41|RestI], RestC) :- remove_quotes(RestI, RestC), !.
 %remove_quotes([41|RestI], RestC) :- remove_quotes(RestI, RestC), !.
 remove_quotes([C|RestI], [C|RestC]) :- remove_quotes(RestI, RestC). 
@@ -1336,7 +1327,7 @@ match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, [Expression|Re
     var(Element), stop_words(RestElements, StopWords),
     %print_message(informational, [Word|PossibleLiteral]),
     extract_expression([','|StopWords], NameWords, [Word|PossibleLiteral], NextWords), NameWords \= [],
-    %print_message(informational, "Expression? ~w"-[NameWords]),
+    % print_message(informational, "Expression? ~w"-[NameWords]),
     % this expression cannot add variables 
     ( phrase(expression_(Expression, Map1, _), NameWords) -> true ; ( name_predicate(NameWords, Expression) ) ),
     %print_message(informational, 'found a constant or an expression '), print_message(informational, Expression),
@@ -1365,23 +1356,29 @@ expression_(Float, Map, Map) --> [AtomNum,'.',AtomDecimal],
         { atom(AtomNum), atom(AtomDecimal), atomic_list_concat([AtomNum,'.',AtomDecimal], Atom), atom_number(Atom, Float) }, !.
 % mathematical expressions
 expression_(InfixBuiltIn, Map1, MapN) --> 
-    %{print_message(informational, "Binary exp map ~w"-[Map1])}, 
-    {op_stop(Stop)}, term_(Stop, Term, Map1, Map2), spaces(_), binary_op(BuiltIn), !, 
-    %{print_message(informational, "Binary exp first term ~w and op ~w"-[Term, BuiltIn])}, 
+    {op_stop(Stop)}, %{print_message(informational, "Stop at ~w"-[Stop])},
+    term_(Stop, Term, Map1, Map2), spaces(_), 
+    binary_op(BuiltIn),
     spaces(_), expression_(Expression, Map2, MapN), spaces(_), 
-    {InfixBuiltIn =.. [BuiltIn, Term, Expression]}. %, print_message(informational, "Binary exp ~w"-InfixBuiltIn)}.  
+    !,  
+    %{print_message(informational, "Term ~w and BuiltIn ~w and Expression ~w"-[Term, BuiltIn, Expression])},
+    { InfixBuiltIn=..[BuiltIn, Term, Expression] }. %,  
+    %print_message(informational, " ~w  ~w  ~w with map ~w "-[Term, BuiltIn, Expression, MapN]) }. % , 
+% signed Value
+expression_(SignedExpression, Map1, MapN) -->  % disregarding + for the time being
+    %{print_message(informational, " minus something ~w"-[Map1])}, 
+    minus_, spaces(_), expression_(Expression, Map1, MapN), spaces(_), !,
+    {SignedExpression =.. [(-), Expression]}. 
+% parentheses expression
+expression_(Expression, Map1, MapN) --> 
+    parenthesis_open_, spaces(_), expression_(Expression, Map1, MapN), spaces(_), parenthesis_close_, !. %,{print_message(informational, " parentheses (~w)"-[Expression])}.      
 % a quick fix for integer numbers extracted from atoms from the tokenizer
 expression_(Number, Map, Map) --> [Atom],  spaces(_), { atom(Atom), atom_number(Atom, Number) }, !. 
-expression_(Var, Map1, Map2) -->  {op_stop(Stop)}, variable(Stop, Var, Map1, Map2),!.%, {print_message(informational, "Just var ~w"-Var)}, 
-expression_(Constant, Map1, Map2) -->  {op_stop(Stop)}, constant(Stop, Constant, Map1, Map2).%, {print_message(informational, "Constant ~w"-Constant)}.     
+expression_(Var, Map1, Map2) -->  {op_stop(Stop)}, variable(Stop, Var, Map1, Map2),!.
+expression_(Constant, Map1, Map2) -->  {op_stop(Stop)}, constant(Stop, Constant, Map1, Map2). %, {print_message(informational, "Constant Expression ~w"-Constant)}.     
 % error clause
-expression(_, _, _, Rest, _) :- 
+expression_(_, _, _, Rest, _) :- 
     asserterror('LE error found in an expression ', Rest), fail.
-
-% only one word operators
-%binary_op(Op) --> [Op], { atom(Op), current_op(_Prec, Fix, Op),
-%    Op \= '.',
-%    (Fix = 'xfx'; Fix='yfx'; Fix='xfy'; Fix='yfy') }.
 
 % operators with any amout of words/symbols
 % binary_op/3
@@ -1391,7 +1388,7 @@ binary_op(Op, In, Out) :-
 
 % very inefficient. Better to compute and store. See below
 op_tokens(Op, OpTokens) :-
-    current_op(_Prec, Fix, Op), Op \= '.',
+    current_op(_Prec, Fix, Op), Op \= '.', % Regenerate response
     (Fix = 'xfx'; Fix='yfx'; Fix='xfy'; Fix='yfy'),
     term_string(Op, OpString), tokenize(OpString, Tokens, [cased(true), spaces(true), numbers(false)]),
     unpack_tokens(Tokens, OpTokens).
@@ -1399,21 +1396,22 @@ op_tokens(Op, OpTokens) :-
 % findall(op2tokens(Op, OpTokens, OpTokens), op_tokens(Op, OpTokens), L), forall(member(T,L), (write(T),write('.'), nl)).
 % op2tokens(+Operator, PrologTokens, sCASPTokens)
 % op2tokens/3
-op2tokens(is_not_before,[is_not_before],[is_not_before]).
-op2tokens(of,[of],[of]).
-op2tokens(if,[if],[if]).
-op2tokens(then,[then],[then]).
-op2tokens(must,[must],[must]).
-op2tokens(on,[on],[on]).
-op2tokens(because,[because],[because]).
-op2tokens(and,[and],[and]).
-op2tokens(in,[in],[in]).
-op2tokens(or,[or],[or]).
-op2tokens(at,[at],[at]).
-op2tokens(before,[before],[before]).
-op2tokens(after,[after],[after]).
-op2tokens(else,[else],[else]).
-op2tokens(with,[with],[with]).
+% disengaging any expression seemingly in natural language
+%op2tokens(is_not_before,[is_not_before],[is_not_before]).
+%op2tokens(of,[of],[of]).
+%op2tokens(if,[if],[if]).
+%op2tokens(then,[then],[then]).
+%op2tokens(must,[must],[must]).
+%op2tokens(on,[on],[on]).
+%op2tokens(because,[because],[because]).
+%op2tokens(and,[and],[and]).
+%op2tokens(in,[in],[in]).
+%op2tokens(or,[or],[or]).
+%op2tokens(at,[at],[at]).
+%op2tokens(before,[before],[before]).
+%op2tokens(after,[after],[after]).
+%op2tokens(else,[else],[else]).
+%op2tokens(with,[with],[with]).
 op2tokens(::,[:,:],[:,:]).
 op2tokens(->,[-,>],[-,>]).
 op2tokens(:,[:],[:]).
@@ -1423,12 +1421,12 @@ op2tokens(==,[=,=],[=,=]).
 op2tokens(:-,[:,-],[:,-]).
 op2tokens(/\,[/,\],[/,\]).
 op2tokens(=,[=],[=]).
-op2tokens(rem,[rem],[rem]).
-op2tokens(is,[is],[is]).
+%op2tokens(rem,[rem],[rem]).
+%op2tokens(is,[is],[is]).
 op2tokens(=:=,[=,:,=],[=,:,=]).
 op2tokens(=\=,[=,\,=],[=,\,=]).
 op2tokens(xor,[xor],[xor]).
-op2tokens(as,[as],[as]).
+%op2tokens(as,[as],[as]).
 op2tokens(rdiv,[rdiv],[rdiv]).
 op2tokens(>=,[>,=],[>,=]).
 op2tokens(@<,[@,<],[@,<]).
@@ -1468,30 +1466,31 @@ op2tokens(-->,[-,-,>],[-,-,>]).
 op_stop_words(Words) :-
     op_stop(Words) -> true; (    
         findall(Word, 
-            (current_op(_Prec, _, Op), Op \= '.', % don't include the period!
+            (current_op(_Prec, _, Op), Op \= '.', % dont include the period!
             term_string(Op, OpString), 
             tokenize(OpString, Tokens, [cased(true), spaces(true), numbers(false)]),
             unpack_tokens(Tokens, [Word|_])), Words), % taking only the first word as stop word 
         assertz(op_stop(Words))
         ), !. 
 
-op_stop([ (on), 
-        (because),
-        (is_not_before),
-        (not),
-        (before),
-        (and),
-        (or),
-        (at),
+% disengaging any word or phrase in natural language
+op_stop([ 
+        %(on), 
+        %(because),
+        %(is_not_before),
+        %(not),
+        %(before),
+        %(and),
+        %(or),
+        %(at),
         (html_meta),
-        (after),
-        (in),
-        (else),
+        %(after),
+        %(in),
+        %(else),
         (+),
-        (then),
-        (must),
-        (if),
-        (if),
+        %(then),
+        %(must),
+        %(if),
         ($),
         (\),
         (=),
@@ -1503,8 +1502,8 @@ op_stop([ (on),
         (:),
         (rem),
         (\),
-        (table),
-        (initialization),
+        %(table),
+        %(initialization),
         (rdiv),
         (/),
         (>),
@@ -1513,11 +1512,8 @@ op_stop([ (on),
         (=),
         (;),
         %(as),
-        (is),
+        %(is),
         (=),
-        @,
-        @,
-        @,
         @,
         (\),
         (thread_local),
@@ -1528,34 +1524,29 @@ op_stop([ (on),
         '\'',
         (=),
         (\),
-        (\),
-        (+),
         (+),
         (:),
         (>),
         (div),
-        (discontiguous),
+        %(discontiguous),
         (<),
         (/),
-        (meta_predicate),
+        %(meta_predicate),
         (=),
         (-),
-        (-),
-        (volatile),
-        (public),
-        (-),
-        (:),
+        %(volatile),
+        %(public),
         (:),
         (*),
         ?,
         (/),
         (*),
         (-),
-        (multifile),
-        (dynamic),
+        %(multifile),
+        %(dynamic),
         (mod),
-        (^),
-        (module_transparent)
+        (^)
+        %(module_transparent)
       ]).
 
 stop_words([], []).
@@ -1565,6 +1556,9 @@ stop_words([Word|_], []) :- var(Word).
 % list_symbol/1: a symbol specific for list that can be used as stop word for others
 list_symbol('[').
 list_symbol(']'). 
+
+parenthesis('(').
+parenthesis(')'). 
 
 extract_literal(_, [], [], []) :- !. 
 extract_literal(StopWords, [],  [Word|RestOfWords],  [Word|RestOfWords]) :-
@@ -1623,7 +1617,7 @@ extract_variable(SW, InName, [Word|OutName], InType, [Word|OutType], [Word|RestO
 % it does not stop at reserved words!
 extract_expression(_, [], [], []) :- !.                                % stop at when words run out
 extract_expression(StopWords, [], [Word|RestOfWords], [Word|RestOfWords]) :-   % stop at  verbs? or prepositions?. 
-    (member(Word, StopWords); that_(Word); list_symbol(Word); phrase(newline, [Word])), !.  
+    (member(Word, StopWords); that_(Word); list_symbol(Word); parenthesis(Word), phrase(newline, [Word])), !.  
 %extract_expression([Word|RestName], [Word|RestOfWords], NextWords) :- % ordinals are not part of the name
 %    ordinal(Word), !,
 %    extract_constant(RestName, RestOfWords, NextWords).
@@ -1641,7 +1635,7 @@ extract_expression(SW, [Word|RestName], [Word|RestOfWords],  NextWords) :-
 extract_constant(_, [], [], []) :- !.                                % stop at when words run out
 extract_constant(StopWords, [], [Word|RestOfWords], [Word|RestOfWords]) :-   % stop at reserved words, verbs? or prepositions?. 
     %(member(Word, StopWords); reserved_word(Word); verb(Word); preposition(Word); punctuation(Word); phrase(newline, [Word])), !.  % or punctuation
-    (member(Word, StopWords); that_(Word); list_symbol(Word); punctuation(Word); phrase(newline, [Word])), !.
+    (member(Word, StopWords); that_(Word); list_symbol(Word); parenthesis(Word); punctuation(Word); phrase(newline, [Word])), !.
 %extract_constant([Word|RestName], [Word|RestOfWords], NextWords) :- % ordinals are not part of the name
 %    ordinal(Word), !,
 %    extract_constant(RestName, RestOfWords, NextWords).

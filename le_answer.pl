@@ -436,7 +436,7 @@ scenario_or_empty_ --> spaces(_).
  
 % show/1
 show(prolog) :-
-    print_message(informational, "About to show prolog code"), 
+    %print_message(informational, "About to show prolog code"), 
     show(metarules), 
     show(rules),
     show(queries),
