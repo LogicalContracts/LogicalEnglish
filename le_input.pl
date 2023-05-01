@@ -96,7 +96,7 @@ query three is:
     op(1150, fx, abducible),
     dictionary/3, meta_dictionary/3, dict/3, meta_dict/3,
     parsed/0, source_lang/1, including/0, just_saved_scasp/2,
-    this_capsule/1, tokenize/3, unpack_tokens/2, clean_comments/2,
+    this_capsule/1, unpack_tokens/2, clean_comments/2,
     query_/2, extract_constant/4, spaces/3, name_as_atom/2, process_types_or_names/4,
     matches_name/4, matches_type/4, delete_underscore/2, add_determiner/2, proper_det/2,
     portray_clause_ind/1, order_templates/2, process_types_dict/2,

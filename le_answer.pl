@@ -74,6 +74,8 @@ which can be used on the new command interface of LE on SWISH
 :- use_module('syntax.pl').
 :- use_module('api.pl'). 
 :- use_module('reasoner.pl'). 
+:- use_module('./tokenize/prolog/tokenize.pl').
+
 
 % html libs
 :- use_module(library(http/html_write)).
