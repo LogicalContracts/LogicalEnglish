@@ -127,7 +127,7 @@ query three is:
 text_to_logic(String_, Translation) :-
     % hack to ensure a newline at the end, for the sake of error reporting:
     ((sub_atom(String_,_,1,0,NL), memberchk(NL,['\n','\r']) ) -> String=String_ ; atom_concat(String_,'\n',String)),
-    tokenize(String, Tokens, [cased(true), spaces(true), numbers(false)]),
+    tokenize(String, Tokens, [cased(true), spaces(true), numbers(true)]),
     retractall(last_nl_parsed(_)), asserta(last_nl_parsed(1)), % preparing line counting
     unpack_tokens(Tokens, UTokens), 
     clean_comments(UTokens, CTokens), !, 
@@ -1352,8 +1352,9 @@ expression_(DateInSeconds, Map, Map) -->
 expression_(DateInSeconds, Map, Map) -->  [Year,'-', Month, '-', Day],  spaces(_),
     { concat_atom([Year, Month, Day], '', Date), parse_time(Date, DateInSeconds) }, !. 
 % basic float  extracted from atoms from the tokenizer
-expression_(Float, Map, Map) --> [AtomNum,'.',AtomDecimal],
-        { atom(AtomNum), atom(AtomDecimal), atomic_list_concat([AtomNum,'.',AtomDecimal], Atom), atom_number(Atom, Float) }, !.
+%expression_(Float, Map, Map) --> [AtomNum,'.',AtomDecimal],
+%        { atom(AtomNum), atom(AtomDecimal), atomic_list_concat([AtomNum,'.',AtomDecimal], Atom), atom_number(Atom, Float) }, !.
+expression_(Number, Map, Map) --> [Number], {number(Number)}. 
 % mathematical expressions
 expression_(InfixBuiltIn, Map1, MapN) --> 
     {op_stop(Stop)}, %{print_message(informational, "Stop at ~w"-[Stop])},
