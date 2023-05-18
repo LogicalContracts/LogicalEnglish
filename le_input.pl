@@ -116,6 +116,7 @@ query three is:
 
 :- use_module('reasoner.pl').
 :- use_module(library(prolog_stack)).
+:- table addExp//2, mulExp//2.
 :- thread_local text_size/1, error_notice/4, dict/3, meta_dict/3, example/2, local_dict/3, local_meta_dict/3,
                 last_nl_parsed/1, kbname/1, happens/2, initiates/3, terminates/3, is_type/1, is_/2, 
                 predicates/1, events/1, fluents/1, metapredicates/1, parsed/0, source_lang/1, including/0, just_saved_scasp/2. 
@@ -145,7 +146,7 @@ document(Translation, In, Rest) :-
     (parsed -> retractall(parsed); true), 
     (including -> retract(including); true), 
     (source_lang(_L) -> retractall(source_lang(_)) ; true),
-    phrase(header(Settings), In, AfterHeader), !, %print_message(informational, "Declarations completed: ~w"-[Settings]), 
+    phrase(header(Settings), In, AfterHeader), !, %print_message(informational, "Declarations completed: ~w"-[Settings]),
     phrase(content(Content), AfterHeader, Rest), 
     append(Settings, Content, Original), !,
     append(Original, [if(is_(A,B), (nonvar(B), is(A,B)))], Translation), % adding def of is_2 last!  
@@ -750,14 +751,16 @@ modifiers(MainExpression, Map1, MapN, on(MainExpression, Var) ) -->
 modifiers(MainExpression, Map, Map, MainExpression) --> [].  
 
 % variable/4 or /6
-variable(StopWords, Var, Map1, MapN) --> 
+variable(StopWords, Var, Map1, MapN) --> variable_declaration(StopWords, Var, Map1, MapN).
+variable(StopWords, Var, Map1, MapN) --> variable_invocation(StopWords, Var, Map1, MapN).
+variable_declaration(StopWords, Var, Map1, MapN) --> 
     spaces(_), indef_determiner, extract_variable(StopWords, [], NameWords, [], _), % <-- CUT!
     {  NameWords\=[], name_predicate(NameWords, Name), update_map(Var, Name, Map1, MapN) }. 
-variable(StopWords, Var, Map1, MapN) --> 
+variable_invocation(StopWords, Var, Map1, MapN) --> 
     spaces(_), def_determiner, extract_variable(StopWords, [], NameWords, [], _), % <-- CUT!
     {  NameWords\=[], name_predicate(NameWords, Name), consult_map(Var, Name, Map1, MapN) }. 
-% allowing for symbolic variables: 
-variable(StopWords, Var, Map1, MapN) --> 
+% allowing for symbolic variables(must not be a number)
+variable_invocation(StopWords, Var, Map1, MapN) --> 
     spaces(_), extract_variable(StopWords, [], NameWords, [], _),
     {  NameWords\=[], name_predicate(NameWords, Name), consult_map(Var, Name, Map1, MapN) }. 
 
@@ -774,7 +777,7 @@ predicate_name_(Module:Predicate) -->
     [Module], colon_, extract_constant([], NameWords), { name_predicate(NameWords, Predicate) }, !.
 predicate_name_(Predicate) --> extract_constant([], NameWords), { name_predicate(NameWords, Predicate) }.
 
-at_time(T, Map1, MapN) --> spaces_or_newlines(_), at_, expression_(T, Map1, MapN), spaces_or_newlines(_).
+at_time(T, Map1, _MapN) --> spaces_or_newlines(_), at_, expression(T, Map1), spaces_or_newlines(_).
 
 spaces(N) --> [' '], !, spaces(M), {N is M + 1}.
 % todo: reach out for codemirror s configuration https://codemirror.net/doc/manual.html for tabSize
@@ -1211,7 +1214,7 @@ match_template(PossibleLiteral, Map1, MapN, Literal) :-
     match(Candidate, PossibleLiteral, Map1, MapN, Template), !, 
     dictionary(Predicate, _, Template), 
     Literal =.. Predicate.
-    %print_message(informational,'Match!! with ~w'-[Literal]).% !. 
+    %print_message(informational,'Match!! with ~w ~w ~w ~w ~w ~w'-[PossibleLiteral, Literal, Map1, MapN, Candidate, Template]).% !. 
 
 % meta_match/5
 % meta_match(+CandidateTemplate, +PossibleLiteral, +MapIn, -MapOut, -SelectedTemplate)
@@ -1272,7 +1275,7 @@ meta_match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, [Expressi
     var(Element), stop_words(RestElements, StopWords),
     extract_expression([','|StopWords], NameWords, [Word|PossibleLiteral], NextWords), NameWords \= [],
     % this expression cannot add variables 
-    ( phrase(expression_(Expression, Map1, Map1), NameWords) -> true ; ( name_predicate(NameWords, Expression) ) ),
+    ( phrase(expression(Expression, Map1), NameWords) -> true ; ( name_predicate(NameWords, Expression) ) ),
     %print_message(informational, 'found a constant or an expression '), print_message(informational, Expression),
     meta_match(RestElements, NextWords, Map1, MapN, RestSelected). 
 
@@ -1325,61 +1328,61 @@ match([Element|RestElements], ['['|PossibleLiteral], Map1, MapN, [List|RestSelec
 % enabling expressions and constants
 match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, [Expression|RestSelected]) :-
     var(Element), stop_words(RestElements, StopWords),
-    %print_message(informational, [Word|PossibleLiteral]),
+    % print_message(informational, "match RestElements ~w StopWords: ~w"-[RestElements, StopWords]),
     extract_expression([','|StopWords], NameWords, [Word|PossibleLiteral], NextWords), NameWords \= [],
-    % print_message(informational, "Expression? ~w"-[NameWords]),
     % this expression cannot add variables 
-    ( phrase(expression_(Expression, Map1, _), NameWords) -> true ; ( name_predicate(NameWords, Expression) ) ),
+    ( phrase(expression(Expression, Map1), NameWords) -> true ; name_predicate(NameWords, Expression)
+        %print_message(informational, "Expression phrase failed ~w Map1 ~w"-[Expression, Map1]) 
+    ),
     %print_message(informational, 'found a constant or an expression '), print_message(informational, Expression),
-    match(RestElements, NextWords, Map1, MapN, RestSelected). 
+    match(RestElements, NextWords, Map1, MapN, RestSelected).
+    %print_message(informational, "Expression? ~w NameWords: ~w NextWords: ~w PossibleLiteral: ~w"-[Expression, NameWords, NextWords, PossibleLiteral]). 
 
 correct_list([], []) :- !. 
 correct_list([A,B], [A,B]) :- atom(B), !. % not(is_list(B)), !. 
 correct_list([A,B], [A|B] ) :- !. 
 correct_list([A|B], [A|NB]) :- correct_list(B, NB). 
 
-% expression/3 or /5
-%expression_(List, MapIn, MapOut) --> list_(List, MapIn, MapOut), !. 
-% expression_ resolve simple math (non boolean) expressions fttb. 
-% dates must be dealt with first  
-% 2021-02-06T08:25:34 is transformed into 1612599934.0.
-expression_(DateInSeconds, Map, Map) --> 
-    [Year,'-', Month, '-', DayTHours,':', Minutes, ':', Seconds], spaces(_),
-    { concat_atom([Year,'-', Month, '-', DayTHours,':', Minutes, ':', Seconds], '', Date), 
+% expressions include dates and arithmetic expressions.
+expression(X, InMap) --> dates(X, InMap).
+
+% A temporary solution to parse 2022-02-06 as dates, not an expression with two minuses.
+% A long term solution might be parsing according to the type of the variable, if it is a date, then parse it as a date.
+expression(X, InMap, In, Out) :- not(dates(X, InMap, In, Out)), expr(X, InMap, In, Out), !.
+
+expr(X, InMap) --> addExp(X, InMap).
+
+% Transform 2021-02-06T08:25:34 into a timestamp.
+dates(DateInSeconds, _Map) --> [Year,'-', Month, '-', Day, THours,':', Minutes, ':', Seconds], spaces(_),
+    {   pad_number(Year, 4, YearStr), pad_number(Month, 2, MonthStr), pad_number(Day, 2, DayStr),  pad_number(Minutes, 2, MinutesStr), pad_number(Seconds, 2, SecondsStr),
+        concat_atom([YearStr,'-', MonthStr, '-', DayStr, THours,':', MinutesStr, ':', SecondsStr], '', Date), 
       parse_time(Date,DateInSeconds) %, print_message(informational, "~w"-[DateInSeconds])  
     }, !.
-% 2021-02-06
-expression_(DateInSeconds, Map, Map) -->  [Year,'-', Month, '-', Day],  spaces(_),
-    { concat_atom([Year, Month, Day], '', Date), parse_time(Date, DateInSeconds) }, !. 
-% basic float  extracted from atoms from the tokenizer
-%expression_(Float, Map, Map) --> [AtomNum,'.',AtomDecimal],
-%        { atom(AtomNum), atom(AtomDecimal), atomic_list_concat([AtomNum,'.',AtomDecimal], Atom), atom_number(Atom, Float) }, !.
-expression_(Number, Map, Map) --> [Number], {number(Number)}. 
-% mathematical expressions
-expression_(InfixBuiltIn, Map1, MapN) --> 
-    {op_stop(Stop)}, %{print_message(informational, "Stop at ~w"-[Stop])},
-    term_(Stop, Term, Map1, Map2), spaces(_), 
-    binary_op(BuiltIn),
-    spaces(_), expression_(Expression, Map2, MapN), spaces(_), 
-    !,  
-    %{print_message(informational, "Term ~w and BuiltIn ~w and Expression ~w"-[Term, BuiltIn, Expression])},
-    { InfixBuiltIn=..[BuiltIn, Term, Expression] }. %,  
-    %print_message(informational, " ~w  ~w  ~w with map ~w "-[Term, BuiltIn, Expression, MapN]) }. % , 
-% signed Value
-expression_(SignedExpression, Map1, MapN) -->  % disregarding + for the time being
-    %{print_message(informational, " minus something ~w"-[Map1])}, 
-    minus_, spaces(_), expression_(Expression, Map1, MapN), spaces(_), !,
-    {SignedExpression =.. [(-), Expression]}. 
-% parentheses expression
-expression_(Expression, Map1, MapN) --> 
-    parenthesis_open_, spaces(_), expression_(Expression, Map1, MapN), spaces(_), parenthesis_close_, !. %,{print_message(informational, " parentheses (~w)"-[Expression])}.      
-% a quick fix for integer numbers extracted from atoms from the tokenizer
-expression_(Number, Map, Map) --> [Atom],  spaces(_), { atom(Atom), atom_number(Atom, Number) }, !. 
-expression_(Var, Map1, Map2) -->  {op_stop(Stop)}, variable(Stop, Var, Map1, Map2),!.
-expression_(Constant, Map1, Map2) -->  {op_stop(Stop)}, constant(Stop, Constant, Map1, Map2). %, {print_message(informational, "Constant Expression ~w"-Constant)}.     
-% error clause
-expression_(_, _, _, Rest, _) :- 
-    asserterror('LE error found in an expression ', Rest), fail.
+% Transform 2021-02-06 into a timestamp.
+dates(DateInSeconds, _Map) -->  [Year,'-', Month, '-', Day], spaces(_),
+    {   pad_number(Year, 4, YearStr), pad_number(Month, 2, MonthStr), pad_number(Day, 2, DayStr),
+        concat_atom([YearStr, '-', MonthStr, '-', DayStr], '', Date), parse_time(Date, DateInSeconds) }, !. 
+
+% relies on tabled execution to avoid left recursion
+addExp(X+Y, InMap) --> addExp(X, InMap), ['+'], mulExp(Y, InMap).
+addExp(X-Y, InMap) --> addExp(X, InMap), ['-'], mulExp(Y, InMap).
+addExp(Out, InMap) --> mulExp(Out, InMap).
+
+mulExp(X*Y, InMap) --> mulExp(X, InMap), ['*'], item(Y, InMap).
+mulExp(X/Y, InMap) --> mulExp(X, InMap), ['/'], item(Y, InMap).
+mulExp(Out, InMap) --> item(Out, InMap).
+
+item(+X, InMap) --> ['+'], item(X, InMap).
+item(-X, InMap) --> ['-'], item(X, InMap).
+item(Out, InMap) --> element(Out, InMap).
+
+element(X, _InMap) --> [X], {number(X)}.
+element(X, InMap) --> ['('], addExp(X, InMap), [')'].
+element(Var, InMap) --> variable_invocation(['+', '-', '*', '/', ')', '('], Var, InMap, InMap).
+
+% pad a number to the specified width with zeros
+pad_number(Number, Width, Out) :-
+     format(atom(Out), '~|~`0t~d~*+', [Number, Width]).
 
 % operators with any amout of words/symbols
 % binary_op/3
@@ -1610,7 +1613,8 @@ extract_variable(SW, InName, OutName, InType, OutType, [Word|RestOfWords], NextW
     is_a_type(Word),
     extract_variable(SW, InName, NextName, InType, OutType, RestOfWords, NextWords),
     (NextName = [] -> OutName = [Word]; OutName = NextName), !.
-extract_variable(SW, InName, [Word|OutName], InType, [Word|OutType], [Word|RestOfWords], NextWords) :- % everything else is part of the name (for instances) and the type (for templates)
+extract_variable(SW, InName, [Word|OutName], InType, [Word|OutType], [Word|RestOfWords], NextWords) :- % everything else is part of the name (except numbers) (for instances) and the type (for templates)
+    not(number(Word)),
     extract_variable(SW, InName, OutName, InType, OutType, RestOfWords, NextWords).
 
 % extract_expression/4
@@ -1618,7 +1622,8 @@ extract_variable(SW, InName, [Word|OutName], InType, [Word|OutType], [Word|RestO
 % it does not stop at reserved words!
 extract_expression(_, [], [], []) :- !.                                % stop at when words run out
 extract_expression(StopWords, [], [Word|RestOfWords], [Word|RestOfWords]) :-   % stop at  verbs? or prepositions?. 
-    (member(Word, StopWords); that_(Word); list_symbol(Word); parenthesis(Word), phrase(newline, [Word])), !.  
+    (member(Word, StopWords); that_(Word); list_symbol(Word); parenthesis(Word), phrase(newline, [Word])), !.
+    % print_message(informational, "extract_expression for stop words StopWords: ~w Word: ~w RestOfWords: ~w"-[StopWords, Word, RestOfWords]).  
 %extract_expression([Word|RestName], [Word|RestOfWords], NextWords) :- % ordinals are not part of the name
 %    ordinal(Word), !,
 %    extract_constant(RestName, RestOfWords, NextWords).
@@ -1630,6 +1635,7 @@ extract_expression(SW, [Word|RestName], [Word|RestOfWords],  NextWords) :-
     %is_a_type(Word),
     %not(determiner(Word)), % no determiners inside constants!
     extract_expression(SW, RestName, RestOfWords, NextWords).
+    % print_message(informational, "extract_expression normal StopWords: ~w Word: ~w NextWords ~w"-[SW, Word, NextWords]).
 
 % extract_constant/4
 % extract_constant(+StopWords, ListOfNameWords, +ListOfWords, NextWordsInText)
@@ -1700,12 +1706,11 @@ extract_list(StopWords, List, Map1, MapN, InWords, LeftWords) :- % symbolic vari
     (NextWords = [']'|_] -> (RestList = [], LeftWords=NextWords, MapN=Map2 ) ; 
     extract_list(StopWords, RestList, Map2, MapN, NextWords, LeftWords) ), 
     (RestList\=[] -> List=[Var|RestList]; List=[Var]), !.
-extract_list(StopWords, List, Map1, MapN, InWords, LeftWords) :-
+extract_list(StopWords, List, Map1, Map1, InWords, LeftWords) :-
     extract_expression(['|',','|StopWords], NameWords, InWords, NextWords), NameWords \= [], 
-    ( phrase(expression_(Expression, Map1, Map2), NameWords) ->   true 
-    ; ( Map1 = Map2, name_predicate(NameWords, Expression) ) ),
-    ( NextWords = [']'|_] -> ( RestList = [], LeftWords=NextWords, MapN=Map2 ) 
-    ;    extract_list(StopWords, RestList, Map2, MapN, NextWords, LeftWords) ), 
+    ( phrase(expression(Expression, Map1), NameWords) ->   true ; ( name_predicate(NameWords, Expression) ) ),
+    ( NextWords = [']'|_] -> ( RestList = [], LeftWords=NextWords ) 
+    ;    extract_list(StopWords, RestList, Map1, Map1, NextWords, LeftWords) ), 
     extend_list(RestList, Expression, List), !. %  print_message(informational, " ~q "-[List]), !. 
     %(RestList=[_,_|_] -> List=[Expression|RestList] ; 
     %    RestList = [One] -> List=[Expression, One] ;
@@ -2121,6 +2126,8 @@ predef_dict([=, T1, T2], [thing_1-thing, thing_2-thing], [T1, is, equal, to, T2]
 predef_dict([isbefore, T1, T2], [time1-time, time2-time], [T1, is, before, T2]). % see reasoner.pl before/2
 predef_dict([isafter, T1, T2], [time1-time, time2-time], [T1, is, after, T2]).  % see reasoner.pl before/2
 predef_dict([member, Member, List], [member-object, list-list], [Member, is, in, List]).
+predef_dict([length, List, Length], [member-object, list-list], [the, length, of, List, is, Length]).
+predef_dict([bagof, Thing, Condition, Bag], [bag-thing, thing-thing, condition-condition], [Bag, is, a, bag, of, Thing, such, that, Condition]).
 predef_dict([is_, A, B], [term-term, expression-expression], [A, is, B]). % builtin Prolog assignment
 % predefined entries:
 %predef_dict([assert,Information], [info-clause], [this, information, Information, ' has', been, recorded]).
