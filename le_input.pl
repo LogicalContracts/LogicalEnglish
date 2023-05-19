@@ -145,8 +145,13 @@ document(Translation, In, Rest) :-
     (parsed -> retractall(parsed); true), 
     (including -> retract(including); true), 
     (source_lang(_L) -> retractall(source_lang(_)) ; true),
-    phrase(header(Settings), In, AfterHeader), !, %print_message(informational, "Declarations completed: ~w"-[Settings]), 
+    phrase(header(Settings), In, AfterHeader), !, 
+    print_message(informational, "Declarations completed: ~w"-[Settings]), 
+    print_message(informational, "In: ~w"-[In]), 
+    print_message(informational, "AfterHeader: ~w"-[AfterHeader]), 
     phrase(content(Content), AfterHeader, Rest), 
+    print_message(informational, "Content: ~w"-[AfterHeader]), 
+
     append(Settings, Content, Original), !,
     append(Original, [if(is_(A,B), (nonvar(B), is(A,B)))], Translation), % adding def of is_2 last!  
     assertz(parsed). 
@@ -757,13 +762,15 @@ variable(StopWords, Var, Map1, MapN) -->
     spaces(_), def_determiner, extract_variable(StopWords, [], NameWords, [], _), % <-- CUT!
     {  NameWords\=[], name_predicate(NameWords, Name), consult_map(Var, Name, Map1, MapN) }. 
 % allowing for symbolic variables: 
+% But must start with letters
 variable(StopWords, Var, Map1, MapN) --> 
     spaces(_), extract_variable(StopWords, [], NameWords, [], _),
     {  NameWords\=[], name_predicate(NameWords, Name), consult_map(Var, Name, Map1, MapN) }. 
 
 % constant/4 or /6
-constant(StopWords, Constant, Map, Map) -->
-    extract_constant(StopWords, NameWords), { NameWords\=[], name_predicate(NameWords, Constant) }. 
+constant(StopWords, Number, Map, Map) -->
+    % extract_constant(StopWords, NameWords), { NameWords\=[], name_predicate(NameWords, Constant) }. 
+    extract_constant(StopWords, [Number]). 
 
 % deprecated
 prolog_literal_(Prolog, Map1, MapN) -->
@@ -1210,8 +1217,8 @@ match_template(PossibleLiteral, Map1, MapN, Literal) :-
     dictionary(Predicate, _, Candidate),
     match(Candidate, PossibleLiteral, Map1, MapN, Template), !, 
     dictionary(Predicate, _, Template), 
-    Literal =.. Predicate.
-    %print_message(informational,'Match!! with ~w'-[Literal]).% !. 
+    Literal =.. Predicate,
+    print_message(informational,'Match!! with ~w ~w ~w ~w ~w ~w'-[PossibleLiteral, Literal, Map1, MapN, Candidate, Template]).% !. 
 
 % meta_match/5
 % meta_match(+CandidateTemplate, +PossibleLiteral, +MapIn, -MapOut, -SelectedTemplate)
@@ -1325,13 +1332,13 @@ match([Element|RestElements], ['['|PossibleLiteral], Map1, MapN, [List|RestSelec
 % enabling expressions and constants
 match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, [Expression|RestSelected]) :-
     var(Element), stop_words(RestElements, StopWords),
-    %print_message(informational, [Word|PossibleLiteral]),
+    print_message(informational, "match RestElements ~w StopWords: ~w"-[RestElements, StopWords]),
     extract_expression([','|StopWords], NameWords, [Word|PossibleLiteral], NextWords), NameWords \= [],
-    % print_message(informational, "Expression? ~w"-[NameWords]),
     % this expression cannot add variables 
-    ( phrase(expression_(Expression, Map1, _), NameWords) -> true ; ( name_predicate(NameWords, Expression) ) ),
+    ( phrase(expression_(Expression, Map1, _), NameWords) -> true ; ( name_predicate(NameWords, Expression), print_message(informational, "Expression phrase failed ~w"-[Expression]) ) ),
     %print_message(informational, 'found a constant or an expression '), print_message(informational, Expression),
-    match(RestElements, NextWords, Map1, MapN, RestSelected). 
+    match(RestElements, NextWords, Map1, MapN, RestSelected),
+    print_message(informational, "Expression? ~w NameWords: ~w NextWords: ~w PossibleLiteral: ~w"-[Expression, NameWords, NextWords, PossibleLiteral]). 
 
 correct_list([], []) :- !. 
 correct_list([A,B], [A,B]) :- atom(B), !. % not(is_list(B)), !. 
@@ -1361,9 +1368,9 @@ expression_(InfixBuiltIn, Map1, MapN) -->
     term_(Stop, Term, Map1, Map2), spaces(_), 
     binary_op(BuiltIn),
     spaces(_), expression_(Expression, Map2, MapN), spaces(_), 
-    !,  
-    %{print_message(informational, "Term ~w and BuiltIn ~w and Expression ~w"-[Term, BuiltIn, Expression])},
-    { InfixBuiltIn=..[BuiltIn, Term, Expression] }. %,  
+    % !,
+    { InfixBuiltIn=..[BuiltIn, Term, Expression] },
+    {print_message(informational, "Term ~w and BuiltIn ~w and Expression ~w and InfixBuiltIn ~w"-[Term, BuiltIn, Expression, InfixBuiltIn])}.
     %print_message(informational, " ~w  ~w  ~w with map ~w "-[Term, BuiltIn, Expression, MapN]) }. % , 
 % signed Value
 expression_(SignedExpression, Map1, MapN) -->  % disregarding + for the time being
@@ -1385,7 +1392,8 @@ expression_(_, _, _, Rest, _) :-
 % binary_op/3
 binary_op(Op, In, Out) :-
     op2tokens(Op, OpTokens, _),
-    append(OpTokens, Out, In).
+    append(OpTokens, Out, In),
+    print_message(informational, "binary_op ~w ~w ~w"-[Op, In, Out]).
 
 % very inefficient. Better to compute and store. See below
 op_tokens(Op, OpTokens) :-
@@ -1611,6 +1619,7 @@ extract_variable(SW, InName, OutName, InType, OutType, [Word|RestOfWords], NextW
     extract_variable(SW, InName, NextName, InType, OutType, RestOfWords, NextWords),
     (NextName = [] -> OutName = [Word]; OutName = NextName), !.
 extract_variable(SW, InName, [Word|OutName], InType, [Word|OutType], [Word|RestOfWords], NextWords) :- % everything else is part of the name (for instances) and the type (for templates)
+    not(number(Word)),
     extract_variable(SW, InName, OutName, InType, OutType, RestOfWords, NextWords).
 
 % extract_expression/4
@@ -1618,7 +1627,8 @@ extract_variable(SW, InName, [Word|OutName], InType, [Word|OutType], [Word|RestO
 % it does not stop at reserved words!
 extract_expression(_, [], [], []) :- !.                                % stop at when words run out
 extract_expression(StopWords, [], [Word|RestOfWords], [Word|RestOfWords]) :-   % stop at  verbs? or prepositions?. 
-    (member(Word, StopWords); that_(Word); list_symbol(Word); parenthesis(Word), phrase(newline, [Word])), !.  
+    (member(Word, StopWords); that_(Word); list_symbol(Word); parenthesis(Word), phrase(newline, [Word])), !,
+    print_message(informational, "extract_expression for stop words StopWords: ~w Word: ~w RestOfWords: ~w"-[StopWords, Word, RestOfWords]).  
 %extract_expression([Word|RestName], [Word|RestOfWords], NextWords) :- % ordinals are not part of the name
 %    ordinal(Word), !,
 %    extract_constant(RestName, RestOfWords, NextWords).
@@ -1629,7 +1639,8 @@ extract_expression(SW, RestName, ['\t'|RestOfWords],  NextWords) :- !,
 extract_expression(SW, [Word|RestName], [Word|RestOfWords],  NextWords) :-
     %is_a_type(Word),
     %not(determiner(Word)), % no determiners inside constants!
-    extract_expression(SW, RestName, RestOfWords, NextWords).
+    extract_expression(SW, RestName, RestOfWords, NextWords),
+    print_message(informational, "extract_expression normal StopWords: ~w Word: ~w NextWords ~w"-[SW, Word, NextWords]).
 
 % extract_constant/4
 % extract_constant(+StopWords, ListOfNameWords, +ListOfWords, NextWordsInText)
@@ -2067,77 +2078,77 @@ dictionary(Predicate, VariablesNames, Template) :- % dict(Predicate, VariablesNa
 % it must be ordered by the side of the third argument, to allow the system to check first the longer template
 % with the corresponding starting words. 
 % for Taxlog examples
-predef_dict(['\'s_R&D_expense_credit_is', Project, ExtraDeduction, TaxCredit], 
-                                 [project-projectid, extra-amount, credit-amount],
-   [Project, '\'s', 'R&D', expense, credit, is, TaxCredit, plus, ExtraDeduction]).
-predef_dict(['can_request_R&D_relief_such_as', Project, ExtraDeduction, TaxCredit], 
-                                 [project-projectid, extra-amount, credit-amount],
-   [Project, can, request,'R&D', relief, for, a, credit, of, TaxCredit, with, a, deduction, of, ExtraDeduction]).
-predef_dict(['\'s_sme_R&D_relief_is', Project, ExtraDeduction, TaxCredit], 
-                                 [project-projectid, extra-amount, credit-amount],
-   [the, 'SME', 'R&D', relief, for, Project, is, estimated, at, TaxCredit, with, an, extra, of, ExtraDeduction]).
-predef_dict([project_subject_experts_list_is,Project,Experts], [project-object, experts_list-list],
-   [Project, has, an, Experts, list]).
-predef_dict([rollover_applies,EventID,Asset,Time,Transferor,TransfereesList], [id-event,asset-asset,when-time,from-person,to-list], 
-   [EventID, rollover, of, the, transfer, of, Asset, from, Transferor, to, TransfereesList, at, Time, applies]).
-predef_dict([transfer_event,ID,Asset,Time,Transferor,TransfereesList],[id-id,asset-asset,time-time,from-person,to-list],
-   [event, ID, of, transfering, Asset, from, Transferor, to, TransfereesList, at, Time, occurs]).
-predef_dict([s_type_and_liability_are(Asset,Type,Liability), [asset-asset, assettype-type, liabilty-amount],
-   [the, type, of, asset, Asset, is, Type, its, liability, is, Liability]]).
-predef_dict([exempt_transfer,From,To,SecurityIdentifier,Time],[from-taxpayer,to-taxpayer,secID-number, time-time],
-   [a, transfer, from, From, to, To, with, SecurityIdentifier, at, Time, is, exempt]).
-predef_dict([shares_transfer,Sender,Recipient,SecurityID,Time], [from-person, to-person, id-number, time-time], 
-   [Sender, transfers, shares, to, Recipient, at, Time, with, id, SecurityID]).
-predef_dict([trading_in_market,SecurityID,MarketID,Time], [id-number,market-number,time-time], 
-   [whoever, is, identified,by, SecurityID, is, trading, in, market, MarketID, at, Time]).
-predef_dict([uk_tax_year_for_date,Date,Year,Start,End], [date-date,year-year,start-date,end-date], 
-   [date, Date, falls, in, the, 'UK', tax, year, Year, that, starts, at, Start, ends, at, End]).
-predef_dict([days_spent_in_uk,Individual,Start,End,TotalDays], [who-person,start-date,end-date,total-number], 
-   [Individual, spent, TotalDays, days, in, the, 'UK', starting, at, Start, ending, at, End]).
-predef_dict([days_spent_in_uk,Individual,Start,End,TotalDays], [who-person,start-date,end-date,total-number], 
-                   [Individual, spent, TotalDays, in, the, 'UK', starting, at, Start, &, ending, at, End]). 
-predef_dict([uk_tax_year_for_date,Date,Year,Start,End], [first_date-date, year-year, second_date-date, third_date-date], 
-                   [in, the, 'UK', Date, falls, in, Year, beginning, at, Start, &, ending, at, End]).
-predef_dict([is_individual_or_company_on, A, B],
-                   [affiliate-affiliate, date-date],
-                   [A, is, an, individual, or, is, a, company, at, B]).
-% Prolog
-predef_dict([has_as_head_before, A, B, C], [list-list, symbol-term, rest_of_list-list], [A, has, B, as, head, before, C]).
-predef_dict([append, A, B, C],[first_list-list, second_list-list, third_list-list], [appending, A, then, B, gives, C]).
-predef_dict([reverse, A, B], [list-list, other_list-list], [A, is, the, reverse, of, B]).
-predef_dict([same_date, T1, T2], [time_1-time, time_2-time], [T1, is, the, same, date, as, T2]). % see reasoner.pl before/2
-predef_dict([between,Minimum,Maximum,Middle], [min-date, max-date, middle-date], 
-                [Middle, is, between, Minimum, &, Maximum]).
-predef_dict([is_1_day_after, A, B], [date-date, second_date-date],
-                [A, is, '1', day, after, B]).
-predef_dict([is_days_after, A, B, C], [date-date, number-number, second_date-date],
-                  [A, is, B, days, after, C]).
-predef_dict([immediately_before, T1, T2], [time_1-time, time_2-time], [T1, is, immediately, before, T2]). % see reasoner.pl before/2
-predef_dict([\=, T1, T2], [thing_1-thing, thing_2-thing], [T1, is, different, from, T2]).
-predef_dict([==, T1, T2], [thing_1-thing, thing_2-thing], [T1, is, equivalent, to, T2]).
-predef_dict([is_a, Object, Type], [object-object, type-type], [Object, is, of, type, Type]).
-predef_dict([is_not_before, T1, T2], [time1-time, time2-time], [T1, is, not, before, T2]). % see reasoner.pl before/2
+% predef_dict(['\'s_R&D_expense_credit_is', Project, ExtraDeduction, TaxCredit], 
+%                                  [project-projectid, extra-amount, credit-amount],
+%    [Project, '\'s', 'R&D', expense, credit, is, TaxCredit, plus, ExtraDeduction]).
+% predef_dict(['can_request_R&D_relief_such_as', Project, ExtraDeduction, TaxCredit], 
+%                                  [project-projectid, extra-amount, credit-amount],
+%    [Project, can, request,'R&D', relief, for, a, credit, of, TaxCredit, with, a, deduction, of, ExtraDeduction]).
+% predef_dict(['\'s_sme_R&D_relief_is', Project, ExtraDeduction, TaxCredit], 
+%                                  [project-projectid, extra-amount, credit-amount],
+%    [the, 'SME', 'R&D', relief, for, Project, is, estimated, at, TaxCredit, with, an, extra, of, ExtraDeduction]).
+% predef_dict([project_subject_experts_list_is,Project,Experts], [project-object, experts_list-list],
+%    [Project, has, an, Experts, list]).
+% predef_dict([rollover_applies,EventID,Asset,Time,Transferor,TransfereesList], [id-event,asset-asset,when-time,from-person,to-list], 
+%    [EventID, rollover, of, the, transfer, of, Asset, from, Transferor, to, TransfereesList, at, Time, applies]).
+% predef_dict([transfer_event,ID,Asset,Time,Transferor,TransfereesList],[id-id,asset-asset,time-time,from-person,to-list],
+%    [event, ID, of, transfering, Asset, from, Transferor, to, TransfereesList, at, Time, occurs]).
+% predef_dict([s_type_and_liability_are(Asset,Type,Liability), [asset-asset, assettype-type, liabilty-amount],
+%    [the, type, of, asset, Asset, is, Type, its, liability, is, Liability]]).
+% predef_dict([exempt_transfer,From,To,SecurityIdentifier,Time],[from-taxpayer,to-taxpayer,secID-number, time-time],
+%    [a, transfer, from, From, to, To, with, SecurityIdentifier, at, Time, is, exempt]).
+% predef_dict([shares_transfer,Sender,Recipient,SecurityID,Time], [from-person, to-person, id-number, time-time], 
+%    [Sender, transfers, shares, to, Recipient, at, Time, with, id, SecurityID]).
+% predef_dict([trading_in_market,SecurityID,MarketID,Time], [id-number,market-number,time-time], 
+%    [whoever, is, identified,by, SecurityID, is, trading, in, market, MarketID, at, Time]).
+% predef_dict([uk_tax_year_for_date,Date,Year,Start,End], [date-date,year-year,start-date,end-date], 
+%    [date, Date, falls, in, the, 'UK', tax, year, Year, that, starts, at, Start, ends, at, End]).
+% predef_dict([days_spent_in_uk,Individual,Start,End,TotalDays], [who-person,start-date,end-date,total-number], 
+%    [Individual, spent, TotalDays, days, in, the, 'UK', starting, at, Start, ending, at, End]).
+% predef_dict([days_spent_in_uk,Individual,Start,End,TotalDays], [who-person,start-date,end-date,total-number], 
+%                    [Individual, spent, TotalDays, in, the, 'UK', starting, at, Start, &, ending, at, End]). 
+% predef_dict([uk_tax_year_for_date,Date,Year,Start,End], [first_date-date, year-year, second_date-date, third_date-date], 
+%                    [in, the, 'UK', Date, falls, in, Year, beginning, at, Start, &, ending, at, End]).
+% predef_dict([is_individual_or_company_on, A, B],
+%                    [affiliate-affiliate, date-date],
+%                    [A, is, an, individual, or, is, a, company, at, B]).
+% % Prolog
+% predef_dict([has_as_head_before, A, B, C], [list-list, symbol-term, rest_of_list-list], [A, has, B, as, head, before, C]).
+% predef_dict([append, A, B, C],[first_list-list, second_list-list, third_list-list], [appending, A, then, B, gives, C]).
+% predef_dict([reverse, A, B], [list-list, other_list-list], [A, is, the, reverse, of, B]).
+% predef_dict([same_date, T1, T2], [time_1-time, time_2-time], [T1, is, the, same, date, as, T2]). % see reasoner.pl before/2
+% predef_dict([between,Minimum,Maximum,Middle], [min-date, max-date, middle-date], 
+%                 [Middle, is, between, Minimum, &, Maximum]).
+% predef_dict([is_1_day_after, A, B], [date-date, second_date-date],
+%                 [A, is, '1', day, after, B]).
+% predef_dict([is_days_after, A, B, C], [date-date, number-number, second_date-date],
+%                   [A, is, B, days, after, C]).
+% predef_dict([immediately_before, T1, T2], [time_1-time, time_2-time], [T1, is, immediately, before, T2]). % see reasoner.pl before/2
+% predef_dict([\=, T1, T2], [thing_1-thing, thing_2-thing], [T1, is, different, from, T2]).
+% predef_dict([==, T1, T2], [thing_1-thing, thing_2-thing], [T1, is, equivalent, to, T2]).
+% predef_dict([is_a, Object, Type], [object-object, type-type], [Object, is, of, type, Type]).
+% predef_dict([is_not_before, T1, T2], [time1-time, time2-time], [T1, is, not, before, T2]). % see reasoner.pl before/2
 predef_dict([=, T1, T2], [thing_1-thing, thing_2-thing], [T1, is, equal, to, T2]).
-predef_dict([isbefore, T1, T2], [time1-time, time2-time], [T1, is, before, T2]). % see reasoner.pl before/2
-predef_dict([isafter, T1, T2], [time1-time, time2-time], [T1, is, after, T2]).  % see reasoner.pl before/2
-predef_dict([member, Member, List], [member-object, list-list], [Member, is, in, List]).
+% predef_dict([isbefore, T1, T2], [time1-time, time2-time], [T1, is, before, T2]). % see reasoner.pl before/2
+% predef_dict([isafter, T1, T2], [time1-time, time2-time], [T1, is, after, T2]).  % see reasoner.pl before/2
+% predef_dict([member, Member, List], [member-object, list-list], [Member, is, in, List]).
 predef_dict([is_, A, B], [term-term, expression-expression], [A, is, B]). % builtin Prolog assignment
 % predefined entries:
 %predef_dict([assert,Information], [info-clause], [this, information, Information, ' has', been, recorded]).
-predef_dict([\=@=, T1, T2], [thing_1-thing, thing_2-thing], [T1, \,=,@,=, T2]).
-predef_dict([\==, T1, T2], [thing_1-thing, thing_2-thing], [T1, \,=,=, T2]).
-predef_dict([=\=, T1, T2], [thing_1-thing, thing_2-thing], [T1, =,\,=, T2]).
-predef_dict([=@=, T1, T2], [thing_1-thing, thing_2-thing], [T1, =,@,=, T2]).
-predef_dict([==, T1, T2], [thing_1-thing, thing_2-thing], [T1, =,=, T2]).
-predef_dict([=<, T1, T2], [thing_1-thing, thing_2-thing], [T1, =,<, T2]).
-predef_dict([=<, T1, T2], [thing_1-thing, thing_2-thing], [T1, =,<, T2]).
-predef_dict([>=, T1, T2], [thing_1-thing, thing_2-thing], [T1, >,=, T2]).
-predef_dict([=, T1, T2], [thing_1-thing, thing_2-thing], [T1, =, T2]).
-predef_dict([<, T1, T2], [thing_1-thing, thing_2-thing], [T1, <, T2]).
-predef_dict([>, T1, T2], [thing_1-thing, thing_2-thing], [T1, >, T2]).
-predef_dict([unparse_time, Secs, Date], [secs-time, date-date], [Secs, corresponds, to, date, Date]).
-predef_dict([must_be, Type, Term], [type-type, term-term], [Term, must, be, Type]).
-predef_dict([must_not_be, A, B], [term-term, variable-variable], [A, must, not, be, B]). 
+% predef_dict([\=@=, T1, T2], [thing_1-thing, thing_2-thing], [T1, \,=,@,=, T2]).
+% predef_dict([\==, T1, T2], [thing_1-thing, thing_2-thing], [T1, \,=,=, T2]).
+% predef_dict([=\=, T1, T2], [thing_1-thing, thing_2-thing], [T1, =,\,=, T2]).
+% predef_dict([=@=, T1, T2], [thing_1-thing, thing_2-thing], [T1, =,@,=, T2]).
+% predef_dict([==, T1, T2], [thing_1-thing, thing_2-thing], [T1, =,=, T2]).
+% predef_dict([=<, T1, T2], [thing_1-thing, thing_2-thing], [T1, =,<, T2]).
+% predef_dict([=<, T1, T2], [thing_1-thing, thing_2-thing], [T1, =,<, T2]).
+% predef_dict([>=, T1, T2], [thing_1-thing, thing_2-thing], [T1, >,=, T2]).
+% predef_dict([=, T1, T2], [thing_1-thing, thing_2-thing], [T1, =, T2]).
+% predef_dict([<, T1, T2], [thing_1-thing, thing_2-thing], [T1, <, T2]).
+% predef_dict([>, T1, T2], [thing_1-thing, thing_2-thing], [T1, >, T2]).
+% predef_dict([unparse_time, Secs, Date], [secs-time, date-date], [Secs, corresponds, to, date, Date]).
+% predef_dict([must_be, Type, Term], [type-type, term-term], [Term, must, be, Type]).
+% predef_dict([must_not_be, A, B], [term-term, variable-variable], [A, must, not, be, B]). 
 
 % pre_is_type/1
 pre_is_type(thing).
