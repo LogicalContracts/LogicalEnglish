@@ -1,4 +1,6 @@
-the target language is: prolog. % other languages available soon
+:- module('safe_gap',[]).
+
+en("the target language is: prolog. % other languages available soon
 
 the templates are:
     there is a safe gap in *a junction* at *a time*.
@@ -55,3 +57,11 @@ query one is:
 query two is:
     the gap in the junction is of which value at which time. 
 
+").
+
+/** <examples>
+?- answer("query one with scenario happyday").
+?- answer("query one with scenario rainynight").
+?- answer(one, with(rainynight), le(E), R).
+?- answer(one, with(happyday), le(E), R).
+*/

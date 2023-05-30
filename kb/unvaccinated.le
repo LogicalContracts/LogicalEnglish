@@ -1,6 +1,4 @@
-:- module('unvaccinated+http://tests.com',[]).
-
-en("the target language is: prolog.
+the target language is: prolog.
 
 the templates are:
 
@@ -51,5 +49,3 @@ query one is:
     
 query two is:
     An arrest warrant is issued for which person.
-
-").

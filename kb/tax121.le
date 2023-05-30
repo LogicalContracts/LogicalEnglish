@@ -1,6 +1,4 @@
-:- module('tax121+https://www.law.cornell.edu/uscode/text/26/121',[]).
-
-en("the target language is: prolog. 
+the target language is: prolog. 
     
 the templates are:
     
@@ -188,16 +186,4 @@ query three is:
 
 query four is:
     the amount of gain to be excluded for which taxpayer from which sale under subsection (a) is which amount. 
-").
 
-/** <examples>
-?- answer("query one with scenario one").
-?- answer("query two with scenario one").
-?- answer(one, with(one), le(E), R). 
-?- answer(two, with(one), le(E), R). 
-?- answer(four, with(one), le(E), R). 
-?- answer("query two with scenario two").
-?- answer(two, with(two), le(E), R).
-?- answer(three, with(three), le(E), R).
-?- answer(two, with(three), le(E), R).
-*/

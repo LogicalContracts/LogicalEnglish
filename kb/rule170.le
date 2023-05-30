@@ -1,3 +1,5 @@
+the target language is: prolog. 
+
 the templates are:
     *A vehicle* is permitted to enter *a junction* at *a time*. 
     *A vehicle* have watched *a junction* until *a time*. 
@@ -12,8 +14,9 @@ the templates are:
     *a time* is clearly before *a second time* plus some security margin.
 
 the knowledge base rule170 includes:
-    A vehicle is permitted to enter a junction at a time if
-    	the vehicle have watched the junction before the time
+
+a vehicle is permitted to enter a junction at a time 
+    if the vehicle have watched the junction before the time
     and it is not the case that
     	there are users crossing the junction at the time
     and there is a safe gap between the vehicle and any user approaching the junction at the time. 
