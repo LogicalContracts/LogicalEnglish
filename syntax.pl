@@ -161,6 +161,12 @@ semantics2prolog(example(T,Sequence),delimiter-[classify,Spec],example(T,Sequenc
 semantics2prolog(query(Name,Goal),delimiter-[classify,classify],query(Name,Goal)) :-
     this_capsule(SwishModule),
     declare_facts_as_dynamic(SwishModule, [query(_,_)]), !. 
+semantics2prolog(query_data_frame(Name,DataFrame),delimiter-[classify,classify],query_data_frame(Name,DataFrame)) :-
+    this_capsule(SwishModule),
+    declare_facts_as_dynamic(SwishModule, [query_data_frame(_,_)]), !. 
+semantics2prolog(plot_cmd(Name,DataFrames,Command),delimiter-[classify,classify],plot_cmd(Name,DataFrames,Command)) :-
+    this_capsule(SwishModule),
+    declare_facts_as_dynamic(SwishModule, [plot_cmd(_, _, _)]), !. 
 semantics2prolog(metapredicates(Assumptions), delimiter-[classify,classify],metapredicates([N])) :- 
     this_capsule(SwishModule), lists:length(Assumptions,N),
     declare_facts_as_dynamic(SwishModule, Assumptions), !. 
