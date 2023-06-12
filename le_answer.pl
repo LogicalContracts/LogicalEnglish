@@ -178,14 +178,14 @@ answer(English, Arg) :- %trace,
     le_input:parsed,
     prepare_query(English, Arg, SwishModule, Goal, Facts, Command), 
     ((SwishModule:just_saved_scasp(FileName, ModuleName), FileName\=null) -> 
-        %print_message(informational, "To query file ~w in module ~w "-[FileName, ModuleName]),
+        print_message(informational, "To query file ~w in module ~w "-[FileName, ModuleName]),
         load_file_module(FileName, ModuleName, true), 
         %print_message(informational, "loaded scasp ~w "-[FileName]),    
         setup_call_catcher_cleanup(assert_facts(ModuleName, Facts), 
             catch(ModuleName:scasp(Goal, [model(_M), tree(_T)]), Error, ( print_message(error, Error), fail ) ), 
             _Result, 
         retract_facts(ModuleName, Facts))
-    ;   %print_message(error, "no scasp"-[]),
+    ;   %print_message(error, "no scasp SwishModule: ~w Facts: ~w Command: ~w Goal: ~w"-[SwishModule, Facts, Command, Goal]),
         setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
             Command, 
             %call(Command), 
@@ -449,7 +449,8 @@ show(rules) :- % trace,
     findall((Pred :- Body), 
         (dict(PredicateElements, _, _),  PredicateElements\=[], Pred=..PredicateElements,
         clause(SwishModule:Pred, Body_), unwrapBody(Body_, Body)), Predicates),
-    forall(member(Clause, [(is_(A,B) :- (nonvar(B), is(A,B)))|Predicates]), portray_clause_ind(Clause)).
+    %forall(member(Clause, [(is_(A,B) :- (nonvar(B), is(A,B)))|Predicates]), portray_clause_ind(Clause)).
+    forall(member(Clause, Predicates), portray_clause_ind(Clause)).
 
 % 
 %(op2tokens(Pred, _, OpTokens) -> % Fixing binary predicates for scasp
