@@ -148,10 +148,9 @@ document(Translation, In, Rest) :-
     (source_lang(_L) -> retractall(source_lang(_)) ; true),
     phrase(header(Settings), In, AfterHeader), !, %print_message(informational, "Declarations completed: ~w"-[Settings]),
     phrase(content(Content), AfterHeader, Rest), 
-    print_message(informational, "Content: ~w"-[AfterHeader]), 
-
-    append(Settings, Content, Original), !,
-    append(Original, [if(is_(A,B), (nonvar(B), is(A,B)))], Translation), % adding def of is_2 last!  
+    %print_message(informational, "Content: ~w"-[AfterHeader]), 
+    append(Settings, Content, Translation), !,
+    %append(Original, [if(is_(A,B), (nonvar(B), is(A,B)))], Translation), % adding def of is_2 no more  
     assertz(parsed). 
 
 % header parses all the declarations and assert them into memory to be invoked by the rules. 
@@ -2111,42 +2110,43 @@ dictionary(Predicate, VariablesNames, Template) :- % dict(Predicate, VariablesNa
 %                    [affiliate-affiliate, date-date],
 %                    [A, is, an, individual, or, is, a, company, at, B]).
 % % Prolog
-% predef_dict([has_as_head_before, A, B, C], [list-list, symbol-term, rest_of_list-list], [A, has, B, as, head, before, C]).
-% predef_dict([append, A, B, C],[first_list-list, second_list-list, third_list-list], [appending, A, then, B, gives, C]).
-% predef_dict([reverse, A, B], [list-list, other_list-list], [A, is, the, reverse, of, B]).
-% predef_dict([same_date, T1, T2], [time_1-time, time_2-time], [T1, is, the, same, date, as, T2]). % see reasoner.pl before/2
-% predef_dict([between,Minimum,Maximum,Middle], [min-date, max-date, middle-date], 
-%                 [Middle, is, between, Minimum, &, Maximum]).
-% predef_dict([is_1_day_after, A, B], [date-date, second_date-date],
-%                 [A, is, '1', day, after, B]).
-% predef_dict([is_days_after, A, B, C], [date-date, number-number, second_date-date],
-%                   [A, is, B, days, after, C]).
-% predef_dict([immediately_before, T1, T2], [time_1-time, time_2-time], [T1, is, immediately, before, T2]). % see reasoner.pl before/2
-% predef_dict([\=, T1, T2], [thing_1-thing, thing_2-thing], [T1, is, different, from, T2]).
-% predef_dict([==, T1, T2], [thing_1-thing, thing_2-thing], [T1, is, equivalent, to, T2]).
-% predef_dict([is_a, Object, Type], [object-object, type-type], [Object, is, of, type, Type]).
-% predef_dict([is_not_before, T1, T2], [time1-time, time2-time], [T1, is, not, before, T2]). % see reasoner.pl before/2
+predef_dict([has_as_head_before, A, B, C], [list-list, symbol-term, rest_of_list-list], [A, has, B, as, head, before, C]).
+predef_dict([append, A, B, C],[first_list-list, second_list-list, third_list-list], [appending, A, then, B, gives, C]).
+predef_dict([reverse, A, B], [list-list, other_list-list], [A, is, the, reverse, of, B]).
+predef_dict([same_date, T1, T2], [time_1-time, time_2-time], [T1, is, the, same, date, as, T2]). % see reasoner.pl before/2
+predef_dict([between,Minimum,Maximum,Middle], [min-date, max-date, middle-date], 
+                [Middle, is, between, Minimum, &, Maximum]).
+predef_dict([is_1_day_after, A, B], [date-date, second_date-date],
+                [A, is, '1', day, after, B]).
+predef_dict([is_days_after, A, B, C], [date-date, number-number, second_date-date],
+                  [A, is, B, days, after, C]).
+predef_dict([immediately_before, T1, T2], [time_1-time, time_2-time], [T1, is, immediately, before, T2]). % see reasoner.pl before/2
+predef_dict([\=, T1, T2], [thing_1-thing, thing_2-thing], [T1, is, different, from, T2]).
+predef_dict([==, T1, T2], [thing_1-thing, thing_2-thing], [T1, is, equivalent, to, T2]).
+predef_dict([is_a, Object, Type], [object-object, type-type], [Object, is, of, type, Type]).
+predef_dict([is_not_before, T1, T2], [time1-time, time2-time], [T1, is, not, before, T2]). % see reasoner.pl before/2
 predef_dict([=, T1, T2], [thing_1-thing, thing_2-thing], [T1, is, equal, to, T2]).
+predef_dict([=, T1, T2], [thing_1-thing, thing_2-thing], [T1, is, T2]). % builtin Prolog assignment
 predef_dict([isbefore, T1, T2], [time1-time, time2-time], [T1, is, before, T2]). % see reasoner.pl before/2
 predef_dict([isafter, T1, T2], [time1-time, time2-time], [T1, is, after, T2]).  % see reasoner.pl before/2
 predef_dict([member, Member, List], [member-object, list-list], [Member, is, in, List]).
 predef_dict([length, List, Length], [member-object, list-list], [the, length, of, List, is, Length]).
 predef_dict([bagof, Thing, Condition, Bag], [bag-thing, thing-thing, condition-condition], [Bag, is, a, bag, of, Thing, such, that, Condition]).
-predef_dict([is_, A, B], [term-term, expression-expression], [A, is, B]). % builtin Prolog assignment
+%predef_dict([is_, A, B], [term-term, expression-expression], [A, is, B]). % builtin Prolog assignment
 % predefined entries:
 %predef_dict([assert,Information], [info-clause], [this, information, Information, ' has', been, recorded]).
-% predef_dict([\=@=, T1, T2], [thing_1-thing, thing_2-thing], [T1, \,=,@,=, T2]).
-% predef_dict([\==, T1, T2], [thing_1-thing, thing_2-thing], [T1, \,=,=, T2]).
-% predef_dict([=\=, T1, T2], [thing_1-thing, thing_2-thing], [T1, =,\,=, T2]).
-% predef_dict([=@=, T1, T2], [thing_1-thing, thing_2-thing], [T1, =,@,=, T2]).
-% predef_dict([==, T1, T2], [thing_1-thing, thing_2-thing], [T1, =,=, T2]).
-% predef_dict([=<, T1, T2], [thing_1-thing, thing_2-thing], [T1, =,<, T2]).
-% predef_dict([=<, T1, T2], [thing_1-thing, thing_2-thing], [T1, =,<, T2]).
-% predef_dict([>=, T1, T2], [thing_1-thing, thing_2-thing], [T1, >,=, T2]).
-% predef_dict([=, T1, T2], [thing_1-thing, thing_2-thing], [T1, =, T2]).
-% predef_dict([<, T1, T2], [thing_1-thing, thing_2-thing], [T1, <, T2]).
-% predef_dict([>, T1, T2], [thing_1-thing, thing_2-thing], [T1, >, T2]).
-% predef_dict([unparse_time, Secs, Date], [secs-time, date-date], [Secs, corresponds, to, date, Date]).
+predef_dict([\=@=, T1, T2], [thing_1-thing, thing_2-thing], [T1, \,=,@,=, T2]).
+predef_dict([\==, T1, T2], [thing_1-thing, thing_2-thing], [T1, \,=,=, T2]).
+predef_dict([=\=, T1, T2], [thing_1-thing, thing_2-thing], [T1, =,\,=, T2]).
+predef_dict([=@=, T1, T2], [thing_1-thing, thing_2-thing], [T1, =,@,=, T2]).
+predef_dict([==, T1, T2], [thing_1-thing, thing_2-thing], [T1, =,=, T2]).
+predef_dict([=<, T1, T2], [thing_1-thing, thing_2-thing], [T1, =,<, T2]).
+predef_dict([=<, T1, T2], [thing_1-thing, thing_2-thing], [T1, =,<, T2]).
+predef_dict([>=, T1, T2], [thing_1-thing, thing_2-thing], [T1, >,=, T2]).
+predef_dict([is, T1, T2], [thing_1-thing, thing_2-thing], [T1, =, T2]).
+predef_dict([<, T1, T2], [thing_1-thing, thing_2-thing], [T1, <, T2]).
+predef_dict([>, T1, T2], [thing_1-thing, thing_2-thing], [T1, >, T2]).
+predef_dict([unparse_time, Secs, Date], [secs-time, date-date], [Secs, corresponds, to, date, Date]).
 % predef_dict([must_be, Type, Term], [type-type, term-term], [Term, must, be, Type]).
 % predef_dict([must_not_be, A, B], [term-term, variable-variable], [A, must, not, be, B]). 
 

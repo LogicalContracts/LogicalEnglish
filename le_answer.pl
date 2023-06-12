@@ -185,7 +185,7 @@ answer(English, Arg) :- %trace,
             catch(ModuleName:scasp(Goal, [model(_M), tree(_T)]), Error, ( print_message(error, Error), fail ) ), 
             _Result, 
         retract_facts(ModuleName, Facts))
-    ;   print_message(error, "no scasp SwishModule: ~w Facts: ~w Command: ~w Goal: ~w"-[SwishModule, Facts, Command, Goal]),
+    ;   %print_message(error, "no scasp SwishModule: ~w Facts: ~w Command: ~w Goal: ~w"-[SwishModule, Facts, Command, Goal]),
         setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
             Command, 
             %call(Command), 
@@ -449,7 +449,8 @@ show(rules) :- % trace,
     findall((Pred :- Body), 
         (dict(PredicateElements, _, _),  PredicateElements\=[], Pred=..PredicateElements,
         clause(SwishModule:Pred, Body_), unwrapBody(Body_, Body)), Predicates),
-    forall(member(Clause, [(is_(A,B) :- (nonvar(B), is(A,B)))|Predicates]), portray_clause_ind(Clause)).
+    %forall(member(Clause, [(is_(A,B) :- (nonvar(B), is(A,B)))|Predicates]), portray_clause_ind(Clause)).
+    forall(member(Clause, Predicates), portray_clause_ind(Clause)).
 
 % 
 %(op2tokens(Pred, _, OpTokens) -> % Fixing binary predicates for scasp
