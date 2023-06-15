@@ -63,11 +63,15 @@ Admissible variants with a specific URL:
 P on T at URL if Body --> P :- targetBody(Body,true,T,URL,[],LE_line or taxlog)
 P at URL if Body  -->  P :- targetBody(Body,false,_,URL,[],LE_line or taxlog)
 */
-
+semantics2prolog2(if(N,empty,B),neck(if)-[],(:-targetBody(B,false,_,'',[],NN))) :- !, % constraints for scasp
+    NN is N + 3. % correction to linecount
+semantics2prolog2(if(empty,B),neck(if)-[],(:-targetBody(B,false,_,'',[],3))) :- !. % constraints for scasp
 semantics2prolog2(if(N,H,B),neck(if)-[],(H:-targetBody(B,false,_,'',[],NN))) :- !, % working rule with line number
+    H\=empty,
     NN is N + 3. % correction to linecount
     %taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB).
-semantics2prolog2(if(H,B),neck(if)-[],(H:-targetBody(B,false,_,'',[],3))) :- !. % pre-settings without line numbers
+semantics2prolog2(if(H,B),neck(if)-[],(H:-targetBody(B,false,_,'',[],3))) :- !, % pre-settings without line numbers
+    H\=empty.
     %taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB),
     %this_capsule(SwishModule),
     %declare_facts_as_dynamic(SwishModule, [H]). 
@@ -137,10 +141,17 @@ taxlog2prolog(query(Name,Goal),delimiter-[classify,classify],query(Name,Goal)).
 
 % extending to cover new structural changes at semantical level
 
+semantics2prolog(if(N,empty,B),neck(if)-[SpecH,SpecB],(:-targetBody(B,false,_,'',[],NN))) :- !, % working rule with line number
+    NN is N + 3, % correction to linecount
+    taxlogHeadSpec(empty,SpecH), taxlogBodySpec(B,SpecB).
+semantics2prolog(if(empty,B),neck(if)-[SpecH,SpecB],(:-targetBody(B,false,_,'',[],3))) :- !, % pre-settings without line numbers
+    taxlogHeadSpec(empty,SpecH), taxlogBodySpec(B,SpecB). 
 semantics2prolog(if(N,H,B),neck(if)-[SpecH,SpecB],(H:-targetBody(B,false,_,'',[],NN))) :- !, % working rule with line number
+    H\=empty,
     NN is N + 3, % correction to linecount
     taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB).
 semantics2prolog(if(H,B),neck(if)-[SpecH,SpecB],(H:-targetBody(B,false,_,'',[],3))) :- !, % pre-settings without line numbers
+    H\=empty,
     taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB),
     this_capsule(SwishModule),
     declare_facts_as_dynamic(SwishModule, [H]). 

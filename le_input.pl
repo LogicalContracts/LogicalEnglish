@@ -101,7 +101,7 @@ query three is:
     matches_name/4, matches_type/4, delete_underscore/2, add_determiner/2, proper_det/2,
     portray_clause_ind/1, order_templates/2, process_types_dict/2,
     assertall/1,asserted/1, 
-    update_file/3, myDeclaredModule/1, conditions/6
+    update_file/3, myDeclaredModule/1, conditions/6, op_stop/1
     ]).
 
 :- multifile sandbox:safe_primitive/1.
@@ -529,6 +529,14 @@ query_content(_, Rest, _) :-
 %           _150144 before _149434,
 %           not ((terminates_at(_152720,_149428,_152732),_150144 before _152732),_152732 before _149434))
 
+% it must not be true that
+% statement/1 or /3 
+statement(Statement) --> 
+    it_must_not_be_true_that_, % spaces_or_newlines(_),
+    newline, spaces(Ind), !, conditions(Ind, [], _MapN, Conditions), spaces_or_newlines(_), period, 
+    {(Conditions = [] -> Statement = [if(empty, true)]; 
+            (Statement = [if(empty, Conditions)]))}, !.
+
 % it becomes the case that
 %   fluent
 % when
@@ -691,12 +699,12 @@ more_conds(_, Ind, Ind, Map, Map, [], L, L).
 % this naive definition of term is problematic
 % term_/4 or /6
 term_(StopWords, Term, Map1, MapN) --> 
-    (variable(StopWords, Term, Map1, MapN), !); (constant(StopWords, Term, Map1, MapN), !); (list_(Term, Map1, MapN), !). %; (compound_(Term, Map1, MapN), !).
+    (variable(StopWords, Term, Map1, MapN), !); (constant(StopWords, Term, Map1, MapN), !); (list_(Term, Map1, MapN), !); (expression(Term, Map1), !). %; (compound_(Term, Map1, MapN), !).
 
 % list_/3 or /5
 list_(List, Map1, MapN) --> 
     spaces(_), bracket_open_, !, extract_list([']'], List, Map1, MapN), bracket_close.   
-
+% compound_ disable
 compound_(V1/V2, Map1, MapN) --> 
     term_(['/'], V1, Map1, Map2), ['/'], term_([], V2, Map2, MapN). 
 
@@ -779,7 +787,7 @@ predicate_name_(Module:Predicate) -->
     [Module], colon_, extract_constant([], NameWords), { name_predicate(NameWords, Predicate) }, !.
 predicate_name_(Predicate) --> extract_constant([], NameWords), { name_predicate(NameWords, Predicate) }.
 
-at_time(T, Map1, _MapN) --> spaces_or_newlines(_), at_, expression(T, Map1), spaces_or_newlines(_).
+at_time(T, Map1, MapN) --> spaces_or_newlines(_), at_, term_([], T, Map1, MapN), spaces_or_newlines(_).
 
 spaces(N) --> [' '], !, spaces(M), {N is M + 1}.
 % todo: reach out for codemirror s configuration https://codemirror.net/doc/manual.html for tabSize
@@ -937,6 +945,9 @@ it_is_unknown_whether_ -->
 
 it_is_unknown_whether_ --> 
     [non], spaces(_), [è], spaces(_), [noto], spaces(_), [se], spaces(_). % italian
+
+it_must_not_be_true_that_ --> 
+    it_, [must], spaces(_), [not], spaces(_), [be], spaces(_), [true], spaces(_), [that], spaces(_).
 
 /* --------------------------------------------------- Supporting code */
 % indentation code
