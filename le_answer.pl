@@ -617,7 +617,7 @@ dump(scasp_scenarios_queries, List, String) :-
     string_concat(StringScenarios, StringQueries, String). 
 
 dump(constraints, List, String) :- %trace, 
-    findall((:- Body), 
+    findall((false :- Body), 
         (member( (:- Body_), List), unwrapBody(Body_, Body)), Predicates),
     with_output_to(string(String), forall(member(Clause, Predicates), portray_clause_ind(Clause))).
     %print_message(informational, " Constraints ~w"-[String]).
