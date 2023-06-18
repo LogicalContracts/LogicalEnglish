@@ -1,0 +1,49 @@
+the target language is: scasp. % other languages available soon
+
+the event predicates are:
+    *an animal* praises *an animal*.
+    *an animal* sings.
+    *an animal* picks up *an object*.
+    it all begins.
+
+the fluents are:
+    *an animal* has *an object*.
+    *an animal* is near *an object*.
+    
+the knowledge base foxec includes:
+
+it becomes the case that
+    an animal has an object
+when
+    the animal picks up the object
+if the animal is near the object.
+
+it becomes the case that
+    the fox is near the cheese
+when
+    the crow sings.
+    
+it becomes the case that
+    the crow is near the cheese
+when
+    it all begins.
+
+it becomes not the case that
+    the crow has the cheese
+when
+    the crow sings.
+    
+the crow sings, at a time T
+    if the fox praises the crow, at T.
+    
+% initial act  
+
+it all begins, at 1.
+the crow picks up the cheese, at 2.     
+    
+scenario one is:
+    the fox praises the crow, at 4.
+    the fox picks up the cheese, at 5.
+   
+query one is:
+    which animal has which object, at which time. 

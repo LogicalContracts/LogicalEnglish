@@ -2121,6 +2121,8 @@ dictionary(Predicate, VariablesNames, Template) :- % dict(Predicate, VariablesNa
 %                    [affiliate-affiliate, date-date],
 %                    [A, is, an, individual, or, is, a, company, at, B]).
 % % Prolog
+predef_dict([length, List, Length], [member-object, list-list], [the, length, of, List, is, Length]).
+predef_dict([bagof, Thing, Condition, Bag], [bag-thing, thing-thing, condition-condition], [Bag, is, a, bag, of, Thing, such, that, Condition]).
 predef_dict([has_as_head_before, A, B, C], [list-list, symbol-term, rest_of_list-list], [A, has, B, as, head, before, C]).
 predef_dict([append, A, B, C],[first_list-list, second_list-list, third_list-list], [appending, A, then, B, gives, C]).
 predef_dict([reverse, A, B], [list-list, other_list-list], [A, is, the, reverse, of, B]).
@@ -2137,13 +2139,11 @@ predef_dict([==, T1, T2], [thing_1-thing, thing_2-thing], [T1, is, equivalent, t
 predef_dict([is_a, Object, Type], [object-object, type-type], [Object, is, of, type, Type]).
 predef_dict([is_not_before, T1, T2], [time1-time, time2-time], [T1, is, not, before, T2]). % see reasoner.pl before/2
 predef_dict([=, T1, T2], [thing_1-thing, thing_2-thing], [T1, is, equal, to, T2]).
-predef_dict([=, T1, T2], [thing_1-thing, thing_2-thing], [T1, is, T2]). % builtin Prolog assignment
 predef_dict([isbefore, T1, T2], [time1-time, time2-time], [T1, is, before, T2]). % see reasoner.pl before/2
 predef_dict([isafter, T1, T2], [time1-time, time2-time], [T1, is, after, T2]).  % see reasoner.pl before/2
 predef_dict([member, Member, List], [member-object, list-list], [Member, is, in, List]).
-predef_dict([length, List, Length], [member-object, list-list], [the, length, of, List, is, Length]).
-predef_dict([bagof, Thing, Condition, Bag], [bag-thing, thing-thing, condition-condition], [Bag, is, a, bag, of, Thing, such, that, Condition]).
 %predef_dict([is_, A, B], [term-term, expression-expression], [A, is, B]). % builtin Prolog assignment
+predef_dict([=, T1, T2], [thing_1-thing, thing_2-thing], [T1, is, T2]). % builtin Prolog assignment
 % predefined entries:
 %predef_dict([assert,Information], [info-clause], [this, information, Information, ' has', been, recorded]).
 predef_dict([\=@=, T1, T2], [thing_1-thing, thing_2-thing], [T1, \,=,@,=, T2]).
