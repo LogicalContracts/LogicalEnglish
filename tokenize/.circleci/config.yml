@@ -1,0 +1,21 @@
+version: 2
+
+jobs:
+  build:
+    docker:
+      - image: swipl:stable
+
+    steps:
+      - run:
+          # TODO Build custom image to improve build time
+          name: Install Deps
+          command: |
+            apt update -y
+            apt install git make -y
+
+      - checkout
+
+      - run:
+          name: Run tests
+          command: |
+            make test
