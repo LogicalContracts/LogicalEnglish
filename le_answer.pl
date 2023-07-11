@@ -82,6 +82,12 @@ which can be used on the new command interface of LE on SWISH
 :- use_module(library(http/term_html)).
 :- use_module(library(http/js_write)).
 
+:- use_module(library(r/r_call)).
+:- use_module(library(r/r_data)).
+:- use_module(swish:swish(lib/r_swish)).
+
+
+
 :- multifile http:location/3.
 :- dynamic   http:location/3.
 
@@ -124,6 +130,10 @@ extract_goal_command_((A;B), M, (IA;IB), (CA;CB)) :-
     extract_goal_command_(A, M, IA, CA), extract_goal_command_(B, M, IB, CB), !. 
 extract_goal_command_((A,B), M, (IA,IB), (CA,CB)) :-
     extract_goal_command_(A, M, IA, CA), extract_goal_command_(B, M, IB, CB), !. 
+extract_goal_command_(r_data_frame(Data, ParamList, InnerPredicate), M, 
+    r_data_frame(Data, ParamList, IA), 
+    r_data_frame(Data, ParamList, CA)) :-
+    extract_goal_command_(InnerPredicate, M, IA, CA), !. 
 extract_goal_command_(holds(Goal,T), M, Goal, (holds(Goal,T);M:holds(Goal,T))) :- !.
 extract_goal_command_(happens(Goal,T), M, Goal, (happens(Goal,T);M:happens(Goal,T))) :- !.
 extract_goal_command_(Goal, M, Goal, M:Goal) :- !. 
@@ -167,6 +177,23 @@ interrupted(T1, Fluent, T2) :- %trace,
     %(T2=(after(T1)-_)->T2=(after(T1)-before(T)); rbefore(T,T2)). 
 
 /* ----------------------------------------------------------------- CLI English */
+
+
+plot(PlotName, Arg) :-
+    le_input:parsed, 
+    prepare_plot(PlotName, Arg, SwishModule, Facts, DataFrames, PlotGoal),
+    copy_term(PlotGoal,PlotGoalForDisplay), % have to copy the term since it gets modified after calling
+    setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
+        (run_data_frames(SwishModule, DataFrames)), 
+        _, 
+        retract_facts(SwishModule, Facts)), % run the data frames command and prepare the data frames
+    atom_concat(PlotName, '.png', PlotNamePng),
+    atom_string(PlotNamePng, PlotNamePngStr),
+    <- png(PlotNamePngStr),  % specifies the download file format with the PlotName
+    PlotGoal, % plot the image into the file
+    r_swish:r_download, % shows the download button
+    PlotGoalForDisplay. % plot the image onto the screen
+
 % answer/1
 % answer(+Query or Query Expression)
 answer(English) :- %trace, 
@@ -254,6 +281,15 @@ answer(English, Arg, E, Result) :- %trace,
 %     extract_goal_command(Goal, SwishModule, _InnerGoal, Command), !.  
 %     %print_message(informational, "Command: ~w"-[Command]).
 
+
+prepare_plot(PlotName, Arg, SwishModule, Facts, DataFrames, PlotGoal) :- %trace, 
+    var(SwishModule), this_capsule(SwishModule), !, 
+    ((Arg = with(ScenarioName)) -> Scenario=ScenarioName; Scenario=noscenario),
+    (Scenario==noscenario -> Facts = [] ; 
+        (SwishModule:example(Scenario, [scenario(Facts, _)]) -> true;  print_message(error, "Scenario: ~w does not exist"-[Scenario]))), !,
+    ( SwishModule:plot_cmd(PlotName, data_frames(DataFrames), PlotCommand) -> true; (print_message(informational, "No plot command named: ~w"-[PlotName]), fail) ), !,
+    extract_goal_command(PlotCommand, SwishModule, _InnerGoal2, PlotGoal).
+
 % prepare_query(+English, +Arguments, -Module, -Goal, -Facts, -Command)
 prepare_query(English, Arg, SwishModule, Goal, Facts, Command) :- %trace, 
     %restore_dicts, 
@@ -270,7 +306,7 @@ prepare_query(English, Arg, SwishModule, Goal, Facts, Command) :- %trace,
         (SwishModule:example(Scenario, [scenario(Facts, _)]) -> 
             true;  print_message(error, "Scenario: ~w does not exist"-[Scenario]))),
     %print_message(informational, "Facts: ~w"-[Facts]), 
-    extract_goal_command(Goal, SwishModule, _InnerGoal, Command), !.   
+    extract_goal_command(Goal, SwishModule, _InnerGoal, Command), !.
     %print_message(informational, "Command: ~w"-[Command]). 
 
 % prepare_query(+English, +Arguments, +Module, -Goal, -Facts, -Command)
@@ -385,6 +421,10 @@ escape_uppercased(Word, EscapedWord) :-
     name(Word, [First|Rest]), First >= 65, First =< 90,
     append([92, First|Rest], [92], NewCodes),
     name(EscapedWord, NewCodes).
+
+run_data_frames(_, []) :- !.
+run_data_frames(SwishModule, [F|R]) :- nonvar(F), 
+    call(SwishModule:F), run_data_frames(SwishModule, R).
 
 assert_facts(_, []) :- !. 
 assert_facts(SwishModule, [F|R]) :- nonvar(F), % print_message(informational, "asserting: ~w"-[SwishModule:F]),
@@ -625,6 +665,12 @@ dump(queries, List, String) :-
         (member( query(Name, Query), List)), Predicates),
     with_output_to(string(String), forall(member(Clause, Predicates), portray_clause_ind(Clause))).
 
+dump(plot, List, String) :- 
+    findall( plot_cmd(Name, DataFrames, Command), 
+        (member(plot_cmd(Name, DataFrames, Command), List)), Predicates),
+    %print_message(informational, "dump Predicates ~w, List: ~w"-[Predicates, List]),
+    with_output_to(string(String), forall(member(Clause, Predicates), portray_clause_ind(Clause))).
+
 dump(scenarios, List, String) :- 
     findall( example(Name, Scenario), 
         (member( example(Name, Scenario), List)), Predicates),
@@ -636,7 +682,8 @@ dump(all, Module, List, String) :-
     %print_message(informational, " Templates ~w"-[StringTemplates]),
 	dump(rules, List, StringRules),
     dump(scenarios, List, StringScenarios),
-    dump(queries, List, StringQueries), 
+    dump(queries, List, StringQueries),
+    dump(plot, List, StringPlots), 
     string_concat(":-module(\'", Module, Module01),
     string_concat(Module01, "\', []).\n", TopHeadString),  
     dump(source_lang, SourceLang), 
@@ -645,7 +692,8 @@ dump(all, Module, List, String) :-
     string_concat(HeadString, "prolog_le(verified).\n", String0), % it has to be here to set the context
 	string_concat(String0, StringRules, String1),
     string_concat(String1, StringScenarios, String2),
-    string_concat(String2, StringQueries, String).   
+    string_concat(String2, StringQueries, String3),
+    string_concat(String3, StringPlots, String).   
 
 dump_scasp(Module, List, String) :-
 	dump(templates_scasp, StringTemplates), 
@@ -729,7 +777,9 @@ write_functors_to_string([F/N|R], Previous, StringFunctors) :- !,
 prolog_colour:term_colours(en(_Text),lps_delimiter-[classify]). % let 'en' stand out with other taxlog keywords
 prolog_colour:term_colours(en_decl(_Text),lps_delimiter-[classify]). % let 'en_decl' stand out with other taxlog keywords
 
-
+user:plot(Plot, with(Scenario)) :-
+    print_message(informational,"plot:Plot ~w with ~w"-[Plot, Scenario]), 
+    plot(Plot, with(Scenario)).
 user:(answer Query with Scenario):- 
     %print_message(informational,"le_answer:answer ~w with ~w"-[Query, Scenario]), 
     answer(Query,with(Scenario)). 
@@ -969,7 +1019,7 @@ explanationLEHTML([C1|Cn],CH) :- explanationLEHTML(C1,CH1), explanationLEHTML(Cn
 explanationLEHTML([],[]).
 
 %sandbox:safe_meta(term_singletons(X,Y), [X,Y]).
-
+sandbox:safe_primitive(le_answer:plot(_Plot, _Scenario)).
 sandbox:safe_primitive(le_answer:answer( _EnText)).
 sandbox:safe_primitive(le_answer:show( _Something)).
 sandbox:safe_primitive(le_answer:show( _Something, _With)).

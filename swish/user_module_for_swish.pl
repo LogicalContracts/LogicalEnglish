@@ -336,7 +336,6 @@ user:term_expansion(NiceTerm, ExpandedTerms) :-  % hook for LE extension
 	%print_message(informational, "current file ~w"-[File]), 
 	le_answer:le_taxlog_translate(NiceTerm,File,Line,TaxlogTerms),
 	le_answer:le_expanded_terms(TaxlogTerms, ExpandedTerms).
-
 	
 user:term_expansion(T,NT) :- taxlog2prolog(T,_,NT).
 %user:term_expansion(T,NT) :- (member(target(prolog),T) -> semantics2prolog(T,_,NT) ; taxlog2prolog(T,_,NT)).
