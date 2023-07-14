@@ -1110,9 +1110,9 @@ as_x_axis_label_ --> [as], spaces(_), [x], spaces(_), [axis], spaces(_), [label]
 
 as_y_axis_label_ --> [as], spaces(_), [y], spaces(_), [axis], spaces(_), [label], spaces(_).
 
-x_axis_limits_(X, Y) --> [x], spaces(_), [axis], spaces(_), [limits], spaces(_), [from], spaces(_), [X], spaces(_), [to], spaces(_), [Y], spaces(_), {number(X), number(Y)}.
+x_axis_limits_(X, Y) --> [x], spaces(_), [axis], spaces(_), [limits], spaces(_), [from], spaces(_), item(X, []), spaces(_), [to], spaces(_), item(Y, []), spaces(_), {number(X), number(Y)}.
 
-y_axis_limits_(X, Y) --> [y], spaces(_), [axis], spaces(_), [limits], spaces(_), [from], spaces(_), [X], spaces(_), [to], spaces(_), [Y], spaces(_), {number(X), number(Y)}.
+y_axis_limits_(X, Y) --> [y], spaces(_), [axis], spaces(_), [limits], spaces(_), [from], spaces(_), item(X, []), spaces(_), [to], spaces(_), item(Y, []), spaces(_), {number(X), number(Y)}.
 
 query_header(Ind, Map) --> spaces(Ind), for_which_, list_of_vars([], Map), colon_, spaces_or_newlines(_).
 query_header(0, []) --> []. 
@@ -1433,7 +1433,7 @@ match_template(PossibleLiteral, Map1, MapN, Literal) :-
 match_template(PossibleLiteral, Map1, MapN, Literal) :- 
     %print_message(informational,'Possible Literal ~w'-[PossibleLiteral]),
     dictionary(Predicate, _, Candidate),
-    match(Candidate, PossibleLiteral, Map1, MapN, Template), !, 
+    match(Candidate, PossibleLiteral, Map1, MapN, Template), !,
     dictionary(Predicate, _, Template), 
     Literal =.. Predicate.
     %print_message(informational,'Match!! with ~w'-[Literal]).% !. 

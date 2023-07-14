@@ -83,8 +83,6 @@ which can be used on the new command interface of LE on SWISH
 :- use_module(library(http/js_write)).
 
 :- use_module(library(r/r_call)).
-:- use_module(library(r/r_data)).
-:- use_module(swish:swish(lib/r_swish)).
 
 
 
