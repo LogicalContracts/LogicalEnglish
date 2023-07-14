@@ -95,7 +95,7 @@ query three is:
     op(1150, fx, show),
     op(1150, fx, abducible),
     dictionary/3, meta_dictionary/3, dict/3, meta_dict/3,
-    parsed/0, source_lang/1, including/0, just_saved_scasp/2,
+    parsed/0, source_lang/1, including/0, %just_saved_scasp/2,
     this_capsule/1, unpack_tokens/2, clean_comments/2,
     query_/2, extract_constant/4, spaces/3, name_as_atom/2, process_types_or_names/4,
     matches_name/4, matches_type/4, delete_underscore/2, add_determiner/2, proper_det/2,
@@ -119,9 +119,8 @@ query three is:
 :- table addExp//2, mulExp//2.
 :- thread_local text_size/1, error_notice/4, dict/3, meta_dict/3, example/2, local_dict/3, local_meta_dict/3,
                 last_nl_parsed/1, kbname/1, happens/2, initiates/3, terminates/3, is_type/1, is_/2, 
-                predicates/1, events/1, fluents/1, metapredicates/1, parsed/0, source_lang/1, including/0, just_saved_scasp/2. 
+                predicates/1, events/1, fluents/1, metapredicates/1, parsed/0, source_lang/1, including/0. % just_saved_scasp/2. 
 :- discontiguous statement/3, declaration/4, _:example/2, _:query/2, _:is_/2. 
-:- dynamic just_saved_scasp/2.
 
 % Main clause: text_to_logic(+String,-Clauses) is det
 % Errors are added to error_notice 
@@ -148,8 +147,7 @@ document(Translation, In, Rest) :-
     (including -> retract(including); true), 
     (source_lang(_L) -> retractall(source_lang(_)) ; true),
     phrase(header(Settings), In, AfterHeader), !, %print_message(informational, "Declarations completed: ~w"-[Settings]),
-    phrase(content(Content), AfterHeader, Rest), 
-    %print_message(informational, "Content: ~w"-[AfterHeader]), 
+    phrase(content(Content), AfterHeader, Rest), %print_message(informational, "Content: ~w"-[AfterHeader]), 
     append(Settings, Content, Translation), !,
     %append(Original, [if(is_(A,B), (nonvar(B), is(A,B)))], Translation), % adding def of is_2 no more  
     assertz(parsed). 
@@ -166,7 +164,7 @@ header(Settings, In, Next) :-
     append(DictEntries, RestoredDictEntries, AllDictEntries), 
     order_templates(AllDictEntries, OrderedEntries), 
     process_types_dict(OrderedEntries, Types), 
-    %print_message(informational, "types ~w rules ~w"-[Types, CollectedRules]),
+    %print_message(informational, "header: types ~w rules ~w"-[Types, CollectedRules]),
     append(OrderedEntries, RulesforErrors, SomeRules),
     append(SomeRules, Types, MRules), 
     %print_message(informational, "rules ~w"-[MRules]),
@@ -184,8 +182,8 @@ included_files(Settings2, RestoredDictEntries, CollectedRules) :-
     member(in_files(ModuleNames), Settings2),   % include all those files and get additional DictEntries before ordering
     %print_message(informational, "Module Names ~w\n"-[ModuleNames]),
     assertz(including), !, % cut to prevent escaping failure of load_all_files
-    load_all_files(ModuleNames, RestoredDictEntries, CollectedRules), 
-    print_message(informational, "Restored Entries ~w\n"-[RestoredDictEntries]). 
+    load_all_files(ModuleNames, RestoredDictEntries, CollectedRules). 
+    %print_message(informational, "Restored Entries ~w\n"-[RestoredDictEntries]). 
 included_files(_, [], []). 
 
 %load_all_files/2
@@ -193,14 +191,14 @@ included_files(_, [], []).
 %and produces the list of entries that must be added to the dictionaries
 load_all_files([], [], []).
 load_all_files([Name|R], AllDictEntries, AllRules) :- 
-    print_message(informational, "Loading ~w"-[Name]),
+    %print_message(informational, "Loading ~w"-[Name]),
     split_module_name(Name, File, URL),  
     %print_message(informational, "File ~w URL ~w"-[File, URL]),
     concat(File, "-prolog", Part1), concat(Part1, ".pl", Filename),  
     (URL\=''->atomic_list_concat([File,'-prolog', '+', URL], NewName); atomic_list_concat([File,'-prolog'], NewName)),
     %print_message(informational, "File ~w FullName ~w"-[Filename, NewName]),
     load_file_module(Filename, NewName, true), !, 
-    %print_message(informational, "the dictionaries of ~w being restored into module ~w"-[NewName]),
+    %print_message(informational, "the dictionaries of ~w being restored into module ~w"-[Filename, NewName]),
     (NewName:local_dict(_,_,_) -> findall(dict(A,B,C), NewName:local_dict(A,B,C), ListDict) ; ListDict = []),
     (NewName:local_meta_dict(_,_,_) -> findall(meta_dict(A,B,C), NewName:local_meta_dict(A,B,C), ListMetaDict); ListMetaDict = []),
     append(ListDict, ListMetaDict, DictEntries), 
@@ -305,14 +303,14 @@ content(T) --> %{print_message(informational, "going for KB:"-[])},
     content(R), 
     {append([kbname(Kbname)|S], R, T)}, !.
 content(T) --> %{print_message(informational, "going for scenario:"-[])},
-    spaces_or_newlines(_), scenario_content(S), !, %{print_message(informational, "scenario: ~w"-[S])},
+    spaces_or_newlines(_), scenario_content(S),  %{print_message(informational, "scenario: ~w"-[S])},
     content(R), 
     {append(S, R, T)}, !.
 content(T) --> %{print_message(informational, "going for query:"-[])},
-    spaces_or_newlines(_), query_content(S), !, content(R), 
+    spaces_or_newlines(_), query_content(S),  content(R), 
     {append(S, R, T)}, !.
 content([]) --> 
-    spaces_or_newlines(_), []. 
+    spaces_or_newlines(_). 
 content(_, Rest, _) :- 
     asserterror('LE error in the content ', Rest), 
     fail.
@@ -506,10 +504,11 @@ rules_previous(KBName) -->
 
 % scenario_content/1 or /3
 % a scenario description: assuming one example -> one scenario -> one list of facts.
-scenario_content(Scenario) -->
-    scenario_, extract_constant([is, es, est, è], NameWords), is_colon_, newline,
+scenario_content(Scenario) --> %{print_message(informational, "starting scenario: "-[])},
+    scenario_, extract_constant([is, es, est, è], NameWords), is_colon_, newline, %{print_message(informational, " scenario: ~w"-[NameWords])},
     %list_of_facts(Facts), period, !, 
     spaces(_), assumptions_(Assumptions), !, % period is gone
+    %{print_message(informational, "scenario: ~w has ~w"-[NameWords, Assumptions])},
     {name_as_atom(NameWords, Name), Scenario = [example( Name, [scenario(Assumptions, true)])]}.
 
 scenario_content(_,  Rest, _) :- 
@@ -603,9 +602,10 @@ rest_list_of_facts([]) --> [].
 
 % assumptions_/3 or /5
 assumptions_([A|R]) --> 
-        spaces_or_newlines(_),  rule_([], _, A), !, assumptions_(R).
-assumptions_([]) --> 
-        spaces_or_newlines(_), []. 
+        spaces_or_newlines(_),  rule_([], _, A), % {print_message(informational, "rule in scenario: ~w"-[A])}, 
+        assumptions_(R).%  {print_message(informational, "rest of rules in scenario: ~w"-[R])}. 
+assumptions_([]) -->  %{print_message(informational, "no more rules in scenario"-[])}, 
+        spaces_or_newlines(_). 
 
 rule_(InMap, InMap, Rule) -->
     it_is_unknown_whether_, spaces_or_newlines(_), 
@@ -638,8 +638,9 @@ newline_or_nothing --> [].
 % it then tries to match those words against a template in memory (see dict/3 predicate).
 % The output is then contigent to the type of literal according to the declarations. 
 literal_(Map1, MapN, FinalLiteral) --> % { print_message(informational, 'at time, literal') },
-    at_time(T, Map1, Map2), comma, possible_instance(PossibleTemplate),  
-    {match_template(PossibleTemplate, Map2, MapN, Literal),
+    at_time(T, Map1, Map2), comma, possible_instance(PossibleTemplate),
+    { PossibleTemplate \=[], % cant be empty 
+     match_template(PossibleTemplate, Map2, MapN, Literal),
      (fluents(Fluents) -> true; Fluents = []),
      (events(Events) -> true; Events = []),
      (lists:member(Literal, Events) -> FinalLiteral = happens(Literal, T) 
@@ -647,8 +648,9 @@ literal_(Map1, MapN, FinalLiteral) --> % { print_message(informational, 'at time
         ; FinalLiteral = Literal))}, !. % by default (including builtins) they are timeless!
 
 literal_(Map1, MapN, FinalLiteral) --> % { print_message(informational, 'literal, at time') },
-    possible_instance(PossibleTemplate), comma, at_time(T, Map1, Map2),  
-    {match_template(PossibleTemplate, Map2, MapN, Literal),
+    possible_instance(PossibleTemplate), comma, at_time(T, Map1, Map2), 
+    { PossibleTemplate \=[], % cant be empty 
+     match_template(PossibleTemplate, Map2, MapN, Literal),
      (fluents(Fluents) -> true; Fluents = []),
      (events(Events) -> true; Events = []),
      (lists:member(Literal, Events) -> FinalLiteral = happens(Literal, T) 
@@ -656,8 +658,9 @@ literal_(Map1, MapN, FinalLiteral) --> % { print_message(informational, 'literal
         ; FinalLiteral = Literal))}, !. % by default (including builtins) they are timeless!
 
 literal_(Map1, MapN, FinalLiteral) -->  
-    possible_instance(PossibleTemplate), %{ print_message(informational, "~w"-[PossibleTemplate]) },
-    {match_template(PossibleTemplate, Map1, MapN, Literal),
+    possible_instance(PossibleTemplate), %{ print_message(informational, "literal_: ~w"-[PossibleTemplate]) },
+    { PossibleTemplate \=[], % cant be empty 
+     match_template(PossibleTemplate, Map1, MapN, Literal), 
      (fluents(Fluents) -> true; Fluents = []),
      (events(Events) -> true; Events = []),
      (consult_map(Time, '_change_time', Map1, _MapF) -> T=Time; true), 

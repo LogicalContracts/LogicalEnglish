@@ -38,7 +38,7 @@ which can be used on the new command interface of LE on SWISH
     op(1150, fx, pred),
     op(1150, fx, show),
     op(1150, fx, abducible),
-    dump/4, dump/3, dump/2, dump_scasp/3, split_module_name/3,
+    dump/4, dump/3, dump/2, dump_scasp/3, split_module_name/3, just_saved_scasp/2,
     prepare_query/6, assert_facts/2, retract_facts/2, parse_and_query/5, parse_and_query_and_explanation/5,
     le_expanded_terms/2, show/1, source_lang/1, targetBody/6
     ]).
@@ -92,6 +92,8 @@ which can be used on the new command interface of LE on SWISH
 %http:location(css,   scasp(css),  []).
     
 :- discontiguous statement/3, declaration/4, _:example/2, _:query/2, _:is_/2. 
+
+:- thread_local  just_saved_scasp/2. 
 
 /* ---------------------------------------------------------------  meta predicates CLI */
 
@@ -798,8 +800,8 @@ le_taxlog_translate( it(Text), File, BaseLine, Terms) :-
 le_taxlog_translate( es(Text), File, BaseLine, Terms) :-
     le_input:text_to_logic(Text, Terms) -> true; showErrors(File,BaseLine).
 le_taxlog_translate( prolog_le(verified), _, _, prolog_le(verified)) :- %trace, % running from prolog file
-    assertz(le_input:parsed), this_capsule(M),  
-    assertz(M:just_saved_scasp(null, null)), 
+    assertz(le_input:parsed), %this_capsule(M),  
+    %assertz(M:just_saved_scasp(null, null)), 
     including -> true; restore_dicts. 
 
 combine_list_into_string(List, String) :-
