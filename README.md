@@ -11,8 +11,9 @@ b. For a LE querying GUI: `https://marketplace.visualstudio.com/items?itemName=L
 2. Symlink (may not be necessary); git clone; and get the docker going:
 
 ```
+mkdir ${HOME}/swish_data
 ln -s /app/swish/config-enabled ${HOME}/swish_data
-# not sure if the symlinking is really necessary though
+# not sure if mkdir and symlinking is really necessary though
 
 # from within where you want to put the LogicalEnglish repo:
 git clone git@github.com:smucclaw/LogicalEnglish.git
