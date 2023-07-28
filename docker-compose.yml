@@ -1,0 +1,12 @@
+version: "3"
+services:
+  swish:
+    image: logicalcontracts/swish-june2023
+    ports:
+      - "3050:3050"
+    volumes:
+      - ${HOME}/swish_data:/data
+      - .:/app
+    environment:
+      - LOAD_KB=true
+    mem_limit: 300m

@@ -1,3 +1,27 @@
+# How to get this set up, for CCLAW folks
+
+Here's a streamlined workflow that Yongming came up with. Please let Yongming know if there are issues.
+
+1. Install the following two VSCode extensions. (Yes, it's probably best to use VSCode for this.)
+
+a. For things like LE syntax highlighting: `https://marketplace.visualstudio.com/items?itemName=NikolaiMerritt.logical-english-vscode`
+
+b. For a LE querying GUI: `https://marketplace.visualstudio.com/items?itemName=LogicalEnglishUI.le-ui`
+
+2. Symlink (may not be necessary); git clone; and get the docker going:
+
+```
+ln -s /app/swish/config-enabled ${HOME}/swish_data
+# not sure if the symlinking is really necessary though
+
+# from within where you want to put the LogicalEnglish repo:
+git clone git@github.com:smucclaw/LogicalEnglish.git
+
+docker compose up
+```
+
+The `le-ui` extension should use the right port, but you might need to adjust the `conf.view.url` setting in VSCode if not.
+
 # Logical English
 
 [Logical English](https://github.com/LogicalContracts/LogicalEnglish/), LE, is a controlled form of natural language that can be used for programming and knowledge representation. 
