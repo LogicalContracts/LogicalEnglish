@@ -212,7 +212,7 @@ load_all_files([Name|R], AllDictEntries, AllRules) :-
     %collect_all_preds(SwishModule, DictEntries, Preds),
     %print_message(informational, "the dictionaries being set dynamics are ~w"-[Preds]),
     %declare_preds_as_dynamic(SwishModule, Preds)
-    %print_message(informational, "Loaded ~w"-[Filename]),
+    print_message(informational, "Loaded ~w"-[Filename]),
     load_all_files(R, RDict, NextRules),
     append(RDict, DictEntries, AllDictEntries),
     append(TheseRules, NextRules, AllRules). 
@@ -428,9 +428,9 @@ list_of_meta_predicates_decl(_, _, Rest, _) :-
 % at least one filename of a file to include
 list_of_files([]) --> spaces_or_newlines(_), next_section, !.
 list_of_files([Filename|Rout]) --> spaces_or_newlines(_), extract_string([Filename]), 
-    %{print_message(informational, "~w "-[Filename])}, 
+    {print_message(informational, "list_of_files: filename ~w "-[Filename])}, 
     list_of_files(Rout), !.
-    %{name_as_atom(NameWords, Filename)}.
+    %{name_as_atom(NameWords, Filename)}.    
 list_of_files(_, Rest, _) :- 
     asserterror('LE error found in a file to include ', Rest), 
     fail.
