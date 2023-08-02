@@ -1271,16 +1271,27 @@ if_ --> [if].
 %  current nlen2lps implementation mixes timed and timeless literals!
 
 statement([l_int(Literal,[])]) --> %spypoint,
-   literal([], _Map1, Literal), period,
-   { Literal \= happens(_,_,_) }.
+   literal([], _Map1, Literal), { Literal = holds(_,_) }, 
+   period.
 
 statement([l_int(Literal,Conditions)]) --> %spypoint,
-   literal([], Map1, Literal), if_, conjunction(Map1, _, Conditions), period,
-   { Literal \= happens(_,_,_) }.
+   literal([], Map1, Literal), { Literal = holds(_,_) }, 
+   if_, conjunction(Map1, _, Conditions), period.
 
 statement([l_events(Happens, Holds)]) --> %spypoint, 
     happens_literal(_T1, _T2, [], Map1, Happens), if_,
     conjunction(Map1, _Map2, Holds), period. % <-- Check this! holds_conjunction?
+
+statement([Literal]) --> %spypoint,
+   literal([], _Map1, Literal), period,
+   { Literal \= happens(_,_,_), Literal \= holds(_,_) }.
+
+statement([(Literal :- Body)]) --> %spypoint,
+   literal([], Map1, Literal), if_, conjunction(Map1, _, Conditions), period,
+   { Literal \= happens(_,_,_), Literal \= holds(_,_), Conditions \= [], list2and(Conditions, Body) }.
+   
+list2and([Cond], Cond) :- !. 
+list2and([Cond|Rest], (Cond, ARest)) :- list2and(Rest, ARest).      
 
 happens_literal(T1, T2, MapIn, MapOut, happens(Action, T1, T2)) -->
     literal(MapIn, MapOut, happens(Action, T1, T2)). 
