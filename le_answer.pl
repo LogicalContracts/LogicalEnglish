@@ -38,7 +38,7 @@ which can be used on the new command interface of LE on SWISH
     op(1150, fx, pred),
     op(1150, fx, show),
     op(1150, fx, abducible),
-    dump/4, dump/3, dump/2, dump_scasp/3, split_module_name/3,
+    dump/4, dump/3, dump/2, dump_scasp/3, split_module_name/3, just_saved_scasp/2,
     prepare_query/6, assert_facts/2, retract_facts/2, parse_and_query/5, parse_and_query_and_explanation/5,
     le_expanded_terms/2, show/1, source_lang/1, targetBody/6
     ]).
@@ -98,6 +98,8 @@ which can be used on the new command interface of LE on SWISH
 %http:location(css,   scasp(css),  []).
     
 :- discontiguous statement/3, declaration/4, _:example/2, _:query/2, _:is_/2. 
+
+:- thread_local  just_saved_scasp/2. 
 
 /* ---------------------------------------------------------------  meta predicates CLI */
 
@@ -206,13 +208,13 @@ answer(English, Arg) :- %trace,
     prepare_query(English, Arg, SwishModule, Goal, Facts, Command), 
     ((SwishModule:just_saved_scasp(FileName, ModuleName), FileName\=null) -> 
         %print_message(informational, "To query file ~w in module ~w "-[FileName, ModuleName]),
-        load_file_module(FileName, ModuleName, true), 
+        le_input:load_file_module(FileName, ModuleName, true), 
         %print_message(informational, "loaded scasp ~w "-[FileName]),    
         setup_call_catcher_cleanup(assert_facts(ModuleName, Facts), 
             catch(ModuleName:scasp(Goal, [model(_M), tree(_T)]), Error, ( print_message(error, Error), fail ) ), 
             _Result, 
         retract_facts(ModuleName, Facts))
-    ;   %print_message(error, "no scasp"-[]),
+    ;   %print_message(error, "no scasp SwishModule: ~w Facts: ~w Command: ~w Goal: ~w"-[SwishModule, Facts, Command, Goal]),
         setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
             Command, 
             %call(Command), 
@@ -407,7 +409,7 @@ process_template_for_scasp([Word|RestWords],  Elements, Types, RestFormat, RestP
     nonvar(Word), Word = '\'', !, 
     process_template_for_scasp(RestWords,  Elements, Types, RestFormat, RestPrintWords).
 process_template_for_scasp([Word|RestWords],  Elements, Types, ['~p'|RestFormat], [Word|RestPrintWords] ) :-
-    op_stop(List), member(Word,List), !, 
+    le_input:op_stop(List), member(Word,List), !, 
     process_template_for_scasp(RestWords,  Elements, Types, RestFormat, RestPrintWords).
 process_template_for_scasp([Word|RestWords],  Elements, Types, [' ~w '|RestFormat], [Word|RestPrintWords] ) :-
     escape_uppercased(Word, _), !, 
@@ -489,7 +491,8 @@ show(rules) :- % trace,
     findall((Pred :- Body), 
         (dict(PredicateElements, _, _),  PredicateElements\=[], Pred=..PredicateElements,
         clause(SwishModule:Pred, Body_), unwrapBody(Body_, Body)), Predicates),
-    forall(member(Clause, [(is_(A,B) :- (nonvar(B), is(A,B)))|Predicates]), portray_clause_ind(Clause)).
+    %forall(member(Clause, [(is_(A,B) :- (nonvar(B), is(A,B)))|Predicates]), portray_clause_ind(Clause)).
+    forall(member(Clause, Predicates), portray_clause_ind(Clause)).
 
 % 
 %(op2tokens(Pred, _, OpTokens) -> % Fixing binary predicates for scasp
@@ -655,10 +658,17 @@ dump(scasp_scenarios_queries, List, String) :-
     string_concat(String02, String0N, StringQueries),
     string_concat(StringScenarios, StringQueries, String). 
 
+dump(constraints, List, String) :- %trace, 
+    findall((false :- Body), 
+        (member( (:- Body_), List), unwrapBody(Body_, Body)), Predicates),
+    with_output_to(string(String), forall(member(Clause, Predicates), portray_clause_ind(Clause))).
+    %print_message(informational, " Constraints ~w"-[String]).
+
 dump(rules, List, String) :- %trace, 
     findall((Pred :- Body), 
         (member( (Pred :- Body_), List), unwrapBody(Body_, Body)), Predicates),
     with_output_to(string(String), forall(member(Clause, Predicates), portray_clause_ind(Clause))).
+    %print_message(informational, " Rules ~w"-[String]).
 
 dump(queries, List, String) :- 
     findall( query(Name, Query), 
@@ -697,6 +707,7 @@ dump(all, Module, List, String) :-
 
 dump_scasp(Module, List, String) :-
 	dump(templates_scasp, StringTemplates), 
+    dump(constraints, List, StringConstraints), 
 	dump(rules, List, StringRules),
     dump(scasp_scenarios_queries, List, StringQueriesScenarios),
     dump(abducibles_scasp, List, StringAbds),  
@@ -711,8 +722,9 @@ dump_scasp(Module, List, String) :-
 	string_concat(Header, StringTemplates, HeadString), 
     string_concat(HeadString, StringAbds, String0), 
     %string_concat(String1, "prolog_le(verified).\n", String2), % not need for scasp
-	string_concat(String0, StringRules, String1),
-    string_concat(String1, StringQueriesScenarios, String). 
+    string_concat(String0, StringConstraints, String1), 
+	string_concat(String1, StringRules, String2),
+    string_concat(String2, StringQueriesScenarios, String). 
 
 restore_dicts :- %trace, 
     %print_message(informational, "dictionaries being restored"),
@@ -817,7 +829,7 @@ user:has_as_head_before(List, Head, Rest) :- has_as_head_before(List, Head, Rest
 %user:le_taxlog_translate( en(Text), Terms) :- le_taxlog_translate( en(Text), Terms)..
 %user:le_taxlog_translate( en(Text), File, Base, Terms) :- le_taxlog_translate( en(Text),  File, Base, Terms).
 
-user:op_stop(StopWords) :- op_stop(StopWords). 
+user:op_stop(StopWords) :- le_input:op_stop(StopWords). 
 
 %user:targetBody(G, B, X, S, L, R) :- targetBody(G, B, X, S, L, R). 
 
@@ -838,8 +850,8 @@ le_taxlog_translate( it(Text), File, BaseLine, Terms) :-
 le_taxlog_translate( es(Text), File, BaseLine, Terms) :-
     le_input:text_to_logic(Text, Terms) -> true; showErrors(File,BaseLine).
 le_taxlog_translate( prolog_le(verified), _, _, prolog_le(verified)) :- %trace, % running from prolog file
-    assertz(le_input:parsed), this_capsule(M),  
-    assertz(M:just_saved_scasp(null, null)), 
+    assertz(le_input:parsed), %this_capsule(M),  
+    %assertz(M:just_saved_scasp(null, null)), 
     including -> true; restore_dicts. 
 
 combine_list_into_string(List, String) :-

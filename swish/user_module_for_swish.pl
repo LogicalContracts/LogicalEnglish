@@ -323,7 +323,7 @@ welcome(M) :-
 	format(string(M),'Logical English open version ~a, dated ~a.',[ShortHash,When]).
 
 sandbox:safe_primitive(user:welcome(_)). 
-
+sandbox:safe_primitive(set_prolog_flag(scasp_forall, prev)).
 
 % This at the end, as it activates the term expansion (no harm done otherwise, just some performance..):
 % first term expansion to support en/1 

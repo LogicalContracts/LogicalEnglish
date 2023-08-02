@@ -1,0 +1,58 @@
+<html>
+<body>
+
+% line 21
+%the maximum time is 30.
+    
+% line 25-28
+the fluents are:
+    a vehicle is at a place heading a direction, known as location,
+%	there is a collision warning between a first vehicle and a second vehicle at a place, known as collisionAlert,
+%	a first vehicle is to the right of a second vehicle at a place, known as toTheRight, 
+	there is a possible collision between a first vehicle and a second vehicle, known as possibleCollision. 
+    
+% line 30
+the events are:
+    a vehicle starts driving to a place,
+    a vehicle is removed.
+    
+% line 32
+%the actions are:
+%	a vehicle steps from a first place to a second place,
+%    a vehicle turns to a direction.
+
+% line 34-38
+initially:
+    mycar is at [2,1] heading northward,
+    yourcar is at [6,1] heading northward,
+    othercar is at [10,5] heading westward,
+    troublemaker is at [6,2] heading northward,
+    brokencar is at [2,7] heading northward.
+
+% line 40-44
+the observations are:
+    mycar starts driving to [2,9] from 2 to 3, 
+    troublemaker starts driving to [8,9] from 2 to 3,
+    yourcar starts driving to [9,9] from 2 to 3,
+    othercar starts driving to [6,1] from 1 to 2,
+    brokencar is removed from 15 to 16.
+
+there is a route from a first place to a second place if
+	the route starts from a street with a direction 
+	and the first place is on the street
+	and the second place is on the street
+	and the orientation from the first place to the second place is the direction.
+
+the orientation from [a X, a Y1] to [the X, a Y2] is northward if
+	the Y1 < the Y2.
+the orientation from [a X, a Y1] to [the X, a Y2] is southward if
+	the Y1 > the Y2.
+the orientation from [a X1, a Y] to [a X2, the Y] is eastward if
+	the X1 < the X2.
+the orientation from [a X1, a Y] to [a X2, the Y] is westward if
+	the X1 > the X2.
+
+
+</body>
+</html>
+

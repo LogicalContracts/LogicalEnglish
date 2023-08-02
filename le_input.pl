@@ -95,13 +95,13 @@ query three is:
     op(1150, fx, show),
     op(1150, fx, abducible),
     dictionary/3, meta_dictionary/3, dict/3, meta_dict/3,
-    parsed/0, source_lang/1, including/0, just_saved_scasp/2,
+    parsed/0, source_lang/1, including/0, %just_saved_scasp/2,
     this_capsule/1, unpack_tokens/2, clean_comments/2,
     query_/2, extract_constant/4, spaces/3, name_as_atom/2, process_types_or_names/4,
     matches_name/4, matches_type/4, delete_underscore/2, add_determiner/2, proper_det/2,
     portray_clause_ind/1, order_templates/2, process_types_dict/2,
     assertall/1,asserted/1, 
-    update_file/3, myDeclaredModule/1, conditions/6
+    update_file/3, myDeclaredModule/1, conditions/6, op_stop/1
     ]).
 
 :- multifile sandbox:safe_primitive/1.
@@ -120,7 +120,7 @@ query three is:
 :- table addExp//2, mulExp//2.
 :- thread_local text_size/1, error_notice/4, dict/3, meta_dict/3, example/2, local_dict/3, local_meta_dict/3,
                 last_nl_parsed/1, kbname/1, happens/2, initiates/3, terminates/3, is_type/1, is_/2, 
-                predicates/1, events/1, fluents/1, metapredicates/1, parsed/0, source_lang/1, including/0, just_saved_scasp/2. 
+                predicates/1, events/1, fluents/1, metapredicates/1, parsed/0, source_lang/1, including/0. % just_saved_scasp/2. 
 :- discontiguous statement/3, declaration/4, _:example/2, _:query/2, _:is_/2. 
 
 % Main clause: text_to_logic(+String,-Clauses) is det
@@ -148,9 +148,9 @@ document(Translation, In, Rest) :-
     (including -> retract(including); true), 
     (source_lang(_L) -> retractall(source_lang(_)) ; true),
     phrase(header(Settings), In, AfterHeader), !, %print_message(informational, "Declarations completed: ~w"-[Settings]),
-    phrase(content(Content), AfterHeader, Rest), 
-    append(Settings, Content, Original), !,
-    append(Original, [if(is_(A,B), (nonvar(B), is(A,B)))], Translation), % adding def of is_2 last!  
+    phrase(content(Content), AfterHeader, Rest), %print_message(informational, "Content: ~w"-[AfterHeader]), 
+    append(Settings, Content, Translation), !,
+    %append(Original, [if(is_(A,B), (nonvar(B), is(A,B)))], Translation), % adding def of is_2 no more  
     assertz(parsed). 
 
 % header parses all the declarations and assert them into memory to be invoked by the rules. 
@@ -165,7 +165,7 @@ header(Settings, In, Next) :-
     append(DictEntries, RestoredDictEntries, AllDictEntries), 
     order_templates(AllDictEntries, OrderedEntries), 
     process_types_dict(OrderedEntries, Types), 
-    %print_message(informational, "types ~w rules ~w"-[Types, CollectedRules]),
+    %print_message(informational, "header: types ~w rules ~w"-[Types, CollectedRules]),
     append(OrderedEntries, RulesforErrors, SomeRules),
     append(SomeRules, Types, MRules), 
     %print_message(informational, "rules ~w"-[MRules]),
@@ -175,15 +175,16 @@ header(_, Rest, _) :-
     fail.
 
 fix_settings(Settings_, Settings2) :-
+    %print_message(informational, "Settings: ~w"-[Settings_]),
     ( member(target(_), Settings_) -> Settings1 = Settings_ ; Settings1 = [target(taxlog)|Settings_] ), !,  % taxlog as default
     Settings2 = [query(null, true), example(null, []), abducible(true,true)|Settings1]. % a hack to stop the loop when query is empty
 
 included_files(Settings2, RestoredDictEntries, CollectedRules) :-
     member(in_files(ModuleNames), Settings2),   % include all those files and get additional DictEntries before ordering
-    print_message(informational, "Module Names ~w\n"-[ModuleNames]),
+    %print_message(informational, "Module Names ~w\n"-[ModuleNames]),
     assertz(including), !, % cut to prevent escaping failure of load_all_files
-    load_all_files(ModuleNames, RestoredDictEntries, CollectedRules), 
-    print_message(informational, "Restored Entries ~w\n"-[RestoredDictEntries]). 
+    load_all_files(ModuleNames, RestoredDictEntries, CollectedRules). 
+    %print_message(informational, "Restored Entries ~w\n"-[RestoredDictEntries]). 
 included_files(_, [], []). 
 
 %load_all_files/2
@@ -191,14 +192,14 @@ included_files(_, [], []).
 %and produces the list of entries that must be added to the dictionaries
 load_all_files([], [], []).
 load_all_files([Name|R], AllDictEntries, AllRules) :- 
-    print_message(informational, "Loading ~w"-[Name]),
+    %print_message(informational, "Loading ~w"-[Name]),
     split_module_name(Name, File, URL),  
-    print_message(informational, "File ~w URL ~w"-[File, URL]),
+    %print_message(informational, "File ~w URL ~w"-[File, URL]),
     concat(File, "-prolog", Part1), concat(Part1, ".pl", Filename),  
     (URL\=''->atomic_list_concat([File,'-prolog', '+', URL], NewName); atomic_list_concat([File,'-prolog'], NewName)),
-    print_message(informational, "File ~w FullName ~w"-[Filename, NewName]),
+    %print_message(informational, "File ~w FullName ~w"-[Filename, NewName]),
     load_file_module(Filename, NewName, true), !, 
-    print_message(informational, "the dictionaries of ~w being restored into module ~w"-[NewName]),
+    %print_message(informational, "the dictionaries of ~w being restored into module ~w"-[Filename, NewName]),
     (NewName:local_dict(_,_,_) -> findall(dict(A,B,C), NewName:local_dict(A,B,C), ListDict) ; ListDict = []),
     (NewName:local_meta_dict(_,_,_) -> findall(meta_dict(A,B,C), NewName:local_meta_dict(A,B,C), ListMetaDict); ListMetaDict = []),
     append(ListDict, ListMetaDict, DictEntries), 
@@ -212,7 +213,7 @@ load_all_files([Name|R], AllDictEntries, AllRules) :-
     %collect_all_preds(SwishModule, DictEntries, Preds),
     %print_message(informational, "the dictionaries being set dynamics are ~w"-[Preds]),
     %declare_preds_as_dynamic(SwishModule, Preds)
-    %print_message(informational, "Loaded ~w"-[Filename]),
+    print_message(informational, "Loaded ~w"-[Filename]),
     load_all_files(R, RDict, NextRules),
     append(RDict, DictEntries, AllDictEntries),
     append(TheseRules, NextRules, AllRules). 
@@ -228,7 +229,6 @@ process_types_dict(Dictionary, Type_entries) :-
         process_types_or_names([Type], GoalElements, Types, TypeWords),
         concat_atom(TypeWords, '_', Word), Word\=''), Templates), 
     (Templates\=[] -> setof(is_type(Ty), member(Ty, Templates), Type_entries) ; Type_entries = []).
-
 
 % process_types_or_names/4
 process_types_or_names([], _, _, []) :- !.
@@ -304,11 +304,11 @@ content(T) --> %{print_message(informational, "going for KB:"-[])},
     content(R), 
     {append([kbname(Kbname)|S], R, T)}, !.
 content(T) --> %{print_message(informational, "going for scenario:"-[])},
-    spaces_or_newlines(_), scenario_content(S), !, %{print_message(informational, "scenario: ~w"-[S])},
+    spaces_or_newlines(_), scenario_content(S),  %{print_message(informational, "scenario: ~w"-[S])},
     content(R), 
     {append(S, R, T)}, !.
 content(T) --> %{print_message(informational, "going for query:"-[])},
-    spaces_or_newlines(_), query_content(S), !, content(R), 
+    spaces_or_newlines(_), query_content(S),  content(R), 
     {append(S, R, T)}, !.
 content(T) --> 
     spaces_or_newlines(_), plot_content(S), !, 
@@ -316,7 +316,7 @@ content(T) -->
     content(R), 
     {append(S, R, T)}, !.
 content([]) --> 
-    spaces_or_newlines(_), []. 
+    spaces_or_newlines(_). 
 content(_, Rest, _) :- 
     asserterror('LE error in the content ', Rest), 
     fail.
@@ -426,14 +426,17 @@ list_of_predicates_decl(_, _, Rest, _) :-
 % at least one predicate declaration required
 list_of_meta_predicates_decl([], []) --> spaces_or_newlines(_), next_section, !. 
 list_of_meta_predicates_decl([Ru|Rin], [F|Rout]) --> 
-    spaces_or_newlines(_), meta_predicate_decl(Ru,F), comma_or_period, list_of_meta_predicates_decl(Rin, Rout).
+    spaces_or_newlines(_), meta_predicate_decl(Ru,F), list_of_meta_predicates_decl(Rin, Rout).
 list_of_meta_predicates_decl(_, _, Rest, _) :- 
     asserterror('LE error found in the declaration of a meta template ', Rest), 
     fail.
 
+% at least one filename of a file to include
 list_of_files([]) --> spaces_or_newlines(_), next_section, !.
-list_of_files([Filename|Rout]) --> spaces_or_newlines(_), extract_string([Filename]), list_of_files(Rout), !.
-    %{name_as_atom(NameWords, Filename)}.
+list_of_files([Filename|Rout]) --> spaces_or_newlines(_), extract_string([Filename]), 
+    {print_message(informational, "list_of_files: filename ~w "-[Filename])}, 
+    list_of_files(Rout), !.
+    %{name_as_atom(NameWords, Filename)}.    
 list_of_files(_, Rest, _) :- 
     asserterror('LE error found in a file to include ', Rest), 
     fail.
@@ -507,10 +510,11 @@ rules_previous(KBName) -->
 
 % scenario_content/1 or /3
 % a scenario description: assuming one example -> one scenario -> one list of facts.
-scenario_content(Scenario) -->
-    scenario_, extract_constant([is, es, est, è], NameWords), is_colon_, newline,
+scenario_content(Scenario) --> %{print_message(informational, "starting scenario: "-[])},
+    scenario_, extract_constant([is, es, est, è], NameWords), is_colon_, newline, %{print_message(informational, " scenario: ~w"-[NameWords])},
     %list_of_facts(Facts), period, !, 
     spaces(_), assumptions_(Assumptions), !, % period is gone
+    %{print_message(informational, "scenario: ~w has ~w"-[NameWords, Assumptions])},
     {name_as_atom(NameWords, Name), Scenario = [example( Name, [scenario(Assumptions, true)])]}.
 
 scenario_content(_,  Rest, _) :- 
@@ -710,6 +714,14 @@ a_box_type_of_ --> [a], spaces(_), [box], spaces(_), [type], spaces(_), [of], sp
 %           _150144 before _149434,
 %           not ((terminates_at(_152720,_149428,_152732),_150144 before _152732),_152732 before _149434))
 
+% it must not be true that
+% statement/1 or /3 
+statement(Statement) --> 
+    it_must_not_be_true_that_, % spaces_or_newlines(_),
+    newline, spaces(Ind), !, conditions(Ind, [], _MapN, Conditions), spaces_or_newlines(_), period, 
+    {(Conditions = [] -> Statement = [if(empty, true)]; 
+            (Statement = [if(empty, Conditions)]))}, !.
+
 % it becomes the case that
 %   fluent
 % when
@@ -772,9 +784,10 @@ rest_list_of_facts([]) --> [].
 
 % assumptions_/3 or /5
 assumptions_([A|R]) --> 
-        spaces_or_newlines(_),  rule_([], _, A), !, assumptions_(R).
-assumptions_([]) --> 
-        spaces_or_newlines(_), []. 
+        spaces_or_newlines(_),  rule_([], _, A), % {print_message(informational, "rule in scenario: ~w"-[A])}, 
+        assumptions_(R).%  {print_message(informational, "rest of rules in scenario: ~w"-[R])}. 
+assumptions_([]) -->  %{print_message(informational, "no more rules in scenario"-[])}, 
+        spaces_or_newlines(_). 
 
 rule_(InMap, InMap, Rule) -->
     it_is_unknown_whether_, spaces_or_newlines(_), 
@@ -807,8 +820,9 @@ newline_or_nothing --> [].
 % it then tries to match those words against a template in memory (see dict/3 predicate).
 % The output is then contigent to the type of literal according to the declarations. 
 literal_(Map1, MapN, FinalLiteral) --> % { print_message(informational, 'at time, literal') },
-    at_time(T, Map1, Map2), comma, possible_instance(PossibleTemplate),  
-    {match_template(PossibleTemplate, Map2, MapN, Literal),
+    at_time(T, Map1, Map2), comma, possible_instance(PossibleTemplate),
+    { PossibleTemplate \=[], % cant be empty 
+     match_template(PossibleTemplate, Map2, MapN, Literal),
      (fluents(Fluents) -> true; Fluents = []),
      (events(Events) -> true; Events = []),
      (lists:member(Literal, Events) -> FinalLiteral = happens(Literal, T) 
@@ -816,8 +830,9 @@ literal_(Map1, MapN, FinalLiteral) --> % { print_message(informational, 'at time
         ; FinalLiteral = Literal))}, !. % by default (including builtins) they are timeless!
 
 literal_(Map1, MapN, FinalLiteral) --> % { print_message(informational, 'literal, at time') },
-    possible_instance(PossibleTemplate), comma, at_time(T, Map1, Map2),  
-    {match_template(PossibleTemplate, Map2, MapN, Literal),
+    possible_instance(PossibleTemplate), comma, at_time(T, Map1, Map2), 
+    { PossibleTemplate \=[], % cant be empty 
+     match_template(PossibleTemplate, Map2, MapN, Literal),
      (fluents(Fluents) -> true; Fluents = []),
      (events(Events) -> true; Events = []),
      (lists:member(Literal, Events) -> FinalLiteral = happens(Literal, T) 
@@ -825,8 +840,9 @@ literal_(Map1, MapN, FinalLiteral) --> % { print_message(informational, 'literal
         ; FinalLiteral = Literal))}, !. % by default (including builtins) they are timeless!
 
 literal_(Map1, MapN, FinalLiteral) -->  
-    possible_instance(PossibleTemplate), %{ print_message(informational, "~w"-[PossibleTemplate]) },
-    {match_template(PossibleTemplate, Map1, MapN, Literal),
+    possible_instance(PossibleTemplate), %{ print_message(informational, "literal_: ~w"-[PossibleTemplate]) },
+    { PossibleTemplate \=[], % cant be empty 
+     match_template(PossibleTemplate, Map1, MapN, Literal), 
      (fluents(Fluents) -> true; Fluents = []),
      (events(Events) -> true; Events = []),
      (consult_map(Time, '_change_time', Map1, _MapF) -> T=Time; true), 
@@ -872,12 +888,12 @@ more_conds(_, Ind, Ind, Map, Map, [], L, L).
 % this naive definition of term is problematic
 % term_/4 or /6
 term_(StopWords, Term, Map1, MapN) --> 
-    (variable(StopWords, Term, Map1, MapN), !); (constant(StopWords, Term, Map1, MapN), !); (list_(Term, Map1, MapN), !). %; (compound_(Term, Map1, MapN), !).
+    (variable(StopWords, Term, Map1, MapN), !); (constant(StopWords, Term, Map1, MapN), !); (list_(Term, Map1, MapN), !); (expression(Term, Map1), !). %; (compound_(Term, Map1, MapN), !).
 
 % list_/3 or /5
 list_(List, Map1, MapN) --> 
     spaces(_), bracket_open_, !, extract_list([']'], List, Map1, MapN), bracket_close.   
-
+% compound_ disable
 compound_(V1/V2, Map1, MapN) --> 
     term_(['/'], V1, Map1, Map2), ['/'], term_([], V2, Map2, MapN). 
 
@@ -952,8 +968,9 @@ variable_invocation_name_extraction(StopWords, Name) -->
     {  NameWords\=[], name_predicate(NameWords, Name) }.
 
 % constant/4 or /6
-constant(StopWords, Constant, Map, Map) -->
-    extract_constant(StopWords, NameWords), { NameWords\=[], name_predicate(NameWords, Constant) }. 
+constant(StopWords, Number, Map, Map) -->
+    % extract_constant(StopWords, NameWords), { NameWords\=[], name_predicate(NameWords, Constant) }. 
+    extract_constant(StopWords, [Number]). 
 
 % deprecated
 prolog_literal_(Prolog, Map1, MapN) -->
@@ -964,7 +981,7 @@ predicate_name_(Module:Predicate) -->
     [Module], colon_, extract_constant([], NameWords), { name_predicate(NameWords, Predicate) }, !.
 predicate_name_(Predicate) --> extract_constant([], NameWords), { name_predicate(NameWords, Predicate) }.
 
-at_time(T, Map1, _MapN) --> spaces_or_newlines(_), at_, expression(T, Map1), spaces_or_newlines(_).
+at_time(T, Map1, MapN) --> spaces_or_newlines(_), at_, term_([], T, Map1, MapN), spaces_or_newlines(_).
 
 spaces(N) --> [' '], !, spaces(M), {N is M + 1}.
 % todo: reach out for codemirror s configuration https://codemirror.net/doc/manual.html for tabSize
@@ -1137,6 +1154,9 @@ it_is_unknown_whether_ -->
 
 it_is_unknown_whether_ --> 
     [non], spaces(_), [è], spaces(_), [noto], spaces(_), [se], spaces(_). % italian
+
+it_must_not_be_true_that_ --> 
+    it_, [must], spaces(_), [not], spaces(_), [be], spaces(_), [true], spaces(_), [that], spaces(_).
 
 /* --------------------------------------------------- Supporting code */
 % indentation code
@@ -1599,7 +1619,8 @@ pad_number(Number, Width, Out) :-
 % binary_op/3
 binary_op(Op, In, Out) :-
     op2tokens(Op, OpTokens, _),
-    append(OpTokens, Out, In).
+    append(OpTokens, Out, In),
+    print_message(informational, "binary_op ~w ~w ~w"-[Op, In, Out]).
 
 % very inefficient. Better to compute and store. See below
 op_tokens(Op, OpTokens) :-
@@ -1872,8 +1893,9 @@ extract_constant(SW, [Word|RestName], [Word|RestOfWords],  NextWords) :-
 extract_string([], [], []) :- !.
 extract_string([], [newline(A)|RestOfWords], [newline(A)|RestOfWords]):- !.
 extract_string([String], InWords, NextWords) :-
-    extract_all_string([newline(_)], Words, InWords, NextWords),
-    concat_atom(Words, '', String). 
+    extract_all_string([newline(_), ',', '.'], Words, InWords, NextWords),
+    concat_atom(Words, '', String).
+    %print_message(informational, "Filename String: ~w"-[String]). 
 
 extract_all_string(StopWords, [], [Word|RestOfWords], RestOfWords) :-
     member(Word, StopWords), !. 
@@ -2288,41 +2310,43 @@ dictionary(Predicate, VariablesNames, Template) :- % dict(Predicate, VariablesNa
 % it must be ordered by the side of the third argument, to allow the system to check first the longer template
 % with the corresponding starting words. 
 % for Taxlog examples
-predef_dict(['\'s_R&D_expense_credit_is', Project, ExtraDeduction, TaxCredit], 
-                                 [project-projectid, extra-amount, credit-amount],
-   [Project, '\'s', 'R&D', expense, credit, is, TaxCredit, plus, ExtraDeduction]).
-predef_dict(['can_request_R&D_relief_such_as', Project, ExtraDeduction, TaxCredit], 
-                                 [project-projectid, extra-amount, credit-amount],
-   [Project, can, request,'R&D', relief, for, a, credit, of, TaxCredit, with, a, deduction, of, ExtraDeduction]).
-predef_dict(['\'s_sme_R&D_relief_is', Project, ExtraDeduction, TaxCredit], 
-                                 [project-projectid, extra-amount, credit-amount],
-   [the, 'SME', 'R&D', relief, for, Project, is, estimated, at, TaxCredit, with, an, extra, of, ExtraDeduction]).
-predef_dict([project_subject_experts_list_is,Project,Experts], [project-object, experts_list-list],
-   [Project, has, an, Experts, list]).
-predef_dict([rollover_applies,EventID,Asset,Time,Transferor,TransfereesList], [id-event,asset-asset,when-time,from-person,to-list], 
-   [EventID, rollover, of, the, transfer, of, Asset, from, Transferor, to, TransfereesList, at, Time, applies]).
-predef_dict([transfer_event,ID,Asset,Time,Transferor,TransfereesList],[id-id,asset-asset,time-time,from-person,to-list],
-   [event, ID, of, transfering, Asset, from, Transferor, to, TransfereesList, at, Time, occurs]).
-predef_dict([s_type_and_liability_are(Asset,Type,Liability), [asset-asset, assettype-type, liabilty-amount],
-   [the, type, of, asset, Asset, is, Type, its, liability, is, Liability]]).
-predef_dict([exempt_transfer,From,To,SecurityIdentifier,Time],[from-taxpayer,to-taxpayer,secID-number, time-time],
-   [a, transfer, from, From, to, To, with, SecurityIdentifier, at, Time, is, exempt]).
-predef_dict([shares_transfer,Sender,Recipient,SecurityID,Time], [from-person, to-person, id-number, time-time], 
-   [Sender, transfers, shares, to, Recipient, at, Time, with, id, SecurityID]).
-predef_dict([trading_in_market,SecurityID,MarketID,Time], [id-number,market-number,time-time], 
-   [whoever, is, identified,by, SecurityID, is, trading, in, market, MarketID, at, Time]).
-predef_dict([uk_tax_year_for_date,Date,Year,Start,End], [date-date,year-year,start-date,end-date], 
-   [date, Date, falls, in, the, 'UK', tax, year, Year, that, starts, at, Start, ends, at, End]).
-predef_dict([days_spent_in_uk,Individual,Start,End,TotalDays], [who-person,start-date,end-date,total-number], 
-   [Individual, spent, TotalDays, days, in, the, 'UK', starting, at, Start, ending, at, End]).
-predef_dict([days_spent_in_uk,Individual,Start,End,TotalDays], [who-person,start-date,end-date,total-number], 
-                   [Individual, spent, TotalDays, in, the, 'UK', starting, at, Start, &, ending, at, End]). 
-predef_dict([uk_tax_year_for_date,Date,Year,Start,End], [first_date-date, year-year, second_date-date, third_date-date], 
-                   [in, the, 'UK', Date, falls, in, Year, beginning, at, Start, &, ending, at, End]).
-predef_dict([is_individual_or_company_on, A, B],
-                   [affiliate-affiliate, date-date],
-                   [A, is, an, individual, or, is, a, company, at, B]).
-% Prolog
+% predef_dict(['\'s_R&D_expense_credit_is', Project, ExtraDeduction, TaxCredit], 
+%                                  [project-projectid, extra-amount, credit-amount],
+%    [Project, '\'s', 'R&D', expense, credit, is, TaxCredit, plus, ExtraDeduction]).
+% predef_dict(['can_request_R&D_relief_such_as', Project, ExtraDeduction, TaxCredit], 
+%                                  [project-projectid, extra-amount, credit-amount],
+%    [Project, can, request,'R&D', relief, for, a, credit, of, TaxCredit, with, a, deduction, of, ExtraDeduction]).
+% predef_dict(['\'s_sme_R&D_relief_is', Project, ExtraDeduction, TaxCredit], 
+%                                  [project-projectid, extra-amount, credit-amount],
+%    [the, 'SME', 'R&D', relief, for, Project, is, estimated, at, TaxCredit, with, an, extra, of, ExtraDeduction]).
+% predef_dict([project_subject_experts_list_is,Project,Experts], [project-object, experts_list-list],
+%    [Project, has, an, Experts, list]).
+% predef_dict([rollover_applies,EventID,Asset,Time,Transferor,TransfereesList], [id-event,asset-asset,when-time,from-person,to-list], 
+%    [EventID, rollover, of, the, transfer, of, Asset, from, Transferor, to, TransfereesList, at, Time, applies]).
+% predef_dict([transfer_event,ID,Asset,Time,Transferor,TransfereesList],[id-id,asset-asset,time-time,from-person,to-list],
+%    [event, ID, of, transfering, Asset, from, Transferor, to, TransfereesList, at, Time, occurs]).
+% predef_dict([s_type_and_liability_are(Asset,Type,Liability), [asset-asset, assettype-type, liabilty-amount],
+%    [the, type, of, asset, Asset, is, Type, its, liability, is, Liability]]).
+% predef_dict([exempt_transfer,From,To,SecurityIdentifier,Time],[from-taxpayer,to-taxpayer,secID-number, time-time],
+%    [a, transfer, from, From, to, To, with, SecurityIdentifier, at, Time, is, exempt]).
+% predef_dict([shares_transfer,Sender,Recipient,SecurityID,Time], [from-person, to-person, id-number, time-time], 
+%    [Sender, transfers, shares, to, Recipient, at, Time, with, id, SecurityID]).
+% predef_dict([trading_in_market,SecurityID,MarketID,Time], [id-number,market-number,time-time], 
+%    [whoever, is, identified,by, SecurityID, is, trading, in, market, MarketID, at, Time]).
+% predef_dict([uk_tax_year_for_date,Date,Year,Start,End], [date-date,year-year,start-date,end-date], 
+%    [date, Date, falls, in, the, 'UK', tax, year, Year, that, starts, at, Start, ends, at, End]).
+% predef_dict([days_spent_in_uk,Individual,Start,End,TotalDays], [who-person,start-date,end-date,total-number], 
+%    [Individual, spent, TotalDays, days, in, the, 'UK', starting, at, Start, ending, at, End]).
+% predef_dict([days_spent_in_uk,Individual,Start,End,TotalDays], [who-person,start-date,end-date,total-number], 
+%                    [Individual, spent, TotalDays, in, the, 'UK', starting, at, Start, &, ending, at, End]). 
+% predef_dict([uk_tax_year_for_date,Date,Year,Start,End], [first_date-date, year-year, second_date-date, third_date-date], 
+%                    [in, the, 'UK', Date, falls, in, Year, beginning, at, Start, &, ending, at, End]).
+% predef_dict([is_individual_or_company_on, A, B],
+%                    [affiliate-affiliate, date-date],
+%                    [A, is, an, individual, or, is, a, company, at, B]).
+% % Prolog
+predef_dict([length, List, Length], [member-object, list-list], [the, length, of, List, is, Length]).
+predef_dict([bagof, Thing, Condition, Bag], [bag-thing, thing-thing, condition-condition], [Bag, is, a, bag, of, Thing, such, that, Condition]).
 predef_dict([has_as_head_before, A, B, C], [list-list, symbol-term, rest_of_list-list], [A, has, B, as, head, before, C]).
 predef_dict([append, A, B, C],[first_list-list, second_list-list, third_list-list], [appending, A, then, B, gives, C]).
 predef_dict([reverse, A, B], [list-list, other_list-list], [A, is, the, reverse, of, B]).
@@ -2342,9 +2366,8 @@ predef_dict([=, T1, T2], [thing_1-thing, thing_2-thing], [T1, is, equal, to, T2]
 predef_dict([isbefore, T1, T2], [time1-time, time2-time], [T1, is, before, T2]). % see reasoner.pl before/2
 predef_dict([isafter, T1, T2], [time1-time, time2-time], [T1, is, after, T2]).  % see reasoner.pl before/2
 predef_dict([member, Member, List], [member-object, list-list], [Member, is, in, List]).
-predef_dict([length, List, Length], [member-object, list-list], [the, length, of, List, is, Length]).
-predef_dict([bagof, Thing, Condition, Bag], [bag-thing, thing-thing, condition-condition], [Bag, is, a, bag, of, Thing, such, that, Condition]).
-predef_dict([is_, A, B], [term-term, expression-expression], [A, is, B]). % builtin Prolog assignment
+%predef_dict([is_, A, B], [term-term, expression-expression], [A, is, B]). % builtin Prolog assignment
+predef_dict([=, T1, T2], [thing_1-thing, thing_2-thing], [T1, is, T2]). % builtin Prolog assignment
 % predefined entries:
 %predef_dict([assert,Information], [info-clause], [this, information, Information, ' has', been, recorded]).
 predef_dict([\=@=, T1, T2], [thing_1-thing, thing_2-thing], [T1, \,=,@,=, T2]).
@@ -2356,12 +2379,12 @@ predef_dict([==, T1, T2], [thing_1-thing, thing_2-thing], [T1, =,=, T2]).
 predef_dict([=<, T1, T2], [thing_1-thing, thing_2-thing], [T1, =,<, T2]).
 predef_dict([=<, T1, T2], [thing_1-thing, thing_2-thing], [T1, =,<, T2]).
 predef_dict([>=, T1, T2], [thing_1-thing, thing_2-thing], [T1, >,=, T2]).
-predef_dict([=, T1, T2], [thing_1-thing, thing_2-thing], [T1, =, T2]).
+predef_dict([is, T1, T2], [thing_1-thing, thing_2-thing], [T1, =, T2]).
 predef_dict([<, T1, T2], [thing_1-thing, thing_2-thing], [T1, <, T2]).
 predef_dict([>, T1, T2], [thing_1-thing, thing_2-thing], [T1, >, T2]).
 predef_dict([unparse_time, Secs, Date], [secs-time, date-date], [Secs, corresponds, to, date, Date]).
-predef_dict([must_be, Type, Term], [type-type, term-term], [Term, must, be, Type]).
-predef_dict([must_not_be, A, B], [term-term, variable-variable], [A, must, not, be, B]). 
+% predef_dict([must_be, Type, Term], [type-type, term-term], [Term, must, be, Type]).
+% predef_dict([must_not_be, A, B], [term-term, variable-variable], [A, must, not, be, B]). 
 
 % pre_is_type/1
 pre_is_type(thing).
