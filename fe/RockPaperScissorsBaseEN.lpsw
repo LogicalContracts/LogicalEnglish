@@ -1,0 +1,40 @@
+
+
+
+maxTime(5).
+
+events([inputs(_33190,_33196,_33202)]).
+
+actions([gets(_33354,_33360)]).
+
+fluents([gameOver,reward(_33584),played(_33688,_33694)]).
+
+initial_state([reward(0)]).
+
+beats(scissors,paper).
+
+beats(paper,rock).
+
+beats(rock,scissors).
+
+observe([inputs(miguel,rock,1000)],2).
+
+observe([inputs(bob,paper,1000)],2).
+
+observe([inputs(alex,paper,1000)],3).
+
+initiated(happens(inputs(_34794,_34826,_34832),_34788,_34790),played(_34794,_34826),[_34832>0,holds(not(played(_34794,_35010)),_34788)]).
+
+l_int(holds(num_players(_35114),_35112),[sum_all(holds(played(_35264,_35270),_35112),_35114)]).
+
+d_pre([holds(num_players(_35416),_35414),_35416>2]).
+
+updated(happens(inputs(_35626,_35658,_35664),_35602,_35604),reward(_35608),_35608-_35610,[_35610 is _35608+_35664]).
+
+updated(happens(gets(_35850,_35882),_35826,_35828),reward(_35832),_35832-_35834,[_35834 is _35832-_35882]).
+
+reactive_rule([holds(played(_36040,_36074),_36038),holds(played(_36138,_36172),_36038),_36040\=_36138,beats(_36074,_36172),holds(not(gameOver),_36038)],[happens(initiate(gameOver),_36038,_36446),holds(reward(_36544),_36038),happens(gets(_36040,_36544),_36038,_36606)]).
+
+reactive_rule([holds(played(_36744,_36778),_36742),holds(played(_36842,_36876),_36742),_36744\=_36842,not(beats(_36778,_36876)),not(beats(_36876,_36778)),holds(not(gameOver),_36742)],[happens(initiate(gameOver),_36742,_37242),holds(reward(_37340),_36742),_37400 is _37340/2,happens(gets(_36744,_37400),_36742,_37476),happens(gets(_36842,_37400),_36742,_37476)]).
+
+

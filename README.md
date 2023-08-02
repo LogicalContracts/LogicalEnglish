@@ -112,6 +112,10 @@ The University of Bologna has actively supported the development of LE, in pursu
 
 ##  <a name='Releases'></a>Release Notes
 
+- [2023-06-12] Previous version [8db435763dad4afbf1cf5f8c46c16d3f53f7255c]https://github.com/LogicalContracts/LogicalEnglish/commit/8db435763dad4afbf1cf5f8c46c16d3f53f7255c
+	- New handling of mathematical expressions.
+	- New translation of is in English as unification "=" in Prolog. 
+	- New translation of = in English as "is" assignment in Prolog. 
 - [2023-04-09] Previous version [37dadce4c7916ed47c79c770ac575330d60f8f94](https://github.com/LogicalContracts/LogicalEnglish/commit/37dadce4c7916ed47c79c770ac575330d60f8f94)
 	- New VSC extension LE GUI  (with new JS API and collapsible explanations)
 	- Standalone LE
