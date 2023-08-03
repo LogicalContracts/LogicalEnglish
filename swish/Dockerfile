@@ -13,12 +13,10 @@ RUN git clone https://github.com/SWI-Prolog/swish.git && \
 RUN make -C /swish RJS="nodejs /usr/share/nodejs/requirejs/r.js" \
 	yarn-zip packs min
 
-FROM base
-LABEL maintainer "Jan Wielemaker <jan@swi-prolog.org>"
+FROM swipl:latest
 
 RUN apt-get update && apt-get install -y \
     graphviz imagemagick \
-    git \
     wamerican && \
     rm -rf /var/lib/apt/lists/*
 
