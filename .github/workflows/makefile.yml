@@ -24,5 +24,6 @@ jobs:
         path: swish
 
     - name: make SWISH
+      working-directory: swish
       run: |
         make RJS="nodejs /usr/share/nodejs/requirejs/r.js" yarn-zip packs min
