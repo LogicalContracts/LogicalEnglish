@@ -84,7 +84,6 @@ which can be used on the new command interface of LE on SWISH
 
 :- use_module(library(r/r_call)).
 :- use_module(library(r/r_data)).
-:- use_module(swish:swish(lib/r_swish)).
 
 
 
@@ -180,22 +179,6 @@ interrupted(T1, Fluent, T2) :- %trace,
 
 /* ----------------------------------------------------------------- CLI English */
 
-
-plot(PlotName, Arg) :-
-    le_input:parsed, 
-    prepare_plot(PlotName, Arg, SwishModule, Facts, DataFrames, PlotGoal),
-    copy_term(PlotGoal,PlotGoalForDisplay), % have to copy the term since it gets modified after calling
-    setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
-        (run_data_frames(SwishModule, DataFrames)), 
-        _, 
-        retract_facts(SwishModule, Facts)), % run the data frames command and prepare the data frames
-    atom_concat(PlotName, '.png', PlotNamePng),
-    atom_string(PlotNamePng, PlotNamePngStr),
-    <- png(PlotNamePngStr),  % specifies the download file format with the PlotName
-    PlotGoal, % plot the image into the file
-    r_swish:r_download, % shows the download button
-    PlotGoalForDisplay. % plot the image onto the screen
-
 % answer/1
 % answer(+Query or Query Expression)
 answer(English) :- %trace, 
@@ -256,9 +239,8 @@ answer(English, Arg, E, Result) :- %trace,
     le_input:parsed, %myDeclaredModule(Module), 
     this_capsule(SwishModule), 
     translate_command(SwishModule, English, _, Goal, PreScenario), 
-    ((Arg = with(ScenarioName), PreScenario=noscenario) -> Scenario=ScenarioName; Scenario=PreScenario), 
+    prepare_scenario(SwishModule, Arg, PreScenario, _Scenario, _, _, Facts),
     extract_goal_command(Goal, SwishModule, InnerGoal, _Command),
-    (Scenario==noscenario -> Facts = [] ; SwishModule:example(Scenario, [scenario(Facts, _)])), !, 
     setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
             catch((true, reasoner:query(at(InnerGoal, SwishModule),_,E,Result)), Error, ( print_message(error, Error), fail ) ), 
             _Result, 
@@ -283,14 +265,37 @@ answer(English, Arg, E, Result) :- %trace,
 %     extract_goal_command(Goal, SwishModule, _InnerGoal, Command), !.  
 %     %print_message(informational, "Command: ~w"-[Command]).
 
+prepare_scenario(SwishModule, Arg, PreScenario, Scenario, LocalFacts, ModuleFacts, AllFacts) :-
+    % extract the name of the scenario
+    ((Arg = with(ScenarioName)) -> Scenario=ScenarioName; Scenario=PreScenario),
+    % seach for scenarios in the same file and in a different module named the scenario
+    (Scenario==noscenario -> AllFacts = [] ; 
+        (
+            (
+                SwishModule:example(Scenario, [scenario(LocalFacts, _)]) -> 
+                print_message(informational, "Loading local scenario ~w"-[Scenario]);  
+                LocalFacts = [], print_message(informational, "Scenario: ~w not found in current file"-[Scenario])
+            ),
+            atomic_list_concat([Scenario,'.pl'], ScenarioFileName), 
+            % print_message(informational, "ScenarioFileName ~w Scenario ~w"-[ScenarioFileName, Scenario]), 
+            % print_message(informational, "LocalFacts ~w "-[LocalFacts]), 
+            (
+                le_input:load_file_module(ScenarioFileName, Scenario, true) -> 
+                print_message(informational, "Loading scenario from module: ~w"-[Scenario]), 
+                parse_scenario_from_file(Scenario, ModuleFacts); ModuleFacts=[]
+            ),
+            % print_message(informational, "ModuleFacts ~w "-[ModuleFacts]),
+            append(LocalFacts, ModuleFacts, AllFacts)
+        )
+    ), !.
 
-prepare_plot(PlotName, Arg, SwishModule, Facts, DataFrames, PlotGoal) :- %trace, 
-    var(SwishModule), this_capsule(SwishModule), !, 
-    ((Arg = with(ScenarioName)) -> Scenario=ScenarioName; Scenario=noscenario),
-    (Scenario==noscenario -> Facts = [] ; 
-        (SwishModule:example(Scenario, [scenario(Facts, _)]) -> true;  print_message(error, "Scenario: ~w does not exist"-[Scenario]))), !,
-    ( SwishModule:plot_cmd(PlotName, data_frames(DataFrames), PlotCommand) -> true; (print_message(informational, "No plot command named: ~w"-[PlotName]), fail) ), !,
-    extract_goal_command(PlotCommand, SwishModule, _InnerGoal2, PlotGoal).
+parse_scenario_from_file(ScenarioModuleName, Assumptions) :- %trace, 
+    ScenarioModuleName:scenario(en(LEString)),
+    tokenize(LEString, Tokens, [cased(true), spaces(true), numbers(true)]),
+    unpack_tokens(Tokens, UTokens), 
+    clean_comments(UTokens, CTokens),
+    % print_message(informational, "CTokens: ~w "-[CTokens]), 
+    phrase(le_input:assumptions_(Assumptions), CTokens).
 
 % prepare_query(+English, +Arguments, -Module, -Goal, -Facts, -Command)
 prepare_query(English, Arg, SwishModule, Goal, Facts, Command) :- %trace, 
@@ -301,12 +306,9 @@ prepare_query(English, Arg, SwishModule, Goal, Facts, Command) :- %trace,
     %print_message(informational, "SwisModule: ~w, English ~w, GoalName ~w, Goal ~w, Scenario ~w"-[SwishModule, English, GoalName, Goal, PreScenario]),
     copy_term(Goal, CopyOfGoal),  
     translate_goal_into_LE(CopyOfGoal, RawGoal), name_as_atom(RawGoal, EnglishQuestion), 
-    ((Arg = with(ScenarioName), PreScenario=noscenario) -> Scenario=ScenarioName; Scenario=PreScenario),
+    prepare_scenario(SwishModule, Arg, PreScenario, Scenario, _, _, Facts),
     show_question(GoalName, Scenario, EnglishQuestion), 
     %print_message(informational, "Scenario: ~w"-[Scenario]),
-    (Scenario==noscenario -> Facts = [] ; 
-        (SwishModule:example(Scenario, [scenario(Facts, _)]) -> 
-            true;  print_message(error, "Scenario: ~w does not exist"-[Scenario]))),
     %print_message(informational, "Facts: ~w"-[Facts]), 
     extract_goal_command(Goal, SwishModule, _InnerGoal, Command), !.
     %print_message(informational, "Command: ~w"-[Command]). 
@@ -321,12 +323,9 @@ prepare_query(English, Arg, SwishModule, Goal, Facts, Command) :- %trace,
     copy_term(Goal, CopyOfGoal),
     %print_message(informational, "prepare_query (2): translated ~w into goalname ~w goal ~w with scenario ~w\n "-[English,GoalName,Goal,PreScenario]), 
     translate_goal_into_LE(CopyOfGoal, RawGoal), name_as_atom(RawGoal, EnglishQuestion),
-    ((Arg = with(ScenarioName), PreScenario=noscenario) -> Scenario=ScenarioName; Scenario=PreScenario),
+    prepare_scenario(SwishModule, Arg, PreScenario, Scenario, _, _, Facts),
     show_question(GoalName, Scenario, EnglishQuestion),  
     %print_message(informational, "prepare_query (3): Scenario: ~w"-[Scenario]), 
-    (Scenario==noscenario -> Facts = [] ; 
-        (SwishModule:example(Scenario, [scenario(Facts, _)]) -> 
-            true;  print_message(error, "Scenario: ~w does not exist"-[Scenario]))), 
     %print_message(informational, "prepare_query (4): Facts: ~w Goal: ~w Module: ~w\n "-[Facts, Goal, SwishModule]),  
     extract_goal_command(Goal, SwishModule, _InnerGoal, Command), !.
     %print_message(informational, "prepare_query (5): Ready from ~w the command ~w\n"-[English, Command]).  
@@ -1031,7 +1030,6 @@ explanationLEHTML([C1|Cn],CH) :- explanationLEHTML(C1,CH1), explanationLEHTML(Cn
 explanationLEHTML([],[]).
 
 %sandbox:safe_meta(term_singletons(X,Y), [X,Y]).
-sandbox:safe_primitive(le_answer:plot(_Plot, _Scenario)).
 sandbox:safe_primitive(le_answer:answer( _EnText)).
 sandbox:safe_primitive(le_answer:show( _Something)).
 sandbox:safe_primitive(le_answer:show( _Something, _With)).
