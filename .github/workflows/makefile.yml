@@ -1,0 +1,28 @@
+name: Makefile CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: checkout Logical English
+      uses: actions/checkout@v3
+      with:
+        path: logicalenglish
+
+    - name: checkout SWISH
+      uses: actions/checkout@v3
+      with:
+        repository: 'SWI-Prolog/swish'
+        path: swish
+
+    - name: make SWISH
+      run: |
+        make RJS="nodejs /usr/share/nodejs/requirejs/r.js" yarn-zip packs min
