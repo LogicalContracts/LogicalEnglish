@@ -2156,7 +2156,7 @@ dictionary(Predicate, VariablesNames, Template) :- % dict(Predicate, VariablesNa
 predef_dict([length, List, Length], [member-object, list-list], [the, length, of, List, is, Length]).
 predef_dict([bagof, Thing, Condition, Bag], [bag-thing, thing-thing, condition-condition], [Bag, is, a, bag, of, Thing, such, that, Condition]).
 predef_dict([has_as_head_before, A, B, C], [list-list, symbol-term, rest_of_list-list], [A, has, B, as, head, before, C]).
-predef_dict([product_list, Number, List], [thing-thing, list-list], [Number, is, the, prod, of, List]).
+predef_dict([product_list, List, Number], [thing-thing, list-list], [Number, is, the, prod, of, List]).
 predef_dict([append, A, B, C],[first_list-list, second_list-list, third_list-list], [appending, A, then, B, gives, C]).
 predef_dict([reverse, A, B], [list-list, other_list-list], [A, is, the, reverse, of, B]).
 predef_dict([same_date, T1, T2], [time_1-time, time_2-time], [T1, is, the, same, date, as, T2]). % see reasoner.pl before/2
