@@ -729,10 +729,9 @@ in(X,List) :- must_be(list,List), member(X,List).
 
 has_as_head_before([Head|Rest],Head,Rest). 
 
-product_list(1, []).
-product_list(X, [H | T]) :-
-  product_list(Y, T),
-  X is H * Y.
+mul(A, B, C) :- C is A * B.
+
+product_list(List, X) :- foldl(mul, List, 1, X).
 
 :- if(current_module(swish)). %%%%% On SWISH:
 
