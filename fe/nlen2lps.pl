@@ -838,6 +838,16 @@ prolog_fact(Prolog) -->  % binary predicate
     {Prolog =.. [Predicate, X, Y]}.
 
 /* --------------------------------------------------------- When statements */
+/* 
+When a vehicle steps from a first place to a second place
+and the vehicle is at the first place heading an old direction
+then the vehicle is at the second place heading the old direction
+*/
+statement([initiated(happens(A,T1,_T2),F, Conds)]) --> % spypoint, 
+   when_, t_or_w(V, [], Map2), action(lambda([V,P1,P2],A)), from_, t_or_w(P1,  Map2, Map3), to_, t_or_w(P2, Map3, Map4), 
+   and_, simul_conjunction(T1, Map4, Map5, Conds),
+   then_, t_or_w(V, Map5, Map6), fluent(lambda([V,P2,D],F)), t_or_w(P2, Map6, Map7), word(heading), t_or_w(D, Map7, _), period.
+
 % added on 2023-06-23
 % When a person is born 
 % then the person is alive.
@@ -1651,4 +1661,6 @@ literal(M_In, M_Out, Timeless) --> % spypoint,
 literal(M_In, M_Out, Timeless) --> % spypoint,
    t_or_w(C1, M_In, M1), and_, t_or_w(C2, M1, M_Out), word(makes), word(a), word(pair), word(fit), word(for), word(a), word(place),
    {Timeless=..[place, C1, C2]}.
+
+
 

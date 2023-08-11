@@ -17,7 +17,7 @@ limitations under the License.
 :- module(reasoner,[query/4, query_with_facts/5, query_once_with_facts/5, explanation_node_type/2, render_questions/2,
     run_examples/0, run_examples/1, myClause2/9, myClause/4, taxlogWrapper/10, niceModule/2, refToOrigin/2,
     isafter/2, is_not_before/2, isbefore/2, immediately_before/2, same_date/2, subtract_days/3, this_year/1, uk_tax_year/4, in/2,
-    isExpressionFunctor/1, set_time_of_day/3, start_of_day/2, end_of_day/2, is_days_after/3, is_1_day_after/2, unparse_time/2
+    isExpressionFunctor/1, set_time_of_day/3, start_of_day/2, end_of_day/2, is_days_after/3, is_1_day_after/2, unparse_time/2, product_list/2
     ]).
 
 /** <module> Tax-KB reasoner and utils
@@ -728,6 +728,10 @@ uk_tax_year(Start,StartYear,Start,End) :- must_be(integer,StartYear),
 in(X,List) :- must_be(list,List), member(X,List).
 
 has_as_head_before([Head|Rest],Head,Rest). 
+
+mul(A, B, C) :- C is A * B.
+
+product_list(List, X) :- foldl(mul, List, 1, X).
 
 :- if(current_module(swish)). %%%%% On SWISH:
 

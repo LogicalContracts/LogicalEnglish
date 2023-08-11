@@ -1,0 +1,26 @@
+the fluents are:
+	a vehicle is at a place heading a direction, known as location. 
+	
+the actions are:
+	a vehicle steps from a first place to a second place. 
+
+% test 1 
+% parser on line 856 in nlen2lps
+/*
+When e_transaction latest a first address an input an amount a second address
+and lps_my_account the second address
+and the amount is greater than 0
+and it is not the case that the first address has played a second choice
+then the first address has played the input.
+*/
+
+% test2 
+% parser on line 1655 in nlen2lps
+When a vehicle steps from an first place to a second place
+and the vehicle is at the first place heading an old direction at a time
+then the vehicle is at the second place heading the old direction.
+
+
+% test 3
+% parser on line 591 in nlen2lps
+% a vehicle is at a place heading a direction at a time.
