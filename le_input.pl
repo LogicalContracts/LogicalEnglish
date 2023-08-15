@@ -114,6 +114,7 @@ query three is:
 :- use_module('le_local.pl'). % module to handle the local filesystem 
 :- endif.
 
+:- use_module(library(r/r_call)).
 :- use_module('reasoner.pl').
 :- use_module(library(prolog_stack)).
 :- table addExp//2, mulExp//2.
@@ -132,7 +133,7 @@ text_to_logic(String_, Translation) :-
     retractall(last_nl_parsed(_)), asserta(last_nl_parsed(1)), % preparing line counting
     unpack_tokens(Tokens, UTokens), 
     clean_comments(UTokens, CTokens), !, 
-    %print_message(informational, "Tokens: ~w"-[CTokens]), 
+    % print_message(informational, "CTokens: ~w"-[CTokens]), 
     phrase(document(Translation), CTokens).
     %print_message(informational, "Translation: ~w"-[Translation]). 
     %with_output_to(string(Report), listing(dict/3)),
@@ -231,6 +232,13 @@ process_types_dict(Dictionary, Type_entries) :-
 
 % process_types_or_names/4
 process_types_or_names([], _, _, []) :- !.
+process_types_or_names([Word|RestWords], Elements, Types, [the, chart|RestPrintWords] ) :- 
+    nonvar(Word), Word = plot_command(RExecuteCommand),
+    copy_term(RExecuteCommand,RExecuteCommandForDisplay),
+    RExecuteCommandForDisplay,  % plot the image onto the screen
+    <- png("image.png"), RExecuteCommand,  % plot the image into the file
+    <- graphics.off(), r_swish:r_download("image.png"), % close the device and show the download button
+    process_types_or_names(RestWords,  Elements, Types, RestPrintWords).
 process_types_or_names([Word|RestWords], Elements, Types, PrintExpression ) :- 
     atom(Word), concat_atom(WordList, '_', Word), !, 
     process_types_or_names(RestWords,  Elements, Types, RestPrintWords),
@@ -288,7 +296,8 @@ settings(AllR, AllS) -->
 settings([], [], Stay, Stay) :- !, 
     ( phrase(rules_previous(_), Stay, _) ; 
       phrase(scenario_, Stay, _)  ;  
-      phrase(query_, Stay, _) ).  
+      phrase(query_, Stay, _) ;
+      phrase(the_plots_are_, Stay, _) ).  
     % settings ending with the start of the knowledge base or scenarios or queries. 
 settings(_, _, Rest, _) :- 
     asserterror('LE error in the declarations on or before ', Rest), 
@@ -308,6 +317,9 @@ content(T) --> %{print_message(informational, "going for scenario:"-[])},
     {append(S, R, T)}, !.
 content(T) --> %{print_message(informational, "going for query:"-[])},
     spaces_or_newlines(_), query_content(S),  content(R), 
+    {append(S, R, T)}, !.
+content(T) --> 
+    spaces_or_newlines(_), plot_content(S),  content(R), 
     {append(S, R, T)}, !.
 content([]) --> 
     spaces_or_newlines(_). 
@@ -406,6 +418,8 @@ fluent_predicate_previous -->
 fluent_predicate_previous --> 
     spaces(_), [the], spaces(_), [time], ['-'], [varying], spaces(_), [predicates], spaces(_), [are], spaces(_), [':'], spaces_or_newlines(_).
 
+the_plots_are_ --> spaces(_), [the], spaces(_), [plots], spaces(_), [are], spaces(_), [':'], spaces_or_newlines(_).
+
 files_to_include_previous(KBName) --> 
     spaces_or_newlines(_), [the], spaces(_), ['knowledge'], spaces(_), [base], extract_constant([includes], NameWords), [includes], 
     spaces(_), [these], spaces(_), [files], spaces(_), [':'], !, spaces_or_newlines(_), {name_as_atom(NameWords, KBName)}.
@@ -420,7 +434,7 @@ list_of_predicates_decl(_, _, Rest, _) :-
 % at least one predicate declaration required
 list_of_meta_predicates_decl([], []) --> spaces_or_newlines(_), next_section, !. 
 list_of_meta_predicates_decl([Ru|Rin], [F|Rout]) --> 
-    spaces_or_newlines(_), meta_predicate_decl(Ru,F), list_of_meta_predicates_decl(Rin, Rout).
+    spaces_or_newlines(_), meta_predicate_decl(Ru,F), comma_or_period, list_of_meta_predicates_decl(Rin, Rout).
 list_of_meta_predicates_decl(_, _, Rest, _) :- 
     asserterror('LE error found in the declaration of a meta template ', Rest), 
     fail.
@@ -460,6 +474,9 @@ next_section(StopHere, StopHere)  :-
 
 next_section(StopHere, StopHere)  :-
     phrase(query_, StopHere, _).  % format(string(Message), "Next query", []), print_message(informational, Message).
+
+next_section(StopHere, StopHere)  :-
+    phrase(the_plots_are_, StopHere, _), !.
 
 % predicate_decl/2
 predicate_decl(dict([Predicate|Arguments],TypesAndNames, Template), Relation) -->
@@ -514,6 +531,7 @@ scenario_content(Scenario) --> %{print_message(informational, "starting scenario
 scenario_content(_,  Rest, _) :- 
     asserterror('LE error found around this scenario expression: ', Rest), fail.
 
+
 % query_content/1 or /3
 % statement: the different types of statements in a LE text
 % a query
@@ -525,6 +543,231 @@ query_content(Query) -->
 
 query_content(_, Rest, _) :- 
     asserterror('LE error found around this expression: ', Rest), fail.
+
+plot_content(PlotList) -->
+    the_plots_are_, plot_statement_list(PlotList).
+
+plot_statement_list([Statement | StatementRest]) --> 
+    plot_statement(Statement), plot_statement_list(StatementRest).
+plot_statement_list([]) --> [].
+
+plot_statement(Statement) --> spaces_or_newlines(_), currentLine(L), 
+    literal_([], Map1, Head), plot_body(Body, Map1, _), period,  
+    {Statement = [if(L, Head, Body)]}. 
+
+concat_body_with_comma([A | B], (A, BB)) :- 
+    concat_body_with_comma(B, BB).
+concat_body_with_comma([A], A).
+
+plot_body_prefix --> 
+    newline, spaces(_), if_, !.
+plot_body_prefix --> 
+    if_, newline_or_nothing, spaces(_).
+
+plot_body(Body, Map1, MapN) --> 
+    plot_body_prefix, !,
+    plot_body_clause_list(ChartVar, 0, UsedVarList, PlotCommandList, CondList, Map1, MapN),
+    {
+        % print_message(informational, "In plot body UsedVarList: ~w \n\n PlotCommandList: ~w \n\nCondList ~w"-[UsedVarList, PlotCommandList, CondList]),
+        atomics_to_string(PlotCommandList, '\n', PlotCommandListStr),
+        pad_name_var(_Names, UsedVarList, ParamList, MapN), 
+        % print_message(informational, "ParamList: ~w PlotCommandListStr ~w"-[ParamList,PlotCommandListStr]),
+        % term_string(PlotTerm, S),
+        ChartAssignCommand = (ChartVar = plot_command(r_execute(ParamList,PlotCommandListStr,_))),
+        append(CondList, [ChartAssignCommand], TermList),
+        concat_body_with_comma(TermList, Body)
+        % print_message(informational, "In plot body Body: ~w"-[Body])
+    }.
+
+plot_body_clause_list(ChartVar, DataFrameCount, UsedVarList, PlotCommandList, CondList, Map1, MapN) --> 
+    plot_body_clause(ChartVar, UsedVarHead, PlotCommandHead, CondHead, DataFrameCount, Map1, Map2), 
+    {NextCount is DataFrameCount + 1},
+    newline, spaces(_), operator(_Op), spaces(_), plot_body_clause_list(ChartVar, NextCount, UsedVarTail, PlotCommandTail, CondTail, Map2, MapN),
+    {
+        append(UsedVarHead, UsedVarTail, UsedVarList),
+        append(PlotCommandHead, PlotCommandTail, PlotCommandList),
+        append(CondHead, CondTail, CondList)
+    }.
+
+plot_body_clause_list(ChartVar, DataFrameCount, UsedVarList, PlotCommandList, CondList, Map1, MapN) --> plot_body_clause(ChartVar, UsedVarList, PlotCommandList, CondList, DataFrameCount, Map1, MapN).
+
+% plot_body_clause/5
+% used to match normal LE conditions or special plot conditions
+plot_body_clause(_, [], [], [Cond], _Count, Map1, MapN) --> condition(Cond, _Ind, Map1, MapN).
+plot_body_clause(ChartVar, UsedVarList, [PlotCommand], [], _Count, Map1, MapN) --> chart(ChartVar, UsedVarList, PlotCommand, Map1, MapN).
+plot_body_clause(_, [], [PlotCommand], [], _Count, Map1, MapN) --> straightLine(PlotCommand, Map1, MapN).
+plot_body_clause(_, [], [PlotCommand], [], _Count, Map1, MapN) --> legend(PlotCommand, Map1, MapN).
+plot_body_clause(_, [], [PlotCommand], [DataFrameCommand], Count, Map1, MapN) --> line(DataFrameCommand, PlotCommand, Count, Map1, MapN).
+plot_body_clause(_, [], [PlotCommand], [DataFrameCommand], Count, Map1, MapN) --> points(DataFrameCommand, PlotCommand, Count, Map1, MapN).
+plot_body_clause(_, [], [PlotCommand], [DataFrameCommand], Count, Map1, MapN) --> verticalLines(DataFrameCommand, PlotCommand, Count, Map1, MapN).
+
+
+chart(ChartVar, UsedVarList, Command, Map1, MapN) --> 
+    variable_invocation([has], _Name, ChartVar, Map1, MapN), spaces(_), 
+    [has], spaces(_), chart_with_list(UsedVarList, Arguments, Map1, MapN), !,
+    {
+        % print_message(informational, "in chart Map1 ~w Arguments ~w"-[Map1, Arguments]),
+        atomic_list_concat(Arguments, ',', Atom), 
+        format(string(Command), 'plot(NULL, ~w)', [Atom])
+    }.
+
+legend(Command, Map1, MapN) --> 
+    variable_invocation([displays], _Name, _Var, Map1, MapN), spaces(_), displays_, legend_, [at], spaces(_), [Position], spaces(_), legend_with_list(Arguments), !,
+    {
+        atom_string(Position, PositionAtom), 
+        atomic_list_concat(Arguments, ',', Atom), 
+        format(string(Command), 'legend("~w",~w)', [PositionAtom, Atom])
+    }.
+
+straightLine(Command, Map1, MapN) --> 
+    variable_invocation([displays], _Name,  _Var, Map1, MapN), spaces(_), displays_, a_straight_line_, line_with_list(Arguments), !,
+    {atomic_list_concat(Arguments, ',', Atom), format(string(Command), 'abline(~w)', [Atom]) }.
+
+verticalLines(DataFrameCommand, PlotCommand, Count, Map1, Map2) --> 
+    variable_invocation([displays],  _Name, _Var, Map1, Map2), spaces(_), displays_, extract_names(NameX, NameY), 
+    from_, literal_(Map2, MapN, Cond), 
+    as_vertical_lines_, line_with_list(Arguments), !,
+    {
+        atomic_concat('verticalLines', Count, DataFrameName),
+        make_data_frame_command(Cond, MapN, DataFrameName, [NameX, NameY], DataFrameCommand),
+        atomic_list_concat(Arguments, ',', Atom), format(string(PlotCommand), 'points(~w$~w,~w$~w,type="h",~w)', [DataFrameName, NameX, DataFrameName, NameY, Atom]) 
+    }.
+
+
+points(DataFrameCommand, PlotCommand, Count, Map1, Map2) -->
+    variable_invocation([displays], _Name, _Var, Map1, Map2), spaces(_), displays_, extract_names(NameX, NameY), 
+    from_, literal_(Map2, MapN, Cond), 
+    as_points_,  line_with_list(Arguments), !,
+    {
+        atomic_concat('points', Count, DataFrameName),
+        make_data_frame_command(Cond, MapN, DataFrameName, [NameX, NameY], DataFrameCommand),
+        atomic_list_concat(Arguments, ',', Atom), format(string(PlotCommand), 'points(~w$~w,~w$~w,~w)', 
+            [DataFrameName, NameX, DataFrameName, NameY, Atom]) 
+    }.
+
+line(DataFrameCommand, PlotCommand, Count, Map1, Map2) --> 
+    variable_invocation([displays], _Name, _Var, Map1, Map2), spaces(_), displays_, extract_names(NameX, NameY), 
+    from_, literal_(Map2, MapN, Cond), % the variables defined are local to the condition
+    as_a_line_, line_with_list(Arguments),
+    {
+        atomic_concat('line', Count, DataFrameName),
+        make_data_frame_command(Cond, MapN, DataFrameName, [NameX, NameY], DataFrameCommand),
+        % the data frame here has to be sorted using order() before plotting as a line
+        % as the data collected using r_data_frame are not ordered
+        atomic_list_concat(Arguments, ',', Atom), format(string(PlotCommand), '~w <- ~w[order(~w$~w),]\n  lines(~w$~w,~w$~w,~w)', 
+            [DataFrameName, DataFrameName, DataFrameName, NameX, DataFrameName, NameX, DataFrameName, NameY, Atom])
+    }.
+
+extract_names(NameX, NameY) -->
+    variable_invocation_name_extraction([and], NameX), [and], variable_invocation_name_extraction([], NameY).
+    % {print_message(informational, "NameX ~w NameY ~w"-[NameX, NameY])}.
+
+make_data_frame_command(Cond, MapN, DataFrameName, Names, DataFrameCommand) :-
+    pad_name_var(Names, _VarList, ParamList, MapN), 
+    DataFrameCommand = r_data_frame(DataFrameName, ParamList, Cond).
+
+pad_name_var([], [], [], _MapN).
+pad_name_var([Name | XT], [Var | YT], [Name=Var | ZT], MapN) :-
+    consult_map(Var, Name, MapN, MapN), 
+    pad_name_var(XT, YT, ZT, MapN).
+
+% chart_with_list used to match different arguments, such as title, xlab, ylab, xlim, ylim, etc.
+chart_with_list(VarList, [Argument|ArgumentRest], Map1, MapN) --> 
+    chart_with(VarHead, Argument, Map1, MapN), spaces_or_newlines(_), [and], spaces(_), chart_with_list(VarTail, ArgumentRest, Map1, MapN),
+    {append(VarHead, VarTail, VarList)}.
+chart_with_list(VarList, [Argument], Map1, MapN) --> chart_with(VarList, Argument, Map1, MapN).
+
+% with is optional for line
+line_with_list(Arguments) --> spaces_or_newlines(_), [with], spaces(_), line_with_tail(Arguments).
+line_with_list([]) --> [].
+line_with_tail([H|T]) --> line_with(H), spaces_or_newlines(_), [and], spaces(_), line_with_tail(T).
+line_with_tail([H]) --> line_with(H).
+
+% legend must have one with clause
+legend_with_list(Arguments) --> spaces_or_newlines(_), [with], spaces(_), legend_with_tail(Arguments). 
+legend_with_tail([H|T]) --> legend_with(H), spaces_or_newlines(_), [and], spaces(_), legend_with_tail(T).
+legend_with_tail([H]) --> legend_with(H).
+
+listOfStringToSingleString(SList, Result) :- 
+    maplist(wrap_with_quotes, SList, SWrappedList),
+    atomic_list_concat(SWrappedList, ',', Result).
+
+wrap_with_quotes(In, Out) :-
+    number(In), format(string(Out), '~w', [In]).
+wrap_with_quotes(In, Out) :-
+    not(number(In)), format(string(Out), '"~w"', [In]).
+
+legend_with(Argument) --> a_colour_of_, ['['], extract_list([']'], List, [], []), [']'], spaces(_),
+    {listOfStringToSingleString(List, ListStr), format(string(Argument), 'col=c(~w)', [ListStr]) }.
+
+legend_with(Argument) --> a_plotting_character_of_, ['['], extract_list([']'], List, [], []), [']'], spaces(_),
+    {listOfStringToSingleString(List, ListStr), format(string(Argument), 'pch=c(~w)', [ListStr]) }.
+
+legend_with(Argument) --> a_character_expansion_factor_of_, [X], spaces(_),
+    {number(X), term_to_atom(cex=X, Argument) }.
+
+legend_with(Argument) --> a_text_of_, ['['], extract_list([']'], List, [], []), [']'], spaces(_),
+    {listOfStringToSingleString(List, ListStr), 
+    %print_message(informational, 'text list=~w'-[List]), 
+    format(string(Argument), 'legend=c(~w)', [ListStr]) }.
+
+legend_with(Argument) --> a_line_type_of_, ['['], extract_list([']'], List, [], []), [']'], spaces(_),
+    {listOfStringToSingleString(List, ListStr), 
+    %print_message(informational, 'line type list=~w'-[List]), 
+    format(string(Argument), 'lty=c(~w)', [ListStr]) }.
+
+legend_with(Argument) --> a_box_type_of_, [X], spaces(_),
+    {atom_string(X, XString), term_to_atom(bty=XString, Argument) }.
+
+line_with(Argument) --> a_colour_of_, [X], spaces(_),
+    {atom_string(X, XAtom), term_to_atom(col=XAtom, Argument) }.
+
+line_with(Argument) --> a_height_of_, [X], spaces(_),
+    {number(X), term_to_atom(h=X, Argument) }.
+
+line_with(Argument) --> a_width_of_, [X], spaces(_),
+    {number(X), term_to_atom(lwd=X, Argument) }.
+
+line_with(Argument) --> a_plotting_character_of_, [X], spaces(_),
+    {number(X), term_to_atom(pch=X, Argument)}.
+
+line_with(Argument) --> a_character_expansion_factor_of_, [X], spaces(_),
+    {number(X), term_to_atom(cex=X, Argument)}.
+
+chart_with([UsedVar], Argument, Map1, MapN) --> 
+    variable_invocation([as], Name, UsedVar, Map1, MapN), as_title_,
+    {format(string(Argument), 'main=~w', [Name])}.
+chart_with([], Argument, _, _) --> extract_constant([], NameWords), as_title_, !,
+    {name_as_atom(NameWords, Title), term_to_atom(main=Title, Argument)}.
+chart_with([], Argument, _, _) --> extract_constant([], NameWords), as_x_axis_label_, !,
+    {name_as_atom(NameWords, Label), term_to_atom(xlab=Label, Argument) }.
+chart_with([], Argument, _, _) --> extract_constant([], NameWords), as_y_axis_label_, !,
+    {name_as_atom(NameWords, Label), term_to_atom(ylab=Label, Argument) }.
+chart_with([], Argument, _, _) --> x_axis_limits_(X, Y), !,
+    {term_to_atom(xlim=c(X,Y), Argument)}.
+chart_with([], Argument, _, _) --> y_axis_limits_(X, Y), !,
+    {term_to_atom(ylim=c(X,Y), Argument)}.
+
+
+displays_ --> [displays], spaces(_).
+
+from_ --> spaces_or_newlines(_), [from], spaces(_).
+
+as_a_line_ --> spaces_or_newlines(_), [as], spaces(_), [a], spaces(_), [line], spaces(_).
+as_points_ --> spaces_or_newlines(_), [as], spaces(_), [points], spaces(_).
+a_straight_line_ -->  [a], spaces(_), [straight], spaces(_), [line], spaces(_).
+as_vertical_lines_ --> spaces_or_newlines(_), [as], spaces(_), [vertical], spaces(_), [lines], spaces(_).
+legend_ --> [legend], spaces(_).
+
+a_colour_of_ --> [a], spaces(_), [color], spaces(_), [of], spaces(_).
+a_colour_of_ --> [a], spaces(_), [colour], spaces(_), [of], spaces(_).
+a_height_of_ --> [a], spaces(_), [height], spaces(_), [of], spaces(_).
+a_width_of_ --> [a], spaces(_), [width], spaces(_), [of], spaces(_).
+a_plotting_character_of_ --> [a], spaces(_), [plotting], spaces(_), [character], spaces(_), [of], spaces(_).
+a_character_expansion_factor_of_ --> [a], spaces(_), [character], spaces(_), [expansion], spaces(_), [factor], spaces(_), [of], spaces(_).
+a_text_of_ --> [a], spaces(_), [text], spaces(_), [of], spaces(_).
+a_line_type_of_ --> [a], spaces(_), [line], spaces(_), [type], spaces(_), [of], spaces(_).
+a_box_type_of_ --> [a], spaces(_), [box], spaces(_), [type], spaces(_), [of], spaces(_).
 
 % (holds_at(_149428,_149434) if 
 % (happens_at(_150138,_150144),
@@ -754,7 +997,7 @@ condition(not(Conds), _, Map1, MapN) -->
     spaces(Ind), conditions(Ind, Map1, MapN, Conds), !.
 
 condition(Cond, _, Map1, MapN) -->  
-    literal_(Map1, MapN, Cond), !. 
+    literal_(Map1, MapN, Cond), !.
 
 % error clause
 condition(_, _Ind, Map, Map, Rest, _) :- 
@@ -768,17 +1011,22 @@ modifiers(MainExpression, Map, Map, MainExpression) --> [].
 
 % variable/4 or /6
 variable(StopWords, Var, Map1, MapN) --> variable_declaration(StopWords, Var, Map1, MapN).
-variable(StopWords, Var, Map1, MapN) --> variable_invocation(StopWords, Var, Map1, MapN).
+variable(StopWords, Var, Map1, MapN) --> variable_invocation(StopWords, _Name, Var, Map1, MapN).
 variable_declaration(StopWords, Var, Map1, MapN) --> 
     spaces(_), indef_determiner, extract_variable(StopWords, [], NameWords, [], _), % <-- CUT!
     {  NameWords\=[], name_predicate(NameWords, Name), update_map(Var, Name, Map1, MapN) }. 
-variable_invocation(StopWords, Var, Map1, MapN) --> 
-    spaces(_), def_determiner, extract_variable(StopWords, [], NameWords, [], _), % <-- CUT!
-    {  NameWords\=[], name_predicate(NameWords, Name), consult_map(Var, Name, Map1, MapN) }. 
+variable_invocation(StopWords, Name, Var, Map1, MapN) --> 
+    variable_invocation_name_extraction(StopWords, Name),
+    {  consult_map(Var, Name, Map1, MapN) }. 
 % allowing for symbolic variables(must not be a number)
-variable_invocation(StopWords, Var, Map1, MapN) --> 
+% variable_invocation_name_extraction(StopWords, Name) --> 
+%     (variable_def_name_extraction(StopWords, Name), !; variable_plain_name_extraction(StopWords, Name)).
+variable_invocation_name_extraction(StopWords, Name) --> 
+    spaces(_), def_determiner, extract_variable(StopWords, [], NameWords, [], _),
+    {  NameWords\=[], name_predicate(NameWords, Name) }.
+variable_invocation_name_extraction(StopWords, Name) --> 
     spaces(_), extract_variable(StopWords, [], NameWords, [], _),
-    {  NameWords\=[], name_predicate(NameWords, Name), consult_map(Var, Name, Map1, MapN) }. 
+    {  NameWords\=[], name_predicate(NameWords, Name) }.
 
 % constant/4 or /6
 constant(StopWords, Number, Map, Map) -->
@@ -911,6 +1159,17 @@ for_which_ --> [for], spaces(_), [which], spaces(_).
 for_which_ --> [para], spaces(_), [el], spaces(_), [cual], spaces(_). % spanish singular
 for_which_ --> [pour], spaces(_), [qui], spaces(_). % french
 for_which_ --> [per], spaces(_), [cui], spaces(_). % italian
+
+
+as_title_ --> [as], spaces(_), [title], spaces(_).
+
+as_x_axis_label_ --> [as], spaces(_), [x], spaces(_), [axis], spaces(_), [label], spaces(_).
+
+as_y_axis_label_ --> [as], spaces(_), [y], spaces(_), [axis], spaces(_), [label], spaces(_).
+
+x_axis_limits_(X, Y) --> [x], spaces(_), [axis], spaces(_), [limits], spaces(_), [from], spaces(_), item(X, []), spaces(_), [to], spaces(_), item(Y, []), spaces(_), {number(X), number(Y)}.
+
+y_axis_limits_(X, Y) --> [y], spaces(_), [axis], spaces(_), [limits], spaces(_), [from], spaces(_), item(X, []), spaces(_), [to], spaces(_), item(Y, []), spaces(_), {number(X), number(Y)}.
 
 query_header(Ind, Map) --> spaces(Ind), for_which_, list_of_vars([], Map), colon_, spaces_or_newlines(_).
 query_header(0, []) --> []. 
@@ -1077,6 +1336,9 @@ has_pairing_asteriks(RestOfTemplate) :-
 name_predicate(Words, Predicate) :-
     concat_atom(Words, '_', Predicate). 
 
+name_predicate_with_spaces(Words, Predicate) :-
+    concat_atom(Words, ' ', Predicate). 
+
 % name_as_atom/2
 name_as_atom([Number], Number) :-
     number(Number), !. 
@@ -1234,7 +1496,7 @@ match_template(PossibleLiteral, Map1, MapN, Literal) :-
     match(Candidate, PossibleLiteral, Map1, MapN, Template), !, 
     dictionary(Predicate, _, Template), 
     Literal =.. Predicate.
-    %print_message(informational,'Match!! with ~w ~w ~w ~w ~w ~w'-[PossibleLiteral, Literal, Map1, MapN, Candidate, Template]).% !. 
+    %print_message(informational,'Match!! with ~w'-[Literal]).% !. 
 
 % meta_match/5
 % meta_match(+CandidateTemplate, +PossibleLiteral, +MapIn, -MapOut, -SelectedTemplate)
@@ -1295,7 +1557,7 @@ meta_match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, [Expressi
     var(Element), stop_words(RestElements, StopWords),
     extract_expression([','|StopWords], NameWords, [Word|PossibleLiteral], NextWords), NameWords \= [],
     % this expression cannot add variables 
-    ( phrase(expression(Expression, Map1), NameWords) -> true ; ( name_predicate(NameWords, Expression) ) ),
+    ( phrase(expression(Expression, Map1), NameWords) -> true ; ( name_predicate_with_spaces(NameWords, Expression) ) ),
     %print_message(informational, 'found a constant or an expression '), print_message(informational, Expression),
     meta_match(RestElements, NextWords, Map1, MapN, RestSelected). 
 
@@ -1350,9 +1612,12 @@ match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, [Expression|Re
     var(Element), stop_words(RestElements, StopWords),
     % print_message(informational, "match RestElements ~w StopWords: ~w"-[RestElements, StopWords]),
     extract_expression([','|StopWords], NameWords, [Word|PossibleLiteral], NextWords), NameWords \= [],
+    % print_message(informational, "PossibleLiteral ~w"-[PossibleLiteral]),
     % this expression cannot add variables 
-    ( phrase(expression(Expression, Map1), NameWords) -> true ; name_predicate(NameWords, Expression)
-        %print_message(informational, "Expression phrase failed ~w Map1 ~w"-[Expression, Map1]) 
+    ( phrase(expression(Expression, Map1), NameWords) -> true ; (
+        name_predicate_with_spaces(NameWords, Expression)
+        % print_message(informational, "Expression phrase failed FullNameWords ~w"-[FullNameWords])
+        )
     ),
     %print_message(informational, 'found a constant or an expression '), print_message(informational, Expression),
     match(RestElements, NextWords, Map1, MapN, RestSelected).
@@ -1374,13 +1639,15 @@ expr(X, InMap) --> addExp(X, InMap).
 
 % Transform 2021-02-06T08:25:34 into a timestamp.
 dates(DateInSeconds, _Map) --> [Year,'-', Month, '-', Day, THours,':', Minutes, ':', Seconds], spaces(_),
-    {   pad_number(Year, 4, YearStr), pad_number(Month, 2, MonthStr), pad_number(Day, 2, DayStr),  pad_number(Minutes, 2, MinutesStr), pad_number(Seconds, 2, SecondsStr),
+    {   number(Year),number(Month),number(Day),number(Minutes),number(Seconds),
+        pad_number(Year, 4, YearStr), pad_number(Month, 2, MonthStr), pad_number(Day, 2, DayStr),  pad_number(Minutes, 2, MinutesStr), pad_number(Seconds, 2, SecondsStr),
         concat_atom([YearStr,'-', MonthStr, '-', DayStr, THours,':', MinutesStr, ':', SecondsStr], '', Date), 
       parse_time(Date,DateInSeconds) %, print_message(informational, "~w"-[DateInSeconds])  
     }, !.
 % Transform 2021-02-06 into a timestamp.
 dates(DateInSeconds, _Map) -->  [Year,'-', Month, '-', Day], spaces(_),
-    {   pad_number(Year, 4, YearStr), pad_number(Month, 2, MonthStr), pad_number(Day, 2, DayStr),
+    {   number(Year),number(Month),number(Day),
+        pad_number(Year, 4, YearStr), pad_number(Month, 2, MonthStr), pad_number(Day, 2, DayStr),
         concat_atom([YearStr, '-', MonthStr, '-', DayStr], '', Date), parse_time(Date, DateInSeconds) }, !. 
 
 % relies on tabled execution to avoid left recursion
@@ -1392,13 +1659,20 @@ mulExp(X*Y, InMap) --> mulExp(X, InMap), ['*'], item(Y, InMap).
 mulExp(X/Y, InMap) --> mulExp(X, InMap), ['/'], item(Y, InMap).
 mulExp(Out, InMap) --> item(Out, InMap).
 
-item(+X, InMap) --> ['+'], item(X, InMap).
-item(-X, InMap) --> ['-'], item(X, InMap).
+item(Y, InMap) --> ['+'], item(X, InMap), {Y is +X}.
+item(Y, InMap) --> ['-'], item(X, InMap), {Y is -X}.
 item(Out, InMap) --> element(Out, InMap).
 
-element(X, _InMap) --> [X], {number(X)}.
+element(X, _InMap) --> [X], {number(X)}, !.
+element(X, _InMap) --> [le_string(X)], !.
 element(X, InMap) --> ['('], addExp(X, InMap), [')'].
-element(Var, InMap) --> variable_invocation(['+', '-', '*', '/', ')', '('], Var, InMap, InMap).
+element(Var, InMap) --> variable_invocation(['+', '-', '*', '/', ')', '('], _Name, Var, InMap, InMap).
+% element(1.5NaN, _InMap) --> ['NA'], !. % a trick to match NA to NaN
+% element(X, _InMap) --> ['\''], element_string_list(List), ['\''], {concat_atom(List, '', XAtom), atom_string(XAtom, X)}, !.
+% element(X, _InMap) --> [X], {atom(X), \+ X = 'NA'}.
+
+element_string_list([H|T]) --> [H], element_string_list(T).
+element_string_list([]) --> [].
 
 % pad a number to the specified width with zeros
 pad_number(Number, Width, Out) :-
@@ -1620,6 +1894,7 @@ extract_variable_template(SW, InName, [Word|OutName], InType, [Word|OutType], [W
 % extract_variable(+StopWords, +InitialNameWords, -FinalNameWords, +InitialTypeWords, -FinalTypeWords, +ListOfWords, -NextWordsInText)
 % refactored as a dcg predicate
 extract_variable(_, Names, Names, Types, Types, [], []) :- !.                                % stop at when words run out
+extract_variable(_, _, _, _, _, [le_string(Word)|RestOfWords], [le_string(Word)|RestOfWords]) :- !. % stops when encounter a le_string, leave it to expression
 extract_variable(StopWords, Names, Names, Types, Types, [Word|RestOfWords], [Word|RestOfWords]) :-   % stop at reserved words, verbs or prepositions. 
     %(member(Word, StopWords); reserved_word(Word); verb(Word); preposition(Word); punctuation(Word); phrase(newline, [Word])), !.  % or punctuation
     (member(Word, StopWords); that_(Word); list_symbol(Word); punctuation(Word); phrase(newline, [Word])), !.
@@ -1661,6 +1936,7 @@ extract_expression(SW, [Word|RestName], [Word|RestOfWords],  NextWords) :-
 % extract_constant/4
 % extract_constant(+StopWords, ListOfNameWords, +ListOfWords, NextWordsInText)
 extract_constant(_, [], [], []) :- !.                                % stop at when words run out
+extract_constant(_, [], RestOfWords, RestOfWords).                  % extract_constant does not have to stop at stopWords, DCG could be relied on to try different possibilities
 extract_constant(StopWords, [], [Word|RestOfWords], [Word|RestOfWords]) :-   % stop at reserved words, verbs? or prepositions?. 
     %(member(Word, StopWords); reserved_word(Word); verb(Word); preposition(Word); punctuation(Word); phrase(newline, [Word])), !.  % or punctuation
     (member(Word, StopWords); that_(Word); list_symbol(Word); parenthesis(Word); punctuation(Word); phrase(newline, [Word])), !.
@@ -1730,7 +2006,7 @@ extract_list(StopWords, List, Map1, MapN, InWords, LeftWords) :- % symbolic vari
     (RestList\=[] -> List=[Var|RestList]; List=[Var]), !.
 extract_list(StopWords, List, Map1, Map1, InWords, LeftWords) :-
     extract_expression(['|',','|StopWords], NameWords, InWords, NextWords), NameWords \= [], 
-    ( phrase(expression(Expression, Map1), NameWords) ->   true ; ( name_predicate(NameWords, Expression) ) ),
+    ( phrase(expression(Expression, Map1), NameWords) ->   true ; ( name_predicate_with_spaces(NameWords, Expression) ) ),
     ( NextWords = [']'|_] -> ( RestList = [], LeftWords=NextWords ) 
     ;    extract_list(StopWords, RestList, Map1, Map1, NextWords, LeftWords) ), 
     extend_list(RestList, Expression, List), !. %  print_message(informational, " ~q "-[List]), !. 
@@ -1808,7 +2084,10 @@ unpack_tokens([cntrl(Char)|Rest], [newline(Next)|NewRest]) :- (Char=='\n' ; Char
     %not sure what will happens on env that use \n\r
     update_nl_count(Next), unpack_tokens(Rest, NewRest).
 unpack_tokens([First|Rest], [New|NewRest]) :-
-    (First = word(New); First=cntrl(New); First=punct(New); First=space(New); First=number(New); First=string(New)), 
+    (First = word(New); First=cntrl(New); First=punct(New); First=space(New); First=number(New); 
+        (First=string(Content), New=le_string(Content)) % change string from tokenizer to le_string to avoid confusion
+    ),  
+    % print_message(informational, "First ~w  New ~w"-[First, New]),
      !,
     unpack_tokens(Rest, NewRest).  
 
@@ -2158,6 +2437,7 @@ predef_dict([\=@=, T1, T2], [thing_1-thing, thing_2-thing], [T1, \,=,@,=, T2]).
 predef_dict([\==, T1, T2], [thing_1-thing, thing_2-thing], [T1, \,=,=, T2]).
 predef_dict([=\=, T1, T2], [thing_1-thing, thing_2-thing], [T1, =,\,=, T2]).
 predef_dict([=@=, T1, T2], [thing_1-thing, thing_2-thing], [T1, =,@,=, T2]).
+predef_dict([=:=, T1, T2], [thing_1-thing, thing_2-thing], [T1, =,:,=, T2]).
 predef_dict([==, T1, T2], [thing_1-thing, thing_2-thing], [T1, =,=, T2]).
 predef_dict([=<, T1, T2], [thing_1-thing, thing_2-thing], [T1, =,<, T2]).
 predef_dict([=<, T1, T2], [thing_1-thing, thing_2-thing], [T1, =,<, T2]).
