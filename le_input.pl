@@ -434,7 +434,7 @@ list_of_predicates_decl(_, _, Rest, _) :-
 % at least one predicate declaration required
 list_of_meta_predicates_decl([], []) --> spaces_or_newlines(_), next_section, !. 
 list_of_meta_predicates_decl([Ru|Rin], [F|Rout]) --> 
-    spaces_or_newlines(_), meta_predicate_decl(Ru,F), list_of_meta_predicates_decl(Rin, Rout).
+    spaces_or_newlines(_), meta_predicate_decl(Ru,F), comma_or_period, list_of_meta_predicates_decl(Rin, Rout).
 list_of_meta_predicates_decl(_, _, Rest, _) :- 
     asserterror('LE error found in the declaration of a meta template ', Rest), 
     fail.
@@ -611,26 +611,6 @@ chart(ChartVar, UsedVarList, Command, Map1, MapN) -->
         format(string(Command), 'plot(NULL, ~w)', [Atom])
     }.
 
-% chart_with_list used to match different arguments, such as title, xlab, ylab, xlim, ylim, etc.
-chart_with_list(VarList, [Argument|ArgumentRest], Map1, MapN) --> 
-    chart_with(VarHead, Argument, Map1, MapN), [and], spaces(_), chart_with_list(VarTail, ArgumentRest, Map1, MapN),
-    {append(VarHead, VarTail, VarList)}.
-chart_with_list(VarList, [Argument], Map1, MapN) --> chart_with(VarList, Argument, Map1, MapN).
-
-chart_with([UsedVar], Argument, Map1, MapN) --> 
-    variable_invocation([as], Name, UsedVar, Map1, MapN), as_title_,
-    {format(string(Argument), 'main=~w', [Name])}.
-chart_with([], Argument, _, _) --> extract_constant([], NameWords), as_title_, !,
-    {name_as_atom(NameWords, Title), term_to_atom(main=Title, Argument)}.
-chart_with([], Argument, _, _) --> extract_constant([], NameWords), as_x_axis_label_, !,
-    {name_as_atom(NameWords, Label), term_to_atom(xlab=Label, Argument) }.
-chart_with([], Argument, _, _) --> extract_constant([], NameWords), as_y_axis_label_, !,
-    {name_as_atom(NameWords, Label), term_to_atom(ylab=Label, Argument) }.
-chart_with([], Argument, _, _) --> x_axis_limits_(X, Y), !,
-    {term_to_atom(xlim=c(X,Y), Argument)}.
-chart_with([], Argument, _, _) --> y_axis_limits_(X, Y), !,
-    {term_to_atom(ylim=c(X,Y), Argument)}.
-
 legend(Command, Map1, MapN) --> 
     variable_invocation([displays], _Name, _Var, Map1, MapN), spaces(_), displays_, legend_, [at], spaces(_), [Position], spaces(_), legend_with_list(Arguments), !,
     {
@@ -691,6 +671,12 @@ pad_name_var([Name | XT], [Var | YT], [Name=Var | ZT], MapN) :-
     consult_map(Var, Name, MapN, MapN), 
     pad_name_var(XT, YT, ZT, MapN).
 
+% chart_with_list used to match different arguments, such as title, xlab, ylab, xlim, ylim, etc.
+chart_with_list(VarList, [Argument|ArgumentRest], Map1, MapN) --> 
+    chart_with(VarHead, Argument, Map1, MapN), spaces_or_newlines(_), [and], spaces(_), chart_with_list(VarTail, ArgumentRest, Map1, MapN),
+    {append(VarHead, VarTail, VarList)}.
+chart_with_list(VarList, [Argument], Map1, MapN) --> chart_with(VarList, Argument, Map1, MapN).
+
 % with is optional for line
 line_with_list(Arguments) --> spaces_or_newlines(_), [with], spaces(_), line_with_tail(Arguments).
 line_with_list([]) --> [].
@@ -747,6 +733,20 @@ line_with(Argument) --> a_plotting_character_of_, [X], spaces(_),
 
 line_with(Argument) --> a_character_expansion_factor_of_, [X], spaces(_),
     {number(X), term_to_atom(cex=X, Argument)}.
+
+chart_with([UsedVar], Argument, Map1, MapN) --> 
+    variable_invocation([as], Name, UsedVar, Map1, MapN), as_title_,
+    {format(string(Argument), 'main=~w', [Name])}.
+chart_with([], Argument, _, _) --> extract_constant([], NameWords), as_title_, !,
+    {name_as_atom(NameWords, Title), term_to_atom(main=Title, Argument)}.
+chart_with([], Argument, _, _) --> extract_constant([], NameWords), as_x_axis_label_, !,
+    {name_as_atom(NameWords, Label), term_to_atom(xlab=Label, Argument) }.
+chart_with([], Argument, _, _) --> extract_constant([], NameWords), as_y_axis_label_, !,
+    {name_as_atom(NameWords, Label), term_to_atom(ylab=Label, Argument) }.
+chart_with([], Argument, _, _) --> x_axis_limits_(X, Y), !,
+    {term_to_atom(xlim=c(X,Y), Argument)}.
+chart_with([], Argument, _, _) --> y_axis_limits_(X, Y), !,
+    {term_to_atom(ylim=c(X,Y), Argument)}.
 
 
 displays_ --> [displays], spaces(_).

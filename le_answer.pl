@@ -131,10 +131,6 @@ extract_goal_command_((A;B), M, (IA;IB), (CA;CB)) :-
     extract_goal_command_(A, M, IA, CA), extract_goal_command_(B, M, IB, CB), !. 
 extract_goal_command_((A,B), M, (IA,IB), (CA,CB)) :-
     extract_goal_command_(A, M, IA, CA), extract_goal_command_(B, M, IB, CB), !. 
-extract_goal_command_(r_data_frame(Data, ParamList, InnerPredicate), M, 
-    r_data_frame(Data, ParamList, IA), 
-    r_data_frame(Data, ParamList, CA)) :-
-    extract_goal_command_(InnerPredicate, M, IA, CA), !. 
 extract_goal_command_(holds(Goal,T), M, Goal, (holds(Goal,T);M:holds(Goal,T))) :- !.
 extract_goal_command_(happens(Goal,T), M, Goal, (happens(Goal,T);M:happens(Goal,T))) :- !.
 extract_goal_command_(Goal, M, Goal, M:Goal) :- !. 
@@ -423,10 +419,6 @@ escape_uppercased(Word, EscapedWord) :-
     append([92, First|Rest], [92], NewCodes),
     name(EscapedWord, NewCodes).
 
-run_data_frames(_, []) :- !.
-run_data_frames(SwishModule, [F|R]) :- nonvar(F), 
-    call(SwishModule:F), run_data_frames(SwishModule, R).
-
 assert_facts(_, []) :- !. 
 assert_facts(SwishModule, [F|R]) :- nonvar(F), % print_message(informational, "asserting: ~w"-[SwishModule:F]),
     assertz(SwishModule:F), assert_facts(SwishModule, R).
@@ -674,12 +666,6 @@ dump(queries, List, String) :-
         (member( query(Name, Query), List)), Predicates),
     with_output_to(string(String), forall(member(Clause, Predicates), portray_clause_ind(Clause))).
 
-dump(plot, List, String) :- 
-    findall( plot_cmd(Name, DataFrames, Command), 
-        (member(plot_cmd(Name, DataFrames, Command), List)), Predicates),
-    %print_message(informational, "dump Predicates ~w, List: ~w"-[Predicates, List]),
-    with_output_to(string(String), forall(member(Clause, Predicates), portray_clause_ind(Clause))).
-
 dump(scenarios, List, String) :- 
     findall( example(Name, Scenario), 
         (member( example(Name, Scenario), List)), Predicates),
@@ -692,7 +678,6 @@ dump(all, Module, List, String) :-
 	dump(rules, List, StringRules),
     dump(scenarios, List, StringScenarios),
     dump(queries, List, StringQueries),
-    dump(plot, List, StringPlots), 
     string_concat(":-module(\'", Module, Module01),
     string_concat(Module01, "\', []).\n", TopHeadString),  
     dump(source_lang, SourceLang), 
@@ -701,8 +686,7 @@ dump(all, Module, List, String) :-
     string_concat(HeadString, "prolog_le(verified).\n", String0), % it has to be here to set the context
 	string_concat(String0, StringRules, String1),
     string_concat(String1, StringScenarios, String2),
-    string_concat(String2, StringQueries, String3),
-    string_concat(String3, StringPlots, String).   
+    string_concat(String2, StringQueries, String).
 
 dump_scasp(Module, List, String) :-
 	dump(templates_scasp, StringTemplates), 
@@ -788,9 +772,6 @@ write_functors_to_string([F/N|R], Previous, StringFunctors) :- !,
 prolog_colour:term_colours(en(_Text),lps_delimiter-[classify]). % let 'en' stand out with other taxlog keywords
 prolog_colour:term_colours(en_decl(_Text),lps_delimiter-[classify]). % let 'en_decl' stand out with other taxlog keywords
 
-user:plot(Plot, with(Scenario)) :-
-    print_message(informational,"plot:Plot ~w with ~w"-[Plot, Scenario]), 
-    plot(Plot, with(Scenario)).
 user:(answer Query with Scenario):- 
     %print_message(informational,"le_answer:answer ~w with ~w"-[Query, Scenario]), 
     answer(Query,with(Scenario)). 
