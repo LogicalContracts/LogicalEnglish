@@ -2100,7 +2100,8 @@ meta_dictionary(Predicate, VariablesNames, Template) :-
     meta_dict(Predicate, VariablesNames, Template) ; predef_meta_dict(Predicate, VariablesNames, Template).
 
 :- discontiguous predef_meta_dict/3.
-predef_meta_dict([\=, T1, T2], [first_thing-time, second_thing-time], [T1, is, different, from, T2]).
+predef_meta_dict([dif, T1, T2], [first_thing-time, second_thing-time], [T1, is, different, from, T2]).
+predef_meta_dict([\=, T1, T2], [first_thing-time, second_thing-time], [T1, is, not, equal, to, T2]).
 predef_meta_dict([=, T1, T2], [first_thing-time, second_thing-time], [T1, is, equal, to, T2]).
 
 % dictionary(?LiteralElements, ?NamesAndTypes, ?Template)
@@ -2171,6 +2172,7 @@ predef_dict([is_days_after, A, B, C], [date-date, number-number, second_date-dat
                   [A, is, B, days, after, C]).
 predef_dict([immediately_before, T1, T2], [time_1-time, time_2-time], [T1, is, immediately, before, T2]). % see reasoner.pl before/2
 predef_dict([dif, T1, T2], [thing_1-thing, thing_2-thing], [T1, is, different, from, T2]).
+predef_dict([\=, T1, T2], [thing_1-thing, thing_2-thing], [T1, is, not, equal, to, T2]).
 predef_dict([==, T1, T2], [thing_1-thing, thing_2-thing], [T1, is, equivalent, to, T2]).
 predef_dict([is_a, Object, Type], [object-object, type-type], [Object, is, of, type, Type]).
 predef_dict([is_not_before, T1, T2], [time1-time, time2-time], [T1, is, not, before, T2]). % see reasoner.pl before/2
