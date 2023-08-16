@@ -21,6 +21,18 @@ git clone git@github.com:smucclaw/LogicalEnglish.git
 docker compose up
 ```
 
+## Using pre-packaged docker.
+
+We have our own docker images at `cclawdev/logicalenglish`
+Please notice the latest tag is `main` - this is becuase of how github metadata extraction works for automatic tagging.
+`latest` tags are created from releases.
+
+```shell
+docker run -it -p 8082:3050  -e LOAD_KB=true -e SWISH_DAEMON_USER=root  --memory="300m" cclawdev/logicalenglish:main
+```
+
+Port `-p 8082:3050` can be mapped to whatever local port you want to use `-p 8888:3050`.
+
 The `le-ui` extension should use the right port, but you might need to adjust the `conf.view.url` setting in VSCode if not.
 
 # Logical English
