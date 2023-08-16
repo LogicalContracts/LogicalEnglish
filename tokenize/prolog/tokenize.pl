@@ -305,7 +305,12 @@ word(W) --> csyms(W).
 
 % TODO Make open and close brackets configurable
 string(S) --> string(`"`, `"`, S).
-string(S) --> string(`'`, `'`, S).
+
+% This is commented out as this causes parsing to fail for templates like
+% *a thing*'s *a attribute* is *a value*
+% as in Bob's age is 42
+% string(S) --> string(`'`, `'`, S).
+
 string(OpenBracket, CloseBracket, S) --> string_start(OpenBracket, CloseBracket, S).
 
 % A string starts when we encounter an OpenBracket
