@@ -305,6 +305,7 @@ word(W) --> csyms(W).
 
 % TODO Make open and close brackets configurable
 string(S) --> string(`"`, `"`, S).
+string(S) --> string(`'`, `'`, S).
 string(OpenBracket, CloseBracket, S) --> string_start(OpenBracket, CloseBracket, S).
 
 % A string starts when we encounter an OpenBracket

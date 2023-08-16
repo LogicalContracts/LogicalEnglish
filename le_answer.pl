@@ -82,6 +82,11 @@ which can be used on the new command interface of LE on SWISH
 :- use_module(library(http/term_html)).
 :- use_module(library(http/js_write)).
 
+:- use_module(library(r/r_call)).
+:- use_module(library(r/r_data)).
+
+
+
 :- multifile http:location/3.
 :- dynamic   http:location/3.
 
@@ -169,6 +174,7 @@ interrupted(T1, Fluent, T2) :- %trace,
     %(T2=(after(T1)-_)->T2=(after(T1)-before(T)); rbefore(T,T2)). 
 
 /* ----------------------------------------------------------------- CLI English */
+
 % answer/1
 % answer(+Query or Query Expression)
 answer(English) :- %trace, 
@@ -229,9 +235,8 @@ answer(English, Arg, E, Result) :- %trace,
     le_input:parsed, %myDeclaredModule(Module), 
     this_capsule(SwishModule), 
     translate_command(SwishModule, English, _, Goal, PreScenario), 
-    ((Arg = with(ScenarioName), PreScenario=noscenario) -> Scenario=ScenarioName; Scenario=PreScenario), 
+    prepare_scenario(SwishModule, Arg, PreScenario, _Scenario, _, _, Facts),
     extract_goal_command(Goal, SwishModule, InnerGoal, _Command),
-    (Scenario==noscenario -> Facts = [] ; SwishModule:example(Scenario, [scenario(Facts, _)])), !, 
     setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
             catch((true, reasoner:query(at(InnerGoal, SwishModule),_,E,Result)), Error, ( print_message(error, Error), fail ) ), 
             _Result, 
@@ -256,6 +261,38 @@ answer(English, Arg, E, Result) :- %trace,
 %     extract_goal_command(Goal, SwishModule, _InnerGoal, Command), !.  
 %     %print_message(informational, "Command: ~w"-[Command]).
 
+prepare_scenario(SwishModule, Arg, PreScenario, Scenario, LocalFacts, ModuleFacts, AllFacts) :-
+    % extract the name of the scenario
+    ((Arg = with(ScenarioName)) -> Scenario=ScenarioName; Scenario=PreScenario),
+    % seach for scenarios in the same file and in a different module named the scenario
+    (Scenario==noscenario -> AllFacts = [] ; 
+        (
+            (
+                SwishModule:example(Scenario, [scenario(LocalFacts, _)]) -> 
+                print_message(informational, "Loading local scenario ~w"-[Scenario]);  
+                LocalFacts = [], print_message(informational, "Scenario: ~w not found in current file"-[Scenario])
+            ),
+            atomic_list_concat([Scenario,'.pl'], ScenarioFileName), 
+            % print_message(informational, "ScenarioFileName ~w Scenario ~w"-[ScenarioFileName, Scenario]), 
+            % print_message(informational, "LocalFacts ~w "-[LocalFacts]), 
+            (
+                le_input:load_file_module(ScenarioFileName, Scenario, true) -> 
+                print_message(informational, "Loading scenario from module: ~w"-[Scenario]), 
+                parse_scenario_from_file(Scenario, ModuleFacts); ModuleFacts=[]
+            ),
+            % print_message(informational, "ModuleFacts ~w "-[ModuleFacts]),
+            append(LocalFacts, ModuleFacts, AllFacts)
+        )
+    ), !.
+
+parse_scenario_from_file(ScenarioModuleName, Assumptions) :- %trace, 
+    ScenarioModuleName:scenario(en(LEString)),
+    tokenize(LEString, Tokens, [cased(true), spaces(true), numbers(true)]),
+    unpack_tokens(Tokens, UTokens), 
+    clean_comments(UTokens, CTokens),
+    % print_message(informational, "CTokens: ~w "-[CTokens]), 
+    phrase(le_input:assumptions_(Assumptions), CTokens).
+
 % prepare_query(+English, +Arguments, -Module, -Goal, -Facts, -Command)
 prepare_query(English, Arg, SwishModule, Goal, Facts, Command) :- %trace, 
     %restore_dicts, 
@@ -265,14 +302,11 @@ prepare_query(English, Arg, SwishModule, Goal, Facts, Command) :- %trace,
     %print_message(informational, "SwisModule: ~w, English ~w, GoalName ~w, Goal ~w, Scenario ~w"-[SwishModule, English, GoalName, Goal, PreScenario]),
     copy_term(Goal, CopyOfGoal),  
     translate_goal_into_LE(CopyOfGoal, RawGoal), name_as_atom(RawGoal, EnglishQuestion), 
-    ((Arg = with(ScenarioName), PreScenario=noscenario) -> Scenario=ScenarioName; Scenario=PreScenario),
+    prepare_scenario(SwishModule, Arg, PreScenario, Scenario, _, _, Facts),
     show_question(GoalName, Scenario, EnglishQuestion), 
     %print_message(informational, "Scenario: ~w"-[Scenario]),
-    (Scenario==noscenario -> Facts = [] ; 
-        (SwishModule:example(Scenario, [scenario(Facts, _)]) -> 
-            true;  print_message(error, "Scenario: ~w does not exist"-[Scenario]))),
     %print_message(informational, "Facts: ~w"-[Facts]), 
-    extract_goal_command(Goal, SwishModule, _InnerGoal, Command), !.   
+    extract_goal_command(Goal, SwishModule, _InnerGoal, Command), !.
     %print_message(informational, "Command: ~w"-[Command]). 
 
 % prepare_query(+English, +Arguments, +Module, -Goal, -Facts, -Command)
@@ -285,12 +319,9 @@ prepare_query(English, Arg, SwishModule, Goal, Facts, Command) :- %trace,
     copy_term(Goal, CopyOfGoal),
     %print_message(informational, "prepare_query (2): translated ~w into goalname ~w goal ~w with scenario ~w\n "-[English,GoalName,Goal,PreScenario]), 
     translate_goal_into_LE(CopyOfGoal, RawGoal), name_as_atom(RawGoal, EnglishQuestion),
-    ((Arg = with(ScenarioName), PreScenario=noscenario) -> Scenario=ScenarioName; Scenario=PreScenario),
+    prepare_scenario(SwishModule, Arg, PreScenario, Scenario, _, _, Facts),
     show_question(GoalName, Scenario, EnglishQuestion),  
     %print_message(informational, "prepare_query (3): Scenario: ~w"-[Scenario]), 
-    (Scenario==noscenario -> Facts = [] ; 
-        (SwishModule:example(Scenario, [scenario(Facts, _)]) -> 
-            true;  print_message(error, "Scenario: ~w does not exist"-[Scenario]))), 
     %print_message(informational, "prepare_query (4): Facts: ~w Goal: ~w Module: ~w\n "-[Facts, Goal, SwishModule]),  
     extract_goal_command(Goal, SwishModule, _InnerGoal, Command), !.
     %print_message(informational, "prepare_query (5): Ready from ~w the command ~w\n"-[English, Command]).  
@@ -646,7 +677,7 @@ dump(all, Module, List, String) :-
     %print_message(informational, " Templates ~w"-[StringTemplates]),
 	dump(rules, List, StringRules),
     dump(scenarios, List, StringScenarios),
-    dump(queries, List, StringQueries), 
+    dump(queries, List, StringQueries),
     string_concat(":-module(\'", Module, Module01),
     string_concat(Module01, "\', []).\n", TopHeadString),  
     dump(source_lang, SourceLang), 
@@ -655,7 +686,7 @@ dump(all, Module, List, String) :-
     string_concat(HeadString, "prolog_le(verified).\n", String0), % it has to be here to set the context
 	string_concat(String0, StringRules, String1),
     string_concat(String1, StringScenarios, String2),
-    string_concat(String2, StringQueries, String).   
+    string_concat(String2, StringQueries, String).
 
 dump_scasp(Module, List, String) :-
 	dump(templates_scasp, StringTemplates), 
@@ -740,7 +771,6 @@ write_functors_to_string([F/N|R], Previous, StringFunctors) :- !,
 :- multifile prolog_colour:term_colours/2.
 prolog_colour:term_colours(en(_Text),lps_delimiter-[classify]). % let 'en' stand out with other taxlog keywords
 prolog_colour:term_colours(en_decl(_Text),lps_delimiter-[classify]). % let 'en_decl' stand out with other taxlog keywords
-
 
 user:(answer Query with Scenario):- 
     %print_message(informational,"le_answer:answer ~w with ~w"-[Query, Scenario]), 
@@ -981,7 +1011,6 @@ explanationLEHTML([C1|Cn],CH) :- explanationLEHTML(C1,CH1), explanationLEHTML(Cn
 explanationLEHTML([],[]).
 
 %sandbox:safe_meta(term_singletons(X,Y), [X,Y]).
-
 sandbox:safe_primitive(le_answer:answer( _EnText)).
 sandbox:safe_primitive(le_answer:show( _Something)).
 sandbox:safe_primitive(le_answer:show( _Something, _With)).
