@@ -688,6 +688,12 @@ legend_with_list(Arguments) --> spaces_or_newlines(_), [with], spaces(_), legend
 legend_with_tail([H|T]) --> legend_with(H), spaces_or_newlines(_), [and], spaces(_), legend_with_tail(T).
 legend_with_tail([H]) --> legend_with(H).
 
+listOfPchTextToPch(PchTextList, PchList) :-
+    maplist(pch_text_to_index, PchTextList, PchList).
+
+listOfLineTextToLineType(LineTextList, LineTypeList) :-
+    maplist(line_text_to_index, LineTextList, LineTypeList).
+
 listOfStringToSingleString(SList, Result) :- 
     maplist(wrap_with_quotes, SList, SWrappedList),
     atomic_list_concat(SWrappedList, ',', Result).
@@ -701,20 +707,16 @@ legend_with(Argument) --> a_colour_of_, ['['], extract_list([']'], List, [], [])
     {listOfStringToSingleString(List, ListStr), format(string(Argument), 'col=c(~w)', [ListStr]) }.
 
 legend_with(Argument) --> a_plotting_character_of_, ['['], extract_list([']'], List, [], []), [']'], spaces(_),
-    {listOfStringToSingleString(List, ListStr), format(string(Argument), 'pch=c(~w)', [ListStr]) }.
+    {listOfPchTextToPch(List, PchList),listOfStringToSingleString(PchList, ListStr), format(string(Argument), 'pch=c(~w)', [ListStr]) }.
 
 legend_with(Argument) --> a_character_expansion_factor_of_, [X], spaces(_),
     {number(X), term_to_atom(cex=X, Argument) }.
 
 legend_with(Argument) --> a_text_of_, ['['], extract_list([']'], List, [], []), [']'], spaces(_),
-    {listOfStringToSingleString(List, ListStr), 
-    %print_message(informational, 'text list=~w'-[List]), 
-    format(string(Argument), 'legend=c(~w)', [ListStr]) }.
+    {listOfStringToSingleString(List, ListStr), format(string(Argument), 'legend=c(~w)', [ListStr]) }.
 
 legend_with(Argument) --> a_line_type_of_, ['['], extract_list([']'], List, [], []), [']'], spaces(_),
-    {listOfStringToSingleString(List, ListStr), 
-    %print_message(informational, 'line type list=~w'-[List]), 
-    format(string(Argument), 'lty=c(~w)', [ListStr]) }.
+    {listOfLineTextToLineType(List, LineTypeList),listOfStringToSingleString(LineTypeList, ListStr), format(string(Argument), 'lty=c(~w)', [ListStr]) }.
 
 legend_with(Argument) --> a_box_type_of_, [X], spaces(_),
     {atom_string(X, XString), term_to_atom(bty=XString, Argument) }.
@@ -728,11 +730,51 @@ line_with(Argument) --> a_height_of_, [X], spaces(_),
 line_with(Argument) --> a_width_of_, [X], spaces(_),
     {number(X), term_to_atom(lwd=X, Argument) }.
 
-line_with(Argument) --> a_plotting_character_of_, [X], spaces(_),
-    {number(X), term_to_atom(pch=X, Argument)}.
+line_with(Argument) --> a_plotting_character_of_, extract_constant([and], NameWords), spaces(_),
+    {name_as_atom(NameWords, PchText),pch_text_to_index(PchText, Pch),term_to_atom(pch=Pch, Argument)}.
 
 line_with(Argument) --> a_character_expansion_factor_of_, [X], spaces(_),
     {number(X), term_to_atom(cex=X, Argument)}.
+
+line_text_to_index('none', -1).
+line_text_to_index('blank', 0).
+line_text_to_index('solid', 1).
+line_text_to_index('dashed', 2).
+line_text_to_index('dotted', 3).
+line_text_to_index('dotdash', 4).
+line_text_to_index('longdash', 5).
+line_text_to_index('twodash', 6).
+line_text_to_index(In, In) :- number(In).
+
+pch_text_to_index('none', -1).
+pch_text_to_index('square', 0).
+pch_text_to_index('circle', 1).
+pch_text_to_index('triangle point up', 2).
+pch_text_to_index('plus', 3).
+pch_text_to_index('cross', 4).
+pch_text_to_index('diamond', 5).
+pch_text_to_index('triangle point down', 6).
+pch_text_to_index('square cross', 7).
+pch_text_to_index('star', 8).
+pch_text_to_index('diamond plus', 9).
+pch_text_to_index('circle plus', 10).
+pch_text_to_index('triangle up down', 11).
+pch_text_to_index('square plus', 12).
+pch_text_to_index('circle cross', 13).
+pch_text_to_index('square and triangle down', 14).
+pch_text_to_index('filled square', 15).
+pch_text_to_index('filled circle', 16).
+pch_text_to_index('filled triangle point up', 17).
+pch_text_to_index('filled diamond', 18).
+pch_text_to_index('solid circle', 19).
+pch_text_to_index('smaller circle', 20).
+pch_text_to_index('filled circle blue', 21).
+pch_text_to_index('filled square blue', 22).
+pch_text_to_index('filled diamond blue', 23).
+pch_text_to_index('filled triangle point-up blue', 24).
+pch_text_to_index('filled triangle point down blue', 25).
+pch_text_to_index('vertical bar', 124).
+pch_text_to_index(In, In) :- number(In).
 
 chart_with([UsedVar], Argument, Map1, MapN) --> 
     variable_invocation([as], Name, UsedVar, Map1, MapN), as_title_,
