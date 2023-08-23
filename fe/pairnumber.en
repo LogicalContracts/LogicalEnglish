@@ -1,0 +1,330 @@
+% line 21
+the maximum time is 30.
+    
+% line 25-28
+the fluents are:
+    a vehicle is at a place heading a direction, known as location,
+	there is a collision warning between a first vehicle and a second vehicle at a place, known as collisionWarning,
+	a first vehicle is to the right of a second vehicle at a place, known as rightOfWay, 
+	there is a possible collision between a first vehicle and a second vehicle, known as collisionPossible. 
+    
+% line 30
+the events are:
+	a vehicle starts driving to a place,
+    a vehicle is removed.
+    
+% line 32
+the actions are:
+	a vehicle steps from a first place to a second place,
+    a vehicle turns to a direction.
+
+% line 34-38
+initially:
+    mycar is at [2,1] heading northward,
+    yourcar is at [6,1] heading northward,
+    othercar is at [10,5] heading westward,
+    troublemaker is at [6,2] heading northward,
+    brokencar is at [2,7] heading northward.
+
+% line 40-44
+the observations are:
+    mycar starts driving to [2,9] from 2 to 3, 
+	troublemaker starts driving to [8,9] from 2 to 3,
+	yourcar starts driving to [9,9] from 2 to 3,
+	othercar starts driving to [6,1] from 1 to 2,
+	brokencar is removed from 15 to 16.
+
+% line 47
+% termination
+When a vehicle is removed
+then it becomes no longer the case that the vehicle is at a place heading a direction. 
+
+
+% line 52-55
+% the main reactive_rule
+If a vehicle starts driving to a new place from a first time to a second time
+and the vehicle is at a present place heading a direction at the second time
+then there is a route from the present place to the new place
+and the vehicle drives to the new place through the route from the second time to a third time.
+
+% line 60- 62
+there is a new route from a start to a finish if
+[a direction, a street1] is a route
+and the start is on street1
+and the finish is on street1
+and the orientation from the start to the finish is direction1.
+
+% line 64-67
+the orientation from [a X, a Y1] to [the X, a Y2] is northward if
+	Y1 < Y2.
+the orientation from [a X, a Y1] to [the X, a Y2] is southward if
+	Y1 > Y2.
+the orientation from [a X1, a Y] to [a X2, the Y] is eastward if
+	X1 < X2.
+the orientation from [a X1, a Y] to [a X2, the Y] is westward if
+	X1 > X2.
+
+% line 72-78
+there is a new route from a start to a finish if 
+[a heading1, a street1] followed by a rest gives the new route
+and the start is on street1
+and a list is a route from a first place to a second place
+and a sublist followed by the new route gives the list
+and the finish is on a street2
+and the street2 is a member of the rest.
+
+% line 82-90
+[eastward,northStreet] is a route from [2,1] to [9,9].
+[northward,westStreet,eastward,northStreet] is a route from [2,1] to [9,9].
+[northward,highStreet,eastward,northStreet] is a route from [6,1] to [9,9].
+[westward,northStreet,southward,westStreet] is a route from [9,9] to [2,1].
+[westward,mainStreet,southward,highStreet] is a route from [10,5] to [6,1].
+
+% line 88-92
+[a X, a Y] is on mainStreet if
+Y is the same as 5
+and X is greater or equal than 3
+and X is equal or less than 10.
+
+[a X, a Y] is on northStreet if
+Y is the same as 9
+and X is greater or equal than 2
+and X is equal or less than 9.
+
+[a X, a Y] is on highStreet if
+X is the same as 6
+and Y is greater or equal than 1
+and Y is equal or less than 9.
+
+[a X, a Y] is on westStreet if
+X is the same as 2
+and Y is greater or equal than 1
+and Y is equal or less than 9.
+
+[a X, a Y] is on eastStreet if
+X is the same as 8
+and Y is greater or equal than 1
+and Y is equal or less than 9.
+
+
+% line 99-124
+% four drive description
+a vehicle drives to a new place through a route from a first time to a second time if
+[a street1, a direction1] is the route
+% and the first time is the same as the second time
+and the vehicle is at the new place heading direction1 at the second time.
+
+a vehicle drives to a new place through a route from an old time to a third time if 
+[a direction1, a street1] is the route
+and the vehicle is at an old place heading direction1 at the old time
+and the old place is different from the new place
+and the old place is next to a next place along direction1
+and the next place is on street1
+and the vehicle steps from the old place to the next place from a first time to a second time
+and the vehicle drives to the new place through the route from the second time to the third time
+and the vehicle is at the new place heading direction1 at the third time.
+ 
+a vehicle drives to a new place through a route from an old time to a third time if 
+[an old direction,an old street, a new direction, a new street] followed by a rest gives the route
+and the vehicle is at an old place heading the old direction at the old time
+and the old place is next to a next place along the old direction
+and it is not the case that the next place is on the new street
+and the vehicle steps from the old place to the next place from a first time to a second time
+and the vehicle drives to the new place through the route from the second time to the third time
+and the vehicle is at the new place heading the new direction at the third time.
+
+a vehicle drives to a new place through a first route from an old time to a third time if 
+[a new direction, a new street] followed by a rest gives a second route
+and [an old direction, an old street] followed by the second route gives the first route
+and the vehicle is at an old place heading the old direction at the old time
+and the old place is next to a next place along the old direction
+and the next place is on the new street
+and the vehicle steps from the old place to the next place from a first time to a second time
+and the vehicle turns to the new direction from the first time to the second time
+and the vehicle drives to the new place through the second route from the second time to the third time
+and the vehicle is at the new place heading the new direction at the third time.
+
+% line 128-129
+% two updates
+When a vehicle steps from an old place to a next place
+and the vehicle is at the old place heading a direction at a time
+then the vehicle is at the next place heading the direction.
+
+When a vehicle steps from an old place to a next place
+then it becomes no longer the case that the vehicle is at the old place heading a direction.
+
+When a vehicle turns to a second direction
+then a first direction that the vehicle is at a place heading the first direction becomes the second direction.
+
+
+% line 133-136 
+% Some geography
+[a X, a Y1] is next to [the X, a Y2] along northward if
+Y2 is Y1 plus 1.
+
+[a X, a Y1] is next to [the X, a Y2] along southward if
+Y2 is Y1 minus 1.
+
+[a X1, a Y] is next to [a X2, the Y] along eastward if
+X2 is X1 plus 1.
+
+[a X1, a Y] is next to [a X2, the Y] along westward if
+X2 is X1 minus 1.
+
+% line 140-147
+% Some self-preservation 
+It must not be true that 
+a first vehicle steps from an old place to a next place from a first time to a second time
+and the second time is the first time plus 1
+and there is a possible collision between the first vehicle and a second vehicle at the first time.
+
+there is a possible collision between a first vehicle and a second vehicle at a time if
+the first vehicle is at a first place heading a first direction at the time
+and the first place is next to a next place along the first direction
+and the second vehicle is at the next place heading the second direction at the time
+and it is not the case that the first direction is opposite to the second direction.
+
+% line 149-152
+northward is opposite to southward.
+southward is opposite to northward.
+eastward is opposite to westward.
+westward is opposite to eastward.
+
+% line 156-165
+It must not be true that
+a first vehicle steps from an old place to a next place from a first time to a second time
+and the second time is the first time plus 1
+and there is a collision warning between the first vehicle and a second vehicle at the next place at the first time
+and it is not the case that the first vehicle is to the right of the second vehicle at the next place at the first time.
+
+there is a collision warning between a first vehicle and a second vehicle at a next place at a time if
+the first vehicle is at a first place heading a first direction at the time
+and the second vehicle is at a second place heading a second direction at the time
+and the first place is next to the next place along the first direction
+and the second place is next to the next place along the second direction
+and there is a clash between the first direction and the second direction.
+
+% line 167-173
+% clash
+there is a clash between a first direction and a second direction if
+the first direction is defined as vertical
+and the second direction is defined as horizontal.
+
+there is a clash between a first direction and a second direction if
+the first direction is defined as horizontal
+and the second direction is defined as vertical.
+
+a direction is defined as horizontal if
+the direction is eastward.
+
+a direction is defined as horizontal if
+the direction is westward.
+
+a direction is defined as vertical if 
+the direction is northward.
+
+a direction is defined as vertical if 
+the direction is southward.
+
+% line 175-184
+a first vehicle is to the right of a second vehicle at a next place at a time if
+the next place is the priority Tjunction of a street
+and the first vehicle is at a place heading a direction at the time
+and the place is on the street.
+
+a first vehicle is to the right of a second vehicle at a next place at a time if
+the next place is a cross of roads
+and the first vehicle is at a first place heading a first direction at the time
+and the second vehicle is at a second place heading a second direction at the time
+and the first direction is on the right of the second direction.
+
+% line 186-189
+westward is on the right of northward.
+southward is on the right of westward.
+eastward is on the right of southward.
+northward is on the right of eastward.
+
+% line 194-199
+% list cross roads and Tjunctions
+[6,5] is a cross of roads.
+[8,5] is a cross of roads.
+
+[2,5] is the priority Tjunction of westStreet.
+[6,9] is the priority Tjunction of northStreet.
+[8,9] is the priority Tjunction of northStreet.
+
+
+[a X, a Y] is defined as a place if
+X is a member of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+and Y is a member of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].
+
+% a vehicle heading northward with measure at a X and a Y are mapped to a XX and a YY with horizontal size Xcar and vertical size Ycar.
+
+point at a X and a Y heading northward is mapped to a XX and a YY with horizontal size 3 and vertical size 7 if
+the XX is the X times 20
+and the YY is the Y times 20.
+
+point at a X and a Y heading southward is mapped to a XX and a YY with horizontal size 3 and vertical size 7 if
+the XX is the X times 20 plus 15
+and the YY is the Y times 20.
+
+point at a X and a Y heading westward is mapped to a XX and a YY with horizontal size 7 and vertical size 3 if
+the XX is the X times 20 plus 15
+and the YY is the Y times 20.
+
+point at a X and a Y heading eastward is mapped to a XX and a YY with horizontal size 7 and vertical size 3 if
+the XX is the X times 20
+and the YY is the Y times 20 plus 15.
+
+display an object with a setting if
+	the object is equal to mycar is at [a X, a Y] heading a direction at a time
+	and the setting has type ellipse point [a XX, a YY] size [a Xcar, a Ycar] fillColor blue
+	and point at the X and the Y heading the direction is mapped to the XX and the YY with horizontal size the Xcar and vertical size the Ycar. 
+    	
+display an object with a setting if
+	the object is equal to yourcar is at [a X, a Y] heading a direction at a time
+	and the setting has type ellipse point [a XX, a YY] size [a Xcar, a Ycar] fillColor red
+	and point at the X and the Y heading the direction is mapped to the XX and the YY with horizontal size the Xcar and vertical size the Ycar.     	
+    	
+display an object with a setting if
+	the object is equal to othercar is at [a X, a Y] heading a direction at a time
+	and the setting has type ellipse point [a XX, a YY] size [a Xcar, a Ycar] fillColor green
+	and point at the X and the Y heading the direction is mapped to the XX and the YY with horizontal size the Xcar and vertical size the Ycar. 
+
+display an object with a setting if
+	the object is equal to troublemaker is at [a X, a Y] heading a direction at time
+	and the setting has type ellipse point [a XX, a YY] size [a Xcar, a Ycar] fillColor maroon
+	and point at the X and the Y heading the direction is mapped to the XX and the YY with horizontal size the Xcar and vertical size the Ycar. 
+/*
+display an object with a setting if
+	the object is equal to brokencar is at [a X, a Y] heading a direction at a time
+	and the setting has type circle center [a XX2, a YY2] radius 10 fillColor red
+	and a XX is X times 20
+	and a YY is Y times 20
+	and XX2 is XX plus 10
+	and YY2 is YY plus 10.
+*/
+
+display an object with a setting if
+	the object is equal to brokencar is at [a X, a Y] heading a direction at a time
+	and the setting has type circle center [a XX2, a YY2] radius 10 fillColor red
+	and XX2 is X times 20 plus 10
+	and YY2 is Y times 20 plus 10.
+
+display timeless with a background if
+	for every 
+		[a X, a Y] is defined as a place
+		and it is not the case that [X,Y] is on a street
+		and a XX is X times 20
+		and a YY is Y times 20
+		and a XX2 is XX plus 20
+		and a YY2 is YY plus 20
+	with
+		a form has type rectangle from [XX, YY] to [XX2, YY2] fillColor yellow
+	add the form to the background. 		
+
+
+
+
+
+	

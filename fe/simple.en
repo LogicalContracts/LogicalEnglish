@@ -1,0 +1,8 @@
+the fluents are:
+    a vehicle is at a place heading a direction, known as location.
+    
+display an object with a setting if
+	the object is equal to yourcar is at [a X, a Y] heading a direction at a time
+	and the setting has type ellipse point [a XX, a YY] size [a Xcar, a Ycar] fillColor red
+	and point at the X and the Y heading the direction is mapped to the XX and the YY with horizontal size the Xcar and vertical size the Ycar.  
+
