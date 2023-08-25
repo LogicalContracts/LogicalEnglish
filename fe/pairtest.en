@@ -1,0 +1,48 @@
+%a direction is defined as horizontal if
+%the direction is eastward.
+
+% line 25-28
+the fluents are:
+    a vehicle is at a place heading a direction, known as location.	
+
+display an object with a setting if
+	the object is equal to mycar is at [a X, a Y] heading a direction at a time
+	and the setting has type ellipse point [a XX, a YY] size [a Xcar, a Ycar] fillColor blue
+	and point at the X and the Y heading the direction is mapped to the XX and the YY with horizontal size the Xcar and vertical size the Ycar. 
+    	
+display an object with a setting if
+	the object is equal to yourcar is at [a X, a Y] heading a direction at a time
+	and the setting has type ellipse point [a XX, a YY] size [a Xcar, a Ycar] fillColor red
+	and point at the X and the Y heading the direction is mapped to the XX and the YY with horizontal size the Xcar and vertical size the Ycar.     	
+    	
+display an object with a setting if
+	the object is equal to othercar is at [a X, a Y] heading a direction at a time
+	and the setting has type ellipse point [a XX, a YY] size [a Xcar, a Ycar] fillColor green
+	and point at the X and the Y heading the direction is mapped to the XX and the YY with horizontal size the Xcar and vertical size the Ycar. 
+
+display an object with a setting if
+	the object is equal to troubleMaker is at [a X, a Y] heading a direction at time
+	and the setting has type ellipse point [a XX, a YY] size [a Xcar, a Ycar] fillColor maroon
+	and point at the X and the Y heading the direction is mapped to the XX and the YY with horizontal size the Xcar and vertical size the Ycar. 
+
+display an object with a setting if
+	the object is equal to brokencar is at [a X, a Y] heading a direction at a time
+	and the setting has type circle center [a XX2, a YY2] radius 10 fillColor red
+	and a XX is X times 20
+	and a YY is X times 20
+	and XX2 is XX plus 10
+	and YY2 is YY plus 10.
+
+display timeless with a background if
+	for every 
+		[a X, a Y] is defined as a place
+		and it is not the case that [X,Y] is on a street
+		and a XX is X times 20
+		and a YY is X times 20
+		and a XX2 is XX plus 20
+		and a YY2 is YY plus 20
+	with
+		a form has type rectangle from [XX, YY] to [XX2, YY2] fillColor yellow
+	add the form to the background. 		
+
+	
