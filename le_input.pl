@@ -117,7 +117,7 @@ query three is:
 :- use_module(library(r/r_call)).
 :- use_module('reasoner.pl').
 :- use_module(library(prolog_stack)).
-:- table addExp//2, mulExp//2.
+:- table addExp//2, mulExp//2, meta_match/5.
 :- thread_local text_size/1, error_notice/4, dict/3, meta_dict/3, example/2, local_dict/3, local_meta_dict/3,
                 last_nl_parsed/1, kbname/1, happens/2, initiates/3, terminates/3, is_type/1, is_/2, 
                 predicates/1, events/1, fluents/1, metapredicates/1, parsed/0, source_lang/1, including/0. % just_saved_scasp/2. 
@@ -623,35 +623,35 @@ straightLine(Command, Map1, MapN) -->
     variable_invocation([displays], _Name,  _Var, Map1, MapN), spaces(_), displays_, a_straight_line_, line_with_list(Arguments), !,
     {atomic_list_concat(Arguments, ',', Atom), format(string(Command), 'abline(~w)', [Atom]) }.
 
-verticalLines(DataFrameCommand, PlotCommand, Count, Map1, Map2) --> 
-    variable_invocation([displays],  _Name, _Var, Map1, Map2), spaces(_), displays_, extract_names(NameX, NameY), 
-    from_, literal_(Map2, MapN, Cond), 
+verticalLines(DataFrameCommand, PlotCommand, Count, Map1, Map1) --> 
+    from_, literal_(Map1, Map2, Cond), 
+    spaces_or_newlines(_), variable_invocation([displays], _Name, _Var, Map2, Map2), spaces(_), displays_, extract_names(NameX, NameY), 
     as_vertical_lines_, line_with_list(Arguments), !,
     {
         atomic_concat('verticalLines', Count, DataFrameName),
-        make_data_frame_command(Cond, MapN, DataFrameName, [NameX, NameY], DataFrameCommand),
+        make_data_frame_command(Cond, Map2, DataFrameName, [NameX, NameY], DataFrameCommand),
         atomic_list_concat(Arguments, ',', Atom), format(string(PlotCommand), 'points(~w$~w,~w$~w,type="h",~w)', [DataFrameName, NameX, DataFrameName, NameY, Atom]) 
     }.
 
 
-points(DataFrameCommand, PlotCommand, Count, Map1, Map2) -->
-    variable_invocation([displays], _Name, _Var, Map1, Map2), spaces(_), displays_, extract_names(NameX, NameY), 
-    from_, literal_(Map2, MapN, Cond), 
+points(DataFrameCommand, PlotCommand, Count, Map1, Map1) -->
+    from_, literal_(Map1, Map2, Cond), 
+    spaces_or_newlines(_), variable_invocation([displays], _Name, _Var, Map2, Map2), spaces(_), displays_, extract_names(NameX, NameY), 
     as_points_,  line_with_list(Arguments), !,
     {
         atomic_concat('points', Count, DataFrameName),
-        make_data_frame_command(Cond, MapN, DataFrameName, [NameX, NameY], DataFrameCommand),
+        make_data_frame_command(Cond, Map2, DataFrameName, [NameX, NameY], DataFrameCommand),
         atomic_list_concat(Arguments, ',', Atom), format(string(PlotCommand), 'points(~w$~w,~w$~w,~w)', 
             [DataFrameName, NameX, DataFrameName, NameY, Atom]) 
     }.
 
-line(DataFrameCommand, PlotCommand, Count, Map1, Map2) --> 
-    variable_invocation([displays], _Name, _Var, Map1, Map2), spaces(_), displays_, extract_names(NameX, NameY), 
-    from_, literal_(Map2, MapN, Cond), % the variables defined are local to the condition
+line(DataFrameCommand, PlotCommand, Count, Map1, Map1) --> 
+    from_, literal_(Map1, Map2, Cond), % the variables defined are local to the condition
+    spaces_or_newlines(_), variable_invocation([displays], _Name, _Var, Map2, Map2), spaces(_), displays_, extract_names(NameX, NameY), 
     as_a_line_, line_with_list(Arguments),
     {
         atomic_concat('line', Count, DataFrameName),
-        make_data_frame_command(Cond, MapN, DataFrameName, [NameX, NameY], DataFrameCommand),
+        make_data_frame_command(Cond, Map2, DataFrameName, [NameX, NameY], DataFrameCommand),
         % the data frame here has to be sorted using order() before plotting as a line
         % as the data collected using r_data_frame are not ordered
         atomic_list_concat(Arguments, ',', Atom), format(string(PlotCommand), '~w <- ~w[order(~w$~w),]\n  lines(~w$~w,~w$~w,~w)', 
@@ -718,11 +718,14 @@ legend_with(Argument) --> a_text_of_, ['['], extract_list([']'], List, [], []), 
 legend_with(Argument) --> a_line_type_of_, ['['], extract_list([']'], List, [], []), [']'], spaces(_),
     {listOfLineTextToLineType(List, LineTypeList),listOfStringToSingleString(LineTypeList, ListStr), format(string(Argument), 'lty=c(~w)', [ListStr]) }.
 
-legend_with(Argument) --> a_box_type_of_, [X], spaces(_),
-    {atom_string(X, XString), term_to_atom(bty=XString, Argument) }.
+legend_with(Argument) --> a_box_type_of_, extract_constant([and], NameWords), spaces(_),
+    {name_as_atom(NameWords, BoxTypeText), box_full_text_to_string(BoxTypeText, Bty), term_to_atom(bty=Bty, Argument) }.
 
 line_with(Argument) --> a_colour_of_, [X], spaces(_),
     {atom_string(X, XAtom), term_to_atom(col=XAtom, Argument) }.
+
+line_with(Argument) --> a_background_colour_of_, [X], spaces(_),
+    {atom_string(X, XAtom), term_to_atom(bg=XAtom, Argument) }.
 
 line_with(Argument) --> a_height_of_, [X], spaces(_),
     {number(X), term_to_atom(h=X, Argument) }.
@@ -731,7 +734,7 @@ line_with(Argument) --> a_width_of_, [X], spaces(_),
     {number(X), term_to_atom(lwd=X, Argument) }.
 
 line_with(Argument) --> a_plotting_character_of_, extract_constant([and], NameWords), spaces(_),
-    {name_as_atom(NameWords, PchText),pch_text_to_index(PchText, Pch),term_to_atom(pch=Pch, Argument)}.
+    {name_as_atom(NameWords, PchText), pch_text_to_index(PchText, Pch), term_to_atom(pch=Pch, Argument)}.
 
 line_with(Argument) --> a_character_expansion_factor_of_, [X], spaces(_),
     {number(X), term_to_atom(cex=X, Argument)}.
@@ -768,13 +771,16 @@ pch_text_to_index('filled triangle point up', 17).
 pch_text_to_index('filled diamond', 18).
 pch_text_to_index('solid circle', 19).
 pch_text_to_index('smaller circle', 20).
-pch_text_to_index('filled circle blue', 21).
-pch_text_to_index('filled square blue', 22).
-pch_text_to_index('filled diamond blue', 23).
-pch_text_to_index('filled triangle point-up blue', 24).
-pch_text_to_index('filled triangle point down blue', 25).
+pch_text_to_index('fillable circle', 21).
+pch_text_to_index('fillable square', 22).
+pch_text_to_index('fillable diamond', 23).
+pch_text_to_index('fillable triangle point up', 24).
+pch_text_to_index('fillable triangle point down', 25).
 pch_text_to_index('vertical bar', 124).
 pch_text_to_index(In, In) :- number(In).
+
+box_full_text_to_string('no box', "n").
+box_full_text_to_string('complete box', "o").
 
 chart_with([UsedVar], Argument, Map1, MapN) --> 
     variable_invocation([as], Name, UsedVar, Map1, MapN), as_title_,
@@ -803,6 +809,8 @@ legend_ --> [legend], spaces(_).
 
 a_colour_of_ --> [a], spaces(_), [color], spaces(_), [of], spaces(_).
 a_colour_of_ --> [a], spaces(_), [colour], spaces(_), [of], spaces(_).
+a_background_colour_of_ --> [a], spaces(_), [background], spaces(_), [colour], spaces(_), [of], spaces(_).
+a_background_color_of_ --> [a], spaces(_), [background], spaces(_), [color], spaces(_), [of], spaces(_).
 a_height_of_ --> [a], spaces(_), [height], spaces(_), [of], spaces(_).
 a_width_of_ --> [a], spaces(_), [width], spaces(_), [of], spaces(_).
 a_plotting_character_of_ --> [a], spaces(_), [plotting], spaces(_), [character], spaces(_), [of], spaces(_).
@@ -1545,8 +1553,8 @@ match_template(PossibleLiteral, Map1, MapN, Literal) :-
 meta_match([], [], Map, Map, []) :- !.
 meta_match([Word|_LastElement], [Word|PossibleLiteral], Map1, MapN, [Word,Literal]) :- % asuming Element is last in template!
     Word = that, % that is a reserved word "inside" templates! -> <meta level> that <object level> 
-    (meta_dictionary(Predicate, _, Candidate); dictionary(Predicate, _, Candidate)), % searching for a new inner literal
-    match(Candidate, PossibleLiteral, Map1, MapN, InnerTemplate),
+    (meta_dictionary(Predicate, _, Candidate), meta_match(Candidate, PossibleLiteral, Map1, MapN, InnerTemplate); 
+        dictionary(Predicate, _, Candidate), match(Candidate, PossibleLiteral, Map1, MapN, InnerTemplate)), % searching for a new inner literal
     (meta_dictionary(Predicate, _, InnerTemplate); dictionary(Predicate, _, InnerTemplate)), 
     Literal =.. Predicate, !. 
 meta_match([MetaElement|RestMetaElements], [MetaWord|RestPossibleLiteral], Map1, MapN, [MetaElement|RestSelected]) :-
@@ -1563,9 +1571,9 @@ meta_match([MetaElement|RestMetaElements], [MetaWord|RestPossibleLiteral], Map1,
 meta_match([MetaElement|RestMetaElements], PossibleLiteral, Map1, MapN, [Literal|RestSelected]) :-
     var(MetaElement), stop_words(RestMetaElements, StopWords), 
     extract_literal(StopWords, LiteralWords, PossibleLiteral, NextWords),
-    dictionary(Predicate, _, Candidate), % this assumes that the "contained" literal is an object level literal. 
-    match(Candidate, LiteralWords, Map1, Map2, Template), 
-    dictionary(Predicate, _, Template), 
+    (meta_dictionary(Predicate, _, Candidate), meta_match(Candidate, LiteralWords, Map1, Map2, Template); 
+        dictionary(Predicate, _, Candidate), match(Candidate, LiteralWords, Map1, Map2, Template)),
+    (meta_dictionary(Predicate, _, Template); dictionary(Predicate, _, Template)), 
     Literal =.. Predicate, !, 
     meta_match(RestMetaElements, NextWords, Map2, MapN, RestSelected).  
 % it could also be an object level matching of other kind
@@ -1609,10 +1617,10 @@ match([], [], Map, Map, []) :- !.  % success! It succeds iff PossibleLiteral is 
 % meta level access: that New Literal
 match([Word|_LastElement], [Word|PossibleLiteral], Map1, MapN, [Word,Literal]) :- % asuming Element is last in template!
     Word = that, % that is a reserved word "inside" templates! -> <meta level> that <object level> 
-    (meta_dictionary(Predicate, _, Candidate); dictionary(Predicate, _, Candidate)), % searching for a new inner literal
-    match(Candidate, PossibleLiteral, Map1, MapN, InnerTemplate),
+    (meta_dictionary(Predicate, _, Candidate), meta_match(Candidate, PossibleLiteral, Map1, MapN, InnerTemplate); 
+        dictionary(Predicate, _, Candidate), match(Candidate, PossibleLiteral, Map1, MapN, InnerTemplate)), % searching for a new inner literal
     (meta_dictionary(Predicate, _, InnerTemplate); dictionary(Predicate, _, InnerTemplate)), 
-    Literal =.. Predicate, !. 
+     Literal =.. Predicate, !. 
 %match([Element, Apost|RestElements], [_Word|PossibleLiteral], Map1, MapN, [Element, Apost|RestSelected]) :-
 %    nonvar(Element), atom_string(Apost, "'"), !, %Word aprox= Element, TO BE DONE: full test
 %    match(RestElements, PossibleLiteral, Map1, MapN, RestSelected). 
