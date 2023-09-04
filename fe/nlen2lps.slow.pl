@@ -1416,18 +1416,18 @@ ordinal(13, 'new').
 ordinal(14, 'present').
 
 % if it is a type is not a word. Using cut
-t_or_w(S, InMap, OutMap, [Det|In], Out) :- (ind_det(Det); Det=the), !, type(S, InMap, OutMap, [Det|In], Out), !.
+t_or_w(S, InMap, OutMap, In, Out) :- type(S, InMap, OutMap, In, Out), !.
 t_or_w(S, InMap, OutMap, In, Out) :- list(S, InMap, OutMap, In, Out), !. % Added by Jacinto on 2023-07-30
 t_or_w(W, Map, Map, In, Out) :- word(W, In, Out).
 
 % treating a list as one word for simplicity
 %word(L, ['['|R], RR) :- rebuilt_list(R, [], L, RR).
        % append(L, [']'|RR], R). % append(['['|W], [']'], L), !.
-%word(W, [P1, '_', P2|R], R) :- atomic_list_concat([P1, '_', P2], '', W), !.
-%word(W, [P1, '_', P2, '_', P3|R], R) :-
-%  atomic_list_concat([P1, '_', P2, '_', P3], '', W), !.
+word(W, [P1, '_', P2|R], R) :- atomic_list_concat([P1, '_', P2], '', W), !.
+word(W, [P1, '_', P2, '_', P3|R], R) :-
+  atomic_list_concat([P1, '_', P2, '_', P3], '', W), !.
 word(W, [W|R], R)  :- not(reserved_word(W)).
-%word(_, Pos, _) :- asserterror('No word at ', Pos), fail.
+word(_, Pos, _) :- asserterror('No word at ', Pos), fail.
 
 rebuilt_list([']'|RR], Map, Map, In, In, RR) :- !. % only the first ocurrence
 rebuilt_list([','|RR], InMap, OutMap, In, Out, NRR) :- !,
@@ -1439,20 +1439,19 @@ rebuilt_list(InS, InMap, OutMap, In, [A|Out], NRR) :-
 % lists
 list(L, InMap, OutMap, ['['|R], RR) :- rebuilt_list(R, InMap, OutMap, [], L, RR).
 
-% modified on 2023-09-03 to minimize complexity
 % 0 votes
-%type(N, Map, Map, [N, Type|Out], Out) :-
-%   number(N), is_a_type(Type).
+type(N, Map, Map, [N, Type|Out], Out) :-
+   number(N), is_a_type(Type).
 % a number of votes
-%type(V, InMap,OutMap, [D, number, of, Type|Out], Out) :-
-%   ind_det(D),
-%   atomic_concat(number, Type, VarName),
-%   OutMap = [map(V,VarName)|InMap], !.
+type(V, InMap,OutMap, [D, number, of, Type|Out], Out) :-
+   ind_det(D),
+   atomic_concat(number, Type, VarName),
+   OutMap = [map(V,VarName)|InMap], !.
 % the number of votes is a special case of anaphora
-%type(V, InMap,OutMap, [the, number, of, Type|Out], Out) :-
-%   atomic_concat(number, Type, VarName),
-%   ((member(map(V,VarName),InMap), OutMap = InMap);
-%    OutMap = [map(V,VarName)|InMap]), !.
+type(V, InMap,OutMap, [the, number, of, Type|Out], Out) :-
+   atomic_concat(number, Type, VarName),
+   ((member(map(V,VarName),InMap), OutMap = InMap);
+    OutMap = [map(V,VarName)|InMap]), !.
 type(V, InMap,OutMap, [D, Ordinal, Type|Out], Out) :-
    ind_det(D),
    ordinal(_, Ordinal),
@@ -1473,7 +1472,7 @@ type(V, InMap,InMap, [the,Type|Out], Out) :- member(map(V,Type),InMap).
 type(V, InMap,InMap, [Type|Out], Out) :- member(map(V,Type),InMap).
 % modified by Jacinto on 2023-07-30 removing the following to prevent for using the on unknown variables
 % uncommented again on 2023-08-23 to allow for the use of "the" to introduce a new variable, as required by earlier examples. 
-type(V, InMap,OutMap, [the,Type|Out], Out) :-  OutMap = [map(V,Type)|InMap]. % creates the var if it does not exist using the type as name
+type(V, InMap,OutMap, [the,Type|Out], Out) :-  OutMap = [map(V,Type)|InMap]. % creates the var if it does not exist
 type(_, In, In, Pos, _) :- asserterror('No type at ', Pos), fail.
 
 is_a_type(T) :- % pending integration with wei2nlen:is_a_type/1

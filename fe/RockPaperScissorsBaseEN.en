@@ -28,13 +28,13 @@ and it is not the case that the player has played a second choice
 then the player has played the choice.
 
 
-the players are a number, known as num_players, at a time if
+the players are a number, known as numPlayers, at a time if
   the number at the time is
      the sum of all
         a player has played a value at the time.
 
 It must not be true that
-    the players are a number, known as num_players, at a time
+    the players are a number, known as numPlayers, at a time
 and the number is greater than 2.
 
 When a player inputs a choice and a value
