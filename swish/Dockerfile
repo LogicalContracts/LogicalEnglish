@@ -1,4 +1,4 @@
-FROM cclawdev/swish:latest as base
+FROM cclawdev/swish:master as base
 
 COPY swish/config-enabled /data/config-enabled
 COPY . /app
