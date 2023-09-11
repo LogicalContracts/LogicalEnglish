@@ -1416,7 +1416,10 @@ ordinal(13, 'new').
 ordinal(14, 'present').
 
 % if it is a type is not a word. Using cut
-t_or_w(S, InMap, OutMap, [Det|In], Out) :- (ind_det(Det); Det=the), !, type(S, InMap, OutMap, [Det|In], Out), !.
+t_or_w(S, InMap, OutMap, [Det|In], Out) :- (ind_det(Det); Det=the ), !, %Added by Jacinto on 2023-09-03
+	type(S, InMap, OutMap, [Det|In], Out).
+t_or_w(S, InMap, OutMap, [Name|In], Out) :- member(map(_,Name), InMap), !,  %Added by Jacinto on 2023-09-04
+	type(S, InMap, OutMap, [Name|In], Out).
 t_or_w(S, InMap, OutMap, In, Out) :- list(S, InMap, OutMap, In, Out), !. % Added by Jacinto on 2023-07-30
 t_or_w(W, Map, Map, In, Out) :- word(W, In, Out).
 
@@ -1512,9 +1515,9 @@ assertall([_F|R]) :-
 asserted(F :- B) :- clause(F, B). % as a rule with a body
 asserted(F) :- clause(F,true). % as a fact
 
-asserterror(Me, Pos) :-
+asserterror(_Me, _Pos) :- true.
    % (clause(error_at(_,_), _) -> retractall(error_at(_,_));true),
-   asserta(error_at(Me, Pos)).
+   %asserta(error_at(Me, Pos)).
 
 showerror :-
    findall((Me, W), (error_at(Me, Pos), first_words(W, Pos,_)), L),
