@@ -187,11 +187,14 @@ become --> [becomes].
 
 math_expression(V1 + V2, Map) --> type(V1, Map, Map0), plus, type(V2, Map0, _Map1).
 math_expression(V1 - V2, Map) --> type(V1, Map, Map0), minus, type(V2, Map0, _Map1).
+math_expression(V1 * V2, Map) --> type(V1, Map, Map0), times, type(V2, Map0, _Map1).
 math_expression(N, _Map) --> word(N), {number(N)}.
 
 plus --> [plus].
 
 minus --> [minus].
+
+times --> [times].
 
 declaration([],[maxTime(M)]) --> maximum_previous, word(M), period, {integer(M)}.
 
@@ -295,10 +298,10 @@ fluent_decl(_, _, Pos, _) :- asserterror('Found no fluent declaration at ', Pos)
 /* --------------------------------------------- undeclared external fluents */
 
 % e_getBalance the address latest a value
-external_fluent(lambda([A, L, V], Fluent)) --> word(E), {Fluent =.. [E, A, L, V]}.
+external_fluent(lambda([A, L, V], Fluent)) --> word(E), {E\=a, E\=an, Fluent =.. [E, A, L, V]}.
 
 % e_existsTransactionReceipt the payment
-external_fluent(lambda([P], Fluent)) --> word(E), {Fluent =.. [E, P]}.
+external_fluent(lambda([P], Fluent)) --> word(E), {E\=a, E\=an, Fluent =.. [E, P]}.
 
 /* ---------------------------------------------------------------- lexicon */
 
@@ -442,7 +445,7 @@ obs_previous --> [the, observations, are, ':'].
 list_of_obs_stat([observe(F,T)|R]) --> list_of_obs(F,T), comma, list_of_obs_stat(R).
 list_of_obs_stat([observe(F,T)]) --> list_of_obs(F,T), period.
 
-list_of_obs([E|RE], T2) --> % spypoint, 
+list_of_obs([E|RE], T2) --> %spypoint, 
     obs_decl(E), and_, list_of_obs(RE, T2).
 list_of_obs([E], T2) --> obs_decl(E), time_expression([_T1, T2]).
 
@@ -459,7 +462,7 @@ obs_decl(Action) -->
 
 %added on 2023-06-22 - modified by Jacinto on 2023-07-30
 % vehicle starts driving to place
-obs_decl(Action) -->
+obs_decl(Action) --> %spypoint,
     word(X), action(lambda([X,Y], Action)), to_,  t_or_w(Y, [], _).
     
 % prize is sent to winner.
@@ -534,7 +537,13 @@ arithmetic_expression(lambda([C1,P,C,T],
 arithmetic_expression(lambda([C1, N, C2], C1 is round(N*C2))) -->
     approximatelly_(N).
 
+% times 20 and plus 15
+arithmetic_expression(lambda([C1, C2, N1, N2], C1 is C2 * N1 + N2)) -->
+shift_(N1, N2).
+
 approximatelly_(N) --> [approximately, N, times], {number(N)}.
+shift_(N1, N2) --> [times, N1], {number(N1)}, [plus, N2], {number(N2)}.
+% shift_(N1, N2) --> [times, N1, plus, N2], {number(N1)}, {number(N2)}.
 
 the_sum_of_all --> [the, sum, of, all].
 
@@ -572,6 +581,7 @@ literal(M_In,M_Out, happens(Action, T1, T2)) --> %spypoint,
     mapped_time_expression([T1,T2], M3, M_Out).    
 
 % added on 2023-06-22
+% edited on 2023-08-04
 % a vehicle drives to a place through a route from a first time to a second time
 %literal(M_In,M_Out, happens(Action, T1, T2)) --> %spypoint,
 %    t_or_w(V, M_In, M2), word(A), to_, :- discontiguous nlen2lps:literal/5.
@@ -580,7 +590,7 @@ literal(M_In,M_Out, happens(Action, T1, T2)) --> %spypoint,
 literal(M_In,M_Out, happens(Action, T1, T2)) --> %spypoint,
     t_or_w(V, M_In, M2), word(A), to_, 
     t_or_w(P, M2, M3), word(through), t_or_w(R, M3, M4),
-    mapped_time_expression([T1,T2], M4, M_Out), {Action=..[A,V,P,R]}.
+    mapped_time_expression([T1,T2], M4, M_Out), {Action=..[A,V,R,P]}.
 
 % added on 2023-06-22; deleted on 2023-06-24
 % there is a route from a first place to a second place at a time
@@ -719,10 +729,40 @@ literal(M_In,M_Out, happens(Action, _T1, _T2)) -->
     t_or_w(Y, M2, M3), in, t_or_w(B, M3, M_Out).
 
 /* ----------------------------------------------------- timeless literals */
+% is equal to is: a meta predicate to transit from timed to timeless
+% added on 2023-08-12 by Jacinto    
+% the object is equal to mycar is at [a X, a Y] heading a direction at a time
+literal(M_In,M_Out, Cond) --> %spypoint, 
+    t_or_w(O, M_In, M2), is_, equal_, to_, literal(M2, M_Out, TimedLiteral),
+    {TimedLiteral = holds(F,_), Cond = (O = F)}. 
+    
+% added on 2023-08-12 by Jacinto
+% a form has type rectangle from [XX,YY] to [XX2, YY2] fillColor yellow
+literal(M_In,M_Out, Timeless) --> %spypoint, 
+    t_or_w(S, M_In, M1), word(has), word(type), t_or_w(Type, M1, M2), from_, t_or_w(From, M2, M3),
+    to_, t_or_w(To, M3, M4), fillColor_, t_or_w(Color, M4, M_Out), 
+    {Timeless=(S=[type:Type, from:From, to:To, fillColor:Color])}.   
+    
+fillColor_ --> [fillColor].   
+
+% added on 2023-08-12 by Jacinto
+% a setting has type ellipse point [a XX, a YY] size [a Xcar, a Ycar] fillColor blue
+literal(M_In,M_Out, Timeless) -->
+    t_or_w(S, M_In, M1), word(has), word(type), t_or_w(Type, M1, M2), word(point), t_or_w(Point, M2, M3),
+    word(size), t_or_w(Size, M3, M4), fillColor_, t_or_w(Color, M4, M_Out), 
+    {Timeless=(S=[type:Type, point:Point, size:Size, fillColor:Color])}.
+    
+% added on 2023-08-13 by Jacinto
+% the setting has type circle center [a XX2, a YY2] radius 10 fillColor red 
+literal(M_In,M_Out, Timeless) --> 
+    t_or_w(S, M_In, M1), word(has), word(type), t_or_w(Type, M1, M2), word(center), t_or_w(Point, M2, M3),
+    word(radius), t_or_w(Radius, M3, M4), fillColor_, t_or_w(Color, M4, M_Out), 
+    {Timeless=(S=[type:Type, center:Point, radius:Radius, fillColor:Color])}.   
+
 % added on 2023-06-25
 % a route starts from a street with a direction
 literal(M_In,M_Out, Timeless) -->
-    t_or_w(R, M_In, M1), word(starts), from_, t_or_w(S, M1, M2), word(with), t_or_w(D, M2, M_Out), 
+    t_or_w(R, M_In, M1), word(starts), from_, t_or_w(S, M1, M2), with_, t_or_w(D, M2, M_Out), 
     {Timeless=..[starts, R, S, D]}.
 
 % added on 2023-06-25
@@ -740,7 +780,7 @@ literal(M_In,M_Out, Timeless) --> %spypoint,
 % added on 2023-06-25
 % a route has as second a street with a direction
 literal(M_In,M_Out, Timeless) -->
-    t_or_w(R, M_In, M1), word(has), word(as), word(second), t_or_w(S, M1, M2), word(with), t_or_w(D, M2, M_Out), 
+    t_or_w(R, M_In, M1), word(has), word(as), word(second), t_or_w(S, M1, M2), with_, t_or_w(D, M2, M_Out), 
     {Timeless=..[has_second, R, S, D]}.
     
 % added on 2023-06-25
@@ -753,12 +793,12 @@ literal(M_In,M_Out, Timeless) --> %spypoint
 % there is a route from a first place to a second place at a time
 literal(M_In,M_Out, Timeless) --> 
     word(there), is_, t_or_w(R, M_In, M1), from_, t_or_w(P1, M1, M2), to_, t_or_w(P2, M2, M_Out), 
-    {Timeless=..[directions, R, P1, P2]}.
+    {Timeless=..[directions, P1, R, P2]}.
 
 % there is a collision warning between a first vehicle and a second vehicle at a third place at a first time.
 literal(M_In, M_Out, holds(Fluent, T)) --> %spypoint,
      word(there), is_, word(a), word(collision), word(warning), word(between), t_or_w(V1, M_In, M1), and_, t_or_w(V2, M1, M2),
-     at_, t_or_w(P, M2, M3), at_, t_or_w(T, M3, M_Out), {Fluent=..[collisionAlert, V1, V2, P]}.
+     at_, t_or_w(P, M2, M3), at_, t_or_w(T, M3, M_Out), {Fluent=..[collisionWarning, V1, V2, P]}.
 
 % it is not the case that the first choice beats the second choice
 literal(M_In,M_Out, not(Timeless)) -->
@@ -798,9 +838,11 @@ literal(M_In,M_Out, Cond) -->
 % scissors beats paper.
 literal(M_In,M_Out, Cond) -->
     t_or_w(X, M_In, M2), word(Predicate), t_or_w(Y, M2, M_Out),
-    {Cond =.. [Predicate, X, Y]}.
+    {Cond =.. [Predicate, X, Y]}.  
 
 literal(M, M, _, Pos, _) :- asserterror('Found no literal at ', Pos), fail.
+
+equal_ --> [equal]. 
 
 /* ------------------------------------------------------ observe statements */
 
@@ -830,7 +872,6 @@ state(Fluent) -->
    word(C), fluent(lambda([C], Fluent)).
 
 /* --------------------------------------------------------- prolog staments */
-
 statement([Prolog]) --> prolog_fact(Prolog).
 
 prolog_fact(Prolog) -->  % binary predicate
@@ -843,10 +884,11 @@ When a vehicle steps from a first place to a second place
 and the vehicle is at the first place heading an old direction
 then the vehicle is at the second place heading the old direction
 */
-statement([initiated(happens(A,T1,_T2),F, Conds)]) --> % spypoint, 
+statement([initiated(happens(A,T1,_T2),F, Conds)]) --> %spypoint, 
    when_, t_or_w(V, [], Map2), action(lambda([V,P1,P2],A)), from_, t_or_w(P1,  Map2, Map3), to_, t_or_w(P2, Map3, Map4), 
    and_, simul_conjunction(T1, Map4, Map5, Conds),
    then_, t_or_w(V, Map5, Map6), fluent(lambda([V,P2,D],F)), t_or_w(P2, Map6, Map7), word(heading), t_or_w(D, Map7, _), period.
+
 
 % added on 2023-06-23
 % When a person is born 
@@ -1290,11 +1332,40 @@ statement([l_int(Literal,Conditions)]) --> %spypoint,
 
 statement([l_events(Happens, Holds)]) --> %spypoint, 
     happens_literal(_T1, _T2, [], Map1, Happens), if_,
-    conjunction(Map1, _Map2, Holds), period. % <-- Check this! holds_conjunction?
+    conjunction(Map1, _Map2, Holds), period. % <-- Check this! holds_conjunction?the object is equal to mycar is at [a X, a Y] heading a direction
 
 statement([Literal]) --> %spypoint,
    literal([], _Map1, Literal), period,
    { Literal \= happens(_,_,_), Literal \= holds(_,_) }.
+   
+% added on 2023-08-12 by Jacinto for:
+% display an object with a setting if
+%		the object is equal to mycar is at [a X, a Y] heading a direction
+%		and the setting has type ellipse point [a XX, a YY] size [a Xcar, a Ycar] fillColor blue
+%		and point at the X and the Y heading the direction is mapped to the XX and the YY with horizontal size the Xcar and vertical size the Ycar.
+statement( [(display(O,S) :- Body)]) --> %spypoint, 
+    display_, t_or_w(O,[], Map1), with_, t_or_w(S,Map1, Map2), if_, conjunction(Map2, _, Conditions), period,
+   { Conditions \= [], list2and(Conditions, Body) }. 
+   
+% added on 2023-08-12 by Jacinto for:
+% display timeless with a background if
+%		for every 
+%			[a X, a Y] is defined as a place
+%			and it is not the case that [X,Y] is on a street
+%			and a XX is X times 20
+%			and a YY is X times 20
+%			and a XX2 is XX plus 20
+%			and a YY2 is YY plus 20
+%		with
+%			a form has type rectangle from [XX,YY] to [XX2, YY2] fillColor yellow
+%		add the form to the background.    
+statement( [(display(O,S) :- findall(Structure, Body, S))] ) --> %spypoint, 
+    display_, t_or_w(O, [], Map1), with_, t_or_w(B, Map1, Map2), if_, for_every_, conjunction(Map2, Map3, Conditions), 
+    with_, literal(Map3, Map4, (F=Structure)), add_, t_or_w(F, Map4, Map5), to_, t_or_w(B, Map5, _Map6), period,  
+   { Conditions \= [], list2and(Conditions, Body) }.    
+
+for_every_ --> [for, every]. 
+add_ --> [add]. 
 
 statement([(Literal :- Body)]) --> %spypoint,
    literal([], Map1, Literal), if_, conjunction(Map1, _, Conditions), period,
@@ -1323,6 +1394,9 @@ holds_literal(_T, Map1, Map2, L) -->
 
 statement(_, Pos, _) :- asserterror('Found no statement at ', Pos), fail.
 
+display_ --> [display].
+with_ --> [with]. 
+
 /* --------------------------------------------------------- Utils in Prolog */
 
 ordinal(1,  'first').
@@ -1339,20 +1413,24 @@ ordinal(10, 'tenth').
 ordinal(11,  'old').
 ordinal(12,  'next').
 ordinal(13, 'new').
+ordinal(14, 'present').
 
 % if it is a type is not a word. Using cut
-t_or_w(S, InMap, OutMap, In, Out) :- type(S, InMap, OutMap, In, Out), !.
+t_or_w(S, InMap, OutMap, [Det|In], Out) :- (ind_det(Det); Det=the ), !, %Added by Jacinto on 2023-09-03
+	type(S, InMap, OutMap, [Det|In], Out).
+t_or_w(S, InMap, OutMap, [Name|In], Out) :- member(map(_,Name), InMap), !,  %Added by Jacinto on 2023-09-04
+	type(S, InMap, OutMap, [Name|In], Out).
 t_or_w(S, InMap, OutMap, In, Out) :- list(S, InMap, OutMap, In, Out), !. % Added by Jacinto on 2023-07-30
 t_or_w(W, Map, Map, In, Out) :- word(W, In, Out).
 
 % treating a list as one word for simplicity
 %word(L, ['['|R], RR) :- rebuilt_list(R, [], L, RR).
        % append(L, [']'|RR], R). % append(['['|W], [']'], L), !.
-word(W, [P1, '_', P2|R], R) :- atomic_list_concat([P1, '_', P2], '', W), !.
-word(W, [P1, '_', P2, '_', P3|R], R) :-
-  atomic_list_concat([P1, '_', P2, '_', P3], '', W), !.
+%word(W, [P1, '_', P2|R], R) :- atomic_list_concat([P1, '_', P2], '', W), !.
+%word(W, [P1, '_', P2, '_', P3|R], R) :-
+%  atomic_list_concat([P1, '_', P2, '_', P3], '', W), !.
 word(W, [W|R], R)  :- not(reserved_word(W)).
-word(_, Pos, _) :- asserterror('No word at ', Pos), fail.
+%word(_, Pos, _) :- asserterror('No word at ', Pos), fail.
 
 rebuilt_list([']'|RR], Map, Map, In, In, RR) :- !. % only the first ocurrence
 rebuilt_list([','|RR], InMap, OutMap, In, Out, NRR) :- !,
@@ -1364,19 +1442,20 @@ rebuilt_list(InS, InMap, OutMap, In, [A|Out], NRR) :-
 % lists
 list(L, InMap, OutMap, ['['|R], RR) :- rebuilt_list(R, InMap, OutMap, [], L, RR).
 
+% modified on 2023-09-03 to minimize complexity
 % 0 votes
-type(N, Map, Map, [N, Type|Out], Out) :-
-   number(N), is_a_type(Type).
+%type(N, Map, Map, [N, Type|Out], Out) :-
+%   number(N), is_a_type(Type).
 % a number of votes
-type(V, InMap,OutMap, [D, number, of, Type|Out], Out) :-
-   ind_det(D),
-   atomic_concat(number, Type, VarName),
-   OutMap = [map(V,VarName)|InMap], !.
+%type(V, InMap,OutMap, [D, number, of, Type|Out], Out) :-
+%   ind_det(D),
+%   atomic_concat(number, Type, VarName),
+%   OutMap = [map(V,VarName)|InMap], !.
 % the number of votes is a special case of anaphora
-type(V, InMap,OutMap, [the, number, of, Type|Out], Out) :-
-   atomic_concat(number, Type, VarName),
-   ((member(map(V,VarName),InMap), OutMap = InMap);
-    OutMap = [map(V,VarName)|InMap]), !.
+%type(V, InMap,OutMap, [the, number, of, Type|Out], Out) :-
+%   atomic_concat(number, Type, VarName),
+%   ((member(map(V,VarName),InMap), OutMap = InMap);
+%    OutMap = [map(V,VarName)|InMap]), !.
 type(V, InMap,OutMap, [D, Ordinal, Type|Out], Out) :-
    ind_det(D),
    ordinal(_, Ordinal),
@@ -1396,7 +1475,8 @@ type(V, InMap,InMap, [the,Type|Out], Out) :- member(map(V,Type),InMap).
 % added by Jacinto on 2023-07-30 to partially handle symbolic variables
 type(V, InMap,InMap, [Type|Out], Out) :- member(map(V,Type),InMap).
 % modified by Jacinto on 2023-07-30 removing the following to prevent for using the on unknown variables
-%type(V, InMap,OutMap, [the,Type|Out], Out) :-  OutMap = [map(V,Type)|InMap]. % creates the var if it does not exist
+% uncommented again on 2023-08-23 to allow for the use of "the" to introduce a new variable, as required by earlier examples. 
+type(V, InMap,OutMap, [the,Type|Out], Out) :-  OutMap = [map(V,Type)|InMap]. % creates the var if it does not exist using the type as name
 type(_, In, In, Pos, _) :- asserterror('No type at ', Pos), fail.
 
 is_a_type(T) :- % pending integration with wei2nlen:is_a_type/1
@@ -1412,8 +1492,8 @@ def_det(the).
 
 reserved_word(W) :- % more reserved words pending
   punctuation(W);
-  W = 'is'; W ='not'; W='When'; W='when'; W='if'; W='If'; W='then';
-  W = 'at'; W= 'from'; W='to'; W='and'; W='half'.
+  W = 'is'; W ='not'; W='When'; W='when'; W='if'; W='If'; W='then'; W='with'; W='fillColor'; 
+  W = 'at'; W= 'from'; W='to'; W='and'; W='half'; W = 'plus'; W = 'minus'; W = 'times'; W='display'.
 
 punctuation('.').
 punctuation(',').
@@ -1435,9 +1515,9 @@ assertall([_F|R]) :-
 asserted(F :- B) :- clause(F, B). % as a rule with a body
 asserted(F) :- clause(F,true). % as a fact
 
-asserterror(Me, Pos) :-
+asserterror(_Me, _Pos) :- true.
    % (clause(error_at(_,_), _) -> retractall(error_at(_,_));true),
-   asserta(error_at(Me, Pos)).
+   %asserta(error_at(Me, Pos)).
 
 showerror :-
    findall((Me, W), (error_at(Me, Pos), first_words(W, Pos,_)), L),
@@ -1491,7 +1571,7 @@ parser(SG,[]) :- asserterror('Failed at', SG), false.
 sum_all(P, N) :-
    findall(_, P, L), length(L, N).
 
-/* -------------------------------------------------------- New parsers for driverlesscar */
+/* -------------------------------------------------------- New productions for driverlesscar */
 
 % the head of the route is the street
 % the second of the route is the direction. 
@@ -1509,9 +1589,11 @@ part(head, [H|_], H).
 %     t_or_w(D, M_In, M1), is_, t_or_w(H, M1, M_Out), 
 %     {Timeless=..[is, D, H]}.
 
+/*
 literal(M_In, M_Out, Timeless) --> %spypoint,
      t_or_w(D, M_In, M_Out), is_, word(H), 
      {Timeless=..[is, D, H]}.
+*/
 
 % there is a clash between a first direction and a second direction
 literal(M_In, M_Out, Timeless) --> %spypoint,
@@ -1531,74 +1613,95 @@ literal(M_In,M_Out, Timeless) --> %spypoint,
 % added on 2023-06-25
 % a route has as second a street with a direction
 % literal(M_In,M_Out, Timeless) -->
-%    t_or_w(R, M_In, M1), word(has), word(as), word(second), t_or_w(S, M1, M2), word(with), t_or_w(D, M2, M_Out), 
+%    t_or_w(R, M_In, M1), word(has), word(as), word(second), t_or_w(S, M1, M2), with_, t_or_w(D, M2, M_Out), 
 %    {Timeless=..[has_second, R, S, D]}.
 
+% edited on 2023-08-04
 % a new route is from a first place to a second place
 literal(M_In,M_Out, Timeless) --> %spypoint,
     t_or_w(R, M_In, M1), is_, from_, t_or_w(P1, M1, M2), to_, t_or_w(P2, M2, M_Out),
-    {Timeless=..[directions, R, P1, P2]}.
+    {Timeless=..[directions, P1, R,  P2]}.
 
 % appending the second route followed by a second street with a second direction gives the new route
 literal(M_In,M_Out, Timeless) --> %spypoint,
-   word(appending), t_or_w(R1, M_In, M1), word(followed), word(by), t_or_w(S, M1, M2), word(with), t_or_w(D, M2, M3),
+   word(appending), t_or_w(R1, M_In, M1), word(followed), word(by), t_or_w(S, M1, M2), with_, t_or_w(D, M2, M3),
    word(gives), t_or_w(R2, M3, M_Out), {Timeless=..[append, R1, S, D, R2]}.
 
 % the orientation from [X, Y1] to [X, Y2] is northward.
-literal(M_In, M_Out, Timeless) -->  spypoint,
+literal(M_In, M_Out, Timeless) --> %spypoint,
     word(the), word(orientation), from_, t_or_w(P1, M_In, M1), to_, t_or_w(P2, M1, M2), is_, t_or_w(H, M2, M_Out),
-    {Timeless=..[is, P1, P2, H]}.
+    {Timeless=..[orientation, P1, P2, H]}.
 
 % modified on 2023-07-27 by Jacinto ----
 % the following rules can all be subsumed by the first
 % a first number < a second number
-literal(M_In, M_Out, Expression) --> % spypoint,
+literal(M_In, M_Out, Expression) --> %spypoint,
    t_or_w(C1, M_In, M1), arithmetic_expression(lambda([C1, C2], Expression)), t_or_w(C2, M1, M_Out).
 
 % a first number is less than a second number
-% literal(M_In, M_Out, C1 < C2) --> % spypoint,
+% literal(M_In, M_Out, C1 < C2) --> %spypoint,
 %   t_or_w(C1, M_In, M1), is_, word(less), word(than), t_or_w(C2, M1, M_Out).
 
 % a first number > a second member
-%literal(M_In, M_Out, Expression) --> % spypoint,
+%literal(M_In, M_Out, Expression) --> %spypoint,
 %   t_or_w(C1, M_In, M1), arithmetic_expression(lambda([C1, C2], C1 > C2)), t_or_w(C2, M1, M_Out).
 
 % a value =< a number
-%literal(M_In, M_Out, Expression) --> % spypoint,
+%literal(M_In, M_Out, Expression) --> %spypoint,
 %   t_or_w(C1, M_In, M1), arithmetic_expression(lambda([C1, C2], C1 =< C2)), t_or_w(C2, M1, M_Out).
 
 % a value >= a number
-%literal(M_In, M_Out, Expression) --> % spypoint,
+%literal(M_In, M_Out, Expression) --> %spypoint,
 %   t_or_w(C1, M_In, M1), arithmetic_expression(lambda([C1, C2], C1 >= C2)), t_or_w(C2, M1, M_Out).
 % end of modifications on 2023-07-27 by Jacinto
 
 % a first number is greater or equal than a second number
-% literal(M_In, M_Out, C1 >= C2) --> % spypoint,
+% literal(M_In, M_Out, C1 >= C2) --> %spypoint,
 %   t_or_w(C1, M_In, M1), is_, word(greater), word(or), word(equal), word(than), t_or_w(C2, M1, M_Out).
 
 % a first number is equal or less than a second number
-% literal(M_In, M_Out, C1 =< C2) --> % spypoint,
+% literal(M_In, M_Out, C1 =< C2) --> %spypoint,
 %   t_or_w(C1, M_In, M1), is_, word(equal), word(or), word(less), word(than), t_or_w(C2, M1, M_Out).
 
 % modified on 2023-07-27 by Jacinto (subsumed as above)
 % a first number is greater than a second number
-%literal(M_In, M_Out, C1 > C2) --> % spypoint,
+%literal(M_In, M_Out, C1 > C2) --> %spypoint,
 %   t_or_w(C1, M_In, M1), is_, word(greater), word(than), t_or_w(C2, M1, M_Out).
 
 % a first number is less than a second number
-% literal(M_In, M_Out, C1 < C2) --> % spypoint,
+% literal(M_In, M_Out, C1 < C2) --> %spypoint,
 %   t_or_w(C1, M_In, M1), is_, word(less), word(than), t_or_w(C2, M1, M_Out).
 
+% section moved here on 2023-08-13 by Jacinto
+% if two productions share the starting elements, put the longest first. 
+% added by YB on 2023-08-08
+% a first number is a second number times a third number plus a fourth number.
+literal(M_In, M_Out, Y1 is Y2 * Y3 + Y4) --> %spypoint,
+    t_or_w(Y1, M_In, M1), is_, t_or_w(Y2, M1, M2), times, t_or_w(Y3, M2, M3), plus, t_or_w(Y4, M3, M_Out).
+
+% added by YB on 2023-08-08
+% a XX is a X times 20.
+literal(M_In, M_Out, C1 is C2 * C3) --> %spypoint,
+   t_or_w(C1, M_In, M1), is_, t_or_w(C2, M1, M2), times, t_or_w(C3, M2, M_Out).
+
+/*
+% a XX is a X times 20 plus 15.
+literal(M_In, M_Out, Expression) --> %spypoint,
+   t_or_w(C1, M_In, M1), is_, t_or_w(C2, M1, M2), arithmetic_expression(lambda([C1, C2, N1, N2], Expression)),
+    t_or_w(N1, M2, M3), t_or_w(N2, M3, M_Out).
+*/
+
+
 % a first number is a second number plus a third number.
-literal(M_In, M_Out, Y1 is Y2 + Y3) --> % spypoint,
+literal(M_In, M_Out, Y1 is Y2 + Y3) --> %spypoint,
     t_or_w(Y1, M_In, M1), is_, t_or_w(Y2, M1, M2), plus, t_or_w(Y3, M2, M_Out).
 
 % a first number is a second number minus a third number.
-literal(M_In, M_Out, Y1 is Y2 - Y3) --> % spypoint,
+literal(M_In, M_Out, Y1 is Y2 - Y3) --> %spypoint,
     t_or_w(Y1, M_In, M1), is_, t_or_w(Y2, M1, M2), minus, t_or_w(Y3, M2, M_Out).
 
 % a first number is a second member
-literal(M_In, M_Out, C1 = C2) --> % spypoint,
+literal(M_In, M_Out, C1 = C2) --> %spypoint,
    t_or_w(C1, M_In, M1), is_, t_or_w(C2, M1, M_Out).
 
 % arithmetic_expression(lambda([C1, N, C2], C1 is (N + C2))) --> addition(N).
@@ -1607,18 +1710,25 @@ literal(M_In, M_Out, C1 = C2) --> % spypoint,
 
 % addition(X)-->t_or_w(X,In,Out),plus.
 
+% deleted on 2023-08-04
 % a street with a direction is a member of a route
-literal(M_In, M_Out, Timeless) --> % spypoint,
-   t_or_w(S, M_In, M1), word(with), t_or_w(D, M1, M2), is_, word(a), word(member), word(of), t_or_w(R, M2, M_Out),
-   {Timeless=..[member, S, D, R]}.
+% literal(M_In, M_Out, Timeless) --> %spypoint,
+%   t_or_w(S, M_In, M1), with_, t_or_w(D, M1, M2), is_, word(a), word(member), word(of), t_or_w(R, M2, M_Out),
+%   {Timeless=..[member, S, D, R]}.
+
+% added on 2023-08-04
+% the street2 is a member of a route
+literal(M_In, M_Out, Timeless) --> %spypoint,
+   t_or_w(S, M_In, M1), is_, word(a), word(member), word(of), t_or_w(R, M1, M_Out),
+   {Timeless=..[member, S, R]}.
 
 % the horizontal coordinate of the first place is a first number
-literal(M_In, M_Out, Timeless) --> % spypoint,
+literal(M_In, M_Out, Timeless) --> %spypoint,
    word(the), word(horizontal), word(coordinate), word(of), t_or_w(P, M_In, M1), is_, t_or_w(C, M1, M_Out), 
    {Timeless=..[x_coordinate, P, C]}.
 
 % the vertical coordinate of the first place is a first number
-literal(M_In, M_Out, Timeless) --> % spypoint,
+literal(M_In, M_Out, Timeless) --> %spypoint,
    word(the), word(vertical), word(coordinate), word(of), t_or_w(P, M_In, M1), is_, t_or_w(C, M1, M_Out), 
    {Timeless=..[y_coordinate, P, C]}.
 
@@ -1630,37 +1740,82 @@ literal(M_In,M_Out, holds(Fluent, T)) -->
 
 
 % a first direction is opposite to a second direction.
-literal(M_In, M_Out, Timeless) --> % spypoint,
+literal(M_In, M_Out, Timeless) --> %spypoint,
    t_or_w(D1, M_In, M1), is_, word(opposite), to_, t_or_w(D2, M1, M_Out), {Timeless=..[opposite, D1, D2]}.
 
 
 % a first vehicle is to the right of a second vehicle at a place at a time
-literal(M_In,M_Out, holds(Fluent, T)) --> % spypoint,
+literal(M_In,M_Out, holds(Fluent, T)) --> %spypoint,
    t_or_w(V1, M_In, M1), is_, to_, word(the), word(right), word(of), t_or_w(V2, M1, M2), at_, t_or_w(P, M2, M3),
    at_, t_or_w(T, M3, M_Out),
    {Fluent=..[rightOfWay, V1, V2, P]}.
 
 % modified by Jacinto on 2023-07-27
 % a place is the priority Tjunction of a street
-literal(M_In, M_Out, Timeless) --> % spypoint,
+literal(M_In, M_Out, Timeless) --> %spypoint,
    t_or_w(P, M_In, M1), is_, word(the), word(priority), word('Tjunction'), word(of), t_or_w(S, M1, M_Out),
    {Timeless=..[priorityTjunction, P, S]}.
 
 % a place is a cross of roads
-literal(M_In, M_Out, Timeless) --> % spypoint,
+literal(M_In, M_Out, Timeless) --> %spypoint,
    t_or_w(P, M_In, M_Out), is_, word(a), word(cross), word(of), word(roads),
    {Timeless=..[crossRoads, P]}.
 
 % a first direction is on the right of a second direction
-literal(M_In, M_Out, Timeless) --> % spypoint,
+literal(M_In, M_Out, Timeless) --> %spypoint,
    t_or_w(D1, M_In, M1), is_, word(on), word(the), word(right), word(of), t_or_w(D2, M1, M_Out),
    {Timeless=..[rightOf, D1, D2]}.
 
 % corrected by Jacinto on 2023-07-27
 % a first number and a second number makes a pair fit for a place 
-literal(M_In, M_Out, Timeless) --> % spypoint,
+literal(M_In, M_Out, Timeless) --> %spypoint,
    t_or_w(C1, M_In, M1), and_, t_or_w(C2, M1, M_Out), word(makes), word(a), word(pair), word(fit), word(for), word(a), word(place),
    {Timeless=..[place, C1, C2]}.
 
+%  a first list followed by a second list gives a new list
+literal(M_In,M_Out, Timeless) --> %spypoint,
+   t_or_w(L1, M_In, M1), word(followed), word(by), t_or_w(L2, M1, M2),
+   word(gives), t_or_w(L3, M2, M_Out), {Timeless=..[append, L1, L2, L3]}.
+
+% [a street1, a direction1] is a route.
+literal(M_In, M_Out, Timeless) --> %spypoint,
+   t_or_w(C1, M_In, M_Out), is_, word(a), word(route),
+   {Timeless=..[is_route, C1]}.
+
+% added on 2023-08-04
+% [a street1, a direction1] is a route from a start to a finish.
+literal(M_In, M_Out, Timeless) --> %spypoint,
+   t_or_w(C1, M_In, M1), is_, word(a), word(route), from_, t_or_w(P1, M1, M2), to_, t_or_w(P2, M2, M_Out),
+   {Timeless=..[route, C1, P1, P2]}.
+
+% added on 2023-08-04
+/* When a vehicle steps from an old place to a next place
+   then it becomes no longer the case that the vehicle is at the old place heading a direction 
+*/
+statement([terminated(happens(Action,_T1,_T2),F, [])]) --> %spypoint,
+   when_,  t_or_w(V, [], Map1), action(lambda([V,P1,P2],Action)), from_, t_or_w(P1, Map1, Map2),
+        to_, t_or_w(P2, Map2, Map3),
+   then_, it_becomes_no_longer_the_case_that_, t_or_w(V, Map3, Map4), fluent(lambda([V,P,D],F)), 
+   t_or_w(P, Map4, Map5), word(heading), t_or_w(D, Map5, _Map6), period.
+
+% added by YB on 2023-08-04
+% a first direction is defined as horizontal.
+literal(M_In, M_Out, Timeless) --> %spypoint,
+   t_or_w(D1, M_In, M_Out), is_, word(defined), word(as), word(H),
+   {Timeless=..[H, D1]}.
+
+% added by YB on 2023-08-04
+% [X,Y] is defined as a place.
+literal(M_In, M_Out, Timeless) --> %spypoint,
+   t_or_w(P, M_In, M_Out), is_, word(defined), word(as), word(a), word(H),
+   {Timeless=..[H, P]}.
+
+% added by YB on 2023-08-08
+% point at a X and a Y heading northward is mapped to a XX and a YY with horizontal size a  Xcar and vertical size a Ycar.
+literal(M_In, M_Out, Timeless) --> %spypoint,
+   word(point), at_,
+   t_or_w(C11, M_In, M1), and_, t_or_w(C12, M1, M2), word(heading), t_or_w(D, M2, M3), is_, word(mapped), to_, t_or_w(C21, M3, M4), and_, t_or_w(C22, M4, M5),
+   with_, word(horizontal), word(size), t_or_w(C31, M5, M6), and_,  word(vertical), word(size), t_or_w(C32, M6, M_Out),
+   {Timeless=..[position, C11, C12, D, C21, C22, C31, C32]}.
 
 
