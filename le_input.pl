@@ -248,14 +248,14 @@ process_types_or_names([Word|RestWords], Elements, Types, PrintExpression ) :-
     process_types_or_names(RestWords,  Elements, Types, RestPrintWords),
     tokenize_atom(Name, NameWords), delete_underscore(NameWords, CNameWords),
     add_determiner(CNameWords, PrintName), append(['*'|PrintName], ['*'|RestPrintWords], PrintExpression).
-process_types_or_names([Word|RestWords], Elements, Types, [PrintWord|RestPrintWords] ) :- 
-    matches_type(Word, Elements, Types, date), 
-    ((nonvar(Word), number(Word)) -> unparse_time(Word, PrintWord); PrintWord = Word), !, 
-    process_types_or_names(RestWords,  Elements, Types, RestPrintWords). 
-process_types_or_names([Word|RestWords], Elements, Types, [PrintWord|RestPrintWords] ) :- 
-    matches_type(Word, Elements, Types, day), 
-    ((nonvar(Word), number(Word)) -> unparse_time(Word, PrintWord); PrintWord = Word), !, 
-    process_types_or_names(RestWords,  Elements, Types, RestPrintWords). 
+% process_types_or_names([Word|RestWords], Elements, Types, [PrintWord|RestPrintWords] ) :- 
+%     matches_type(Word, Elements, Types, date), 
+%     ((nonvar(Word), number(Word)) -> unparse_time(Word, PrintWord); PrintWord = Word), !, 
+%     process_types_or_names(RestWords,  Elements, Types, RestPrintWords). 
+% process_types_or_names([Word|RestWords], Elements, Types, [PrintWord|RestPrintWords] ) :- 
+%     matches_type(Word, Elements, Types, day), 
+%     ((nonvar(Word), number(Word)) -> unparse_time(Word, PrintWord); PrintWord = Word), !, 
+%     process_types_or_names(RestWords,  Elements, Types, RestPrintWords). 
 process_types_or_names([Word|RestWords],  Elements, Types, Output) :-
     compound(Word), 
     translate_goal_into_LE(Word, PrintWord), !, % cut the alternatives
@@ -1661,18 +1661,21 @@ expression(X, InMap, In, Out) :- not(dates(X, InMap, In, Out)), expr(X, InMap, I
 
 expr(X, InMap) --> addExp(X, InMap).
 
+dates(date(Year, Month, Day), _Map) --> [Year, '-', Month, '-', Day], spaces(_).
+
 % Transform 2021-02-06T08:25:34 into a timestamp.
-dates(DateInSeconds, _Map) --> [Year,'-', Month, '-', Day, THours,':', Minutes, ':', Seconds], spaces(_),
-    {   number(Year),number(Month),number(Day),number(Minutes),number(Seconds),
-        pad_number(Year, 4, YearStr), pad_number(Month, 2, MonthStr), pad_number(Day, 2, DayStr),  pad_number(Minutes, 2, MinutesStr), pad_number(Seconds, 2, SecondsStr),
-        concat_atom([YearStr,'-', MonthStr, '-', DayStr, THours,':', MinutesStr, ':', SecondsStr], '', Date), 
-      parse_time(Date,DateInSeconds) %, print_message(informational, "~w"-[DateInSeconds])  
-    }, !.
+% dates(DateInSeconds, _Map) --> [Year,'-', Month, '-', Day, THours,':', Minutes, ':', Seconds], spaces(_),
+%     {   number(Year),number(Month),number(Day),number(Minutes),number(Seconds),
+%         pad_number(Year, 4, YearStr), pad_number(Month, 2, MonthStr), pad_number(Day, 2, DayStr),  pad_number(Minutes, 2, MinutesStr), pad_number(Seconds, 2, SecondsStr),
+%         concat_atom([YearStr,'-', MonthStr, '-', DayStr, THours,':', MinutesStr, ':', SecondsStr], '', Date), 
+%       parse_time(Date,DateInSeconds) %, print_message(informational, "~w"-[DateInSeconds])  
+%     }, !.
+
 % Transform 2021-02-06 into a timestamp.
-dates(DateInSeconds, _Map) -->  [Year,'-', Month, '-', Day], spaces(_),
-    {   number(Year),number(Month),number(Day),
-        pad_number(Year, 4, YearStr), pad_number(Month, 2, MonthStr), pad_number(Day, 2, DayStr),
-        concat_atom([YearStr, '-', MonthStr, '-', DayStr], '', Date), parse_time(Date, DateInSeconds) }, !. 
+% dates(DateInSeconds, _Map) -->  [Year,'-', Month, '-', Day], spaces(_),
+%     {   number(Year),number(Month),number(Day),
+%         pad_number(Year, 4, YearStr), pad_number(Month, 2, MonthStr), pad_number(Day, 2, DayStr),
+%         concat_atom([YearStr, '-', MonthStr, '-', DayStr], '', Date), parse_time(Date, DateInSeconds) }, !. 
 
 % relies on tabled execution to avoid left recursion
 addExp(X+Y, InMap) --> addExp(X, InMap), ['+'], mulExp(Y, InMap).
@@ -2442,22 +2445,49 @@ predef_dict([max_list, List, Number], [thing-thing, list-list], [Number, is, the
 predef_dict([product_list, List, Number], [thing-thing, list-list], [Number, is, the, product, of, List]).
 predef_dict([append, A, B, C],[first_list-list, second_list-list, third_list-list], [appending, A, then, B, gives, C]).
 predef_dict([reverse, A, B], [list-list, other_list-list], [A, is, the, reverse, of, B]).
-predef_dict([same_date, T1, T2], [time_1-time, time_2-time], [T1, is, the, same, date, as, T2]). % see reasoner.pl before/2
-predef_dict([between,Minimum,Maximum,Middle], [min-date, max-date, middle-date], 
-                [Middle, is, between, Minimum, &, Maximum]).
-predef_dict([is_1_day_after, A, B], [date-date, second_date-date],
-                [A, is, '1', day, after, B]).
-predef_dict([is_days_after, A, B, C], [date-date, number-number, second_date-date],
-                  [A, is, B, days, after, C]).
-predef_dict([immediately_before, T1, T2], [time_1-time, time_2-time], [T1, is, immediately, before, T2]). % see reasoner.pl before/2
+
+predef_dict([valid_date, Date], [date-date], [Date, is, a, date]).
+
+predef_dict([to_date, T, Date], [date-date, date-date], Is_date) :-
+  member(T, [yesterday, today, tomorrow]), (
+    Is_date = [T, is, Date] ;
+    (T = yesterday, Is_date = [yesterday, was, Date])
+  ).
+
+predef_dict(
+  [is_duration_before_after, A, B, C, D],
+  [date-date, duration-object, before_after-object, second_date-date],
+  [A, is, Number, Duration, C, D]
+) :-
+  member(Duration_s, [years, months, weeks, days]),
+  B =.. [Duration_s, Number], (
+    Duration = Duration_s ; (
+      Number = 1,
+      (Duration_s = years, Duration = year) ;
+      (Duration_s = months, Duration = month) ;
+      (Duration_s = weeks, Duration = week) ;
+      (Duration_s = days, Duration = day)
+    )
+  ),
+  member(C, [before, after]).
+
+% predef_dict([same_date, T1, T2], [time_1-time, time_2-time], [T1, is, the, same, date, as, T2]). % see reasoner.pl before/2
+% predef_dict([between,Minimum,Maximum,Middle], [min-date, max-date, middle-date], 
+%                 [Middle, is, between, Minimum, &, Maximum]).
+% predef_dict([is_1_day_after, A, B], [date-date, second_date-date],
+%                 [A, is, 1, day, after, B]).
+% predef_dict([is_days_after, A, B, C], [date-date, number-number, second_date-date],
+%                 [A, is, B, days, after, C]).
+
+% predef_dict([immediately_before, T1, T2], [time_1-time, time_2-time], [T1, is, immediately, before, T2]). % see reasoner.pl before/2
 predef_dict([dif, T1, T2], [thing_1-thing, thing_2-thing], [T1, is, different, from, T2]).
 predef_dict([\=, T1, T2], [thing_1-thing, thing_2-thing], [T1, is, not, equal, to, T2]).
 predef_dict([==, T1, T2], [thing_1-thing, thing_2-thing], [T1, is, equivalent, to, T2]).
 predef_dict([is_a, Object, Type], [object-object, type-type], [Object, is, of, type, Type]).
 predef_dict([is_not_before, T1, T2], [time1-time, time2-time], [T1, is, not, before, T2]). % see reasoner.pl before/2
 predef_dict([=, T1, T2], [thing_1-thing, thing_2-thing], [T1, is, equal, to, T2]).
-predef_dict([isbefore, T1, T2], [time1-time, time2-time], [T1, is, before, T2]). % see reasoner.pl before/2
-predef_dict([isafter, T1, T2], [time1-time, time2-time], [T1, is, after, T2]).  % see reasoner.pl before/2
+% predef_dict([isbefore, T1, T2], [time1-time, time2-time], [T1, is, before, T2]). % see reasoner.pl before/2
+% predef_dict([isafter, T1, T2], [time1-time, time2-time], [T1, is, after, T2]).  % see reasoner.pl before/2
 predef_dict([member, Member, List], [member-object, list-list], [Member, is, in, List]).
 %predef_dict([is_, A, B], [term-term, expression-expression], [A, is, B]). % builtin Prolog assignment
 predef_dict([=, T1, T2], [thing_1-thing, thing_2-thing], [T1, is, T2]). % builtin Prolog assignment

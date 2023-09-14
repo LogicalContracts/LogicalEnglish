@@ -1,0 +1,45 @@
+the target language is: prolog.
+
+% The templates and knowledge base here are defined using the following
+% predefined templates:
+% *a date* is a date.
+% *today/tomorrow/yesterday* *is/was* *a date*.
+% *a date* is *a duration* *before/after* *an other date*.
+
+% Equality and disquality can be expressed using the builtins:
+% date0 is date1
+% date0 is different from date2
+
+the templates are:
+  *a date* is before *an other date*.
+  *a date* is strictly before *an other date*.
+
+  *a date* is after *an other date*.
+  *a date* is strictly after *an other date*.
+
+the knowledge base date time includes:
+  a date is before an other date
+  if date is a n days before other date
+  and n >= 0.
+
+  a date is strictly before an other date
+  if date is a n days before other date
+  and n > 0.
+
+  a date is after an other date
+  if other date is before date.
+
+  a date is strictly after an other date
+  if other date is strictly before date.
+
+query q0 is:
+  which date is before 2023-2-10.
+
+query q1 is:
+  which date is strictly before 2023-2-10.
+
+query q2 is:
+  which date is strictly before today.
+
+query q3 is:
+  yesterday is after which date.

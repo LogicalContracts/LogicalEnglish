@@ -17,7 +17,9 @@ limitations under the License.
 :- module(reasoner,[query/4, query_with_facts/5, query_once_with_facts/5, explanation_node_type/2, render_questions/2,
     run_examples/0, run_examples/1, myClause2/9, myClause/4, taxlogWrapper/10, niceModule/2, refToOrigin/2,
     isafter/2, is_not_before/2, isbefore/2, immediately_before/2, same_date/2, subtract_days/3, this_year/1, uk_tax_year/4, in/2,
-    isExpressionFunctor/1, set_time_of_day/3, start_of_day/2, end_of_day/2, is_days_after/3, is_1_day_after/2, unparse_time/2, product_list/2
+    isExpressionFunctor/1, set_time_of_day/3, start_of_day/2, end_of_day/2, is_days_after/3, is_1_day_after/2, unparse_time/2, product_list/2,
+    valid_date/1, to_date/2, is_duration_before_after/4
+    % is_duration_before_dates/3
     ]).
 
 /** <module> Tax-KB reasoner and utils
@@ -28,6 +30,8 @@ limitations under the License.
 
 :- use_module(kp_loader).
 :- use_module(le_answer).
+
+:- ['declarative_date_time/declarative_date_time'].
 
 :- thread_local do_not_fail_undefined_preds/0. 
 
@@ -722,6 +726,11 @@ uk_tax_year(Start,StartYear,Start,End) :- must_be(integer,StartYear),
     format_time(string(Start),"%F",date(StartYear,4,6)),
     format_time(string(End),"%F",date(EndYear,4,5)).
 
+is_duration_before_after(Date0, Duration, before, Date1) :-
+  !, is_duration_before(Date0, Duration, Date1).
+
+is_duration_before_after(Date0, Duration, after, Date1) :-
+  !, is_duration_before_after(Date1, Duration, before, Date0).
 
 %! in(X,List) is nondet.
 %  X is in List

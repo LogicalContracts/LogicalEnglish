@@ -35,6 +35,18 @@ Port `-p 8082:3050` can be mapped to whatever local port you want to use `-p 888
 
 The `le-ui` extension should use the right port, but you might need to adjust the `conf.view.url` setting in VSCode if not.
 
+## Building a local docker image
+For testing, it is useful to be able to build and run a local docker image.
+One can do this using the [build_and_run_local_docker_img.sh](./build_and_run_local_docker_img.sh)
+script.
+
+When run, the script creates:
+- A new docker image with:
+  - Name: `cclawdev/logicalenglish`
+  - Tag: `local`
+- A new container using the above `cclawdev/logicalenglish:local` image,
+  with port 3050 forwarded to 3050 in the container.
+
 # Logical English
 
 [Logical English](https://github.com/LogicalContracts/LogicalEnglish/), LE, is a controlled form of natural language that can be used for programming and knowledge representation. 

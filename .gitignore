@@ -6,3 +6,4 @@ le-ui/node_modules
 **/node_modules
 test_script.pl
 pack/logicalenglish/**
+**/__pycache__
