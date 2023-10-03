@@ -2455,8 +2455,8 @@ predef_dict([to_date, T, Date], [date-date, date-date], Is_date) :-
   ).
 
 predef_dict(
-  [is_duration_before_after, A, B, C, D],
-  [date-date, duration-object, before_after-object, second_date-date],
+  [is_duration_before_after_within, A, B, C, D],
+  [date-date, duration-object, before_after_within-object, second_date-date],
   [A, is, Number, Duration, C, D]
 ) :-
   member(Duration_s, [years, months, weeks, days]),
@@ -2469,7 +2469,7 @@ predef_dict(
       (Duration_s = days, Duration = day)
     )
   ),
-  member(C, [before, after]).
+  member(C, [before, after, within]).
 
 % predef_dict([same_date, T1, T2], [time_1-time, time_2-time], [T1, is, the, same, date, as, T2]). % see reasoner.pl before/2
 % predef_dict([between,Minimum,Maximum,Middle], [min-date, max-date, middle-date], 
