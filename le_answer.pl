@@ -82,9 +82,12 @@ which can be used on the new command interface of LE on SWISH
 :- use_module(library(http/term_html)).
 :- use_module(library(http/js_write)).
 
+:- if(exists_source(library(r/r_call))).
 :- use_module(library(r/r_call)).
+:- endif.
+:- if(exists_source(library(r/r_data))).
 :- use_module(library(r/r_data)).
-
+:- endif.
 
 
 :- multifile http:location/3.

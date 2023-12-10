@@ -114,7 +114,9 @@ query three is:
 :- use_module('le_local.pl'). % module to handle the local filesystem 
 :- endif.
 
+:- if(exists_source(library(r/r_call))).
 :- use_module(library(r/r_call)).
+:- endif.
 :- use_module('reasoner.pl').
 :- use_module(library(prolog_stack)).
 :- table addExp//2, mulExp//2.
@@ -232,6 +234,7 @@ process_types_dict(Dictionary, Type_entries) :-
 
 % process_types_or_names/4
 process_types_or_names([], _, _, []) :- !.
+:- if(exists_source(library(r/r_call))).
 process_types_or_names([Word|RestWords], Elements, Types, [the, chart|RestPrintWords] ) :- 
     nonvar(Word), Word = plot_command(RExecuteCommand),
     copy_term(RExecuteCommand,RExecuteCommandForDisplay),
@@ -239,6 +242,7 @@ process_types_or_names([Word|RestWords], Elements, Types, [the, chart|RestPrintW
     <- png("image.png"), RExecuteCommand,  % plot the image into the file
     <- graphics.off(), r_swish:r_download("image.png"), % close the device and show the download button
     process_types_or_names(RestWords,  Elements, Types, RestPrintWords).
+:- endif.
 process_types_or_names([Word|RestWords], Elements, Types, PrintExpression ) :- 
     atom(Word), concat_atom(WordList, '_', Word), !, 
     process_types_or_names(RestWords,  Elements, Types, RestPrintWords),
