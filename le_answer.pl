@@ -40,7 +40,7 @@ which can be used on the new command interface of LE on SWISH
     op(1150, fx, abducible),
     dump/4, dump/3, dump/2, dump_scasp/3, split_module_name/3, just_saved_scasp/2,
     prepare_query/6, assert_facts/2, retract_facts/2, parse_and_query/5, parse_and_query_and_explanation/5,
-    le_expanded_terms/2, show/1, source_lang/1, targetBody/6
+    parse_and_query_and_explanation_text/5, le_expanded_terms/2, show/1, source_lang/1, targetBody/6
     ]).
 
 %:- use_module(library(sandbox)).
@@ -936,6 +936,18 @@ parse_and_query_and_explanation(File, Document, Question, Scenario, Answer) :-
     %with_output_to(string(Answer), write(LE_Explanation)). 
     produce_html_explanation(LE_Explanation, Answer). 
 
+% Generate a text-based answer, with a nested list represeting the explanation.
+parse_and_query_and_explanation_text(File, Document, Question, Scenario, Answer) :-
+    %print_message(informational, "parse_and_query and explanation ~w ~w ~w ~w"-[File, Document, Question, Scenario]),
+    le_taxlog_translate(Document, _, 1, TaxlogTerms),
+    this_capsule(M), 
+    non_expanded_terms(File, TaxlogTerms, ExpandedTerms),
+    M:assertz(myDeclaredModule_(File)),  
+    forall(member(T, [(:-module(File,[]))|ExpandedTerms]), assertz(M:T)), % simulating term expansion
+    hack_module_for_taxlog(M), 
+    answer( Question, Scenario, le(LE_Explanation), _Result),
+    produce_text_explanation(LE_Explanation, Answer). 
+
 % non_expanded_terms/2 is just as the one above, but with semantics2prolog2 instead of semantics2prolog that has many other dependencies. 
 non_expanded_terms(Name, TaxlogTerms, ExpandedTerms) :-
     %print_message(informational, " Translated ~w"-[TaxlogTerms]), 
@@ -1012,6 +1024,31 @@ explanationLEHTML(f(G,_Ref,_,_,_,C),[li(title="Failed goal",[span(class=Class, "
 explanationLEHTML([C1|Cn],CH) :- explanationLEHTML(C1,CH1), explanationLEHTML(Cn,CHn), (CHn\=[] -> Joint = ['and '|CHn]; Joint = CHn), append(CH1,Joint,CH).
     %append(CH1,CHn,CH).
 explanationLEHTML([],[]).
+
+produce_text_explanation(le_Explanation(Trees), Explanation) :-
+    explanationLEText(Trees,Text), 
+    % phrase(html(Text), ExplanationInHtml),
+    with_output_to(string(Explanation), write(Text)). 
+
+explanationLEText(s(G,_Ref,_,_,_,C),[Gs|RestTree]) :- 
+    %Navigator=' a rule', 
+    explanationLEText(C,CH), 
+    (CH\=[] -> 
+        ( RestTree =  [CH] )
+    ;   ( RestTree = [] )
+    ),
+    with_output_to(string(Gs), format('"~w"', G))
+    .
+explanationLEText(u(G,_Ref,_,_,_,[]),[G]).
+explanationLEText(f(G,_Ref,_,_,_,C),[Gs|RestTree]) :- 
+    explanationLEText(C,CH), 
+    (CH\=[] -> 
+        ( RestTree =  [CH] )
+    ;   ( RestTree = [] )
+    ),
+    with_output_to(string(Gs), format('"It is not the case that: ~w"', G)).
+explanationLEText([C1|Cn],CH) :- explanationLEText(C1,CH1), explanationLEText(Cn,CHn), append(CH1,CHn,CH).
+explanationLEText([],[]).
 
 %sandbox:safe_meta(term_singletons(X,Y), [X,Y]).
 sandbox:safe_primitive(le_answer:answer( _EnText)).
