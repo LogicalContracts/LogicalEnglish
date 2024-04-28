@@ -1,6 +1,4 @@
-:- module('cittadinanza_italiana+http://tests.com',[]).
-
-en("il linguaggio destinazione è: prolog.
+il linguaggio destinazione è: prolog.
 
 i modelli sono:
 *una persona* ha la cittadinanza italiana,
@@ -46,10 +44,3 @@ filippo è nato in italia.
 
 domanda uno è:
 quale persona ha la cittadinanza italiana.
-
-").
-
-/** <examples>
-?- answer("query uno with scenario giuseppe").
-?- answer("query uno with scenario filippo").
-*/
