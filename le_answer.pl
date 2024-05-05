@@ -69,9 +69,9 @@ which can be used on the new command interface of LE on SWISH
 
 :- use_module('le_input.pl').  
 :- use_module('syntax.pl').
-:- if(current_module(wasm)).
+:- if(\+current_module(wasm)).
 :- use_module('api.pl'). 
-:-endif.
+:- endif.
 :- use_module('reasoner.pl'). 
 :- use_module('./tokenize/prolog/tokenize.pl').
 
@@ -945,8 +945,9 @@ parse_and_query_and_explanation_text(File, Document, Question, Scenario, Answer)
     non_expanded_terms(File, TaxlogTerms, ExpandedTerms),
     M:assertz(myDeclaredModule_(File)),  
     forall(member(T, [(:-module(File,[]))|ExpandedTerms]), assertz(M:T)), % simulating term expansion
-    hack_module_for_taxlog(M), 
-    answer( Question, Scenario, le(LE_Explanation), _Result),
+    hack_module_for_taxlog(M),
+    (member(target(scasp),TaxlogTerms) -> answer(Question, Scenario);
+    answer( Question, Scenario, le(LE_Explanation), _Result)),
     produce_text_explanation(LE_Explanation, Answer). 
 
 % non_expanded_terms/2 is just as the one above, but with semantics2prolog2 instead of semantics2prolog that has many other dependencies. 
@@ -1059,7 +1060,7 @@ hack_module_for_taxlog(M) :-
 :- endif.
 
 %sandbox:safe_meta(term_singletons(X,Y), [X,Y]).
-:- if(exists(library(pengines_sandbox))).
+:- if(exists_source(library(pengines_sandbox))).
 sandbox:safe_primitive(le_answer:answer( _EnText)).
 sandbox:safe_primitive(le_answer:show( _Something)).
 sandbox:safe_primitive(le_answer:show( _Something, _With)).
