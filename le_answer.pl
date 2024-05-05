@@ -31,27 +31,24 @@ which can be used on the new command interface of LE on SWISH
     op(800,fx,user:responde), % to support querying in spanish
     %op(1150,fx,user:show), % to support querying
     op(850,xfx,user:of), % to support querying
-    %op(850,fx,user:'#pred'), % to support scasp 
-    %op(800,xfx,user:'::'), % to support scasp 
-    op(950, xfx, ::),           % pred not x :: "...".
-    op(1200, fx, #),
-    op(1150, fx, pred),
-    op(1150, fx, show),
-    op(1150, fx, abducible),
     dump/4, dump/3, dump/2, dump_scasp/3, split_module_name/3, just_saved_scasp/2,
     prepare_query/6, assert_facts/2, retract_facts/2, parse_and_query/5, parse_and_query_and_explanation/5,
     parse_and_query_and_explanation_text/5, le_expanded_terms/2, show/1, source_lang/1, targetBody/6
     ]).
 
 %:- use_module(library(sandbox)).
+:- if(exists_source(library(pengines_sandbox))).
 :- use_module(library(pengines_sandbox)). 
+:- endif.
 
 % required for sCASP justification (from ~/git/swish/pack/sCASP/examples)
 
-% :- use_module(library(scasp)).
-% :- use_module(library(scasp/html)).
-% :- use_module(library(scasp/output)).
-% :- use_module(library(scasp/json)).
+:- if(exists_source(library(scasp))).
+:- use_module(library(scasp)).
+:- use_module(library(scasp/html)).
+:- use_module(library(scasp/output)).
+:- use_module(library(scasp/json)).
+:- endif.
 
 % :- use_module(library(http/http_server)).
 % :- use_module(library(http/html_write)).
@@ -72,7 +69,9 @@ which can be used on the new command interface of LE on SWISH
 
 :- use_module('le_input.pl').  
 :- use_module('syntax.pl').
+:- if(current_module(wasm)).
 :- use_module('api.pl'). 
+:-endif.
 :- use_module('reasoner.pl'). 
 :- use_module('./tokenize/prolog/tokenize.pl').
 
@@ -80,7 +79,9 @@ which can be used on the new command interface of LE on SWISH
 % html libs
 :- use_module(library(http/html_write)).
 :- use_module(library(http/term_html)).
+:- if(exists_source(library(http/js_write))).
 :- use_module(library(http/js_write)).
+:- endif.
 
 :- if(exists_source(library(r/r_call))).
 :- use_module(library(r/r_call)).
@@ -1050,7 +1051,15 @@ explanationLEText(f(G,_Ref,_,_,_,C),[Gs|RestTree]) :-
 explanationLEText([C1|Cn],CH) :- explanationLEText(C1,CH1), explanationLEText(Cn,CHn), append(CH1,CHn,CH).
 explanationLEText([],[]).
 
+% Moved here so it loads in the wasm version, that doesn't have access to api.pl
+:- if(current_module(wasm)).
+hack_module_for_taxlog(M) :-  
+    retractall(kp_loader:module_api_hack(_)),
+    assert(kp_loader:module_api_hack(M)).
+:- endif.
+
 %sandbox:safe_meta(term_singletons(X,Y), [X,Y]).
+:- if(exists(library(pengines_sandbox))).
 sandbox:safe_primitive(le_answer:answer( _EnText)).
 sandbox:safe_primitive(le_answer:show( _Something)).
 sandbox:safe_primitive(le_answer:show( _Something, _With)).
@@ -1065,5 +1074,6 @@ sandbox:safe_primitive(le_answer:(show _)).
 sandbox:safe_primitive(le_answer:parse_and_query(_,_,_,_,_)).
 sandbox:safe_primitive(le_answer:parse_and_query_and_explanation(_,_,_,_,_)). 
 sandbox:safe_primitive(kp_loader:module_api_hack(_)).
+:- endif.
 
 %sandbox:safe_primitive(term_singletons(_,_)).  % this would not work as term_singletons/2 is an undefined, C-based primitive
