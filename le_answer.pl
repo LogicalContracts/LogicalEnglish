@@ -148,7 +148,7 @@ translate_query(English_String, Goals) :-
     unpack_tokens(Tokens, UTokens), 
     clean_comments(UTokens, CTokens), 
     phrase(conditions(0, [], _, Goals), CTokens) -> true 
-    ; ( error_notice(error, Me,Pos, ContextTokens), print_message(error, [Me,Pos,ContextTokens]), fail ). 
+    ; ( le_input:error_notice(error, Me,Pos, ContextTokens), print_message(error, [Me,Pos,ContextTokens]), fail ). 
 
 /* ----------------------------------------------------------------- Event Calculus  */
 % holds/2
@@ -445,7 +445,7 @@ translate_command(_, English_String, GoalName, Goals, Scenario) :-
     unpack_tokens(Tokens, UTokens), 
     clean_comments(UTokens, CTokens), Scenario=noscenario, GoalName=nonamed, 
     (phrase(conditions(0, [], _, Goals), CTokens) ->  true  ;
-        ( once(error_notice(error, Me,_, ContextTokens)), print_message(informational, "~w ~w"-[Me,ContextTokens]), CTokens=[], fail )
+        ( once(le_input:error_notice(error, Me,_, ContextTokens)), print_message(informational, "~w ~w"-[Me,ContextTokens]), CTokens=[], fail )
     ). 
 
 command_(Goal, Scenario) --> 
