@@ -299,10 +299,11 @@ settings(AllR, AllS) -->
     {append(Setting, RS, AllS), append(Rules, RRules, AllR)}, !.
 settings([], [], Stay, Stay) :- !, 
     ( phrase(rules_previous(_), Stay, _) ; 
+      phrase(ontology_, Stay, _)  ;  
       phrase(scenario_, Stay, _)  ;  
       phrase(query_, Stay, _) ;
       phrase(the_plots_are_, Stay, _) ).  
-    % settings ending with the start of the knowledge base or scenarios or queries. 
+    % settings ending with the start of the knowledge base or ontology or scenarios or queries. 
 settings(_, _, Rest, _) :- 
     asserterror('LE error in the declarations on or before ', Rest), 
     fail.
@@ -313,20 +314,20 @@ settings([], [], Stay, Stay).
 content(T) --> %{print_message(informational, "going for KB:"-[])},  
     spaces_or_newlines(_), rules_previous(Kbname), %{print_message(informational, "KBName: ~w"-[Kbname])}, 
     kbase_content(S),  %{print_message(informational, "KB: ~w"-[S])}, 
-    content(R), 
-    {append([kbname(Kbname)|S], R, T)}, !.
+    content(R),  {append([kbname(Kbname)|S], R, T)}, !.
+content(T) --> %{print_message(informational, "going for the ontology:"-[])},
+    spaces_or_newlines(_), ontology_content(S),  %{print_message(informational, "ontology: ~w"-[S])},
+    content(R), {append(S, R, T)}, !.
+% the annexes to the contract are:
+content(T) --> %{print_message(informational, "going for the annexes:"-[])},
+    spaces_or_newlines(_), annexes_content(S),  %{print_message(informational, "annexes: ~w"-[S])},
+    content(R), {append(S, R, T)}, !.
 content(T) --> %{print_message(informational, "going for scenario:"-[])},
     spaces_or_newlines(_), scenario_content(S),  %{print_message(informational, "scenario: ~w"-[S])},
-    content(R), 
-    {append(S, R, T)}, !.
+    content(R), {append(S, R, T)}, !.
 content(T) --> %{print_message(informational, "going for query:"-[])},
-    spaces_or_newlines(_), query_content(S),  content(R), 
-    {append(S, R, T)}, !.
-content(T) --> 
-    spaces_or_newlines(_), plot_content(S),  content(R), 
-    {append(S, R, T)}, !.
-content([]) --> 
-    spaces_or_newlines(_). 
+    spaces_or_newlines(_), query_content(S),  content(R), {append(S, R, T)}, !.
+content([]) --> spaces_or_newlines(_).
 content(_, Rest, _) :- 
     asserterror('LE error in the content ', Rest), 
     fail.
@@ -471,6 +472,9 @@ next_section(StopHere, StopHere)  :-
     phrase(files_to_include_previous(_), StopHere, _), !.
 
 next_section(StopHere, StopHere)  :-
+    phrase(ontology_, StopHere, _), !.
+
+next_section(StopHere, StopHere)  :-
     phrase(rules_previous(_), StopHere, _), !. % format(string(Message), "Next knowledge base", []), print_message(informational, Message).
 
 next_section(StopHere, StopHere)  :-
@@ -534,6 +538,35 @@ scenario_content(Scenario) --> %{print_message(informational, "starting scenario
 
 scenario_content(_,  Rest, _) :- 
     asserterror('LE error found around this scenario expression: ', Rest), fail.
+
+% ontology_content/1 or /3
+% an ontology description. All assumptions are added to the kb after verification.
+ontology_content(Ontology) --> %spypoint, %{print_message(informational, "starting scenario: "-[])},
+    ontology_previous(_Name), kbase_content(Ontology), !.  
+    % for the moment, the ontology is added directly to the kb. .
+
+ontology_content(_,  Rest, _) :- 
+    asserterror('LE error found around this ontology expression: ', Rest), fail.
+
+% ontology_previous//1
+ontology_previous(default) --> 
+    spaces_or_newlines(_), ss_([the, ontology, is, :]), spaces_or_newlines(_).
+ontology_previous(KBName) --> 
+    ontology_, [named], spaces(_), [','], extract_constant([',', is, es, est, 'è'], NameWords), [','], spaces(_), is_colon_, spaces_or_newlines(_), %{print_message(informational, " scenario: ~w"-[NameWords])},
+    {name_as_atom(NameWords, KBName)}.
+
+% annexes_content/1 or /3
+% an annexes description. All assumptions are added to the kb after verification.
+annexes_content(Annexes) --> %spypoint, %{print_message(informational, "starting scenario: "-[])},
+    annexes_previous(_Name), kbase_content(Annexes), !.  
+    % for the moment, the ontology is added directly to the kb. .
+
+annexes_content(_,  Rest, _) :- 
+    asserterror('LE error found around this annexes expression: ', Rest), fail.
+
+% annexes_previous//1
+annexes_previous(default) --> 
+    spaces_or_newlines(_), ss_([the, annexes, to, the, contract, are, :]), spaces_or_newlines(_).
 
 
 % query_content/1 or /3
@@ -1219,6 +1252,12 @@ it_is_unknown_whether_ -->
 it_must_not_be_true_that_ --> 
     it_, [must], spaces(_), [not], spaces(_), [be], spaces(_), [true], spaces(_), [that], spaces(_).
 
+ontology_ -->  spaces_or_newlines(_), ['Ontology'], !, spaces(_).
+ontology_ -->  spaces_or_newlines(_), [ontology], spaces(_). % english 
+ontology_ -->  spaces_or_newlines(_), [the], spaces(_), [ontology], spaces(_). % english 
+ontology_ -->  spaces_or_newlines(_), ['l\''], spaces(_), [ontologie], spaces(_). % french
+ontology_ -->  spaces_or_newlines(_), [la], spaces(_), ['ontología'], spaces(_). % spanish
+
 /* --------------------------------------------------- Supporting code */
 % indentation code
 % ri/2 ri(-Conditions, +IndentedForm). 
@@ -1274,6 +1313,13 @@ c2p(or(A, RestA), (AA; RestAA)) :-
 	c2p(RestA, RestAA). 
 
 /* --------------------------------------------------- More Supporting code */
+% scape spaces ss_/3
+ss_(All, [' '|RestIn], Output) :-
+    ss_(All, RestIn, Output). 
+ss_([Word|Rest], [Word|RestIn], Output) :-
+    ss_(Rest, RestIn, Output).
+ss_([], Rin, Rout) :- spaces(_, Rin, Rout). 
+
 clean_comments([], []) :- !.
 clean_comments(['%'|Rest], New) :- % like in prolog comments start with %
     jump_comment(Rest, Next), 
