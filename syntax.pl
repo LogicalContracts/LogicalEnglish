@@ -196,6 +196,7 @@ semantics2prolog(target(T), delimiter-[classify,classify],target(T)) :-
 
 declare_facts_as_dynamic(_, []) :- !. 
 declare_facts_as_dynamic(M, [F|R]) :- functor(F, is_a, A), % facts are the templates now
+    %print_message(informational, "asserted table: ~w"-[A]),
     table((M:is_a/2) as incremental), !, 
     dynamic([M:is_a/A], [incremental(true), discontiguous(true)]), declare_facts_as_dynamic(M, R). 
 declare_facts_as_dynamic(M, [F|R]) :- functor(F, P, A),  % facts are the templates now

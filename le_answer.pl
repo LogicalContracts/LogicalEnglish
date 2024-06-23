@@ -186,9 +186,9 @@ answer(English) :- %trace,
 
 % answer/2
 % answer(+Query, with(+Scenario))
-answer(English, Arg) :- %trace, 
+answer(English, Arg) :- trace, 
     le_input:parsed,
-    prepare_query(English, Arg, SwishModule, Goal, FactsPre, Command), 
+    prepare_query(English, Arg, SwishModule, Goal, FactsPre), 
     % adding isa_a/2 connections 
     % Facts = [(is_a(X,Y):-user:is_a(X,Y))|FactsPre], 
     append(FactsPre, [(is_a(A, B):-(is_a(A, C),is_a(C, B)))], Facts), 
@@ -202,7 +202,7 @@ answer(English, Arg) :- %trace,
         retract_facts(ModuleName, Facts))
     ;   %print_message(error, "no scasp SwishModule: ~w Facts: ~w Command: ~w Goal: ~w"-[SwishModule, Facts, Command, Goal]),
         setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
-            (listing(SwishModule:is_a/2), Command), 
+            (listing(SwishModule:is_a/2), Goal), 
             %call(Command), 
             %catch_with_backtrace(Command, Error, print_message(error, Error)), 
             %catch((true, Command), Error, ( print_message(error, Error), fail ) ), 
@@ -216,7 +216,9 @@ answer(English, Arg) :- %trace,
 % answer(+English, with(+Scenario), -Result)
 answer(English, Arg, EnglishAnswer) :- %trace, 
     le_input:parsed, 
-    prepare_query(English, Arg, SwishModule, Goal, Facts, Command), 
+    prepare_query(English, Arg, SwishModule, Goal, FactsPre), 
+    % adding isa_a/2 connections 
+    append(FactsPre, [(is_a(A, B):-(is_a(A, C), is_a(C, B)))], Facts), 
     % this_capsule(SwishModule), 
     % translate_command(SwishModule, English, _, Goal, PreScenario), % later -->, Kbs),
     % %copy_term(Goal, CopyOfGoal), 
@@ -227,7 +229,7 @@ answer(English, Arg, EnglishAnswer) :- %trace,
     %module(SwishModule), 
     %print_message(informational, "Calling ~w with ~w on ~w "-[Command, Facts, SwishModule]), 
     setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
-            catch_with_backtrace(Command, Error, print_message(error, Error)), 
+            catch_with_backtrace(Goal, Error, print_message(error, Error)), 
             %catch(Command, Error, ( print_message(error, Error), fail ) ), 
             _Result, 
             retract_facts(SwishModule, Facts)),
@@ -242,12 +244,19 @@ answer(English, Arg, E, Result) :- %trace,
     le_input:parsed, %myDeclaredModule(Module), 
     this_capsule(SwishModule), 
     translate_command(SwishModule, English, _, Goal, PreScenario), 
-    prepare_scenario(SwishModule, Arg, PreScenario, _Scenario, _, _, Facts),
+    ((Arg = with(ScenarioName), PreScenario=noscenario) -> Scenario=ScenarioName; Scenario=PreScenario), 
     extract_goal_command(Goal, SwishModule, InnerGoal, _Command),
+    (Scenario==noscenario -> FactsPre = [] ; SwishModule:example(Scenario, [scenario(FactsPre, _)])), !, 
+    % adding isa_a/2 connections 
+    % append(FactsPre, [(is_a(A, B):-(is_a(A, C),is_a(C, B))), (reasoner:is_a(X,Y) :- is_a(X,Y))], Facts),
+    % append(FactsPre, [(is_a_(X,Y):-is_a(X,Y)), (is_a(A, B):-(is_a_(A, C),is_a(C, B)))], Facts),
+    append(FactsPre, [(is_a(A, B):-(is_a(A, C),is_a(C, B)))], Facts),
     setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
-            catch((true, reasoner:query(at(InnerGoal, SwishModule),_,E,Result)), Error, ( print_message(error, Error), fail ) ), 
+            %catch((listing(SwishModule:is_a/2), reasoner:query(at(InnerGoal, SwishModule),Result,E,_)),             
+            catch((listing(SwishModule:is_a/2), reasoner:query(at(InnerGoal, SwishModule),_U,E,Result)), Error, ( print_message(error, Error), fail ) ),
+            %catch(reasoner:query(at(InnerGoal, SwishModule),_U,E,Result), Error, ( print_message(error, Error), fail ) ),
             _Result, 
-            retract_facts(SwishModule, Facts)). 
+            retract_facts(SwishModule, Facts)).  
 
 % prepare_query/6
 % prepare_query(+English, +Arguments, -Module, -Goal, -Facts, -Command)
@@ -300,37 +309,44 @@ parse_scenario_from_file(ScenarioModuleName, Assumptions) :- %trace,
     % print_message(informational, "CTokens: ~w "-[CTokens]), 
     phrase(le_input:assumptions_(Assumptions), CTokens).
 
-% prepare_query(+English, +Arguments, -Module, -Goal, -Facts, -Command)
-prepare_query(English, Arg, SwishModule, Goal, Facts, Command) :- %trace, 
+prepare_query(English, Arg, SwishModule, Goal, Facts) :- %trace, 
     %restore_dicts, 
-    var(SwishModule), this_capsule(SwishModule), !, 
+    var(SwishModule), this_capsule(SwishModule), % !, 
     %print_message(informational, "Module at prepare query ~w"-[SwishModule]), 
     translate_command(SwishModule, English, GoalName, Goal, PreScenario),
+    %enrich_goal(PreGoal, Goal), 
     %print_message(informational, "SwisModule: ~w, English ~w, GoalName ~w, Goal ~w, Scenario ~w"-[SwishModule, English, GoalName, Goal, PreScenario]),
     copy_term(Goal, CopyOfGoal),  
     translate_goal_into_LE(CopyOfGoal, RawGoal), name_as_atom(RawGoal, EnglishQuestion), 
-    prepare_scenario(SwishModule, Arg, PreScenario, Scenario, _, _, Facts),
+    ((Arg = with(ScenarioName), PreScenario=noscenario) -> Scenario=ScenarioName; Scenario=PreScenario),
     show_question(GoalName, Scenario, EnglishQuestion), 
     %print_message(informational, "Scenario: ~w"-[Scenario]),
+    (Scenario==noscenario -> Facts = [] ; 
+        (SwishModule:example(Scenario, [scenario(Facts, _)]) -> 
+            true;  print_message(error, "Scenario: ~w does not exist"-[Scenario]))), !.
     %print_message(informational, "Facts: ~w"-[Facts]), 
-    extract_goal_command(Goal, SwishModule, _InnerGoal, Command), !.
+    %extract_goal_command(Goal, SwishModule, _InnerGoal, Command), !.   
     %print_message(informational, "Command: ~w"-[Command]). 
 
 % prepare_query(+English, +Arguments, +Module, -Goal, -Facts, -Command)
-prepare_query(English, Arg, SwishModule, Goal, Facts, Command) :- %trace, 
+prepare_query(English, Arg, SwishModule, Goal, Facts) :- %trace, 
     %restore_dicts, 
     nonvar(SwishModule),
     %with_output_to(string(Report), listing(dict/3)),
     %print_message(informational, "prepare_query (1): Dictionaries in memory ~w\n"-[Report]),  
     translate_command(SwishModule, English, GoalName, Goal, PreScenario),
+    %enrich_goal(PreGoal, Goal), 
     copy_term(Goal, CopyOfGoal),
     %print_message(informational, "prepare_query (2): translated ~w into goalname ~w goal ~w with scenario ~w\n "-[English,GoalName,Goal,PreScenario]), 
     translate_goal_into_LE(CopyOfGoal, RawGoal), name_as_atom(RawGoal, EnglishQuestion),
-    prepare_scenario(SwishModule, Arg, PreScenario, Scenario, _, _, Facts),
+    ((Arg = with(ScenarioName), PreScenario=noscenario) -> Scenario=ScenarioName; Scenario=PreScenario),
     show_question(GoalName, Scenario, EnglishQuestion),  
     %print_message(informational, "prepare_query (3): Scenario: ~w"-[Scenario]), 
+    (Scenario==noscenario -> Facts = [] ; 
+        (SwishModule:example(Scenario, [scenario(Facts, _)]) -> 
+            true;  print_message(error, "Scenario: ~w does not exist"-[Scenario]))), !. 
     %print_message(informational, "prepare_query (4): Facts: ~w Goal: ~w Module: ~w\n "-[Facts, Goal, SwishModule]),  
-    extract_goal_command(Goal, SwishModule, _InnerGoal, Command), !.
+    %extract_goal_command(Goal, SwishModule, _InnerGoal, Command), !.
     %print_message(informational, "prepare_query (5): Ready from ~w the command ~w\n"-[English, Command]).  
 
 prepare_query(English, _, _, _, _, _) :- 
@@ -427,7 +443,7 @@ escape_uppercased(Word, EscapedWord) :-
     name(EscapedWord, NewCodes).
 
 assert_facts(_, []) :- !. 
-assert_facts(SwishModule, [F|R]) :- nonvar(F), % print_message(informational, "asserting: ~w"-[SwishModule:F]),
+assert_facts(SwishModule, [F|R]) :- nonvar(F),  %print_message(informational, "asserting: ~w"-[SwishModule:F]),
     assertz(SwishModule:F), assert_facts(SwishModule, R).
 
 retract_facts(_, []) :- !. 

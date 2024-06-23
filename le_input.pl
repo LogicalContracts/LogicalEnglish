@@ -121,7 +121,7 @@ query three is:
 :- use_module(library(prolog_stack)).
 :- table addExp//2, mulExp//2.
 :- thread_local text_size/1, error_notice/4, dict/3, meta_dict/3, example/2, local_dict/3, local_meta_dict/3,
-                last_nl_parsed/1, kbname/1, happens/2, initiates/3, terminates/3, is_type/1, is_/2, 
+                last_nl_parsed/1, kbname/1, happens/2, initiates/3, terminates/3, is_type/1, is_/2, is_a/2, 
                 predicates/1, events/1, fluents/1, metapredicates/1, parsed/0, source_lang/1, including/0. % just_saved_scasp/2. 
 :- discontiguous statement/3, declaration/4, _:example/2, _:query/2, _:is_/2. 
 
@@ -176,10 +176,27 @@ header(_, Rest, _) :-
     asserterror('LE error in the header ', Rest), 
     fail.
 
-fix_settings(Settings_, Settings2) :-
+fix_settings(Settings_, Settings3) :-
     %print_message(informational, "Settings: ~w"-[Settings_]),
     ( member(target(_), Settings_) -> Settings1 = Settings_ ; Settings1 = [target(taxlog)|Settings_] ), !,  % taxlog as default
-    Settings2 = [query(null, true), example(null, []), abducible(true,true)|Settings1]. % a hack to stop the loop when query is empty
+    % adding dynamic statements for all the predef_dict templates 
+    % adding special header for is_a/2
+    findall(Pred, filtered_dictionary(Pred), PH),
+    filter_repeats(PH, PredefHeaders), 
+    %print_message(informational, "Predefined Predicates ~w"-[PredefHeaders]),
+    ( member(predicates(Templates), Settings1) -> 
+        (   append(Previous, [predicates(Templates)|Rest], Settings1), % replacing predicates/1
+            append(Templates, PredefHeaders, AllTemplates), append(Previous, Rest, IncompleteSettings), 
+            Settings2 = [predicates(AllTemplates)|IncompleteSettings] )
+    ;   Settings2 = [predicates(PredefHeaders)|Settings1]
+    ),
+    Settings3 = [query(null, true), example(null, []), abducible(true,true)|Settings2]. % a hack to stop the loop when query is empty
+
+filter_repeats([], []) :- !.
+filter_repeats([H|R], RR) :- member(H,R), !,  filter_repeats(R, RR). 
+filter_repeats([H|R], [H|RR]) :- filter_repeats(R, RR). 
+
+fix_dictionary(Dict, Dict). 
 
 included_files(Settings2, RestoredDictEntries, CollectedRules) :-
     member(in_files(ModuleNames), Settings2),   % include all those files and get additional DictEntries before ordering
@@ -2549,6 +2566,12 @@ proper_det(105, an) :- !.
 proper_det(111, an) :- !.
 proper_det(117, an) :- !.
 proper_det(_, a). 
+
+filtered_dictionary(Pred) :-
+    dictionary(PredicateElements, _, _),  
+    PredicateElements\=[], 
+    not(le_input:prolog_predef_dict(PredicateElements, _, _)),  % not among the built ins. 
+    Pred=..PredicateElements.
 
 % ---------------------------------------------------------------- sandbox
 
