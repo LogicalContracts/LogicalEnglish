@@ -2475,7 +2475,7 @@ dictionary(Predicate, VariablesNames, Template) :- % dict(Predicate, VariablesNa
 % predef_dict([is_individual_or_company_on, A, B],
 %                    [affiliate-affiliate, date-date],
 %                    [A, is, an, individual, or, is, a, company, at, B]).
-
+predef_dict([is_of_type, Object, Type], [object-object, type-type], [Object, is, of, type, Type]). % predefining is a
 predef_dict([is_a, Object, Type], [object-object, type-type], [Object, is, an, Type]). % predefining is a
 predef_dict([is_a, Object, Type], [object-object, type-type], [Object, is, a, Type]). % predefining is a
 predef_dict([is_a, Object, Type], [object-object, type-type], [Object, is, of, Type]).
