@@ -37,7 +37,8 @@ portray_clause_ind(Clause) :-
    portray_clause(Clause). 
 
 update_file(NewFileName, URL, String) :-
-   update_gitty_file(NewFileName, URL, String). 
+   catch(update_gitty_file(NewFileName, URL, String), Ex, print_message(warning,"Could not update_gitty_file: ~w"-[Ex])). 
+   %update_gitty_file(NewFileName, URL, String). 
 
 sandbox:safe_primitive(prolog_listing:portray_clause(_)).
 sandbox:safe_primitive(write(_)). 
