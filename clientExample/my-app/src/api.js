@@ -5,8 +5,7 @@ import axios from 'axios';
 const SERVER_URL = "http://localhost:3050/taxkbapi";
 //const SERVER_URL = "https://le.logicalcontracts.com/taxkbapi";
 const MY_TOKEN = "myToken123";
-//const axiosConfig = {/*headers:{'Access-Control-Allow-Origin':'*'}*/};
-const axiosConfig = {headers:{'Access-Control-Allow-Origin':'*'}};
+const axiosConfig = {/*headers:{'Access-Control-Allow-Origin':'*'}*/};
 
 export async function loadFile(ServerFile){
     return (await axios.post(SERVER_URL, {

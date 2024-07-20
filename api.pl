@@ -26,6 +26,8 @@ limitations under the License.
 :- use_module(library(pengines)).
 :- use_module(pengine_sandbox:library(pengines)).
 :- use_module(library(sandbox)).
+:- use_module(library(http/http_cors)).
+:- set_setting(http:cors, [*]). 
 %:- use_module(library(http/http_digest)).  % to activate digest authorization options
 
 % :- multifile pengines:authentication_hook/3.
@@ -87,6 +89,7 @@ handle_api(Request) :-
     assertion(Payload.token=='myToken123'),
     (entry_point(Payload,Result)->true;Result=_{error:"Goal failed"}),
     %print_message(informational,"returning: ~w"-[Result]),
+    cors_enable,
     reply_json_dict(Result).
 
 :- discontiguous api:entry_point/2.
