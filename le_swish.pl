@@ -31,7 +31,9 @@ load_file_module(FileName, ModuleName, Flag) :-
 
 this_capsule(M) :-
    %le_program_module(M). 
-   pengine_self(M).
+   pengine_self(M), !.
+
+this_capsule(user).
 
 portray_clause_ind(Clause) :- 
    portray_clause(Clause). 

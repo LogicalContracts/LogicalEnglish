@@ -81,15 +81,17 @@ safe_module(M) :- sub_atom(M,0,_,_,leSessionModule), !.
 safe_file(F) :- sub_atom(F,_,_,_,'/moreExamples/').
 
 % handler for the original api
-:- http_handler('/taxkbapi', handle_api, []).  % this defines a web server endpoint
+%:- http_handler('/taxkbapi', handle_api, []).  % this defines a web server endpoint
+:- http_handler('/leapi', handle_api, []).  % this defines a web server endpoint for LE API
+
 handle_api(Request) :-
+    cors_enable, 
     http_read_json_dict(Request, Payload, [value_string_as(atom)]),
     %asserta(my_request(Request)), % for debugging
     %print_message(informational,"Request Payload: ~w"-[Payload]),
     assertion(Payload.token=='myToken123'),
     (entry_point(Payload,Result)->true;Result=_{error:"Goal failed"}),
-    %print_message(informational,"returning: ~w"-[Result]),
-    cors_enable,
+    %print_message(informational,"returning Result: ~w"-[Result]),
     reply_json_dict(Result).
 
 :- discontiguous api:entry_point/2.
@@ -116,6 +118,21 @@ entry_point(R, _{results:Results}) :- get_dict(operation,R,query), !,
         makeUnknownsArray(U_,U),
         makeExplanationTree(E_,E)
         ), Results).
+
+% Added for API LE
+% curl --header "Content-Type: application/json" --request POST --data '{"token":"myToken123","operation":"answer", "file": "testingle", "document":" ... ", "theQuery":"one", "scenario":"alice"}' http://localhost:3050/leapi
+entry_point(R, _{results:AnswerExplanation}) :- get_dict(operation,R,answer), !, 
+    term_string(Query,R.theQuery,[variable_names(_VarPairs_)]),
+    %print_message(informational,"entry point query asking: ~w"-[Query]),
+    le_answer:parse_and_query(R.file, en(R.document), Query, with(R.scenario), AnswerExplanation).
+    %print_message(informational,"entry point query returning: ~w"-[AnswerExplanation]).
+
+% Added for API LE
+entry_point(R, _{results:AnswerExplanation}) :- get_dict(operation,R,explain), !, 
+    term_string(Query,R.theQuery,[variable_names(_VarPairs_)]),
+    %print_message(informational,"entry point query asking: ~w"-[Query]),
+    le_answer:parse_and_query_and_explanation(R.file, en(R.document), Query, with(R.scenario), AnswerExplanation).
+    %print_message(informational,"entry point query returning: ~w"-[AnswerExplanation]).    
 
 % Example:
 %  curl --header "Content-Type: application/json" --request POST --data '{"operation":"draft", "pageURL":"http://mysite/page1#section2",  "content":[{"url":"http://mysite/page1#section2!chunk1", "text":"john flies by instruments"}, {"url":"http://mysite/page1#section2!chunk2", "text":"miguel drives with gusto"}]}' http://localhost:3050/taxkbapi
