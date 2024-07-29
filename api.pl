@@ -27,6 +27,7 @@ limitations under the License.
 :- use_module(pengine_sandbox:library(pengines)).
 :- use_module(library(sandbox)).
 :- use_module(library(http/http_cors)).
+:- use_module(library(settings)).
 :- set_setting(http:cors, [*]). 
 %:- use_module(library(http/http_digest)).  % to activate digest authorization options
 
@@ -85,7 +86,11 @@ safe_file(F) :- sub_atom(F,_,_,_,'/moreExamples/').
 :- http_handler('/leapi', handle_api, []).  % this defines a web server endpoint for LE API
 
 handle_api(Request) :-
-    cors_enable, 
+    option(method(options), Request), !,
+    cors_enable(Request,
+                  [ methods([get,post,delete]), headers([*])
+                  ]),
+    format('~n'),
     http_read_json_dict(Request, Payload, [value_string_as(atom)]),
     %asserta(my_request(Request)), % for debugging
     %print_message(informational,"Request Payload: ~w"-[Payload]),
