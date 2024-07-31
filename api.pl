@@ -86,11 +86,12 @@ safe_file(F) :- sub_atom(F,_,_,_,'/moreExamples/').
 :- http_handler('/leapi', handle_api, []).  % this defines a web server endpoint for LE API
 
 handle_api(Request) :-
-    option(method(options), Request), !,
-    cors_enable(Request,
-                  [ methods([get,post,delete]), headers([*])
-                  ]),
-    format('~n'),
+    cors_enable, 
+    % option(method(options), Request), !,
+    % cors_enable(Request,
+    %               [ methods([get,post,delete]), headers([*])
+    %               ]),
+    % format('~n'),
     http_read_json_dict(Request, Payload, [value_string_as(atom)]),
     %asserta(my_request(Request)), % for debugging
     %print_message(informational,"Request Payload: ~w"-[Payload]),

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 
-const SERVER_URL = "http://localhost:3050/leapi";
+const SERVER_URL_BASE = "http://localhost:3050";
+const SERVER_URL = SERVER_URL_BASE + "/leapi";
 const MY_TOKEN = "myToken123";
 //const axiosConfig = {/*headers:{'Access-Control-Allow-Origin':'*'}*/};
 //const axiosConfig = {headers:{'Access-Control-Allow-Origin':'*', 'Sec-Fetch-Mode': 'cors', 'Sec-Fetch-Dest': SERVER_URL}};
@@ -29,7 +30,7 @@ function App() {
       const response = await axios.post(SERVER_URL, data, {
         headers: {
           'Content-Type': 'application/json', 
-          'Access-Control-Allow-Origin':'*' //, 'Sec-Fetch-Mode': 'cors', 'Sec-Fetch-Dest': SERVER_URL
+          'Access-Control-Allow-Origin':'*' 
         }
       });
       setResponse(response.data);
