@@ -593,7 +593,7 @@ unwrapBody(targetBody(Body, _, _, _, _, _), Body).
 % hack to bring in the reasoner for explanations.  
 targetBody(G, false, _, '', [], _) :-
     this_capsule(SwishModule), extract_goal_command(G, SwishModule, _InnerG, Command), 
-    %print_message(informational, "Reducing ~w to ~w"-[G,Command]),
+    print_message(informational, "Reducing ~w to ~w"-[G,Command]),
     call(Command). 
 
 dump(templates, String) :-
@@ -918,7 +918,7 @@ le_expanded_terms(TaxlogTerms, ExpandedTerms) :-
 :- multifile kp_loader:myDeclaredModule_/1. 
 
 parse_and_query(File, Document, Question, Scenario, AnswerExplanation) :-
-    %print_message(informational, "parse_and_query ~w ~w ~w ~w"-[File, Document, Question, Scenario]),
+    print_message(informational, "parse_and_query ~w ~w ~w ~w"-[File, Document, Question, Scenario]),
     %Answer = 'respuesta + explanation'. 
 	%context_module(user), % LE programs are in the user module
 	%prolog_load_context(source,File), % atom_prefix(File,'pengine://'), % process only SWISH windows
@@ -930,11 +930,11 @@ parse_and_query(File, Document, Question, Scenario, AnswerExplanation) :-
     %M:assert(myDeclaredModule_(M)), 
     %print_message(informational, "Expanded to be asserted on ~w "-[M]), 
 	non_expanded_terms(File, TaxlogTerms, ExpandedTerms),
-    %print_message(informational, "Expanded to be asserted on ~w this ~w"-[M, ExpandedTerms]), 
+    print_message(informational, "Expanded to be asserted on ~w this ~w"-[M, ExpandedTerms]), 
     %forall(member(T, ExpandedTerms), (assertz(M:T), print_message(informational, "Asserted ~w"-[M:T]))),  % simulating term expansion
     %kp_loader:assert(myDeclaredModule_(user)), 
     %myDeclaredModule(M),
-    forall(member(T, [(:-module(File,[]))|ExpandedTerms]), assertz(M:T)), % simulating term expansion
+    forall(member(T, [(:-module(File,[])), source_lang(le)|ExpandedTerms]), assertz(M:T)), % simulating term expansion
     answer( Question, Scenario, AnswerExplanation). 
 
 parse_and_query_and_explanation(File, Document, Question, Scenario, Answer) :-

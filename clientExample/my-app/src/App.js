@@ -9,6 +9,7 @@ const MY_TOKEN = "myToken123";
 
 
 function App() {
+  const [operation, setOperation] = useState('answer'); 
   const [document, setDocument] = useState('');
   const [filename, setFilename] = useState('');
   const [theQuery, setTheQuery] = useState('');
@@ -19,10 +20,12 @@ function App() {
     event.preventDefault();
 
     const data = {
+      operation: operation, 
       token: MY_TOKEN,
       file: filename,
       document: document,
       theQuery: theQuery,
+      facts: '', 
       scenario: scenario
     };
 
@@ -41,6 +44,7 @@ function App() {
 
   return (
     <div>
+      <input type="text" placeholder="Operation" value={operation} onChange={(e) => setOperation(e.target.value)} />
       <input type="text" placeholder="Filename" value={filename} onChange={(e) => setFilename(e.target.value)} />
       <textarea placeholder="LE Document" value={document} onChange={(e) => setDocument(e.target.value)} />
       <input type="text" placeholder="Query" value={theQuery} onChange={(e) => setTheQuery(e.target.value)} />

@@ -597,7 +597,7 @@ expand_explanation_refs_le([Node|Nodes],Facts, [NewNode|NewNodes]) :-
 expand_explanation_refs_le([],_,[]). 
 
 translate_to_le(X, EnglishAnswer) :-
-    le_input:translate_goal_into_LE(X, RawAnswer), le_input:name_as_atom(RawAnswer, EnglishAnswer). 
+    le_answer:translate_goal_into_LE(X, RawAnswer), le_input:name_as_atom(RawAnswer, EnglishAnswer). 
     %print_message(informational, "Translating ~w into ~w"-[X, EnglishAnswer]), !. 
 
 expand_explanation_refs_casp([Node|Nodes],Facts,[X-NewChildren|NewNodes]) :- !,
