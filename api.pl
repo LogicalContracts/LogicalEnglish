@@ -138,8 +138,8 @@ entry_point(R, _{results:AnswerExplanation}) :- get_dict(operation,R,answer), !,
 % Added for API LE
 entry_point(R, _{results:AnswerExplanation}) :- get_dict(operation,R,explain), !, 
     term_string(Query,R.theQuery,[variable_names(_VarPairs_)]),
-    %print_message(informational,"entry point explain asking: ~w"-[Query]),
-    le_answer:parse_and_query_and_explanation(R.file, en(R.document), Query, with(R.scenario), AnswerExplanation).
+    print_message(informational,"entry point explain asking: ~w"-[Query]),
+    le_answer:parse_and_query_and_explanation_text(R.file, en(R.document), Query, with(R.scenario), AnswerExplanation).
     %print_message(informational,"entry point query returning: ~w"-[AnswerExplanation]).    
 
 % Example:

@@ -593,7 +593,7 @@ unwrapBody(targetBody(Body, _, _, _, _, _), Body).
 % hack to bring in the reasoner for explanations.  
 targetBody(G, false, _, '', [], _) :-
     this_capsule(SwishModule), extract_goal_command(G, SwishModule, _InnerG, Command), 
-    print_message(informational, "Reducing ~w to ~w"-[G,Command]),
+    %print_message(informational, "Reducing ~w to ~w"-[G,Command]),
     call(Command). 
 
 dump(templates, String) :-
@@ -674,13 +674,13 @@ dump(scasp_scenarios_queries, List, String) :-
 
 dump(constraints, List, String) :- %trace, 
     findall((false :- Body), 
-        (member( (:- Body_), List), unwrapBody(Body_, Body)), Predicates),
+        (member( (:- _:Body_), List), unwrapBody(Body_, Body)), Predicates),
     with_output_to(string(String), forall(member(Clause, Predicates), portray_clause_ind(Clause))).
     %print_message(informational, " Constraints ~w"-[String]).
 
 dump(rules, List, String) :- %trace, 
     findall((Pred :- Body), 
-        (member( (Pred :- Body_), List), unwrapBody(Body_, Body)), Predicates),
+        (member( (Pred :- _:Body_), List), unwrapBody(Body_, Body)), Predicates),
     with_output_to(string(String), forall(member(Clause, Predicates), portray_clause_ind(Clause))).
     %print_message(informational, " Rules ~w"-[String]).
 
@@ -744,13 +744,13 @@ restore_dicts(DictEntries) :- %trace,
     %myDeclaredModule(SwishModule),
     this_capsule(SwishModule), 
     %SwishModule=user,
-    %print_message(informational, "the dictionaries are being restored into module ~w"-[SwishModule]),
+    print_message(informational, "the dictionaries are being restored into module ~w"-[SwishModule]),
     (SwishModule:local_dict(_,_,_) -> findall(dict(A,B,C), SwishModule:local_dict(A,B,C), ListDict) ; ListDict = []),
     (SwishModule:local_meta_dict(_,_,_) -> findall(meta_dict(A,B,C), SwishModule:local_meta_dict(A,B,C), ListMetaDict); ListMetaDict = []),
     %(local_dict(_,_,_) -> findall(dict(A,B,C), local_dict(A,B,C), ListDict) ; ListDict = []),
     %(local_meta_dict(_,_,_) -> findall(meta_dict(A,B,C), local_meta_dict(A,B,C), ListMetaDict); ListMetaDict = []),
     append(ListDict, ListMetaDict, DictEntries), 
-    %print_message(informational, "the dictionaries being restored are ~w"-[DictEntries]),
+    print_message(informational, "the dictionaries being restored are ~w"-[DictEntries]),
     collect_all_preds(SwishModule, DictEntries, Preds),
     %print_message(informational, "the dictionaries being set dynamics are ~w"-[Preds]),
     declare_preds_as_dynamic(SwishModule, Preds). 
@@ -918,23 +918,25 @@ le_expanded_terms(TaxlogTerms, ExpandedTerms) :-
 :- multifile kp_loader:myDeclaredModule_/1. 
 
 parse_and_query(File, Document, Question, Scenario, AnswerExplanation) :-
-    print_message(informational, "parse_and_query ~w ~w ~w ~w"-[File, Document, Question, Scenario]),
+    %print_message(informational, "parse_and_query ~w ~w ~w ~w"-[File, Document, Question, Scenario]),
     %Answer = 'respuesta + explanation'. 
 	%context_module(user), % LE programs are in the user module
 	%prolog_load_context(source,File), % atom_prefix(File,'pengine://'), % process only SWISH windows
 	%prolog_load_context(term_position,TP), stream_position_data(line_count,TP,Line),
     le_taxlog_translate(Document, _, 1, TaxlogTerms),
+    %print_message(informational, "TaxlogTerms to be asserted "-[TaxlogTerms]), 
     %M = user, 
     this_capsule(M), 
     %api:set_le_program_module(M),
     %M:assert(myDeclaredModule_(M)), 
     %print_message(informational, "Expanded to be asserted on ~w "-[M]), 
 	non_expanded_terms(File, TaxlogTerms, ExpandedTerms),
-    print_message(informational, "Expanded to be asserted on ~w this ~w"-[M, ExpandedTerms]), 
+    %print_message(informational, "Expanded to be asserted on ~w this ~w"-[M, ExpandedTerms]), 
     %forall(member(T, ExpandedTerms), (assertz(M:T), print_message(informational, "Asserted ~w"-[M:T]))),  % simulating term expansion
     %kp_loader:assert(myDeclaredModule_(user)), 
     %myDeclaredModule(M),
-    forall(member(T, [(:-module(File,[])), source_lang(le)|ExpandedTerms]), assertz(M:T)), % simulating term expansion
+    forall(member(T, [(:-module(File,[])), source_lang(en)|ExpandedTerms]), assertz(M:T)), % simulating term expansion
+    %restore_dicts, 
     answer( Question, Scenario, AnswerExplanation). 
 
 parse_and_query_and_explanation(File, Document, Question, Scenario, Answer) :-
@@ -960,8 +962,10 @@ parse_and_query_and_explanation(File, Document, Question, Scenario, Answer) :-
 parse_and_query_and_explanation_text(File, Document, Question, Scenario, Answer) :-
     %print_message(informational, "parse_and_query and explanation ~w ~w ~w ~w"-[File, Document, Question, Scenario]),
     le_taxlog_translate(Document, _, 1, TaxlogTerms),
+    %print_message(informational, "TaxlogTerms to be asserted "-[TaxlogTerms]), 
     this_capsule(M), 
     non_expanded_terms(File, TaxlogTerms, ExpandedTerms),
+    %print_message(informational, "Expanded to be asserted on ~w this ~w"-[M, ExpandedTerms]),
     M:assertz(myDeclaredModule_(File)),  
     forall(member(T, [(:-module(File,[]))|ExpandedTerms]), assertz(M:T)), % simulating term expansion
     hack_module_for_taxlog(M),

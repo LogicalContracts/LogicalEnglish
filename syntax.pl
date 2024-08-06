@@ -115,18 +115,19 @@ semantics2prolog2(target(T), delimiter-[classify,classify],target(T)).
     % this_capsule(SwishModule), 
     % declare_facts_as_dynamic(SwishModule, [just_saved_scasp(_, _)]), !. 
 
+
 taxlog2prolog(if(_LineNumber,H,B), Spec, New) :- !, taxlog2prolog(if(H,B),Spec,New). % hack for LogicalEnglish
 taxlog2prolog(if(function(Call,Result),Body), neck(if)-[delimiter-[head(meta,Call),classify],SpecB], (function(Call,Result):-Body)) :- !,
     taxlogBodySpec(Body,SpecB).
-taxlog2prolog(if(at(on(H,T),Url),B), neck(if)-[delimiter-[delimiter-[SpecH,classify],classify],SpecB], (H:-targetBody(B,true,T,Url,[],taxlog))) :- !,
+taxlog2prolog(if(at(on(H,T),Url),B), neck(if)-[delimiter-[delimiter-[SpecH,classify],classify],SpecB], (H:-le_answer:targetBody(B,true,T,Url,[],taxlog))) :- !,
     taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB).
-taxlog2prolog(if(at(H,Url),B), neck(if)-[delimiter-[SpecH,classify],SpecB], (H:-targetBody(B,false,_T,Url,[],taxlog))) :- !,
+taxlog2prolog(if(at(H,Url),B), neck(if)-[delimiter-[SpecH,classify],SpecB], (H:-le_answer:targetBody(B,false,_T,Url,[],taxlog))) :- !,
     taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB).
-taxlog2prolog(if(on(H,T),B), neck(if)-[delimiter-[SpecH,classify],SpecB], (H:-targetBody(B,true,T,'',[],taxlog))) :- !,
+taxlog2prolog(if(on(H,T),B), neck(if)-[delimiter-[SpecH,classify],SpecB], (H:-le_answer:targetBody(B,true,T,'',[],taxlog))) :- !,
     taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB).
-taxlog2prolog(if(H,B),neck(if)-[SpecH,SpecB],(H:-targetBody(B,false,_,'',[],taxlog))) :- !,
+taxlog2prolog(if(H,B),neck(if)-[SpecH,SpecB],(H:-le_answer:targetBody(B,false,_,'',[],taxlog))) :- !,
     taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB).
-taxlog2prolog((because(on(H,T),Why):-B), neck(clause)-[ delimiter-[delimiter-[SpecH,classify],classify], SpecB ], (H:-targetBody(call(B),true,T,'',Why,taxlog))) :- Why\==[], !,
+taxlog2prolog((because(on(H,T),Why):-B), neck(clause)-[ delimiter-[delimiter-[SpecH,classify],classify], SpecB ], (H:-le_answer:targetBody(call(B),true,T,'',Why,taxlog))) :- Why\==[], !,
     taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB).
 taxlog2prolog(mainGoal(G,Description),delimiter-[Spec,classify],(mainGoal(G,Description):-(_=1->true;GG))) :- !, % hack to avoid 'unreferenced' highlight in SWISH
     functor(G,F,N), functor(GG,F,N), % avoid "Singleton-marked variable appears more than once"
@@ -143,16 +144,16 @@ taxlog2prolog(query(Name,Goal),delimiter-[classify,classify],query(Name,Goal)).
 
 % extending to cover new structural changes at semantical level
 
-semantics2prolog(if(N,empty,B),neck(if)-[SpecH,SpecB],(:-targetBody(B,false,_,'',[],NN))) :- !, % working rule with line number
+semantics2prolog(if(N,empty,B),neck(if)-[SpecH,SpecB],(:-le_answer:targetBody(B,false,_,'',[],NN))) :- !, % working rule with line number
     NN is N + 3, % correction to linecount
     taxlogHeadSpec(empty,SpecH), taxlogBodySpec(B,SpecB).
-semantics2prolog(if(empty,B),neck(if)-[SpecH,SpecB],(:-targetBody(B,false,_,'',[],3))) :- !, % pre-settings without line numbers
+semantics2prolog(if(empty,B),neck(if)-[SpecH,SpecB],(:-le_answer:targetBody(B,false,_,'',[],3))) :- !, % pre-settings without line numbers
     taxlogHeadSpec(empty,SpecH), taxlogBodySpec(B,SpecB). 
-semantics2prolog(if(N,H,B),neck(if)-[SpecH,SpecB],(H:-targetBody(B,false,_,'',[],NN))) :- !, % working rule with line number
+semantics2prolog(if(N,H,B),neck(if)-[SpecH,SpecB],(H:-le_answer:targetBody(B,false,_,'',[],NN))) :- !, % working rule with line number
     H\=empty,
     NN is N + 3, % correction to linecount
     taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB).
-semantics2prolog(if(H,B),neck(if)-[SpecH,SpecB],(H:-targetBody(B,false,_,'',[],3))) :- !, % pre-settings without line numbers
+semantics2prolog(if(H,B),neck(if)-[SpecH,SpecB],(H:-le_answer:targetBody(B,false,_,'',[],3))) :- !, % pre-settings without line numbers
     H\=empty,
     taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB),
     this_capsule(SwishModule),
