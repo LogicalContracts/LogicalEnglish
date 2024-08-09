@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-:- module(_ThisFileName,[start_api_server/0, set_le_program_module/1, le_program_module/1, hack_module_for_taxlog/1]).
+:- module(_ThisFileName,[start_api_server/0, set_le_program_module/1, le_program_module/1, hack_module_for_taxlog/1, handle_api/1]).
 
 % API for client apps to use the reasoner and drafter
 
