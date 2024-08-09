@@ -112,6 +112,13 @@ The University of Bologna has actively supported the development of LE, in pursu
 
 ##  <a name='Releases'></a>Release Notes
 
+- [2024-08-08] Previous version [328c4b7d1cb5e146a3e5175b4537d30a3f69c7e6]https://github.com/LogicalContracts/LogicalEnglish/commit/328c4b7d1cb5e146a3e5175b4537d30a3f69c7e6 
+	- Static Prolog LE server without SWISH
+		- From [https://github.com/LogicalContracts/LogicalEnglish/tree/main/clientExample/my-app]https://github.com/LogicalContracts/LogicalEnglish/tree/main/clientExample/my-app
+		- swipl simple_server.pl --port=3050 --staticdir='./build'
+		- with static files being produced by: npm run build
+		- from models in: [https://github.com/LogicalContracts/LogicalEnglish/tree/main/clientExample/my-app/public]https://github.com/LogicalContracts/LogicalEnglish/tree/main/clientExample/my-app/public
+		- runs from URL: http://localhost:3050/static/simple_client.html
 - [2023-06-12] Previous version [8db435763dad4afbf1cf5f8c46c16d3f53f7255c]https://github.com/LogicalContracts/LogicalEnglish/commit/8db435763dad4afbf1cf5f8c46c16d3f53f7255c
 	- New handling of mathematical expressions.
 	- New translation of is in English as unification "=" in Prolog. 
