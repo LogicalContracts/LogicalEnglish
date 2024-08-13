@@ -33,7 +33,7 @@ this_capsule(M) :-
    %le_program_module(M). 
    pengine_self(M), !.
 
-this_capsule(user).
+%this_capsule(user).
 
 portray_clause_ind(Clause) :- 
    portray_clause(Clause). 

@@ -30,7 +30,9 @@
 
 :- module(simple_server, [simple_server_main/0, simple_server_impl/1]).
 
-:- use_module(library(http/http_server), [http_server/1, http_redirect/3,
+:- use_module(library(http/thread_httpd)).
+:- use_module(library(http/http_dispatch)).
+:- use_module(library(http/http_server), [http_server/2, http_redirect/3,
                                           http_stop_server/2,
                                           http_read_json_dict/3, reply_json_dict/2]).
 :- use_module(library(http/http_path),   [http_absolute_location/3]).
@@ -40,6 +42,11 @@
 :- use_module(library(debug)).
 :- use_module(library(optparse), [opt_arguments/3]).
 :- use_module('../../api.pl', [start_api_server/0, set_le_program_module/1, le_program_module/1, hack_module_for_taxlog/1, handle_api/1]). 
+
+:- thread_pool_create(compute, 30,
+                      [ local(20000), global(100000), trail(50000),
+                        backlog(5)
+                      ]).
 
 % The most useful debug flags are here. A complete set of debug
 % flags can be found by
@@ -110,7 +117,8 @@ simple_server_impl(Opts) :-
     server_opts(Opts),
     % set_prolog_flag(verbose_file_search, true), % for debugging
     assert_server_locations(Opts),
-    http_server([port(Opts.port)
+    http_server(http_dispatch,  % LE using dispatch to expand a new thread
+                [port(Opts.port)
                  % TODO: enable ssl (https):
                  % ssl([certificate_file('cacert.pem'), % or cert.csr?
                  %      key_file('privkey.pem')]),
@@ -173,7 +181,7 @@ assert_server_locations(Opts) :-
                 http_reply_from_files(static_dir(.),
                                       % disable cache for debugging
                                       [cache(false)]),
-                [prefix]).
+                [prefix, spawn(compute)]).
 
 :- http_handler(root(json),     % localhost:9999/json
                 reply_with_json, [priority(0)]).

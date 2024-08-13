@@ -253,8 +253,8 @@ answer(English, Arg, E, Result) :- %trace,
     append(FactsPre, [(is_a(A, B):-(is_a(A, C),is_a(C, B)))], Facts),
     setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
             %catch((listing(SwishModule:is_a/2), reasoner:query(at(InnerGoal, SwishModule),Result,E,_)),             
-            catch((listing(SwishModule:is_a/2), reasoner:query(at(InnerGoal, SwishModule),_U,E,Result)), Error, ( print_message(error, Error), fail ) ),
-            %catch(reasoner:query(at(InnerGoal, SwishModule),_U,E,Result), Error, ( print_message(error, Error), fail ) ),
+            %catch((listing(SwishModule:is_a/2), reasoner:query(at(InnerGoal, SwishModule),_U,E,Result)), Error, ( print_message(error, Error), fail ) ),
+            catch_with_backtrace(reasoner:query(at(InnerGoal, SwishModule),_U,E,Result), Error, ( print_message(error, Error), fail ) ),
             _Result, 
             retract_facts(SwishModule, Facts)).  
 
@@ -594,7 +594,8 @@ unwrapBody(targetBody(Body, _, _, _, _, _), Body).
 targetBody(G, false, _, '', [], _) :-
     this_capsule(SwishModule), extract_goal_command(G, SwishModule, _InnerG, Command), 
     %print_message(informational, "Reducing ~w to ~w"-[G,Command]),
-    call(Command). 
+    %call(Command).
+    catch(Command,Caught,format("Caught: ~q~n",[Caught])). 
 
 dump(templates, String) :-
     findall(local_dict(Prolog, NamesTypes, Templates), (le_input:dict(Prolog, NamesTypes, Templates)), PredicatesDict),
@@ -935,8 +936,9 @@ parse_and_query(File, Document, Question, Scenario, AnswerExplanation) :-
     %forall(member(T, ExpandedTerms), (assertz(M:T), print_message(informational, "Asserted ~w"-[M:T]))),  % simulating term expansion
     %kp_loader:assert(myDeclaredModule_(user)), 
     %myDeclaredModule(M),
+    M:assertz(myDeclaredModule_(File)),  
     forall(member(T, [(:-module(File,[])), source_lang(en)|ExpandedTerms]), assertz(M:T)), % simulating term expansion
-    %restore_dicts, 
+    hack_module_for_taxlog(M), 
     answer( Question, Scenario, AnswerExplanation). 
 
 parse_and_query_and_explanation(File, Document, Question, Scenario, Answer) :-
