@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 
-const SERVER_URL_BASE = "http://localhost:3050";
+const SERVER_URL_BASE = "http://localhost:3052";
 const SERVER_URL = SERVER_URL_BASE + "/leapi";
 const MY_TOKEN = "myToken123";
 //const axiosConfig = {/*headers:{'Access-Control-Allow-Origin':'*'}*/};

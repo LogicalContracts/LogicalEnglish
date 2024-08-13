@@ -190,7 +190,6 @@ answer(English, Arg) :- %trace,
     le_input:parsed,
     prepare_query(English, Arg, SwishModule, Goal, FactsPre), 
     % adding isa_a/2 connections 
-    % Facts = [(is_a(X,Y):-user:is_a(X,Y))|FactsPre], 
     append(FactsPre, [(is_a(A, B):-(is_a(A, C),is_a(C, B)))], Facts), 
     ((SwishModule:just_saved_scasp(FileName, ModuleName), FileName\=null) -> 
         %print_message(informational, "To query file ~w in module ~w "-[FileName, ModuleName]),
@@ -202,8 +201,8 @@ answer(English, Arg) :- %trace,
         retract_facts(ModuleName, Facts))
     ;   %print_message(error, "no scasp SwishModule: ~w Facts: ~w Command: ~w Goal: ~w"-[SwishModule, Facts, Command, Goal]),
         setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
-            (listing(SwishModule:is_a/2), SwishModule:Goal), 
-            %call(Command), 
+            %listing(SwishModule:is_a/2), SwishModule:Goal), 
+            call(SwishModule:Goal), 
             %catch_with_backtrace(Command, Error, print_message(error, Error)), 
             %catch((true, Command), Error, ( print_message(error, Error), fail ) ), 
             _Result, 
