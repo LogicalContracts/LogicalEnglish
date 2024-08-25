@@ -27,7 +27,7 @@ limitations under the License.
 :- use_module(api). 
 
 load_file_module(FileName, ModuleName, Flag) :-
-   load_named_file(FileName, ModuleName, Flag). 
+   load_named_file(FileName, ModuleName, Flag). % in kp_loader
 
 this_capsule(M) :-
    %le_program_module(M). 
@@ -43,5 +43,5 @@ update_file(NewFileName, URL, String) :-
    %update_gitty_file(NewFileName, URL, String). 
 
 sandbox:safe_primitive(prolog_listing:portray_clause(_)).
-sandbox:safe_primitive(write(_)). 
-sandbox:safe_primitive(writeq(_)). 
+%sandbox:safe_primitive(write(_)). 
+%sandbox:safe_primitive(writeq(_)). 

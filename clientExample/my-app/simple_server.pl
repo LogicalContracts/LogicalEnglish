@@ -43,7 +43,7 @@
 :- use_module(library(optparse), [opt_arguments/3]).
 :- use_module('../../api.pl', [start_api_server/0, set_le_program_module/1, le_program_module/1, hack_module_for_taxlog/1, handle_api/1]). 
 
-:- thread_pool_create(compute, 30,
+:- thread_pool_create(compute, 5,
                       [ local(20000), global(100000), trail(50000),
                         backlog(5)
                       ]).

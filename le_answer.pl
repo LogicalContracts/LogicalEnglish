@@ -102,7 +102,7 @@ which can be used on the new command interface of LE on SWISH
     
 :- discontiguous statement/3, declaration/4, _:example/2, _:query/2, _:is_/2. 
 
-:- thread_local  just_saved_scasp/2. 
+:- thread_local  just_saved_scasp/2, psem/1. 
 
 /* ---------------------------------------------------------------  meta predicates CLI */
 
@@ -308,23 +308,23 @@ parse_scenario_from_file(ScenarioModuleName, Assumptions) :- %trace,
     % print_message(informational, "CTokens: ~w "-[CTokens]), 
     phrase(le_input:assumptions_(Assumptions), CTokens).
 
-prepare_query(English, Arg, SwishModule, Goal, Facts) :- %trace, 
+prepare_query(English, Arg, Module, Goal, Facts) :- %trace, 
     %restore_dicts, 
-    var(SwishModule), this_capsule(SwishModule), % !, 
-    %print_message(informational, "Module at prepare query ~w"-[SwishModule]), 
-    translate_command(SwishModule, English, GoalName, Goal, PreScenario),
+    var(Module), psem(Module), %this_capsule(Module), % !, 
+    %print_message(informational, "Module at prepare query ~w"-[Module]), 
+    translate_command(Module, English, GoalName, Goal, PreScenario),
     %enrich_goal(PreGoal, Goal), 
-    %print_message(informational, "SwisModule: ~w, English ~w, GoalName ~w, Goal ~w, Scenario ~w"-[SwishModule, English, GoalName, Goal, PreScenario]),
+    print_message(informational, "Module: ~w, English ~w, GoalName ~w, Goal ~w, Scenario ~w"-[Module, English, GoalName, Goal, PreScenario]),
     copy_term(Goal, CopyOfGoal),  
     translate_goal_into_LE(CopyOfGoal, RawGoal), name_as_atom(RawGoal, EnglishQuestion), 
     ((Arg = with(ScenarioName), PreScenario=noscenario) -> Scenario=ScenarioName; Scenario=PreScenario),
     show_question(GoalName, Scenario, EnglishQuestion), 
     %print_message(informational, "Scenario: ~w"-[Scenario]),
     (Scenario==noscenario -> Facts = [] ; 
-        (SwishModule:example(Scenario, [scenario(Facts, _)]) -> 
+        (Module:example(Scenario, [scenario(Facts, _)]) -> 
             true;  print_message(error, "Scenario: ~w does not exist"-[Scenario]))), !.
     %print_message(informational, "Facts: ~w"-[Facts]), 
-    %extract_goal_command(Goal, SwishModule, _InnerGoal, Command), !.   
+    %extract_goal_command(Goal, Module, _InnerGoal, Command), !.   
     %print_message(informational, "Command: ~w"-[Command]). 
 
 % prepare_query(+English, +Arguments, +Module, -Goal, -Facts, -Command)
@@ -349,9 +349,9 @@ prepare_query(English, Arg, SwishModule, Goal, Facts) :- %trace,
     %print_message(informational, "prepare_query (5): Ready from ~w the command ~w\n"-[English, Command]).  
 
 prepare_query(English, _, _, _, _, _) :- 
-    print_message(error, "Don't understand this question: ~w "-[English]). 
+    print_message(error, "Don't understand this question: ~w "-[English]). %'
 
-show_question(GoalName, Scenario, NLQuestion) :- (this_capsule(M); current_module(M)),   
+show_question(GoalName, Scenario, NLQuestion) :- psem(M), %(this_capsule(M); current_module(M)),   
     (M:source_lang(en) -> print_message(informational, "Query ~w with ~w: ~w"-[GoalName, Scenario, NLQuestion]); true),
     (M:source_lang(fr) -> print_message(informational, "La question ~w avec ~w: ~w"-[GoalName, Scenario, NLQuestion]); true),
     (M:source_lang(it) -> print_message(informational, "Domanda ~w con ~w: ~w"-[GoalName, Scenario, NLQuestion]); true), 
@@ -562,7 +562,7 @@ show(types) :-
     %    name_as_atom(ProcessedWordsAnswers, EnglishAnswer)), Templates), 
     print_message(information, "Pre-defined Types:"-[]),
     setof(Tpy, pre_is_type(Tpy), PreSet), 
-    forall(member(Tp, PreSet),print_message(informational, '~a'-[Tp])), 
+    forall(member(Tp, PreSet),print_message(informational, '~a'-[Tp])), % '
     print_message(informational, "Types defined in the current document:"-[]), 
     setof(Ty, is_type(Ty), Set), 
     forall(member(T, Set), print_message(informational, '~a'-[T])). 
@@ -592,7 +592,7 @@ unwrapBody(targetBody(Body, _, _, _, _, _), Body).
 % hack to bring in the reasoner for explanations.  
 targetBody(G, false, _, '', [], _) :-
     this_capsule(SwishModule), extract_goal_command(G, SwishModule, _InnerG, Command), 
-    %print_message(informational, "Reducing ~w to ~w"-[G,Command]),
+    print_message(informational, "Reducing ~w to ~w in ~w"-[G,Command, SwishModule]),
     %call(Command).
     catch(Command,Caught,format("Caught: ~q~n",[Caught])). 
 
@@ -625,7 +625,7 @@ dump(templates_scasp, String) :-
         Elements = [Goal|LE], 
         numbervars(Elements, 1, _), 
         format(atom(Term), Format, Elements) ), Templates),
-    with_output_to(string(String2), forall(member(T, Templates), (atom_string(T, R),write(R),write("\'.\n")))),
+    with_output_to(string(String2), forall(member(T, Templates), (atom_string(T, R),write(R),write("\'.\n")))), %'
     string_concat(String1, String2, String). 
 
 dump(source_lang, String) :-
@@ -701,8 +701,8 @@ dump(all, Module, List, String) :-
 	dump(rules, List, StringRules),
     dump(scenarios, List, StringScenarios),
     dump(queries, List, StringQueries),
-    string_concat(":-module(\'", Module, Module01),
-    string_concat(Module01, "\', []).\n", TopHeadString),  
+    string_concat(":-module(\'", Module, Module01), % '
+    string_concat(Module01, "\', []).\n", TopHeadString), % '  
     dump(source_lang, SourceLang), 
     string_concat(TopHeadString, SourceLang, TopMost), 
 	string_concat(TopMost, StringTemplates, HeadString),  
@@ -717,8 +717,8 @@ dump_scasp(Module, List, String) :-
 	dump(rules, List, StringRules),
     dump(scasp_scenarios_queries, List, StringQueriesScenarios),
     dump(abducibles_scasp, List, StringAbds),  
-    string_concat(":-module(\'", Module, Module01),
-    string_concat(Module01, "\', []).\n", TopHeadString), 
+    string_concat(":-module(\'", Module, Module01), % '
+    string_concat(Module01, "\', []).\n", TopHeadString), % ' 
     dump(source_lang_scasp, SourceLang), 
     string_concat(TopHeadString, SourceLang, TopMost), 
     % headers for scasp
@@ -926,7 +926,7 @@ parse_and_query(File, Document, Question, Scenario, AnswerExplanation) :-
     le_taxlog_translate(Document, _, 1, TaxlogTerms),
     %print_message(informational, "TaxlogTerms to be asserted "-[TaxlogTerms]), 
     %M = user, 
-    this_capsule(M), 
+    %this_capsule(M), 
     %api:set_le_program_module(M),
     %M:assert(myDeclaredModule_(M)), 
     %print_message(informational, "Expanded to be asserted on ~w "-[M]), 
@@ -935,9 +935,11 @@ parse_and_query(File, Document, Question, Scenario, AnswerExplanation) :-
     %forall(member(T, ExpandedTerms), (assertz(M:T), print_message(informational, "Asserted ~w"-[M:T]))),  % simulating term expansion
     %kp_loader:assert(myDeclaredModule_(user)), 
     %myDeclaredModule(M),
-    M:assertz(myDeclaredModule_(File)),  
-    forall(member(T, [(:-module(File,[])), source_lang(en)|ExpandedTerms]), assertz(M:T)), % simulating term expansion
-    hack_module_for_taxlog(M), 
+    %M:assertz(myDeclaredModule_(File)),
+    retractall(psem(_)), % cleaning id of previously consulted modules  
+    forall(member(T, [(:-module(File,[])), source_lang(en)|ExpandedTerms]), assertz(File:T)), % simulating term expansion
+    assert(psem(File)),  % setting this module for further reasoning
+    %hack_module_for_taxlog(M), 
     answer( Question, Scenario, AnswerExplanation). 
 
 parse_and_query_and_explanation(File, Document, Question, Scenario, Answer) :-
