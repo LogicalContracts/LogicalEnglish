@@ -241,21 +241,21 @@ answer(English, Arg, EnglishAnswer) :- %trace,
 % answer(at(English, Module), Arg, E, Result) :- %trace,
 answer(English, Arg, E, Result) :- %trace, 
     le_input:parsed, %myDeclaredModule(Module), 
-    this_capsule(SwishModule), 
-    translate_command(SwishModule, English, _, Goal, PreScenario), 
+    (psem(Module); this_capsule(Module)), 
+    translate_command(Module, English, _, Goal, PreScenario), 
     ((Arg = with(ScenarioName), PreScenario=noscenario) -> Scenario=ScenarioName; Scenario=PreScenario), 
-    extract_goal_command(Goal, SwishModule, InnerGoal, _Command),
-    (Scenario==noscenario -> FactsPre = [] ; SwishModule:example(Scenario, [scenario(FactsPre, _)])), !, 
+    extract_goal_command(Goal, Module, InnerGoal, _Command),
+    (Scenario==noscenario -> FactsPre = [] ; Module:example(Scenario, [scenario(FactsPre, _)])), !, 
     % adding isa_a/2 connections 
     % append(FactsPre, [(is_a(A, B):-(is_a(A, C),is_a(C, B))), (reasoner:is_a(X,Y) :- is_a(X,Y))], Facts),
     % append(FactsPre, [(is_a_(X,Y):-is_a(X,Y)), (is_a(A, B):-(is_a_(A, C),is_a(C, B)))], Facts),
     append(FactsPre, [(is_a(A, B):-(is_a(A, C),is_a(C, B)))], Facts),
-    setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
+    setup_call_catcher_cleanup(assert_facts(Module, Facts), 
             %catch((listing(SwishModule:is_a/2), reasoner:query(at(InnerGoal, SwishModule),Result,E,_)),             
             %catch((listing(SwishModule:is_a/2), reasoner:query(at(InnerGoal, SwishModule),_U,E,Result)), Error, ( print_message(error, Error), fail ) ),
-            catch_with_backtrace(reasoner:query(at(InnerGoal, SwishModule),_U,E,Result), Error, ( print_message(error, Error), fail ) ),
+            catch_with_backtrace(reasoner:query(at(InnerGoal, Module),_U,E,Result), Error, ( print_message(error, Error), fail ) ),
             _Result, 
-            retract_facts(SwishModule, Facts)).  
+            retract_facts(Module, Facts)).  
 
 % prepare_query/6
 % prepare_query(+English, +Arguments, -Module, -Goal, -Facts, -Command)
@@ -310,7 +310,7 @@ parse_scenario_from_file(ScenarioModuleName, Assumptions) :- %trace,
 
 prepare_query(English, Arg, Module, Goal, Facts) :- %trace, 
     %restore_dicts, 
-    var(Module), psem(Module), %this_capsule(Module), % !, 
+    var(Module), (psem(Module); this_capsule(Module)), % !, 
     %print_message(informational, "Module at prepare query ~w"-[Module]), 
     translate_command(Module, English, GoalName, Goal, PreScenario),
     %enrich_goal(PreGoal, Goal), 
@@ -351,7 +351,7 @@ prepare_query(English, Arg, SwishModule, Goal, Facts) :- %trace,
 prepare_query(English, _, _, _, _, _) :- 
     print_message(error, "Don't understand this question: ~w "-[English]). %'
 
-show_question(GoalName, Scenario, NLQuestion) :- psem(M), %(this_capsule(M); current_module(M)),   
+show_question(GoalName, Scenario, NLQuestion) :- (psem(M); this_capsule(M)), % current_module(M)),   
     (M:source_lang(en) -> print_message(informational, "Query ~w with ~w: ~w"-[GoalName, Scenario, NLQuestion]); true),
     (M:source_lang(fr) -> print_message(informational, "La question ~w avec ~w: ~w"-[GoalName, Scenario, NLQuestion]); true),
     (M:source_lang(it) -> print_message(informational, "Domanda ~w con ~w: ~w"-[GoalName, Scenario, NLQuestion]); true), 
@@ -919,49 +919,35 @@ le_expanded_terms(TaxlogTerms, ExpandedTerms) :-
 
 parse_and_query(File, Document, Question, Scenario, AnswerExplanation) :-
     %print_message(informational, "parse_and_query ~w ~w ~w ~w"-[File, Document, Question, Scenario]),
-    %Answer = 'respuesta + explanation'. 
-	%context_module(user), % LE programs are in the user module
 	%prolog_load_context(source,File), % atom_prefix(File,'pengine://'), % process only SWISH windows
 	%prolog_load_context(term_position,TP), stream_position_data(line_count,TP,Line),
     le_taxlog_translate(Document, _, 1, TaxlogTerms),
     %print_message(informational, "TaxlogTerms to be asserted "-[TaxlogTerms]), 
-    %M = user, 
-    %this_capsule(M), 
-    %api:set_le_program_module(M),
-    %M:assert(myDeclaredModule_(M)), 
     %print_message(informational, "Expanded to be asserted on ~w "-[M]), 
 	non_expanded_terms(File, TaxlogTerms, ExpandedTerms),
     %print_message(informational, "Expanded to be asserted on ~w this ~w"-[M, ExpandedTerms]), 
-    %forall(member(T, ExpandedTerms), (assertz(M:T), print_message(informational, "Asserted ~w"-[M:T]))),  % simulating term expansion
-    %kp_loader:assert(myDeclaredModule_(user)), 
-    %myDeclaredModule(M),
-    %M:assertz(myDeclaredModule_(File)),
     retractall(psem(_)), % cleaning id of previously consulted modules  
     forall(member(T, [(:-module(File,[])), source_lang(en)|ExpandedTerms]), assertz(File:T)), % simulating term expansion
     assert(psem(File)),  % setting this module for further reasoning
-    %hack_module_for_taxlog(M), 
     answer( Question, Scenario, AnswerExplanation). 
 
+% Generate an answer in html, with a nested list representing the explanation.
 parse_and_query_and_explanation(File, Document, Question, Scenario, Answer) :-
     %print_message(informational, "parse_and_query and explanation ~w ~w ~w ~w"-[File, Document, Question, Scenario]),
     le_taxlog_translate(Document, _, 1, TaxlogTerms),
-    this_capsule(M), 
+    %this_capsule(M), 
 	non_expanded_terms(File, TaxlogTerms, ExpandedTerms),
     %M:assertz(myDeclaredModule_(File)), % to enable the reasoner
-    %M:assertz(kp_loader:module_api_hack(M)), 
-    M:assertz(myDeclaredModule_(File)),  
-    forall(member(T, [(:-module(File,[]))|ExpandedTerms]), assertz(M:T)), % simulating term expansion
-    %forall(member(T, [is_a_dragon(bob), is_a_dragon(alice), is_a_parent_of(alice, bob)]), assertz(M:T)), % simulating facts addition
-    %kp_loader:loaded_kp(Answer).
-    hack_module_for_taxlog(M), 
-    %reasoner:query(at(is_happy(A), M),_,le(LE_Explanation),_), 
+    retractall(psem(_)), % cleaning id of previously consulted modules  
+    forall(member(T, [(:-module(File,[]))|ExpandedTerms]), assertz(File:T)), % simulating term expansion
+    assert(psem(File)),  % setting this module for further reasoning
+    hack_module_for_taxlog(File), % to enable the reasoner
     %print_message(informational, " Asserted ~w"-[ExpandedTerms]), 
-    %answer( Question, Scenario, Answer). 
     answer( Question, Scenario, le(LE_Explanation), _Result), 
     %with_output_to(string(Answer), write(LE_Explanation)). 
     produce_html_explanation(LE_Explanation, Answer). 
 
-% Generate a text-based answer, with a nested list represeting the explanation.
+% Generate a text-based answer, with a nested list representing the explanation.
 parse_and_query_and_explanation_text(File, Document, Question, Scenario, Answer) :-
     %print_message(informational, "parse_and_query and explanation ~w ~w ~w ~w"-[File, Document, Question, Scenario]),
     le_taxlog_translate(Document, _, 1, TaxlogTerms),
