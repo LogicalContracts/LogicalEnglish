@@ -501,9 +501,11 @@ show(prolog) :-
 
 show(rules) :- % trace, 
     this_capsule(SwishModule), 
+    %print_message(informational, "Swish Module ~w"-[SwishModule]),
     findall((Pred :- Body), 
         (dict(PredicateElements, _, _),  PredicateElements\=[], Pred=..PredicateElements,
-        clause(SwishModule:Pred, Body_), unwrapBody(Body_, Body)), Predicates),
+        clause(SwishModule:Pred, Body_), unwrapBody(Body_, Body)), Predicates), 
+    %print_message(informational, "Rules  ~w"-[Predicates]),
     %forall(member(Clause, [(is_(A,B) :- (nonvar(B), is(A,B)))|Predicates]), portray_clause_ind(Clause)).
     forall(member(Clause, Predicates), portray_clause_ind(Clause)).
 
@@ -526,6 +528,7 @@ show(queries) :- % trace,
     this_capsule(SwishModule), 
     findall((query(A,B) :- true), 
         (clause(SwishModule:query(A,B), _)), Predicates),
+    %print_message(informational, "Queries  ~w"-[Predicates]),
     forall(member(Clause, Predicates), portray_clause_ind(Clause)).
 
 show(scenarios) :- % trace, 
@@ -587,12 +590,12 @@ show(scasp, with(Q)) :-
     clause(SwishModule:query(Q,Query), _),
     print_message(informational, "/** <examples>\n?- ? ~w .\n **/ "-[Query]).
 
-unwrapBody(targetBody(Body, _, _, _, _, _), Body). 
+unwrapBody(_:targetBody(Body, _, _, _, _, _), Body). 
 
 % hack to bring in the reasoner for explanations.  
 targetBody(G, false, _, '', [], _) :-
     (psem(Module); this_capsule(Module)), extract_goal_command(G, Module, _InnerG, Command), 
-    %print_message(informational, "targetBody Reducing ~w to ~w in ~w"-[G,Command, Module]),
+    print_message(informational, "targetBody Reducing ~w to ~w in ~w"-[G,Command, Module]),
     %call(Command).
     catch(Command,Caught,format("Caught: ~q~n",[Caught])). 
 
