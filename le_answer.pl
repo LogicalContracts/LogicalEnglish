@@ -311,10 +311,10 @@ parse_scenario_from_file(ScenarioModuleName, Assumptions) :- %trace,
 prepare_query(English, Arg, Module, Goal, Facts) :- %trace, 
     %restore_dicts, 
     var(Module), (psem(Module); this_capsule(Module)), % !, 
-    print_message(informational, "Module at prepare query ~w"-[Module]), 
+    %print_message(informational, "Module at prepare query ~w"-[Module]), 
     translate_command(Module, English, GoalName, Goal, PreScenario),
     %enrich_goal(PreGoal, Goal), 
-    print_message(informational, "Module: ~w, English ~w, GoalName ~w, Goal ~w, Scenario ~w"-[Module, English, GoalName, Goal, PreScenario]),
+    %print_message(informational, "Module: ~w, English ~w, GoalName ~w, Goal ~w, Scenario ~w"-[Module, English, GoalName, Goal, PreScenario]),
     copy_term(Goal, CopyOfGoal),  
     translate_goal_into_LE(CopyOfGoal, RawGoal), name_as_atom(RawGoal, EnglishQuestion), 
     ((Arg = with(ScenarioName), PreScenario=noscenario) -> Scenario=ScenarioName; Scenario=PreScenario),
@@ -592,7 +592,7 @@ unwrapBody(targetBody(Body, _, _, _, _, _), Body).
 % hack to bring in the reasoner for explanations.  
 targetBody(G, false, _, '', [], _) :-
     (psem(Module); this_capsule(Module)), extract_goal_command(G, Module, _InnerG, Command), 
-    print_message(informational, "targetBody Reducing ~w to ~w in ~w"-[G,Command, Module]),
+    %print_message(informational, "targetBody Reducing ~w to ~w in ~w"-[G,Command, Module]),
     %call(Command).
     catch(Command,Caught,format("Caught: ~q~n",[Caught])). 
 

@@ -2475,6 +2475,14 @@ dictionary(Predicate, VariablesNames, Template) :- % dict(Predicate, VariablesNa
 % predef_dict([is_individual_or_company_on, A, B],
 %                    [affiliate-affiliate, date-date],
 %                    [A, is, an, individual, or, is, a, company, at, B]).
+predef_dict([has_affiliated_with_at, _A, B, C], [entity-entity, affiliate-affiliate, date-date], [who, affiliated, with, B, at, C]).
+predef_dict([has_affiliated_with_at, _A, B, C], [entity-entity, affiliate-affiliate, date-date], [what, entity, affiliated, with, B, at, C]).
+predef_dict([has_affiliated_with_at, A, B, _C], [entity-entity, affiliate-affiliate, date-date], [when, did, A, affiliate, with, B]).
+%predef_dict([has_affiliated_with_at, B, _A, C], [affiliate-affiliate, entity-entity, date-date], [which, entity, did, B, affiliate, with, at, C]).
+predef_dict([has_affiliated_with_at, A, B, _C], [entity-entity, affiliate-affiliate, date-date], [on, what, date, did, A, affiliate, with, B]).
+predef_dict([has_affiliated_with_at, A, B, _C], [entity-entity, affiliate-affiliate, date-date], [is, there, an, affiliation, between, A, and, B]).
+predef_dict([has_affiliated_with_at, A, B, _C], [entity-entity, affiliate-affiliate, date-date], [when, did, the, affiliation, between, A, and, B, begin]).
+% general predefinitions
 predef_dict([is_of_type, Object, Type], [object-object, type-type], [Object, is, of, type, Type]). % predefining is a
 predef_dict([is_a, Object, Type], [object-object, type-type], [Object, is, an, Type]). % predefining is a
 predef_dict([is_a, Object, Type], [object-object, type-type], [Object, is, a, Type]). % predefining is a
