@@ -1,10 +1,7 @@
-the target language is: prolog.
+the target language is: prolog. 
 
 the predicates are:
-    *a term* must not be a variable,
-    *a term* must be nonvar,
     *an entity* has affiliated with *an affiliate* at *a date*,
-    *a date* is not before *a second date*,
     *an affiliate* is an individual or is a company,
     *an affiliate* is a trust,
     *an affiliate* is a partnership,
@@ -29,11 +26,9 @@ an entity is a superannuation fund
     if the entity is a superannuation fund according to other legislation.
 
 the knowledge base 4_affiliates_3 includes:
-a term must not be a variable
-    if the term must be nonvar.
 
 an entity has affiliated with an affiliate at a date
-    if the date is not before 2009-01-01
+    if the date >= 2009-01-01
     and the affiliate is an individual 
         or the affiliate is a company
     and it is not the case that
@@ -46,17 +41,10 @@ an entity has affiliated with an affiliate at a date
         or  the affiliate acts in concert with the entity.
 
 an entity has affiliated with an affiliate at a date
-    if  the date is before 2009-01-01
-    and the entity is known
-    and the affiliate is known
+    if  the date < 2009-01-01
     and the affiliate is affiliated per older legislation with the entity.
-
-% predefined
-%an affiliate is an individual or is a company at a date
-%    if myDB_entities:is_individual_or_company_on(the affiliate,the date).
     
 scenario test is:
-    2020-01-02 is before 2009-01-01.
     company is a company. 
     company acts in accordance with directions from andrew.
     company is affiliated per older legislation with andrew.
