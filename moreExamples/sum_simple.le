@@ -1,0 +1,18 @@
+the target language is: prolog.
+
+the templates are:
+*a number* is the result. 
+*a number* is a factor. 
+
+the knowledge base sum includes:
+    
+a number S is the result if
+    S is the sum of each F such that
+         F is a factor. 
+    
+scenario one is:
+    3 is a factor.
+    2 is a factor.  
+      
+query one is:
+    which number is the result. 

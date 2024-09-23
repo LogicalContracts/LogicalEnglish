@@ -360,7 +360,7 @@ show_question(GoalName, Scenario, NLQuestion) :- (psem(M); this_capsule(M)), % c
     !.  
 
 show_answer(Goal) :- %trace, 
-    this_capsule(M), 
+    (psem(M); this_capsule(M)), 
     translate_goal_into_LE(Goal, RawAnswer), name_as_atom(RawAnswer, NLAnswer), 
     (M:source_lang(en) -> print_message(informational, "Answer: ~w"-[NLAnswer]); true), 
     (M:source_lang(fr) -> print_message(informational, "La réponse: ~w"-[NLAnswer]); true), 
@@ -595,7 +595,7 @@ unwrapBody(_:targetBody(Body, _, _, _, _, _), Body).
 % hack to bring in the reasoner for explanations.  
 targetBody(G, false, _, '', [], _) :-
     (psem(Module); this_capsule(Module)), extract_goal_command(G, Module, _InnerG, Command), 
-    print_message(informational, "targetBody Reducing ~w to ~w in ~w"-[G,Command, Module]),
+    %print_message(informational, "targetBody Reducing ~w to ~w in ~w"-[G,Command, Module]),
     %call(Command).
     catch(Command,Caught,format("Caught: ~q~n",[Caught])). 
 
@@ -677,15 +677,15 @@ dump(scasp_scenarios_queries, List, String) :-
 
 dump(constraints, List, String) :- %trace, 
     findall((false :- Body), 
-        (member( (:- _:Body_), List), unwrapBody(Body_, Body)), Predicates),
+        (member( (:- Body_), List), unwrapBody(Body_, Body)), Predicates),
     with_output_to(string(String), forall(member(Clause, Predicates), portray_clause_ind(Clause))).
     %print_message(informational, " Constraints ~w"-[String]).
 
 dump(rules, List, String) :- %trace, 
     findall((Pred :- Body), 
-        (member( (Pred :- _:Body_), List), unwrapBody(Body_, Body)), Predicates),
+        (member( (Pred :- Body_), List), unwrapBody(Body_, Body)), Predicates),
     with_output_to(string(String), forall(member(Clause, Predicates), portray_clause_ind(Clause))).
-    %print_message(informational, " Rules ~w"-[String]).
+    %print_message(informational, " Rules ~w"-[List]).
 
 dump(queries, List, String) :- 
     findall( query(Name, Query), 
@@ -927,26 +927,36 @@ parse_and_query(File, Document, Question, Scenario, AnswerExplanation) :-
     le_taxlog_translate(Document, _, 1, TaxlogTerms),
     %print_message(informational, "TaxlogTerms to be asserted "-[TaxlogTerms]), 
     %print_message(informational, "Expanded to be asserted on ~w "-[M]), 
+    retractall(psem(_)), % cleaning id of previously consulted modules  
+    assert(psem(File)),  % setting this module for further reasoning
 	non_expanded_terms(File, TaxlogTerms, ExpandedTerms),
     %print_message(informational, "Expanded to be asserted on ~w this ~w"-[M, ExpandedTerms]), 
-    retractall(psem(_)), % cleaning id of previously consulted modules  
-    forall(member(T, [(:-module(File,[])), source_lang(en)|ExpandedTerms]), assertz(File:T)), % simulating term expansion
-    assert(psem(File)),  % setting this module for further reasoning
-    answer( Question, Scenario, AnswerExplanation). 
+    forall(member(T, [(:-module(File,[])), source_lang(en)|ExpandedTerms]), 
+        ( %print_message(informational, "Asserting File:T ~w:~w"-[File,T]), 
+         assertz(File:T))), % simulating term expansion
+    answer( Question, Scenario, AnswerExplanation),
+    % cleaning memory
+    forall(member(T, [(:-module(File,[])), source_lang(en)|ExpandedTerms]), 
+        ( %print_message(informational, "Removing File:T ~w:~w"-[File,T]), 
+         retract(File:T))). 
 
 % Generate an answer in html, with a nested list representing the explanation.
 parse_and_query_and_explanation(File, Document, Question, Scenario, Answer) :-
     %print_message(informational, "parse_and_query and explanation ~w ~w ~w ~w"-[File, Document, Question, Scenario]),
     le_taxlog_translate(Document, _, 1, TaxlogTerms),
     %this_capsule(M), 
-	non_expanded_terms(File, TaxlogTerms, ExpandedTerms),
-    %M:assertz(myDeclaredModule_(File)), % to enable the reasoner
-    retractall(psem(_)), % cleaning id of previously consulted modules  
-    forall(member(T, [(:-module(File,[]))|ExpandedTerms]), assertz(File:T)), % simulating term expansion
+    retractall(psem(_)), % cleaning id of previously consulted modules 
     assert(psem(File)),  % setting this module for further reasoning
+	non_expanded_terms(File, TaxlogTerms, ExpandedTerms),
+    %M:assertz(myDeclaredModule_(File)), % to enable the reasoner 
+    forall(member(T, [(:-module(File,[]))|ExpandedTerms]), assertz(File:T)), % simulating term expansion
     hack_module_for_taxlog(File), % to enable the reasoner
     %print_message(informational, " Asserted ~w"-[ExpandedTerms]), 
     answer( Question, Scenario, le(LE_Explanation), _Result), 
+    % cleaning memory
+    forall(member(T, [(:-module(File,[])), source_lang(en)|ExpandedTerms]), 
+        ( %print_message(informational, "Removing File:T ~w:~w"-[File,T]), 
+         retract(File:T))), 
     %with_output_to(string(Answer), write(LE_Explanation)). 
     produce_html_explanation(LE_Explanation, Answer). 
 
@@ -973,7 +983,7 @@ non_expanded_terms(Name, TaxlogTerms, ExpandedTerms) :-
         member(TT_,TaxlogTerms), 
         (is_list(TT_)->member(TT,TT_);TT=TT_), % the LE translator generates a list of lists... and non lists
         ((member(target(prolog),TaxlogTerms);member(target(scasp),TaxlogTerms)) -> 
-            semantics2prolog2(TT,_,PrologTerm); true) % disabling taxlog translation
+            semantics2prolog(TT,_,PrologTerm); true) % disabling taxlog translation
         ), ExpandedTerms_0) 
     ; ExpandedTerms_0 = []),
     % member(target(prolog),TaxlogTerms), 

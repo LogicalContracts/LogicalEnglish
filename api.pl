@@ -95,7 +95,7 @@ handle_api(Request) :-
     % format('~n'),
     http_read_json_dict(Request, Payload, [value_string_as(atom)]),
     %asserta(my_request(Request)), % for debugging
-    print_message(informational,"Request Payload: ~w"-[Payload]),
+    %print_message(informational,"Request Payload: ~w"-[Payload]),
     assertion(Payload.token=='myToken123'),
     (entry_point(Payload,Result)->true;Result=_{error:"Goal failed"}),
     print_message(informational,"returning Result: ~w"-[Result]),
@@ -118,7 +118,7 @@ handle_api(Request) :-
 %   each result is a {result: true/false/unknown, bindings:VarsValuesArray, unknowns: ArrayOfTerm, why: ExplanationTerm}
 entry_point(R, _{results:Results}) :- get_dict(operation,R,query), !, 
     term_string(Query,R.theQuery,[variable_names(VarPairs_)]),
-    print_message(informational,"entry point query asking: ~w"-[Query]),
+    %print_message(informational,"entry point query asking: ~w"-[Query]),
     (get_dict(facts,R,Facts_) -> (is_list(Facts_) -> maplist(term_string,Facts,Facts_) ; Facts=Facts_) ; Facts=[]),
     findall( _{bindings:VarPairs, unknowns:U, result:Result, why:E}, (
         query_with_facts(at(Query,R.module),Facts,unknowns(U_),taxlogExplanation(E_),Result),
@@ -131,14 +131,14 @@ entry_point(R, _{results:Results}) :- get_dict(operation,R,query), !,
 % curl --header "Content-Type: application/json" --request POST --data '{"token":"myToken123","operation":"answer", "file": "testingle", "document":" ... ", "theQuery":"one", "scenario":"alice"}' http://localhost:3050/leapi
 entry_point(R, _{results:AnswerExplanation}) :- get_dict(operation,R,answer), !, 
     term_string(Query,R.theQuery,[variable_names(_VarPairs_)]),
-    print_message(informational,"entry point answer asking: ~w"-[Query]),
+    %print_message(informational,"entry point answer asking: ~w"-[Query]),
     le_answer:parse_and_query(R.file, en(R.document), Query, with(R.scenario), AnswerExplanation).
     %print_message(informational,"entry point query returning: ~w"-[AnswerExplanation]).
 
 % Added for API LE
 entry_point(R, _{results:AnswerExplanation}) :- get_dict(operation,R,explain), !, 
     term_string(Query,R.theQuery,[variable_names(_VarPairs_)]),
-    print_message(informational,"entry point explain asking: ~w"-[Query]),
+    %print_message(informational,"entry point explain asking: ~w"-[Query]),
     le_answer:parse_and_query_and_explanation(R.file, en(R.document), Query, with(R.scenario), AnswerExplanation).
     %print_message(informational,"entry point query returning: ~w"-[AnswerExplanation]).    
 

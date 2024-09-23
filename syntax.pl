@@ -156,8 +156,8 @@ semantics2prolog(if(N,H,B),neck(if)-[SpecH,SpecB],(H:-le_answer:targetBody(B,fal
 semantics2prolog(if(H,B),neck(if)-[SpecH,SpecB],(H:-le_answer:targetBody(B,false,_,'',[],3))) :- !, % pre-settings without line numbers
     H\=empty,
     taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB),
-    this_capsule(SwishModule),
-    declare_facts_as_dynamic(SwishModule, [H]). 
+    (le_answer:psem(Module); this_capsule(Module)),
+    declare_facts_as_dynamic(Module, [H]). 
 %semantics2prolog(if(H,B),neck(if)-[SpecH,SpecB],(H:-B)) :- !,
 %    SpecH=classify, SpecB=classify. 
     %taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB).
@@ -165,39 +165,39 @@ semantics2prolog(if(H,B),neck(if)-[SpecH,SpecB],(H:-le_answer:targetBody(B,false
 %    functor(G,F,N), functor(GG,F,N), % avoid "Singleton-marked variable appears more than once"
 %    taxlogBodySpec(G,Spec).
 semantics2prolog(abducible(Abd,Body),delimiter-[classify,classify],abducible(Abd,Body)) :-
-    this_capsule(SwishModule),
-    declare_facts_as_dynamic(SwishModule, [abducible(_,_)]), !. 
+    (le_answer:psem(Module); this_capsule(Module)),
+    declare_facts_as_dynamic(Module, [abducible(_,_)]), !. 
 semantics2prolog(example(T,Sequence),delimiter-[classify,Spec],example(T,Sequence)) :-  
-    this_capsule(SwishModule),
-    declare_facts_as_dynamic(SwishModule, [example(_,_)]), !, 
+    (le_answer:psem(Module); this_capsule(Module)),
+    declare_facts_as_dynamic(Module, [example(_,_)]), !, 
     Spec = classify. % just a hack - scenarioSequenceSpec must be different for prolog's scenarios
     %(Sequence==[]->Spec=classify ; (Spec=list-SeqSpec, scenarioSequenceSpec(Sequence,SeqSpec))).
 semantics2prolog(query(Name,Goal),delimiter-[classify,classify],query(Name,Goal)) :-
-    this_capsule(SwishModule),
-    declare_facts_as_dynamic(SwishModule, [query(_,_)]), !. 
+    (le_answer:psem(Module); this_capsule(Module)),
+    declare_facts_as_dynamic(Module, [query(_,_)]), !. 
 semantics2prolog(metapredicates(Assumptions), delimiter-[classify,classify],metapredicates([N])) :- 
-    this_capsule(SwishModule), lists:length(Assumptions,N),
-    declare_facts_as_dynamic(SwishModule, Assumptions), !. 
+    (le_answer:psem(Module); this_capsule(Module)), lists:length(Assumptions,N),
+    declare_facts_as_dynamic(Module, Assumptions), !. 
 semantics2prolog(predicates(Assumptions), delimiter-[classify,classify],predicates([N])) :- 
-    this_capsule(SwishModule), lists:length(Assumptions,N),
-    declare_facts_as_dynamic(SwishModule, Assumptions), !. 
+    (le_answer:psem(Module); this_capsule(Module)), lists:length(Assumptions,N),
+    declare_facts_as_dynamic(Module, Assumptions), !. 
     %print_message(informational, "asserted: ~w"-[Assumptions]).
 semantics2prolog(events(Assumptions), delimiter-[classify,classify],events([N])) :- 
-    this_capsule(SwishModule), lists:length(Assumptions,N),
-    declare_facts_as_dynamic(SwishModule, [happens(_,_), initiates(_,_,_), terminates(_,_,_)|Assumptions]), !.
+    (le_answer:psem(Module); this_capsule(Module)), lists:length(Assumptions,N),
+    declare_facts_as_dynamic(Module, [happens(_,_), initiates(_,_,_), terminates(_,_,_)|Assumptions]), !.
 semantics2prolog(fluents(Assumptions), delimiter-[classify,classify],fluents([N])) :-
-    this_capsule(SwishModule), lists:length(Assumptions,N),
-    declare_facts_as_dynamic(SwishModule, [it_is_illegal(_,_)|Assumptions]), !.
+    (le_answer:psem(Module); this_capsule(Module)), lists:length(Assumptions,N),
+    declare_facts_as_dynamic(Module, [it_is_illegal(_,_)|Assumptions]), !.
 semantics2prolog(target(T), delimiter-[classify,classify],target(T)) :- 
-    this_capsule(SwishModule), 
-    declare_facts_as_dynamic(SwishModule, [just_saved_scasp(_, _)]), !. 
+    (le_answer:psem(Module); this_capsule(Module)),
+    declare_facts_as_dynamic(Module, [just_saved_scasp(_, _)]), !. 
 
 % assuming one example -> one scenario -> one list of facts. % deprecated
 % declare_dynamic(Module, [scenario(Facts, _)]) :- declare_facts_as_dynamic(Module, Facts).
 
 declare_facts_as_dynamic(_, []) :- !. 
 declare_facts_as_dynamic(M, [F|R]) :- functor(F, is_a, A), % facts are the templates now
-    %print_message(informational, "asserted table: ~w"-[A]),
+    %print_message(informational, "asserted table: is_a ~w on ~w"-[A, M]),
     table((M:is_a/2) as incremental), !, 
     dynamic([M:is_a/A], [incremental(true), discontiguous(true)]), declare_facts_as_dynamic(M, R). 
 declare_facts_as_dynamic(M, [F|R]) :- functor(F, P, A),  % facts are the templates now
