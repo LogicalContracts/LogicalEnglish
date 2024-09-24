@@ -306,13 +306,12 @@ an asset is a CGT exempt asset
 an asset is a CGT exempt asset
   if the asset belongs to a person
   and the person was a resident of Norfolk Island at a date
-  and the date is before 2015-10-24.
+  and the date < 2015-10-24.
 
 % An asset is a CGT exempt asset if the asset was acquired on or before 19 September 1985.
 an asset is a CGT exempt asset
   if the asset was acquired at a date
-  and the date is before 1985-09-19
-      or the date is equal to 1985-09-19. 
+  and the date =< 1985-09-19. 
         
 scenario Colin is:
     asset one belongs to Colin.

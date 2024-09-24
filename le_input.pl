@@ -2508,8 +2508,8 @@ prolog_predef_dict([\=, T1, T2], [thing_1-thing, thing_2-thing], [T1, is, differ
 prolog_predef_dict([==, T1, T2], [thing_1-thing, thing_2-thing], [T1, is, equivalent, to, T2]).
 prolog_predef_dict([is_not_before, T1, T2], [time1-time, time2-time], [T1, is, not, before, T2]). % see reasoner.pl before/2
 prolog_predef_dict([=, T1, T2], [thing_1-thing, thing_2-thing], [T1, is, equal, to, T2]).
-prolog_predef_dict([isbefore, T1, T2], [time1-time, time2-time], [T1, is, before, T2]). % see reasoner.pl before/2
-prolog_predef_dict([isafter, T1, T2], [time1-time, time2-time], [T1, is, after, T2]).  % see reasoner.pl before/2
+prolog_predef_dict([<, T1, T2], [time1-time, time2-time], [T1, is, before, T2]). 
+prolog_predef_dict([>, T1, T2], [time1-time, time2-time], [T1, is, after, T2]).  
 prolog_predef_dict([member, Member, List], [member-object, list-list], [Member, is, in, List]).
 %prolog_predef_dict([is_, A, B], [term-term, expression-expression], [A, is, B]). % builtin Prolog assignment
 prolog_predef_dict([nonvar, T1], [thing_1-thing], [T1, is, known]). % is it instantiated?

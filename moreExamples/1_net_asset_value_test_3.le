@@ -56,7 +56,7 @@ A person has relevant asset an asset
 
 A person has relevant asset an asset
     if the person is affiliated with an affiliate
-    and the affiliate owns the assethas_cgt_assets_net_value_of_at
+    and the affiliate owns the asset
     and the asset is used in business of the person
         or the person is connected to a connection C
             and the asset is used in business of C
