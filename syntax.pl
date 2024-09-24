@@ -201,7 +201,7 @@ declare_facts_as_dynamic(M, [F|R]) :- functor(F, is_a, A), % facts are the templ
     table((M:is_a/2) as incremental), !, 
     dynamic([M:is_a/A], [incremental(true), discontiguous(true)]), declare_facts_as_dynamic(M, R). 
 declare_facts_as_dynamic(M, [F|R]) :- functor(F, P, A),  % facts are the templates now
-    %print_message(informational, "asserted dynamic local discontiguous: ~w"-[P]),
+    %print_message(informational, "asserted dynamic local discontiguous: ~w:~w"-[M,P]),
     dynamic([M:P/A], [thread(local), discontiguous(true)]), declare_facts_as_dynamic(M, R). 
 
 % note: keep the above cases coherent with kp_loader:system_predicate/1

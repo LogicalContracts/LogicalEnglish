@@ -594,10 +594,10 @@ unwrapBody(_:targetBody(Body, _, _, _, _, _), Body).
 
 % hack to bring in the reasoner for explanations.  
 targetBody(G, false, _, '', [], _) :-
-    (psem(Module); this_capsule(Module)), extract_goal_command(G, Module, _InnerG, Command), 
+    ((psem(Module), !); this_capsule(Module)), extract_goal_command(G, Module, _InnerG, Command), 
     %print_message(informational, "targetBody Reducing ~w to ~w in ~w"-[G,Command, Module]),
     %call(Command).
-    catch(Command,Caught,format("Caught: ~q~n",[Caught])). 
+    catch(Command,Caught,print_message(error, "Caught: ~w:~q~n"-[Module, Caught])). 
 
 dump(templates, String) :-
     findall(local_dict(Prolog, NamesTypes, Templates), (le_input:dict(Prolog, NamesTypes, Templates)), PredicatesDict),

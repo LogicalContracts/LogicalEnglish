@@ -1,7 +1,9 @@
-the target language is: prolog. 
+the target language is: prolog.
 
 the predicates are:
     *an entity* has affiliated with *an affiliate* at *a date*,
+    *a date* is before or at *a second date*,
+    *a date* is after *a second date*,
     *an affiliate* is an individual or is a company,
     *an affiliate* is a trust,
     *an affiliate* is a partnership,
@@ -28,7 +30,7 @@ an entity is a superannuation fund
 the knowledge base 4_affiliates_3 includes:
 
 an entity has affiliated with an affiliate at a date
-    if the date >= 2009-01-01
+    if the date is after 2009-01-01
     and the affiliate is an individual 
         or the affiliate is a company
     and it is not the case that
@@ -41,13 +43,32 @@ an entity has affiliated with an affiliate at a date
         or  the affiliate acts in concert with the entity.
 
 an entity has affiliated with an affiliate at a date
-    if  the date < 2009-01-01
+    if  the date is before or at 2009-01-01
     and the affiliate is affiliated per older legislation with the entity.
     
 scenario test is:
+    2020-01-02 is after 2009-01-01. 
     company is a company. 
     company acts in accordance with directions from andrew.
     company is affiliated per older legislation with andrew.
     
 query one is:
     andrew has affiliated with company at 2020-01-02.
+
+query two is:
+    who affiliated with which entity at which date. 
+
+query three is:
+    what entity affiliated with which company at which date. 
+
+query four is:
+    when did which entity affiliate with which other entity.
+
+query five is:
+    on what date did which entity affiliate with which company. 
+
+query six is:
+    is there an affiliation between which entity and which company. 
+    
+query seven is:
+    when did the affiliation between which entity and which company begin.
