@@ -949,7 +949,7 @@ parse_and_query_and_explanation(File, Document, Question, Scenario, Answer) :-
     assert(psem(File)),  % setting this module for further reasoning
 	non_expanded_terms(File, TaxlogTerms, ExpandedTerms),
     %M:assertz(myDeclaredModule_(File)), % to enable the reasoner 
-    forall(member(T, [(:-module(File,[]))|ExpandedTerms]), assertz(File:T)), % simulating term expansion
+    forall(member(T, [(:-module(File,[])), source_lang(en)|ExpandedTerms]), assertz(File:T)), % simulating term expansion
     hack_module_for_taxlog(File), % to enable the reasoner
     %print_message(informational, " Asserted ~w"-[ExpandedTerms]), 
     answer( Question, Scenario, le(LE_Explanation), _Result), 
@@ -965,14 +965,19 @@ parse_and_query_and_explanation_text(File, Document, Question, Scenario, Answer)
     %print_message(informational, "parse_and_query and explanation ~w ~w ~w ~w"-[File, Document, Question, Scenario]),
     le_taxlog_translate(Document, _, 1, TaxlogTerms),
     %print_message(informational, "TaxlogTerms to be asserted "-[TaxlogTerms]), 
-    this_capsule(M), 
+    %this_capsule(M), , 
+    retractall(psem(_)), % cleaning id of previously consulted modules 
+    assert(psem(File)),  % setting this module for further reasoning
     non_expanded_terms(File, TaxlogTerms, ExpandedTerms),
     %print_message(informational, "Expanded to be asserted on ~w this ~w"-[M, ExpandedTerms]),
-    M:assertz(myDeclaredModule_(File)),  
-    forall(member(T, [(:-module(File,[]))|ExpandedTerms]), assertz(M:T)), % simulating term expansion
-    hack_module_for_taxlog(M),
+    %M:assertz(myDeclaredModule_(File)),  
+    forall(member(T, [(:-module(File,[])), source_lang(en)|ExpandedTerms]), assertz(File:T)), % simulating term expansion
+    hack_module_for_taxlog(File),
     (member(target(scasp),TaxlogTerms) -> answer(Question, Scenario);
-    answer( Question, Scenario, le(LE_Explanation), _Result)),
+    answer( Question, Scenario, le(LE_Explanation), _Result)),    % cleaning memory
+    forall(member(T, [(:-module(File,[])), source_lang(en)|ExpandedTerms]), 
+        ( %print_message(informational, "Removing File:T ~w:~w"-[File,T]), 
+         retract(File:T))), 
     produce_text_explanation(LE_Explanation, Answer). 
 
 % non_expanded_terms/2 is just as the one above, but with semantics2prolog2 instead of semantics2prolog that has many other dependencies. 
