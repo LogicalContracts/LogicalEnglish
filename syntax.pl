@@ -66,10 +66,10 @@ P on T at URL if Body --> P :- targetBody(Body,true,T,URL,[],LE_line or taxlog)
 P at URL if Body  -->  P :- targetBody(Body,false,_,URL,[],LE_line or taxlog)
 */
 semantics2prolog2(if(N,empty,B),neck(if)-[],(:-le_answer:targetBody(B,false,_,'',[],NN))) :- !, % constraints for scasp
-    NN is N + 3. % correction to linecount
+    nonvar(N), NN is N + 3. % correction to linecount
 semantics2prolog2(if(empty,B),neck(if)-[],(:-le_answer:targetBody(B,false,_,'',[],3))) :- !. % constraints for scasp
 semantics2prolog2(if(N,H,B),neck(if)-[],(H:-le_answer:targetBody(B,false,_,'',[],NN))) :- !, % working rule with line number
-    H\=empty,
+    nonvar(N), H\=empty,
     NN is N + 3. % correction to linecount
     %taxlogHeadSpec(H,SpecH), taxlogBodySpec(B,SpecB).
 semantics2prolog2(if(H,B),neck(if)-[],(H:-le_answer:targetBody(B,false,_,'',[],3))) :- !, % pre-settings without line numbers
@@ -99,9 +99,9 @@ semantics2prolog2(metapredicates(Assumptions), delimiter-[classify,classify],met
     lists:length(Assumptions,N).
     % declare_facts_as_dynamic(SwishModule, Assumptions), !. 
 semantics2prolog2(predicates(Assumptions), delimiter-[classify,classify],predicates([N])) :- !,
-    % this_capsule(SwishModule), 
-    lists:length(Assumptions,N).
-    % declare_facts_as_dynamic(SwishModule, Assumptions), !. 
+    this_capsule(SwishModule), 
+    lists:length(Assumptions,N),
+    declare_facts_as_dynamic(SwishModule, Assumptions), !. 
     %print_message(informational, "asserted: ~w"-[Assumptions]).
 semantics2prolog2(events(Assumptions), delimiter-[classify,classify],events([N])) :- !, 
     % this_capsule(SwishModule), 
@@ -180,7 +180,7 @@ semantics2prolog(metapredicates(Assumptions), delimiter-[classify,classify],meta
     declare_facts_as_dynamic(Module, Assumptions), !. 
 semantics2prolog(predicates(Assumptions), delimiter-[classify,classify],predicates([N])) :- 
     (le_answer:psem(Module); this_capsule(Module)), lists:length(Assumptions,N),
-    declare_facts_as_dynamic(Module, Assumptions), !. 
+    declare_facts_as_dynamic(Module, Assumptions). 
     %print_message(informational, "asserted: ~w"-[Assumptions]).
 semantics2prolog(events(Assumptions), delimiter-[classify,classify],events([N])) :- 
     (le_answer:psem(Module); this_capsule(Module)), lists:length(Assumptions,N),
@@ -202,7 +202,7 @@ declare_facts_as_dynamic(M, [F|R]) :- functor(F, is_a, A), % facts are the templ
     dynamic([M:is_a/A], [incremental(true), discontiguous(true)]), declare_facts_as_dynamic(M, R). 
 declare_facts_as_dynamic(M, [F|R]) :- functor(F, P, A),  % facts are the templates now
     %print_message(informational, "asserted dynamic local discontiguous: ~w:~w"-[M,P]),
-    dynamic([M:P/A], [thread(local), discontiguous(true)]), declare_facts_as_dynamic(M, R). 
+    dynamic([M:P/A], [discontiguous(true)]), declare_facts_as_dynamic(M, R). 
 
 % note: keep the above cases coherent with kp_loader:system_predicate/1
 

@@ -53,13 +53,13 @@ query_with_facts(Goal,Facts_,OnceUndo,unknowns(Unknowns),E,Outcome) :- %trace,
         (print_message(error,"No knowledge module specified"-[]), fail)),
     context_module(Me),
     (shouldMapModule(M_,M)->true;M=M_),
-    (is_list(Facts_)-> Facts=Facts_; example_fact_sequence(M,Facts_,Facts)),
+    (is_list(Facts_)-> Facts=Facts_; example_fact_sequence(M,Facts_,Facts)), %trace, 
     Caller = Me:(
         i(at(G,M),OnceUndo,U,Result_),
         Result_=..[Outcome,E_],
         expand_explanation_refs(E_,Facts,E)
         ),
-    retractall(hypothetical_fact(_,_,_,_,_,_)),
+    retractall(hypothetical_fact(_,_,_,_,_,_)), %trace, 
     (OnceUndo==true -> (true, once_with_facts(Caller, M, Facts, true)) ; (true, call_with_facts(Caller, M, Facts))),
     list_without_variants(U,Unknowns_), % remove duplicates, keeping the first clause reference for each group
     mapModulesInUnknwons(Unknowns_,Unknowns).
@@ -84,15 +84,18 @@ render_question(G/_,Q) :- format(string(Q)," Is ~w true?",[G]).
 % list_without_variants(+L,-NL) 
 % Remove duplicates from list L, without binding variables, and keeping last occurrences in their original order
 list_without_variants([X/Cref|L],[X/Cref|NL]) :- !, remove_all_variants(L,X,LL), list_without_variants(LL,NL).
+list_without_variants([X|L],[X|NL]) :- !, remove_all_variants(L,X,LL), list_without_variants(LL,NL). % added to support abducibles
 list_without_variants([],[]).
 % remove_all_variants(+List,+Term,-NewList)
 remove_all_variants(L,T,NL) :- select(X/_Cref,L,LL), variant(X,T), !, remove_all_variants(LL,T,NL).
+remove_all_variants(L,T,NL) :- select(X,L,LL), variant(X,T), !, remove_all_variants(LL,T,NL). % added to support abducibles
 remove_all_variants(L,_,L).
 
 niceModule(Goal,NiceGoal) :- nonvar(Goal), Goal=at(G,Ugly), moduleMapping(Nice,Ugly), !, NiceGoal=at(G,Nice).
 niceModule(G,G).
 
 mapModulesInUnknwons([G/Cref|U], [NG/Cref|NU]) :- !, niceModule(G,NG), mapModulesInUnknwons(U,NU).
+mapModulesInUnknwons([G|U], [NG|NU]) :- !, niceModule(G,NG), mapModulesInUnknwons(U,NU).
 mapModulesInUnknwons([],[]).
 
 % i(+AtGoal,+OnceTimed,-Unknowns,-ExplainedResult) always succeeds, with result true(Explanation) or false(Explanation)
@@ -100,7 +103,7 @@ mapModulesInUnknwons([],[]).
 i( at(G,KP),OnceTimed,U,Result) :- % hack to use the latest module version on the SWISH window
     shouldMapModule(KP,UUID), !,
     i( at(G,UUID),OnceTimed,U,Result).
-i( at(G,KP),OnceTimed,Unknowns,Result) :- !,
+i( at(G,KP),OnceTimed,Unknowns,Result) :- %!,
     reset_errors,
     context_module(M), 
     nextGoalID(ID),
@@ -132,22 +135,33 @@ i( G,_,_,_) :- print_message(error,"Top goal ~w should be qualified with ' at kn
 i(G,M,_,_,_,_) :- var(G), !, throw(variable_call_at(M)).
 i(true, _, _, _, U, E) :- !, U=[], E=[].
 i(false, _, _, _, _U, _E) :- !, fail.
-i(and(A,B), M, CID, Cref, U, E) :- !, i((A,B),M,CID,Cref,U,E).
-i((A,B), M, CID, Cref, U, E) :- !, i(A,M,CID,Cref,U1,E1), i(B,M,CID,Cref,U2,E2), append(U1,U2,U), append(E1,E2,E).
-i(or(A,B), M, CID, Cref, U, E) :- !, i((A;B),M,CID,Cref,U,E).
-i((A;B), M, CID, Cref, U, E) :- !, (i(A,M,CID,Cref,U,E) ; i(B,M,CID,Cref,U,E)).
+%i(and(A,B), M, CID, Cref, U, E) :- !, i((A,B),M,CID,Cref,U,E).
+i((A,B), M, CID, Cref, U, E) :- !, 
+    i(A,M,CID,Cref,U1,E1), i(B,M,CID,Cref,U2,E2), append(U1,U2,U), append(E1,E2,E).
+%i(or(A,B), M, CID, Cref, U, E) :- !, i((A;B),M,CID,Cref,U,E).
+i((A;B), M, CID, Cref, U, E) :- !, 
+    (i(A,M,CID,Cref,U,E) ; i(B,M,CID,Cref,U,E)).
 i(must(I,M), Mod, CID, Cref, U, E) :- !, i(then(I,M), Mod, CID, Cref, U, E).
 i(\+ G,M,CID, Cref, U,E) :- !, i( not(G),M,CID,Cref,U,E).
-i(not(G), M, CID, Cref, NotU, NotE) :- !, 
+i(not G, M, CID, Cref, NotU, NotE) :- !, 
     newGoalID(NotID),
     % our negation as failure requires no unknowns:
-    ( i( G, M, NotID, Cref, U, E) -> (
+    ( i( G, M, NotID, Cref, U, E1) -> (
         assert( failed(NotID,M,CID,Cref,not(G))),
-        assert( failed_success(NotID,U,E)),
+        assert( failed_success(NotID,U,E1)),
         fail
     ) ; (
-        NotE = [f(NotID,M,CID,_NotHere_TheyAreAsserted)], NotU=[]
-    )).
+        % NotE = [f(NotID,M,CID,_NotHere_TheyAreAsserted)], NotU=[]
+        (failed_success(NotID, U_, E_) -> (    
+            NotE=[s(not(G),meta,E_)], NotU = U_
+            % NotE = [s(NotID,M,CID, E_)], NotU=U_
+            %NotU = U_, NotE=[s(NotID,M,CID,E_)], E=[f(not(G),M,meta,NotE)] %, print_message(error, "explanation ~w"-[E])
+        )
+        ; (
+            NotE = [f(NotID,M,CID,_NotHere_TheyAreAsserted)], NotU=[]
+            %NotE = [f(NotID,M,CID,_)], NotU=[],  E=[s(not(G),M,meta,NotE)] )%, print_message(error, "explanation NOT ~w"-[E]) )
+    ) ) 
+    ) ).
 i(!,_,_,_,_,_) :- throw(no_cuts_allowed).
 i(';'(C->T,Else), M, CID, Cref, U, E) :- !,% should we forbid Prolog if-then-elses..?
     nextGoalID(ID),
@@ -242,16 +256,19 @@ i(findall(X,G,L),M,CID,Cref,U,E) :- !,
 %     (Q_=Format-Args -> format(string(Q__),Format,Args); Q_=Q__),
 %     U=[at(Q__,M)], E=[u(at(Q__,M),M,Cref,[])].
 i(M:G,Mod,CID,Cref,U,E) :- !, i(at(G,M),Mod,CID,Cref,U,E).
+i(G, M, CID, Cref, U,E) :- not(le_answer:abducing), G = is_a(_,_), !,  % explicitly added to handle the taxonomies when not abducing them
+    catch(call(M:G), Error, print_message(error, "The error is ~w"-[(CID, Error)])),
+    U = [], E=[s(G,M,Cref,[])]. 
 i(G,M,CID,Cref,U,E) :- system_predicate(G), !, 
     evalArgExpressions(G,M,NewG,CID,Cref,Uargs,E_),
     % floundering originates unknown:
-    catch(( myCall(M:NewG), U=Uargs, E=E_), 
-        error(_Error,_Cx), 
-        (append(Uargs,[at(instantiation_error(G),M)/c(Cref)],U), append(E_,[u(instantiation_error(G),M,Cref,[])],E) )).
+    catch(( myCall(M:NewG), U=Uargs, E=E_), %print_message(informational,"The goal is ~w"-[(G, NewG, U, E)])), 
+         error(_Error,_Cx), 
+         (  append(Uargs,[at(instantiation_error(G),M)/c(Cref)],U), append(E_,[u(instantiation_error(G),M,Cref,[])],E) )).
 i(at(G,KP),M,CID,Cref,U,E) :- shouldMapModule(KP,UUID), !, 
     i(at(G,UUID),M,CID,Cref,U,E). % use SWISH's latest editor version
-i(At,Mod,CID,Cref,U,E) :- At=at(G,M_), !, 
-    atom_string(M,M_),
+i(At,Mod,CID,Cref,U,E) :- At=at(G,M_),!, 
+    atom_string(M,M_), M\="le_answer", 
     ( (loaded_kp(M); hypothetical_fact(M,_,_,_,_,_)) -> 
                 i(G,M,CID,Cref,U,E) ; 
                 (U=[At/c(Cref)], E=[u(At,Mod,Cref,[])] )).
@@ -285,7 +302,8 @@ i(G,M,CID,Cref,U,E) :-
     (catch(M:irrelevant_explanation(NewG),_,fail) -> E=Eargs ; (E=[s(G,M,Ref,Children)], append(Eargs,Children_,Children) )),
     % we keep the explanation and unknowns for the last solution:
     ((E=[],U=[]) -> true ; copy_term(U+E,U_+E_), nb_setarg(1,LastSolutionHolder,U_+E_)).
-
+i(Q,M,_CID,Cref,U,E) :- le_answer:abducing, le_input:predef_abd(Q), 
+    U=[at(Q,M)], E=[u(at(Q,M),M,Cref,[])].
 % unknown(+Goal,+Module) whether the knowledge source is currently unable to provide a result 
 unknown(G,M) :- var(G), !, throw(variable_unknown_call_at(M)).
 unknown(on(G,_Time),M) :- !, unknown(G,M).
@@ -308,7 +326,7 @@ set_counter(Counter,N) :- Counter=counter(_), nb_setarg(1,Counter,N).
 inc_counter(Counter,N) :- get_counter(Counter,N), NewN is N+1, nb_setarg(1,Counter,NewN).
 inc_counter(Counter) :- inc_counter(Counter,_).
 
-evalArgExpressions(G,M,NewG,CID,Cref,U,E) :- 
+evalArgExpressions(G,M,NewG,CID,Cref,U,E) :- %trace, 
     G=..[F|Args], 
     maplist(evalExpression(M,CID,Cref),Args,Results,Us,Es),
     NewG=..[F|Results], 
@@ -570,21 +588,22 @@ expand_explanation_refs_taxlog([],_,[]).
 
 expand_explanation_refs_le([Node|Nodes],Facts, [NewNode|NewNodes]) :-  
     Node=..[Type,X0,Module,Ref,Children], 
-    ( Children=[s(L,M2,Ref2,[])], unifiable(X0, L, _) ->  % to filter final leaves
-        ( NextType = s, X = L, NextChildren = [], NextModule = M2, NextRef = Ref2 ) 
-    ;   ( NextType = Type, X = X0, NextChildren = Children, NextModule = Module, NextRef = Ref)),
+    %( Children=[s(L,M2,Ref2,[])], unifiable(X0, L, _) ->  % to filter final leaves
+    %    ( NextType = s, X = L, NextChildren = [], NextModule = M2, NextRef = Ref2 ) 
+    %;   ( NextType = Type, X = X0, NextChildren = Children, NextModule = Module, NextRef = Ref)),
+    NextType = Type, X = X0, NextChildren = Children, NextModule = Module, NextRef = Ref, 
     refToSourceAndOrigin(NextRef,Source,Origin),
     %TODO: is the following test against facts necessary???:
     ((member(XX,Facts), variant(XX,X)) -> NewOrigin=userFact ; NewOrigin=Origin),
     (X\=[] -> 
         (translate_to_le(X, EnglishAnswer) -> 
-            %print_message(informational, "Explaining ~w as ~w"-[X, EnglishAnswer])
+            %print_message(informational, "Explaining ~w as ~w"-[X, EnglishAnswer]),
             ( Output = EnglishAnswer            
             %NewNode=..[Type,Output,Ref,Module,Source,NewOrigin,NewChildren],
             %expand_explanation_refs(Children,Facts,NewChildren),
             %AllNodes = [NewNode|NewNodes]
             )
-        ;   ( %print_message(informational, "Can't translate ~w"-[X]),
+        ;   ( print_message(informational, "Cant translate ~w"-[X]),
               term_string('Prolog Expression'(X), Output) )
         )
     ;         %AllNodes = NewNodes
@@ -596,7 +615,7 @@ expand_explanation_refs_le([Node|Nodes],Facts, [NewNode|NewNodes]) :-
     expand_explanation_refs_le(Nodes,Facts,NewNodes).
 expand_explanation_refs_le([],_,[]). 
 
-translate_to_le(X, EnglishAnswer) :-
+translate_to_le(X, EnglishAnswer) :-%trace, 
     le_answer:translate_goal_into_LE(X, RawAnswer), le_input:name_as_atom(RawAnswer, EnglishAnswer). 
     %print_message(informational, "Translating ~w into ~w"-[X, EnglishAnswer]), !. 
 
@@ -728,6 +747,9 @@ uk_tax_year(Start,StartYear,Start,End) :- must_be(integer,StartYear),
 in(X,List) :- must_be(list,List), member(X,List).
 
 has_as_head_before([Head|Rest],Head,Rest). 
+
+all_fail([]) :- !. 
+all_fail([f(_ID,_M,_CID,_E)|Rest]) :- all_fail(Rest). 
 
 :- if(current_module(swish)). %%%%% On SWISH:
 
