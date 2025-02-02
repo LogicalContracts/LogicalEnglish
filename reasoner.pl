@@ -25,6 +25,7 @@ limitations under the License.
 */
 
 :- use_module(library(aggregate)).
+:- use_module(library(prolog_stack)).
 
 :- use_module(kp_loader).
 :- use_module(le_answer).
@@ -56,8 +57,8 @@ query_with_facts(Goal,Facts_,OnceUndo,unknowns(Unknowns),E,Outcome) :- %trace,
     (is_list(Facts_)-> Facts=Facts_; example_fact_sequence(M,Facts_,Facts)), %trace, 
     Caller = Me:(
         i(at(G,M),OnceUndo,U,Result_),
-        Result_=..[Outcome,E_],
-        expand_explanation_refs(E_,Facts,E)
+        Result_=..[Outcome,E_], print_message(informational, "Result_ ~w"-[Result_]), 
+        expand_explanation_refs(E_,Facts,E) %,print_message(informational, "Explanations ~w into ~w"-[E_, E])
         ),
     retractall(hypothetical_fact(_,_,_,_,_,_)), %trace, 
     (OnceUndo==true -> (true, once_with_facts(Caller, M, Facts, true)) ; (true, call_with_facts(Caller, M, Facts))),
@@ -143,7 +144,7 @@ i((A;B), M, CID, Cref, U, E) :- !,
     (i(A,M,CID,Cref,U,E) ; i(B,M,CID,Cref,U,E)).
 i(must(I,M), Mod, CID, Cref, U, E) :- !, i(then(I,M), Mod, CID, Cref, U, E).
 i(\+ G,M,CID, Cref, U,E) :- !, i( not(G),M,CID,Cref,U,E).
-i(not G, M, CID, Cref, NotU, NotE) :- !, 
+i(not(G), M, CID, Cref, NotU, NotE) :- !, 
     newGoalID(NotID),
     % our negation as failure requires no unknowns:
     ( i( G, M, NotID, Cref, U, E1) -> (
@@ -571,7 +572,8 @@ expand_explanation_refs(CrudeE,Facts,taxlog(taxlogExplanation(E))) :- !,
     expand_explanation_refs_taxlog(CrudeE, Facts, E). 
 
 expand_explanation_refs(CrudeE,Facts,le(le_Explanation(E))) :-  !, 
-    expand_explanation_refs_le(CrudeE, Facts, E). 
+    expand_explanation_refs_le(CrudeE, Facts, E).
+    %print_message(informational, "The explanation is: ~w "-[E]). 
  
 expand_explanation_refs(CrudeE,Facts,scasp(E)) :-
     expand_explanation_refs_casp(CrudeE, Facts, E). 
@@ -587,12 +589,12 @@ expand_explanation_refs_taxlog([Node|Nodes],Facts,[NewNode|NewNodes]) :- !,
 expand_explanation_refs_taxlog([],_,[]).
 
 expand_explanation_refs_le([Node|Nodes],Facts, [NewNode|NewNodes]) :-  
-    Node=..[Type,X0,Module,Ref,Children], 
+    Node=..[Type,X0,Module,Ref,Children], %print_message(informational, "Node ~w"-[Node]),
     %( Children=[s(L,M2,Ref2,[])], unifiable(X0, L, _) ->  % to filter final leaves
     %    ( NextType = s, X = L, NextChildren = [], NextModule = M2, NextRef = Ref2 ) 
     %;   ( NextType = Type, X = X0, NextChildren = Children, NextModule = Module, NextRef = Ref)),
     NextType = Type, X = X0, NextChildren = Children, NextModule = Module, NextRef = Ref, 
-    refToSourceAndOrigin(NextRef,Source,Origin),
+    refToSourceAndOrigin(NextRef,Source,Origin), %print_message(informational, "Source ~w Origin ~w"-[Source, Origin]),
     %TODO: is the following test against facts necessary???:
     ((member(XX,Facts), variant(XX,X)) -> NewOrigin=userFact ; NewOrigin=Origin),
     (X\=[] -> 
@@ -610,7 +612,7 @@ expand_explanation_refs_le([Node|Nodes],Facts, [NewNode|NewNodes]) :-
         Output = 'it is a fact'
     ),
     %translate_to_le(X, Output),      
-    NewNode=..[NextType,Output,NextRef,NextModule,Source,NewOrigin,NewChildren],
+    NewNode=..[NextType,Output,NextRef,NextModule,Source,NewOrigin,NewChildren], %print_message(informational, "NewNode ~w"-[NewNode]),
     expand_explanation_refs_le(NextChildren,Facts,NewChildren),
     expand_explanation_refs_le(Nodes,Facts,NewNodes).
 expand_explanation_refs_le([],_,[]). 
