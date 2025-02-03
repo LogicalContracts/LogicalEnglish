@@ -57,9 +57,9 @@ query_with_facts(Goal,Facts_,OnceUndo,unknowns(Unknowns),E,Outcome) :- %trace,
     (is_list(Facts_)-> Facts=Facts_; example_fact_sequence(M,Facts_,Facts)), %trace, 
     Caller = Me:(
         i(at(G,M),OnceUndo,U,Result_),
-        Result_=..[Outcome,E_], print_message(informational, "Result_ ~w"-[Result_]), 
+        Result_=..[Outcome,E_], %print_message(informational, "Result_ ~w"-[Result_]), 
         expand_explanation_refs(E_,Facts,E) %,print_message(informational, "Explanations ~w into ~w"-[E_, E])
-        ),
+        ), %print_message(informational, "Caller ~w "-[Caller]), 
     retractall(hypothetical_fact(_,_,_,_,_,_)), %trace, 
     (OnceUndo==true -> (true, once_with_facts(Caller, M, Facts, true)) ; (true, call_with_facts(Caller, M, Facts))),
     list_without_variants(U,Unknowns_), % remove duplicates, keeping the first clause reference for each group
@@ -116,7 +116,7 @@ i( at(G,KP),OnceTimed,Unknowns,Result) :- %!,
         (expand_failure_trees_and_simp([f(ID,_,_,_)],FailedUnknowns,E), U=[], Result=false(E)) ),
     append(U,FailedUnknowns,U_),
     maplist(niceModule,U_,Unknowns).
-i( G,_,_,_) :- print_message(error,"Top goal ~w should be qualified with ' at knowledge_page'"-[G]), fail.
+%i( G,_,_,_) :- print_message(error,"Top goal ~w should be qualified with ' at knowledge_page'"-[G]), fail. %off by now
 
 % i(+Goal,+AlreadyLoadedAndMappedModule,+CallerGoalID,+CallerClauseRef,-Unknowns,-Why) 
 % failure means false; success with empty Unknowns list means true; 
@@ -276,7 +276,7 @@ i(At,Mod,CID,Cref,U,E) :- At=at(G,M_),!,
 i(G,M,_CID,Cref,U,E) :- unknown(G,M), do_not_fail_undefined_preds, !, 
     (U=[at(G,M)/c(Cref)],E=[ u(at(G,M),M,Cref,[]) ]).
 %TODO: on(G,2020) means "G true on some instant in 2020"; who matches that with '20210107' ? check for clauses and hypos
-i(G,M,CID,Cref,U,E) :- 
+i(G,M,CID,Cref,U,E) :- %trace,
     newGoalID(NewID), create_counter(Counter),
     LastSolutionHolder = hacky(none),
     (true ;( % before failing, save our failure information 
@@ -378,9 +378,9 @@ myClause2(H,Time,M,Body,Ref,IsProlog,URL,E, Line) :-
 
 % taxlogWrapper(RawBody,ExplicitTime,Time,Module,Body,ClauseRef,IsProlog,URL,E,LE_Line)
 % keep this in sync with syntax.pl
-taxlogWrapper(targetBody(Body,Explicit,Time_,URL,E_,L),Explicit,Time,M,Body,Ref,IsProlog,URL,E, L) :- (Body=call(_);Body==true), !,
+taxlogWrapper(_:targetBody(Body,Explicit,Time_,URL,E_,L),Explicit,Time,M,Body,Ref,IsProlog,URL,E, L) :- (Body=call(_);Body==true), !,
     Time=Time_, IsProlog=true, E=[s(E_,M,Ref,[])].
-taxlogWrapper(targetBody(Body,Explicit,Time_,URL,E, L),Explicit,Time,_M,Body,_Ref,IsProlog,URL,E, L) :- !, Time=Time_, IsProlog=false.
+taxlogWrapper(_:targetBody(Body,Explicit,Time_,URL,E, L),Explicit,Time,_M,Body,_Ref,IsProlog,URL,E, L) :- !, Time=Time_, IsProlog=false.
 taxlogWrapper(Body_,false,_Time,_M,Body,_Ref,IsProlog,URL,E, _) :- Body_=Body,IsProlog=true,E=[],URL=''.
 
 refToOrigin(Ref,URL) :-

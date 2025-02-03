@@ -251,8 +251,8 @@ answer(English, Arg, E, Result) :- %trace,
     append(FactsPre, [(is_a(A, B):-(is_a(A, C),is_a(C, B)))], Facts),
     setup_call_catcher_cleanup(assert_facts(Module, Facts), 
             %catch((listing(SwishModule:is_a/2), reasoner:query(at(InnerGoal, SwishModule),Result,E,_)),             
-            catch((listing(Module:is_a/2), reasoner:query(at(InnerGoal, Module),_U,E,Result)), Error, ( print_message(error, Error), fail ) ),
-            %catch_with_backtrace(reasoner:query(at(InnerGoal, Module),_U,E,Result), Error, ( print_message(error, Error), fail ) ),
+            %catch((listing(Module:is_a/2), reasoner:query(at(InnerGoal, Module),_U,E,Result)), Error, ( print_message(error, Error), fail ) ),
+            catch_with_backtrace(reasoner:query(at(InnerGoal, Module),_U,E,Result), Error, ( print_message(error, Error), fail ) ),
             _Result, 
             retract_facts(Module, Facts)).  
 

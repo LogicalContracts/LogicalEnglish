@@ -1135,7 +1135,7 @@ or_ --> [ou]. % french
 
 not_ --> [it], spaces(_), [is], spaces(_), [not], spaces(_), [the], spaces(_), [case], spaces(_), [that], spaces(_). 
 not_ --> [non], spaces(_), [risulta], spaces(_), [che], spaces(_). % italian
-not_ --> [ce], spaces(_), [n],[A],[est], spaces(_), [pas], spaces(_), [le], spaces(_), [cas], spaces(_), [que], spaces(_), {atom_string(A, "'")}. % french
+not_ --> [ce], spaces(_), [n],[A],[est], spaces(_), [pas], spaces(_), [le], spaces(_), [cas], spaces(_), [que], spaces(_), {atom_string(A, "'")}. % 'french
 not_ --> [no], spaces(_), [es], spaces(_), [el], spaces(_), [caso], spaces(_), [que], spaces(_).  % spanish
 
 is_the_sum_of_each_ --> [is], spaces(_), [the], spaces(_), [sum], spaces(_), [of], spaces(_), [each], spaces(_) .
@@ -1178,7 +1178,7 @@ for_all_cases_in_which_ --> spaces_or_newlines(_), [en], spaces(_), [cualquier],
 it_is_the_case_that_ --> [it], spaces(_), [is], spaces(_), [the], spaces(_), [case], spaces(_), [that], spaces(_).
 it_is_the_case_that_ --> [es], spaces(_), [el], spaces(_), [caso], spaces(_), [que], spaces(_).  % spanish
 it_is_the_case_that_ --> [es], spaces(_), [también], spaces(_), [el], spaces(_), [caso], spaces(_), [que], spaces(_).  % spanish
-it_is_the_case_that_ --> [c], [A], [est], spaces(_), [le], spaces(_), [cas], spaces(_), [que], spaces(_), {atom_string(A, "'")}. % french
+it_is_the_case_that_ --> [c], [A], [est], spaces(_), [le], spaces(_), [cas], spaces(_), [que], spaces(_), {atom_string(A, "'")}. % 'french
 it_is_the_case_that_ --> [è], spaces(_), [provato], spaces(_), [che], spaces(_). % italian
 
 is_a_set_of_ --> [is], spaces(_), [a], spaces(_), [set], spaces(_), [of], spaces(_). 
