@@ -203,7 +203,7 @@ answer(English, Arg) :- %trace,
             %listing(SwishModule:is_a/2), SwishModule:Goal), 
             call(SwishModule:Goal), 
             %catch_with_backtrace(Command, Error, print_message(error, Error)), 
-            %catch((true, Command), Error, ( print_message(error, Error), fail ) ), 
+            %catch((true, SwishModule:Goal), Error, ( print_message(error, Error), fail ) ), 
             _Result, 
             retract_facts(SwishModule, Facts)) 
     ),  
@@ -383,6 +383,8 @@ translate_goal_into_LE(aggregate_all(sum(V),Conditions,R), [R,is,the,sum,of,each
     translate_goal_into_LE(Conditions, Answer), !.
 translate_goal_into_LE(not(G), [it,is,not,the,case,that,'\n', '\t'|Answer]) :- 
     translate_goal_into_LE(G, Answer), !.
+translate_goal_into_LE(is_a(A,B), ProcessedWordsAnswers) :-
+    (starts_with_vowel(B)->ProcessedWordsAnswers=[A, is, an, B]; ProcessedWordsAnswers=[A, is, a, B]), !.  
 translate_goal_into_LE(Goal, ProcessedWordsAnswers) :- 
     %print_message(informational, "translated_goal_into_LE: (meta) from  ~w\n"-[Goal]), 
     Goal =.. [Pred|GoalElements], meta_dictionary([Pred|GoalElements], Types, WordsAnswer),
@@ -403,6 +405,26 @@ translate_goal_into_LE(holds(Goal,T), Answer) :-
     process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), 
     process_time_term(T, TimeExplain),
     Answer = ['At', TimeExplain, it, holds, that|ProcessedWordsAnswers], !. 
+
+starts_with_vowel(Term) :-
+    atom(Term),
+    atom_chars(Term, [FirstChar|Rest]), 
+    ( member(FirstChar, ['a', 'e', 'i', 'o', 'u', 'A', 'E', 'I', 'O', 'U'])
+    ; (Rest=[SecondChar|_], 
+       member(FirstChar, ['h', 'H']), 
+       member(SecondChar, ['o', 'e', 'E', 'O']))),!.
+    
+starts_with_vowel(Term) :- % not needed fttb.
+    compound(Term),
+    Term =.. [Functor| _],
+    atom(Functor),
+    atom_chars(Functor, [FirstChar|Rest]), 
+    ( member(FirstChar, ['a', 'e', 'i', 'o', 'u', 'A', 'E', 'I', 'O', 'U'])
+    ; (Rest=[SecondChar|_], 
+       member(FirstChar, ['h', 'H']), 
+       member(SecondChar, ['o', 'e', 'E', 'O']))).
+
+starts_with_vowel('LLM'). 
 
 process_time_term(T,ExplainT) :- var(T), name_as_atom([a, time, T], ExplainT). % in case of vars
 process_time_term(T,T) :- nonvar(T), atom(T), !. 

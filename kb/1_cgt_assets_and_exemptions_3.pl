@@ -40,7 +40,8 @@ the templates are:
   *an asset* was acquired at *a date*.
   *a thing* is a share or a unit or similar investments.
   *a thing* is a rental property plant or equipment.
-  *an asset* is used for the purchase of items for personal consumption. 
+  *an asset* is used for the purchase of items for personal consumption.
+  *an arrangement* for the asset is *a state*. 
   
 the ontology is:
 
@@ -50,10 +51,10 @@ the ontology is:
 
 a thing is a CGT asset
   if the thing is a property
-  or it is not the case that
-     the thing is a property
-     and the thing is a legal right
-         or the thing is an equitable right. 
+  or    the thing is a legal right
+        or the thing is an equitable right
+    and it is not the case that
+        the thing is a property. 
 
 % List of assets - List of CGT assets and exemptions - https://www.ato.gov.au/Individuals/Capital-gains-tax/List-of-cgt-assets-and-exemptions/
 
