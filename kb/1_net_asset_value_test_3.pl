@@ -42,7 +42,9 @@ A tax payer satisfies maximum net asset value test at a date
     and the value =< 6000000.
 
 A person has cgt assets net value of a value at a date
-    if  the value is the sum of each partial such that
+    if  the person has relevant asset an asset X
+    and a value Y is the net value of X at the date
+    and the value is the sum of each partial such that
         the person has relevant asset an asset
         and the asset is a cgt asset
         and it is not the case that

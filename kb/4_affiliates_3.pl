@@ -6,7 +6,7 @@ the predicates are:
     *a term* must not be a variable,
     *a term* must be nonvar,
     *an entity* has affiliated with *an affiliate* at *a date*,
-    *a date* is not before *a second date*,
+    *a date* is not earlier than *a second date*,
     *an affiliate* is an individual or is a company,
     *an affiliate* is a trust,
     *an affiliate* is a partnership,
@@ -33,7 +33,7 @@ an entity is a superannuation fund
 the knowledge base 4_affiliates_3 includes:
 
 an entity has affiliated with an affiliate at a date
-    if the date is not before 2009-01-01
+    if the date is not earlier than 2009-01-01
     and the affiliate is an individual 
         or the affiliate is a company
     and it is not the case that
@@ -46,11 +46,17 @@ an entity has affiliated with an affiliate at a date
         or  the affiliate acts in concert with the entity.
 
 an entity has affiliated with an affiliate at a date
-    if  the date is before 2009-01-01
-    and the affiliate is affiliated per older legislation with the entity.
+    if  the date is known
+    and the date is before 2009-01-01
+    and the affiliate is affiliated per older legislation with the entity. 
+    
+a date P is not earlier than a date A
+    if P is A
+    or 	P is known
+    	and A is known
+    	and A is before P. 
     
 scenario test is:
-    2020-01-02 is before 2009-01-01.
     company is a company. 
     company acts in accordance with directions from andrew.
     company is affiliated per older legislation with andrew.
