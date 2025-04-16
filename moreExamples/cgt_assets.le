@@ -39,6 +39,7 @@ the templates are:
   *a thing* is a share or a unit or similar investments.
   *a thing* is a rental property plant or equipment.
   *an asset* is used for the purchase of items for personal consumption. 
+  *an arrangement* for *an asset* is *a state*. 
   
 the ontology is:
 
@@ -65,7 +66,7 @@ a thing is a CGT asset
 % Award & payout assets
 a thing is a property 
   if the thing is a real state asset
-  or a thing is a share or a unit or similar investments
+  or the thing is a share or a unit or similar investments
   or the thing is a personal use asset
   or the thing is a collectable asset
   or the thing is an intangible asset
@@ -163,7 +164,7 @@ an asset is a CGT exempt asset
 % rare books
 a thing is a collectable asset
   if the thing is an artwork
-  or the thing is jewellery
+  or the thing is a jewellery
   or the thing is an antique
   or the thing is a rare coin
   or the thing is a rare medallion
@@ -316,12 +317,77 @@ scenario Colin is:
     Colin was a resident of Norfolk Island at 2000-01-01.
     asset two was acquired at 1985-09-19.  
 
+scenario Crypto is: 
+    Alice is a taxpayer.
+    asset bitcoin is a cryptocurrency. 
+    asset bitcoin belongs to Alice.
+    asset bitcoin was acquired at 2020-01-01.
+    asset bitcoin is used for the purchase of items for personal consumption.
+    asset nft_rare belongs to Alice.
+	asset nft_rare costed 15000 to acquire.
+    asset nft_gift is a gift. 
+	asset nft_gift belongs to Alice.
+    asset nft_gift was gifted through a will to a deductible gift recipient beneficiary.
+
+scenario Farmer is:
+    Bob is a taxpayer.
+    asset hobby_farm is a farm. 
+    asset hobby_farm belongs to Bob.
+    asset hobby_farm is used purely for personal use purposes.
+    asset commercial_farm is a farm. 
+    asset commercial_farm belongs to Bob.
+    asset commercial_farm is used soley for taxable income generating purposes.
+    asset tractor_business is a business equipment. 
+    asset tractor_business belongs to Bob.
+    asset tractor_business is a rental property plant or equipment.
+    asset tractor_business meets the definition of plant and equipment under Division 43 of the Income Tax Act.
+    asset tractor_vintage belongs to Bob.
+    asset tractor_vintage costed 8000 to acquire. 
+
+scenario Legal is:
+    Carol is a taxpayer.
+    asset land_right belongs to Carol.
+    asset leasehold belongs to Carol.
+    asset lawsuit_settlement belongs to Carol.
+    asset lawsuit_settlement corresponds to compensation or damages.
+    asset lawsuit_settlement was received for an injury at workplace of Carol.   
+
+scenario Loan is:
+    David is a taxpayer.
+    asset iou_loan belongs to David.
+    asset boat belongs to David.
+    asset boat costed 9500 to acquire.
+    asset boat is used purely for personal use purposes.
+    asset stamps belongs to David.
+    asset stamps was acquired at 1980-01-01.
+
+scenario Insurance is: 
+    Emma is a taxpayer.
+    asset insurance_payout belongs to Emma.
+    asset insurance_payout arose from the maturity of a policy.
+    asset super_interest belongs to Emma.
+    asset super_interest is an interest in a fund.
+    %the fund has 4 members.
+    asset super_interest is being transferred because of a relationship breakdown.
+    asset medal belongs to Emma.
+    asset medal was secured for valour or brave conduct.  
+
+scenario Mixed is:
+    Frank is a taxpayer.
+    asset holiday_house belongs to Frank.
+    asset granny_flat belongs to Frank.
+    the arrangement for asset granny_flat is created.
+    the arrangement is a granny flat arrangement.
+    asset fridge belongs to Frank.
+    asset fridge is a rental property plant or equipment.
+    asset fridge meets the definition of plant and equipment under Division 43 of the Income Tax Act.
+
 % Check if your assets are subject to CGT, exempt, or pre-date CGT.
-query one is:
+query cgt asset is:
   which thing is a CGT asset.
 
-query two is:
+query exempt asset is:
   which asset is a CGT exempt asset. 
 
-query three is:
+query predate is:
   which asset is a pre-date CGT asset. 

@@ -32,6 +32,7 @@
 
 :- use_module(library(http/thread_httpd)).
 :- use_module(library(http/http_dispatch)).
+:- use_module(library(http/http_json)). 
 :- use_module(library(http/http_server), [http_server/2, http_redirect/3,
                                           http_stop_server/2,
                                           http_read_json_dict/3, reply_json_dict/2]).
@@ -43,9 +44,9 @@
 :- use_module(library(optparse), [opt_arguments/3]).
 :- use_module('../../api.pl', [start_api_server/0, set_le_program_module/1, le_program_module/1, hack_module_for_taxlog/1, handle_api/1]). 
 
-:- thread_pool_create(compute, 5,
+:- thread_pool_create(compute, 8,
                       [ local(20000), global(100000), trail(50000),
-                        backlog(5)
+                        backlog(0)
                       ]).
 
 % The most useful debug flags are here. A complete set of debug

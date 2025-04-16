@@ -97,7 +97,7 @@ handle_api(Request) :-
     %asserta(my_request(Request)), % for debugging
     %print_message(informational,"Request Payload: ~w"-[Payload]),
     assertion(Payload.token=='myToken123'),
-    (entry_point(Payload,Result)->true;Result=_{error:"Goal failed"}),
+    (entry_point(Payload,Result)->true;Result=_{error:"No answer"}),
     print_message(informational,"returning Result: ~w"-[Result]),
     reply_json_dict(Result).
 
@@ -131,16 +131,27 @@ entry_point(R, _{results:Results}) :- get_dict(operation,R,query), !,
 % curl --header "Content-Type: application/json" --request POST --data '{"token":"myToken123","operation":"answer", "file": "testingle", "document":" ... ", "theQuery":"one", "scenario":"alice"}' http://localhost:3050/leapi
 entry_point(R, _{results:AnswerExplanation}) :- get_dict(operation,R,answer), !, 
     term_string(Query,R.theQuery,[variable_names(_VarPairs_)]),
-    %print_message(informational,"entry point answer asking: ~w"-[Query]),
-    le_answer:parse_and_query(R.file, en(R.document), Query, with(R.scenario), AnswerExplanation).
-    %print_message(informational,"entry point query returning: ~w"-[AnswerExplanation]).
+   %thread_create(    
+        %print_message(informational,"entry point answer asking: ~w"-[Query]),
+        le_answer:parse_and_query(R.file, en(R.document), Query, with(R.scenario), AnswerExplanation).
+        %print_message(informational,"entry point query returning: ~w"-[AnswerExplanation]).
+    %    ThreadId,
+    %    [detached(true)]
+    %),
+    %thread_join(ThreadId, status(AnswerExplanation)).
 
 % Added for API LE
 entry_point(R, _{results:AnswerExplanation}) :- get_dict(operation,R,explain), !, 
     term_string(Query,R.theQuery,[variable_names(_VarPairs_)]),
-    %print_message(informational,"entry point explain asking: ~w"-[Query]),
-    le_answer:parse_and_query_and_explanation(R.file, en(R.document), Query, with(R.scenario), AnswerExplanation).
-    %print_message(informational,"entry point query returning: ~w"-[AnswerExplanation]).    
+    %thread_create(
+        %print_message(informational,"entry point explain asking: ~w"-[Query]),
+        le_answer:parse_and_query_and_explanation(R.file, en(R.document), Query, with(R.scenario), AnswerExplanation).
+        %print_message(informational,"entry point query returning: ~w"-[AnswerExplanation]),
+    %    ThreadId,
+    %    [detached(true)]
+    %),
+    %thread_join(ThreadId, status(AnswerExplanation)).
+
 
 % Example:
 %  curl --header "Content-Type: application/json" --request POST --data '{"operation":"draft", "pageURL":"http://mysite/page1#section2",  "content":[{"url":"http://mysite/page1#section2!chunk1", "text":"john flies by instruments"}, {"url":"http://mysite/page1#section2!chunk2", "text":"miguel drives with gusto"}]}' http://localhost:3050/taxkbapi
