@@ -257,28 +257,23 @@ i(findall(X,G,L),M,CID,Cref,U,E) :- !,
 %     (Q_=Format-Args -> format(string(Q__),Format,Args); Q_=Q__),
 %     U=[at(Q__,M)], E=[u(at(Q__,M),M,Cref,[])].
 i(M:G,Mod,CID,Cref,U,E) :- !, i(at(G,M),Mod,CID,Cref,U,E).
-i(G, M, CID, Cref, U,E) :- not(le_answer:abducing), G = is_a(_,_), !,  % explicitly added to handle the taxonomies when not abducing them
+i(G, M, CID, Cref, U,E) :- not(le_answer:abducing), G = is_a(_,_), !,   % explicitly added to handle the taxonomies when not abducing them
     % this works but does not trace:
     % catch(call(M:G), Error, print_message(error, "The error is ~w"-[(CID, Error)])),
     % U = [], E=[s(G,M,Cref,[])]. 
     % this is with trace: 
-    myClause(G,M, BodyPre,Ref), 
-    catch(call(M:G), Error, print_message(error, "The error is ~w"-[(CID, Error)])),
-    %print_message(error, "ontology ~w -> ~w ref ~w"-[G, BodyPre, Ref]),
-    (((BodyPre = true);(BodyPre=(is_a(_,Y), is_a(Y,_), var(Y))))) ->  
-         (  Stop = true ; 
-         (  Stop = false )
-    ), 
-    %print_message(error, "explanation of ~w => ~w "-[G,E]), 
-    ( Stop ->  
-         (    U=[], E = [s(G,M,Ref,[])] ) ; 
-         (i(BodyPre, M, CID, Cref, U, E) )
-    ).    
+    %catch(call(M:G), Error, print_message(error, "The error is ~w"-[(CID, Error)])),
+    myCall(M:G), 
+    E = [s(G,M,Ref,ER)],   
+    myClause(G,M, BodyPre,Ref),
+    not((BodyPre=(is_a(_,Y), is_a(Y,_)), var(Y))),
+    %print_message(error, "ontology ~w -> ~w ref ~w"-[G, BodyPre, Ref]), 
+    i(BodyPre, M, CID, Cref, U, ER).
 i(G,M,CID,Cref,U,E) :- system_predicate(G), !, 
     evalArgExpressions(G,M,NewG,CID,Cref,Uargs,E_),
     % floundering originates unknown:
-    catch(( myCall(M:NewG), U=Uargs, E=E_), %print_message(informational,"The goal is ~w"-[(G, NewG, U, E)])), 
-         error(_Error,_Cx), 
+    catch(( myCall(M:NewG), U=Uargs, E = [s(G,M,Cref,E_)] %,print_message(informational,"The goal is ~w"-[(G, NewG, U, E)])
+          ), error(_Error,_Cx), 
          (  append(Uargs,[at(instantiation_error(G),M)/c(Cref)],U), append(E_,[u(instantiation_error(G),M,Cref,[])],E) )).
 i(at(G,KP),M,CID,Cref,U,E) :- shouldMapModule(KP,UUID), !, 
     i(at(G,UUID),M,CID,Cref,U,E). % use SWISH's latest editor version
