@@ -40,8 +40,8 @@ the templates are:
   *an asset* was acquired at *a date*.
   *a thing* is a share or a unit or similar investments.
   *a thing* is a rental property plant or equipment.
-  *an asset* is used for the purchase of items for personal consumption.
-  *an arrangement* for the asset is *a state*. 
+  *an asset* is used for the purchase of items for personal consumption. 
+  *an arrangement* for *an asset* is *a state*. 
   
 the ontology is:
 
@@ -68,7 +68,7 @@ a thing is a CGT asset
 % Award & payout assets
 a thing is a property 
   if the thing is a real state asset
-  or a thing is a share or a unit or similar investments
+  or the thing is a share or a unit or similar investments
   or the thing is a personal use asset
   or the thing is a collectable asset
   or the thing is an intangible asset
@@ -166,7 +166,7 @@ an asset is a CGT exempt asset
 % rare books
 a thing is a collectable asset
   if the thing is an artwork
-  or the thing is jewellery
+  or the thing is a jewellery
   or the thing is an antique
   or the thing is a rare coin
   or the thing is a rare medallion
@@ -193,7 +193,7 @@ a thing is a intangible asset
 % plant and equipment found in a rental property
 a thing is a depreciating asset
   if the thing is a business equipment
-  or the thing is rental property plant or equipment.
+  or the thing is a rental property plant or equipment.
 
 % Plant and equipment is rental property plant and equipment if it is a removable asset in a rental property
 %   and it meets the definition of plant and equipment under Division 43 of the Income Tax Act.

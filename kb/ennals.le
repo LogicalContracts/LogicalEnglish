@@ -1,0 +1,50 @@
+the target language is: prolog. 
+
+the templates are:
+*a dragon* smokes.
+*a dragon* is a parent of *a dragon*.
+*a dragon* is healthy.
+*a dragon* is happy.
+*a creature* is a dragon.
+
+
+the knowledge base dragon includes:
+
+there is an insurance contract between a first party and a second party if
+and the first party is a customer
+and the second party is an insurer
+and an insurance contract is agreed between the first party and the second party.
+
+an insurance contract is agreed between a customer and an insurer if 
+there is an agreed account of a situation 
+and there is uncertainty regarding outcomes 
+and there is uncertainty regarding probabilities 
+and the customer agrees to pay premium to the insurer 
+and the insurer agrees to cover risk for the customer. 
+
+an insurance claim is submitted if
+there are reports of an event 
+and the event is covered by a type of insurance policy 
+and the type of insurance policy is agreed 
+and details of the event match details of contract.  
+
+there is a home insurance contract if
+there is a reported event at home and
+event is covered by home insurance policy and
+excess payment is agreed
+
+remedial action is taken if
+there is a home insurance policy and
+insurance claim is submitted and
+excess payment is agreed
+
+scenario smoky is:
+    bob is a dragon.
+    alice is a dragon.
+    alice is a parent of bob.
+
+query happy is:
+    which dragon is happy.
+
+query healthy is:
+    which dragon is healthy.
