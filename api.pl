@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-:- module(_ThisFileName,[start_api_server/0, set_le_program_module/1, le_program_module/1, hack_module_for_taxlog/1, handle_api/1]).
+:- module(_ThisFileName,[start_api_server/0, set_le_program_module/1, le_program_module/1, hack_module_for_taxlog/1, handle_api/1, makeExplanationTree/2]).
 
 % API for client apps to use the reasoner and drafter
 
@@ -143,15 +143,7 @@ entry_point(R, _{results:AnswerExplanation}) :- get_dict(operation,R,answer), !,
 % Added for API LE
 entry_point(R, _{results:AnswerExplanation}) :- get_dict(operation,R,explain), !, 
     term_string(Query,R.theQuery,[variable_names(_VarPairs_)]),
-    %thread_create(
-        %print_message(informational,"entry point explain asking: ~w"-[Query]),
-        le_answer:parse_and_query_and_explanation(R.file, en(R.document), Query, with(R.scenario), AnswerExplanation).
-        %print_message(informational,"entry point query returning: ~w"-[AnswerExplanation]),
-    %    ThreadId,
-    %    [detached(true)]
-    %),
-    %thread_join(ThreadId, status(AnswerExplanation)).
-
+    le_answer:parse_and_query_all_answers(R.file, en(R.document), Query, with(R.scenario), AnswerExplanation).
 
 % Example:
 %  curl --header "Content-Type: application/json" --request POST --data '{"operation":"draft", "pageURL":"http://mysite/page1#section2",  "content":[{"url":"http://mysite/page1#section2!chunk1", "text":"john flies by instruments"}, {"url":"http://mysite/page1#section2!chunk2", "text":"miguel drives with gusto"}]}' http://localhost:3050/taxkbapi

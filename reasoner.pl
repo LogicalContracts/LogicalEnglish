@@ -279,7 +279,7 @@ i(at(G,KP),M,CID,Cref,U,E) :- shouldMapModule(KP,UUID), !,
     i(at(G,UUID),M,CID,Cref,U,E). % use SWISH's latest editor version
 i(At,Mod,CID,Cref,U,E) :- At=at(G,M_),!,
     atom_string(M,M_), M\="le_answer", 
-    ( (loaded_kp(M); hypothetical_fact(M,_,_,_,_,_)) -> 
+    ( (psem(M_); loaded_kp(M); hypothetical_fact(M,_,_,_,_,_)) -> 
                 i(G,M,CID,Cref,U,E) ; 
                 (U=[At/c(Cref)], E=[u(At,Mod,Cref,[])] )).
 i(G,M,_CID,Cref,U,E) :- unknown(G,M), do_not_fail_undefined_preds, !, 
@@ -482,7 +482,7 @@ example_fact_sequence(M_,Name,Facts) :-
 once_with_facts(G,M_,Facts,DoUndo) :-
     must_be(boolean,DoUndo),
     atom_string(M,M_),
-    loaded_kp(M), % make sure the module is loaded
+    (le_answer:psem(M); loaded_kp(M)), % make sure the module is loaded
     assert_and_remember(Facts,M,from_with_facts,Undo),
     (true; DoUndo==true, once(Undo), fail),
     once(M:G),
@@ -491,7 +491,7 @@ once_with_facts(G,M_,Facts,DoUndo) :-
 % call_with_facts(+Goal,+Module,+AdditionalFacts) This does NOT undo the fact changes
 call_with_facts(G,M_,Facts) :-
     atom_string(M,M_),
-    loaded_kp(M), % make sure the module is loaded
+    (le_answer:psem(M); loaded_kp(M)), % make sure the module is loaded
     assert_and_remember(Facts,M,from_with_facts,_Undo),
     call(M:G).
 
