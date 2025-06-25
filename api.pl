@@ -129,7 +129,7 @@ entry_point(R, _{results:Results}) :- get_dict(operation,R,query), !,
 
 % Added for API LE
 % curl --header "Content-Type: application/json" --request POST --data '{"token":"myToken123","operation":"answer", "file": "testingle", "document":" ... ", "theQuery":"one", "scenario":"alice"}' http://localhost:3050/leapi
-entry_point(R, _{results:AnswerExplanation}) :- get_dict(operation,R,answer), !, 
+entry_point(R, _{answer:AnswerExplanation}) :- get_dict(operation,R,answer), !, 
     term_string(Query,R.theQuery,[variable_names(_VarPairs_)]),
    %thread_create(    
         %print_message(informational,"entry point answer asking: ~w"-[Query]),

@@ -32,8 +32,8 @@ which can be used on the new command interface of LE on SWISH
     %op(1150,fx,user:show), % to support querying
     op(850,xfx,user:of), % to support querying
     dump/4, dump/3, dump/2, dump_scasp/3, split_module_name/3, just_saved_scasp/2, psem/1, 
-    prepare_query/6, assert_facts/2, retract_facts/2, parse_and_query/5, parse_and_query_and_explanation/5, parse_and_query_all_answers/5,
-    parse_and_query_and_explanation_text/5, le_expanded_terms/2, show/1, source_lang/1, targetBody/6
+    prepare_query/6, assert_facts/2, retract_facts/2, parse_and_query/5, parse_and_query_and_explanation/6, parse_and_query_all_answers/5,
+    parse_and_query_and_explanation_text/6, le_expanded_terms/2, show/1, source_lang/1, targetBody/6
     ]).
 
 %:- use_module(library(sandbox)).
@@ -236,9 +236,9 @@ answer(English, Arg, EnglishAnswer) :- %trace,
     %reasoner:query_once_with_facts(Goal,Scenario,_,_E,Result).
 
 % answer/4
-% answer(+English, with(+Scenario), -Explanations, -Result) :-
+% answer(+English, with(+Scenario), -Explanations, -Output) :-
 % answer(at(English, Module), Arg, E, Result) :- %trace,
-answer(English, Arg, E, Result) :- %trace, 
+answer(English, Arg, E, Output) :- %trace, 
     le_input:parsed, %myDeclaredModule(Module), 
     (psem(Module); this_capsule(Module)), 
     translate_command(Module, English, _, Goal, PreScenario), 
@@ -252,11 +252,12 @@ answer(English, Arg, E, Result) :- %trace,
     setup_call_catcher_cleanup(assert_facts(Module, Facts), 
             %catch((listing(SwishModule:is_a/2), reasoner:query(at(InnerGoal, SwishModule),Result,E,_)),             
             %catch((listing(Module:is_a/2), reasoner:query(at(InnerGoal, Module),_U,E,Result)), Error, ( print_message(error, Error), fail ) ),
-            catch_with_backtrace(reasoner:query(at(InnerGoal, Module),_U,E,Result), Error, ( print_message(error, Error), fail ) ),
+            catch_with_backtrace(reasoner:query(at(InnerGoal, Module),_U,E,Result), Error, ( print_message(error, Error) ) ),
             _Result, 
-            retract_facts(Module, Facts)).  
+            retract_facts(Module, Facts)), 
+    (nonvar(Error)->Output=Error; Output=Result).   
 
-% answer_all/4
+% answer_all/3
 % answer_all(+English, with(+Scenario), -Explanations) :-
 answer_all(English, Arg, Results) :- %trace, 
     le_input:parsed, %myDeclaredModule(Module), 
@@ -273,14 +274,21 @@ answer_all(English, Arg, Results) :- %trace,
             %catch((listing(SwishModule:is_a/2), reasoner:query(at(InnerGoal, SwishModule),Result,E,_)),             
             %catch((listing(Module:is_a/2), reasoner:query(at(InnerGoal, Module),_U,E,Result)), Error, ( print_message(error, Error), fail ) ),
             catch_with_backtrace(
-                findall(_{answer:Result, explanation:E}, 
+                findall(Answer, 
                     ( reasoner:query(at(InnerGoal, Module),_U, le(LE_Explanation), Result) ,
-                      produce_html_explanation(LE_Explanation, E) ),
+                      produce_html_explanation(LE_Explanation, E), correct_answer(InnerGoal, E, Result, Answer) ),
                     Results), 
                 Error, 
-                ( print_message(error, Error), fail ) ),
+                ( print_message(error, Error)) ),
             _Result, 
             retract_facts(Module, Facts)).  
+
+% correct_answer/5     
+% correct_answer(InnerGoal, E, Result, Error, Answer).
+correct_answer(_, E, true, _{answer:'Yes', explanation:E}) :- !. 
+correct_answer(InnerGoal, E, false, _{answer:'No', explanation:E}) :-
+    ground(InnerGoal), !.
+correct_answer(_InnerGoal, E, false, _{answer:'None', explanation:E}).  
 
 % prepare_query/6
 % prepare_query(+English, +Arguments, -Module, -Goal, -Facts, -Command)
@@ -1021,7 +1029,7 @@ parse_and_query_all_answers(File, Document, Question, Scenario, AnswerExplanatio
          retract(File:T))). 
 
 % Generate an answer in html, with a nested list representing the explanation.
-parse_and_query_and_explanation(File, Document, Question, Scenario, Answer) :-
+parse_and_query_and_explanation(File, Document, Question, Scenario, Answer, Result) :-
     %print_message(informational, "parse_and_query and explanation ~w ~w ~w ~w"-[File, Document, Question, Scenario]),
     le_taxlog_translate(Document, _, 1, TaxlogTerms),
     %this_capsule(M), 
@@ -1032,7 +1040,7 @@ parse_and_query_and_explanation(File, Document, Question, Scenario, Answer) :-
     forall(member(T, [(:-module(File,[])), source_lang(en)|ExpandedTerms]), assertz(File:T)), % simulating term expansion
     hack_module_for_taxlog(File), % to enable the reasoner
     %print_message(informational, " Asserted ~w"-[ExpandedTerms]), 
-    answer( Question, Scenario, le(LE_Explanation), _Result), 
+    answer( Question, Scenario, le(LE_Explanation), Result), 
     % cleaning memory
     forall(member(T, [(:-module(File,[])), source_lang(en)|ExpandedTerms]), 
         ( %print_message(informational, "Removing File:T ~w:~w"-[File,T]), 
@@ -1041,7 +1049,7 @@ parse_and_query_and_explanation(File, Document, Question, Scenario, Answer) :-
     produce_html_explanation(LE_Explanation, Answer). 
 
 % Generate a text-based answer, with a nested list representing the explanation.
-parse_and_query_and_explanation_text(File, Document, Question, Scenario, Answer) :-
+parse_and_query_and_explanation_text(File, Document, Question, Scenario, Answer, Result) :-
     %print_message(informational, "parse_and_query and explanation ~w ~w ~w ~w"-[File, Document, Question, Scenario]),
     le_taxlog_translate(Document, _, 1, TaxlogTerms),
     %print_message(informational, "TaxlogTerms to be asserted "-[TaxlogTerms]), 
@@ -1054,7 +1062,7 @@ parse_and_query_and_explanation_text(File, Document, Question, Scenario, Answer)
     forall(member(T, [(:-module(File,[])), source_lang(en)|ExpandedTerms]), assertz(File:T)), % simulating term expansion
     hack_module_for_taxlog(File),
     (member(target(scasp),TaxlogTerms) -> answer(Question, Scenario);
-    answer( Question, Scenario, le(LE_Explanation), _Result)),    % cleaning memory
+    answer( Question, Scenario, le(LE_Explanation), Result)),    % cleaning memory
     forall(member(T, [(:-module(File,[])), source_lang(en)|ExpandedTerms]), 
         ( %print_message(informational, "Removing File:T ~w:~w"-[File,T]), 
          retract(File:T))), 
@@ -1186,7 +1194,7 @@ sandbox:safe_primitive(le_answer:dump_scasp(_,_,_)).
 sandbox:safe_primitive(current_output(_)). 
 sandbox:safe_primitive(le_answer:(show _)). 
 sandbox:safe_primitive(le_answer:parse_and_query(_,_,_,_,_)).
-sandbox:safe_primitive(le_answer:parse_and_query_and_explanation(_,_,_,_,_)). 
+sandbox:safe_primitive(le_answer:parse_and_query_and_explanation(_,_,_,_,_,_)). 
 sandbox:safe_primitive(kp_loader:module_api_hack(_)).
 :- endif.
 
