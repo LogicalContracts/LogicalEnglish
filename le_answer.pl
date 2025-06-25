@@ -558,12 +558,12 @@ show(prolog) :-
     show(scenarios). 
 
 show(rules) :- %trace, 
-    this_capsule(SwishModule), 
+    psem(File),
     findall(Pr, le_input:filtered_dictionary(Pr), Preds), 
     remove_duplicates(Preds, PredsClean), 
     %print_message(informational, "Swish Module ~w"-[SwishModule]), 
     findall((Pred :- Body), 
-        ( member(Pred, PredsClean), clause(SwishModule:Pred, Body_), unwrapBody(Body_, Body)), Predicates),
+        ( member(Pred, PredsClean), clause(File:Pred, Body_), unwrapBody(Body_, Body)), Predicates),
     %print_message(informational, "Rules  ~w"-[Predicates]),
     %forall(member(Clause, [(is_(A,B) :- (nonvar(B), is(A,B)))|Predicates]), portray_clause_ind(Clause)).
     forall(member(Clause, Predicates), portray_clause_ind(Clause)).
@@ -577,23 +577,23 @@ show(rules) :- %trace,
 %), 
 
 show(metarules) :- %trace, 
-    this_capsule(SwishModule), 
+    psem(File),
     findall((Pred :- Body), 
         (meta_dict(PredicateElements, _, _), PredicateElements\=[], 
-         Pred=..PredicateElements, clause(SwishModule:Pred, Body_), unwrapBody(Body_, Body)), Predicates),
+         Pred=..PredicateElements, clause(File:Pred, Body_), unwrapBody(Body_, Body)), Predicates),
     forall(member(Clause, Predicates), portray_clause_ind(Clause)).
 
 show(queries) :- %trace, 
-    this_capsule(SwishModule), 
+    psem(File),
     findall((query(A,B) :- true), 
-        (clause(SwishModule:query(A,B), _)), Predicates),
+        (clause(File:query(A,B), _)), Predicates),
     %print_message(informational, "Queries  ~w"-[Predicates]),
     forall(member(Clause, Predicates), portray_clause_ind(Clause)).
 
 show(scenarios) :- %trace, 
-    this_capsule(SwishModule), 
+    psem(File),
     findall((example(A,B) :- true), 
-        (clause(SwishModule:example(A,B), _)), Predicates),
+        (clause(File:example(A,B), _)), Predicates),
     forall(member(Clause, Predicates), portray_clause_ind(Clause)).
 
 show(templates) :-
