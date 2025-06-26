@@ -227,13 +227,21 @@ answer(English, Arg, EnglishAnswer) :- %trace,
     %module(SwishModule), 
     %print_message(informational, "Calling ~w with ~w on ~w "-[Command, Facts, SwishModule]), 
     setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
-            catch_with_backtrace(SwishModule:Goal, Error, print_message(error, Error)), 
+            catch_with_backtrace((SwishModule:Goal->right_answer(Goal,true, EnglishAnswer); right_answer(Goal,false, EnglishAnswer))
+            , Error, print_message(error, Error)), 
             %catch(Command, Error, ( print_message(error, Error), fail ) ), 
             _Result, 
-            retract_facts(SwishModule, Facts)),
-    %print_message(informational, "The Answer is: ~w and the Result ~w"-[Command, Result]), 
-    translate_goal_into_LE(Goal, RawAnswer), name_as_atom(RawAnswer, EnglishAnswer). 
+            retract_facts(SwishModule, Facts)).
+    %print_message(informational, "The Answer is: ~w and the Result ~w"-[Goal, Result]). 
     %reasoner:query_once_with_facts(Goal,Scenario,_,_E,Result).
+
+% right_answer/3     
+% right_answer(Goal, Result, Answer).
+right_answer(Goal, true, EnglishAnswer) :- 
+    translate_goal_into_LE(Goal, RawAnswer), name_as_atom(RawAnswer, EnglishAnswer).
+right_answer(InnerGoal, false, 'No') :-
+    ground(InnerGoal), !.
+right_answer(_InnerGoal, false, 'None').  
 
 % answer/4
 % answer(+English, with(+Scenario), -Explanations, -Output) :-
