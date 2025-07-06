@@ -1,0 +1,148 @@
+the target language is: prolog. 
+
+the templates are:
+*a label* is a label for *a description*.
+the dataset ID is *a dataset*. 
+the dataset *a dataset* is described at *a location*. 
+the dataset *a dataset* can be downloaded from *a url*.   
+the provider of *a dataset* is *a provider*.
+the platform of *a dataset* is *a platform*.
+the method of delivery of *a dataset* is *a method*. 
+the product version of *a dataset* included here is *a date*. 
+
+the ontology is:
+    
+the dataset ID is FDIC Insured Banks. 
+%the dataset FDIC Insured Banks is described at https://hub.arcgis.com/datasets/geoplatform::fdic-insured-banks/about . 
+%the dataset FDIC Insured Banks can be downloaded from https://hub.arcgis.com/datasets/geoplatform::fdic-insured-banks/ .   
+the provider of FDIC Insured Banks is GeoPlatform ArcGIS Online.
+the platform of FDIC Insured Banks is ArcGIS.
+the method of delivery of FDIC Insured Banks is http. 
+the product version of FDIC Insured Banks included here is 2018-06-29:00:00. 
+
+%Column Label to Meaning Mappings:
+X is a label for Latitude. 
+Y is a label for Longitude. 
+OBJECTID is a label for ID. 
+ACQDATE is a label for Acquisition Date. 
+ADDRESS is a label for Branch Address. 
+ADDRESS2 is a label for Street Address Line 2. 
+BKCLASS is a label for Institution Class. 
+CBSA is a label for Core Based Statistical Areas (Branch). 
+CBSA_DIV is a label for Metropolitan Divisions Name (Branch). 
+CBSA_DIV_FLG is a label for Metropolitan Divisions Flag (Branch). 
+CBSA_DIV_NO is a label for Metropolitan Divisions Number (Branch). 
+CBSA_METRO is a label for Metropolitan Division Number (Branch). 
+CBSA_METRO_FLG is a label for Metropolitan Division Flag (Branch). 
+CBSA_METRO_NAME is a label for Metropolitan Division Name (Branch). 
+CBSA_MICRO_FLG is a label for Micropolitan Division Flag (Branch). 
+CBSA_NO is a label for Core Based Statistical Area Name (Branch). 
+CERT is a label for Institution FDIC Certificate #. CITY is a label for Branch City. 
+COUNTY is a label for Branch County. 
+CSA is a label for Combined Statistical Area Name (Branch). 
+CSA_FLG is a label for Combined Statistical Area Flag (Branch). 
+CSA_NO is a label for Combined Statistical Area Number (Branch). 
+ESTYMD is a label for Branch Established Date. 
+FI_UNINUM is a label for FDIC UNINUM of the Owner Institution. 
+ID is a label for ID. LATITUDE is a label for Latitude. 
+LONGITUDE is a label for Longitude. 
+MAINOFF is a label for Main Office. 
+MDI_STATUS_CODE is a label for Minority Status Code. 
+MDI_STATUS_DESC is a label for Minority Status Description. 
+NAME is a label for Institution Name. 
+OFFNAME is a label for Office Name. 
+OFFNUM is a label for Branch Number. 
+RUNDATE is a label for Run Date. 
+SERVTYPE is a label for Service Type Code. 
+SERVTYPE_DESC is a label for Service Type Description. 
+STALP is a label for Branch State Abbreviation. 
+STCNTY is a label for State and County Number. 
+STNAME is a label for Branch State. 
+UNINUM is a label for Unique Identification Number for a Branch Office. 
+ZIP is a label for Branch Zip Code.
+
+an object is of a type
+    if a label is a label for the type
+    and the object is of the label.  % connection to the dataset 
+    
+%Ontological Mappings:
+%Spatial/Geographic Mappings (GeoSPARQL/GeoNames):
+
+    X is a geo:lat (latitude coordinate). % as in http://www.opengis.net/ont/geosparql#lat
+    Y is a geo:long (longitude coordinate). % as in http://www.opengis.net/ont/geosparql#long
+    LATITUDE is a geo:lat (latitude coordinate). % as in http://www.opengis.net/ont/geosparql#lat
+    LONGITUDE is a geo:long (longitude coordinate). % as in http://www.opengis.net/ont/geosparql#long
+    OBJECTID is a geo:SpatialObject. % as in http://www.opengis.net/ont/geosparql#SpatialObject
+    ADDRESS is a locn:Address. % as in http://www.w3.org/ns/locn#Address
+    ADDRESS2 is a locn:addressArea. % as in http://www.w3.org/ns/locn#addressArea
+    CITY is a gn:populatedPlace. % as in http://www.geonames.org/ontology#populatedPlace
+    COUNTY is a gn:administrativeDivision. % as in http://www.geonames.org/ontology#administrativeDivision
+    STNAME is a gn:administrativeDivision. % as in http://www.geonames.org/ontology#administrativeDivision
+    STALP is a gn:countryCode. % as in http://www.geonames.org/ontology#countryCode
+    ZIP is a locn:postCode. % as in http://www.w3.org/ns/locn#postCode
+
+%Financial/Business Mappings (FIBO):
+    BKCLASS is a fibo-be-le-lp:BusinessEntity. % as in https://spec.edmcouncil.org/fibo/ontology/BE/LegalEntities/LegalPersons/BusinessEntity
+    NAME is a fibo-fnd-org-fm:FormalOrganization. % as in https://spec.edmcouncil.org/fibo/ontology/FND/Organizations/FormalOrganizations/FormalOrganization
+    CERT is a fibo-fnd-arr-id:Identifier. % as in https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/IdentifiersAndIndices/Identifier
+    FI_UNINUM is a fibo-fnd-arr-id:Identifier. % as in https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/IdentifiersAndIndices/Identifier
+    UNINUM is a fibo-fnd-arr-id:Identifier. % as in https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/IdentifiersAndIndices/Identifier
+    OFFNAME is a fibo-be-le-fbo:Branch. % as in https://spec.edmcouncil.org/fibo/ontology/BE/LegalEntities/FormalBusinessOrganizations/Branch
+    OFFNUM is a fibo-fnd-arr-id:Identifier. % as in https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/IdentifiersAndIndices/Identifier
+    MAINOFF is a fibo-be-le-fbo:HeadOffice. % as in https://spec.edmcouncil.org/fibo/ontology/BE/LegalEntities/FormalBusinessOrganizations/HeadOffice
+    SERVTYPE is a fibo-fbc-fct-fse:FinancialService. % as in https://spec.edmcouncil.org/fibo/ontology/FBC/FunctionalEntities/FinancialServicesEntities/FinancialService
+    SERVTYPE_DESC is a fibo-fbc-fct-fse:FinancialServiceDescription. % as in https://spec.edmcouncil.org/fibo/ontology/FBC/FunctionalEntities/FinancialServicesEntities/FinancialServiceDescription
+
+%Temporal Mappings (W3C Time Ontology):
+    ACQDATE is a time:Instant. % as in http://www.w3.org/2006/time#Instant
+    ESTYMD is a time:Instant. % as in http://www.w3.org/2006/time#Instant
+    RUNDATE is a time:Instant. % as in http://www.w3.org/2006/time#Instant
+
+%Statistical/Administrative Mappings (SDMX, Dublin Core):
+    CBSA is a sdmx-concept:statisticalClassification. % as in http://purl.org/linked-data/sdmx/2009/concept#statisticalClassification
+    CBSA_DIV is a sdmx-concept:statisticalClassification. % as in http://purl.org/linked-data/sdmx/2009/concept#statisticalClassification
+    CSA is a sdmx-concept:statisticalClassification. % as in http://purl.org/linked-data/sdmx/2009/concept#statisticalClassification
+    STCNTY is a sdmx-concept:administrativeClassification. % as in http://purl.org/linked-data/sdmx/2009/concept#administrativeClassification
+
+%General Data Mappings (DCAT, Dublin Core):
+    ID is a dct:identifier. % as in http://purl.org/dc/terms/identifier
+    CBSA_DIV_FLG is a dcat:Dataset. % as in http://www.w3.org/ns/dcat#Dataset
+    CBSA_METRO_FLG is a dcat:Dataset. % as in http://www.w3.org/ns/dcat#Dataset
+    CBSA_MICRO_FLG is a dcat:Dataset. % as in http://www.w3.org/ns/dcat#Dataset
+    CSA_FLG is a dcat:Dataset. % as in http://www.w3.org/ns/dcat#Dataset
+    MDI_STATUS_CODE is a skos:Concept. % as in http://www.w3.org/2004/02/skos/core#Concept
+    MDI_STATUS_DESC is a skos:prefLabel. % as in http://www.w3.org/2004/02/skos/core#prefLabel
+
+%Demographic/Social Mappings (FOAF, Schema.org):
+    MDI_STATUS_CODE is a schema:demographicGroup. % as in http://schema.org/demographicGroup
+    MDI_STATUS_DESC is a schema:description. % as in http://schema.org/description
+
+query thing is:
+  which thing is a which type.
+
+query label is:
+  which label is a label for Institution Class. 
+
+query description is:
+  CBSA is a label for which description. 
+
+query dataset is:
+	the dataset ID is which one.
+    
+query about is:
+    the dataset FDIC Insured Banks is described at which text.
+  
+query download is:
+    the dataset FDIC Insured Banks can be downloaded from which url.
+   
+query provider is:
+    the provider of FDIC Insured Banks is which provider.
+    
+query platform is:
+    the platform of FDIC Insured Banks is which platform.
+
+query method is:
+    the method of delivery of FDIC Insured Banks is which method. 
+    
+query version is:
+    the product version of FDIC Insured Banks included here is which version. 
