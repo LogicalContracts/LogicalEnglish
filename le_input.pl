@@ -279,7 +279,7 @@ process_types_or_names([Word|RestWords], Elements, Types, [PrintWord|RestPrintWo
     process_types_or_names(RestWords,  Elements, Types, RestPrintWords). 
 process_types_or_names([Word|RestWords],  Elements, Types, Output) :-
     compound(Word), 
-    translate_goal_into_LE(Word, PrintWord), !, % cut the alternatives
+    le_answer:translate_goal_into_LE(Word, PrintWord), !, % cut the alternatives
     process_types_or_names(RestWords,  Elements, Types, RestPrintWords),
     append(PrintWord, RestPrintWords, Output). 
 process_types_or_names([Word|RestWords],  Elements, Types, [Word|RestPrintWords] ) :-

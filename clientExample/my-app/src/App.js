@@ -87,11 +87,14 @@ return (
             </div>
           </div>
         ))}
+        
       </div>
     )}
+
+    {response && response.answer && <p><strong>Answer:</strong> {response.answer}</p>}
     
     {/* Keep the raw JSON display if you still want it */}
-    {response && <pre style={{ marginTop: '20px' }}>{JSON.stringify(response, null, 2)}</pre>}
+    {/* response && <pre style={{ marginTop: '20px' }}>{JSON.stringify(response, null, 2)}</pre> */}
   </div>
 );
 }

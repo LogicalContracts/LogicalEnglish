@@ -29,7 +29,15 @@ Your app is ready to be deployed!
 
 See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
 
-You can run it from simple_server_html by updating the references to the actual .js and .css files below ./build
+You can run it from simple_server_html by updating, in that file, the references to the actual .js and .css files below ./build
+
+Open simple_server.html and correct this line: 
+
+<script defer="defer" src="./static/js/main.6dc19d90.js"></script><link href="./static/css/main.e6c13ad2.css" rel="stylesheet">
+
+with the main.<replace>.js and main.<replace>.css produced by this command into ./build/static/css and js
+
+run `npm run build` again to copy the updated simple_server.html from ./public into ./build
 
 ### `npm run eject`
 
