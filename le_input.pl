@@ -133,9 +133,11 @@ text_to_logic(String_, Translation) :-
     ((sub_atom(String_,_,1,0,NL), memberchk(NL,['\n','\r']) ) -> String=String_ ; atom_concat(String_,'\n',String)),
     tokenize(String, Tokens, [cased(true), spaces(true), numbers(true)]),
     retractall(last_nl_parsed(_)), asserta(last_nl_parsed(1)), % preparing line counting
+    %print_message(informational, "+++++ Tokens: ~w"-[Tokens]),
     unpack_tokens(Tokens, UTokens), 
-    clean_comments(UTokens, CTokens), !, 
-    % print_message(informational, "CTokens: ~w"-[CTokens]), 
+    %print_message(informational, "----- UTokens: ~w"-[UTokens]),
+    clean_comments(UTokens, CTokens), !,
+    %print_message(informational, "CTokens: ~w"-[CTokens]), 
     phrase(document(Translation), CTokens).
     %print_message(informational, "Translation: ~w"-[Translation]). 
     %with_output_to(string(Report), listing(dict/3)),
@@ -2145,7 +2147,7 @@ builtin_(BuiltIn, [BuiltIn|RestWords], RestWords) :-
 /* --------------------------------------------------------- Utils in Prolog */
 time_of(P, T) :- P=..[_|Arguments], lists:append(_, [T], Arguments). % it assumes time as the last argument
 
-% Unwraps tokens, excelt for newlines which become newline(NextLineNumber)
+% Unwraps tokens, except for newlines which become newline(NextLineNumber)
 unpack_tokens([], []).
 unpack_tokens([cntrl(Char)|Rest], [newline(Next)|NewRest]) :- (Char=='\n' ; Char=='\r'), !,
     %not sure what will happens on env that use \n\r
@@ -2154,7 +2156,7 @@ unpack_tokens([First|Rest], [New|NewRest]) :-
     (First = word(New); First=cntrl(New); First=punct(New); First=space(New); First=number(New); 
         (First=string(Content), New=le_string(Content)) % change string from tokenizer to le_string to avoid confusion
     ),  
-    % print_message(informational, "First ~w  New ~w"-[First, New]),
+    %print_message(informational, "First ~w  New ~w"-[First, New]),
      !,
     unpack_tokens(Rest, NewRest).  
 

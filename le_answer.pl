@@ -200,7 +200,7 @@ answer(English, Arg) :- %trace,
         retract_facts(ModuleName, Facts))
     ;   %print_message(error, "no scasp SwishModule: ~w Facts: ~w Command: ~w Goal: ~w"-[SwishModule, Facts, Command, Goal]),
         setup_call_catcher_cleanup(assert_facts(SwishModule, Facts), 
-            %listing(SwishModule:is_a/2), SwishModule:Goal), 
+            %(listing(SwishModule:is_a/2), SwishModule:Goal), 
             call(SwishModule:Goal), 
             %catch_with_backtrace(Command, Error, print_message(error, Error)), 
             %catch((true, SwishModule:Goal), Error, ( print_message(error, Error), fail ) ), 

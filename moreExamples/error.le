@@ -1,0 +1,7 @@
+a not-for-profit must register for GST 
+    if the entity is a not-for-profit
+    and		the entity has a turnover 
+    		and the turnover >= 150000
+    	or
+     		the entity projected turnover is a projection 
+    		and the projection >= 150000. 

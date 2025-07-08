@@ -1,0 +1,75 @@
+the target language is: prolog. 
+    
+the templates are:
+*an entity* does not operate for profit.
+*an entity* must register for GST. 
+*an entity* has *a turnover*. 
+*an entity* projected turnover is *a turnover*. 
+*an entity* has *a turnover*. 
+the turnover of *an entity* for the current month is *an amount*.    
+the turnover of *an entity* for the previous 11 months is *an amount*. 
+the turnover of *an entity* for the next 11 months is *an amount*.
+    
+the ontology is:
+    
+sporting club is an entity.
+charity is an entity.
+community group is an entity.
+professional association is an entity.    
+
+an entity is a not-for-profit if the entity does not operate for profit. 
+        
+the knowledge base gst includes:
+
+an entity must register for GST 
+    if the entity is a not-for-profit
+    and		the entity has a turnover 
+    		and the turnover >= 150000
+    	or	the entity projected turnover is a projection 
+    		and the projection >= 150000. 
+
+an entity must register for GST 
+    if it is not the case that
+    	the entity is a not-for-profit
+    and 	the entity has a turnover 
+   			and the turnover >= 75000 
+    	or the entity projected turnover is a projection
+    		and the projection >= 75000.
+
+an entity has a current turnover
+    if the turnover of the entity for the current month is a monthly amount
+    and the turnover of the entity for the previous 11 months is a past amount
+    and the current turnover = monthly amount + past amount. 
+
+an entity projected turnover is a projection
+    if the turnover of the entity for the current month is a monthly amount
+    and the turnover of the entity for the next 11 months is a future amount
+    and the projection = monthly amount + future amount. 
+    
+scenario A is:
+Cherrio Charity is an entity. 
+Cherrio Charity does not operate for profit. 
+Cherrio Charity has 160000. 
+    
+query A is:
+Cherrio Charity must register for GST. 
+% yes
+    
+scenario B is: 
+sporting club does not operate for profit.
+sporting club projected turnover is 100000. 
+        
+query B is:
+sporting club must register for GST. 
+% no
+    
+scenario C is: 
+Tom s Bakery is an entity.
+Tom s Bakery has 80000.
+    
+query C is: 
+Tom s Bakery must register for GST.
+% yes
+    
+query not-for-profit is:
+which entity is a not-for-profit. 
