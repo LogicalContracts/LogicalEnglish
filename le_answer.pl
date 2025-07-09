@@ -567,19 +567,19 @@ remove_duplicates([H|R], [H|RR]) :- remove_duplicates(R, RR).
 
 % show/1
 show(prolog) :-
-    %print_message(informational, "About to show prolog code"), 
+    %print_message(informational, "%This is prolog code"), 
     show(metarules), 
     show(rules),
     show(queries),
     show(scenarios). 
 
 show(rules) :- %trace, 
-    psem(File),
+    (psem(Module); this_capsule(Module)), 
     findall(Pr, le_input:filtered_dictionary(Pr), Preds), 
     remove_duplicates(Preds, PredsClean), 
-    %print_message(informational, "Swish Module ~w"-[SwishModule]), 
+    print_message(informational, "Module ~w"-[Module]), 
     findall((Pred :- Body), 
-        ( member(Pred, PredsClean), clause(File:Pred, Body_), unwrapBody(Body_, Body)), Predicates),
+        ( member(Pred, PredsClean), clause(Module:Pred, Body_), unwrapBody(Body_, Body)), Predicates),
     %print_message(informational, "Rules  ~w"-[Predicates]),
     %forall(member(Clause, [(is_(A,B) :- (nonvar(B), is(A,B)))|Predicates]), portray_clause_ind(Clause)).
     forall(member(Clause, Predicates), portray_clause_ind(Clause)).
@@ -592,24 +592,24 @@ show(rules) :- %trace,
 %; RevGoalElements = GoalElements 
 %), 
 
-show(metarules) :- %trace, 
-    psem(File),
+show(metarules) :- %trace,  
+    (psem(Module); this_capsule(Module)), 
     findall((Pred :- Body), 
         (meta_dict(PredicateElements, _, _), PredicateElements\=[], 
-         Pred=..PredicateElements, clause(File:Pred, Body_), unwrapBody(Body_, Body)), Predicates),
+         Pred=..PredicateElements, clause(Module:Pred, Body_), unwrapBody(Body_, Body)), Predicates),
     forall(member(Clause, Predicates), portray_clause_ind(Clause)).
 
 show(queries) :- %trace, 
-    psem(File),
+    (psem(Module); this_capsule(Module)),
     findall((query(A,B) :- true), 
         (clause(File:query(A,B), _)), Predicates),
     %print_message(informational, "Queries  ~w"-[Predicates]),
     forall(member(Clause, Predicates), portray_clause_ind(Clause)).
 
-show(scenarios) :- %trace, 
-    psem(File),
-    findall((example(A,B) :- true), 
-        (clause(File:example(A,B), _)), Predicates),
+show(scenarios) :- %trace,
+    (psem(Module); this_capsule(Module)),
+    findall((example(A,B) :- true),
+        (clause(Module:example(A,B), _)), Predicates),
     forall(member(Clause, Predicates), portray_clause_ind(Clause)).
 
 show(templates) :-
