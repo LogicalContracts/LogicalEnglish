@@ -602,7 +602,7 @@ show(metarules) :- %trace,
 show(queries) :- %trace, 
     (psem(Module); this_capsule(Module)),
     findall((query(A,B) :- true), 
-        (clause(File:query(A,B), _)), Predicates),
+        (clause(Module:query(A,B), _)), Predicates),
     %print_message(informational, "Queries  ~w"-[Predicates]),
     forall(member(Clause, Predicates), portray_clause_ind(Clause)).
 

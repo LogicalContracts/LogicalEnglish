@@ -128,9 +128,9 @@ all_kps_loaded(KP):-
 loaded_kp(Name) :- module_api_hack(Name), !.
 loaded_kp(Name) :- must_be(nonvar,Name), shouldMapModule(_,Name), !. % SWISH module already loaded 
 loaded_kp(Name) :- \+ kp_location(Name,_,_), !, 
-    (\+ reported_missing_kp(Name) -> (
-        assert(reported_missing_kp(Name)), print_message(error,"Unknown knowledge page: ~w"-[Name])) 
-        ; true), 
+    (\+ reported_missing_kp(Name) -> ( true 
+        %assert(reported_missing_kp(Name)), print_message(error,"Unknown knowledge page: ~w"-[Name])) 
+        ; true) ), 
     fail.
 loaded_kp(Name) :- % some version already loaded:
     module_property(Name,last_modified_generation(T)), T>0, 
