@@ -269,7 +269,7 @@ i(G, M, CID, Cref, U,E) :- not(le_answer:abducing), G = is_a(_,_), !,   % explic
     not((BodyPre=(is_a(_,Y), is_a(Y,_)), var(Y))),
     %print_message(error, "ontology ~w -> ~w ref ~w"-[G, BodyPre, Ref]), 
     i(BodyPre, M, CID, Cref, U, ER).
-i(G,M,CID,Cref,U,E) :- system_predicate(G), !, 
+i(G,M,CID,Cref,U,E) :- system_predicate(G), \+ comparison_predicate(G), !, % 
     evalArgExpressions(G,M,NewG,CID,Cref,Uargs,E_),
     % floundering originates unknown:
     catch(( myCall(M:NewG), U=Uargs, E = [s(G,M,Cref,E_)] %,print_message(informational,"The goal is ~w"-[(G, NewG, U, E)])
@@ -282,7 +282,7 @@ i(At,Mod,CID,Cref,U,E) :- At=at(G,M_),!,
     ( (psem(M_); loaded_kp(M); hypothetical_fact(M,_,_,_,_,_)) -> 
                 i(G,M,CID,Cref,U,E) ; 
                 (U=[At/c(Cref)], E=[u(At,Mod,Cref,[])] )).
-i(G,M,_CID,Cref,U,E) :- unknown(G,M), do_not_fail_undefined_preds, !, 
+i(G,M,_CID,Cref,U,E) :- \+ system_predicate(G), unknown(G,M), do_not_fail_undefined_preds, !, 
     (U=[at(G,M)/c(Cref)],E=[ u(at(G,M),M,Cref,[]) ]).
 %TODO: on(G,2020) means "G true on some instant in 2020"; who matches that with '20210107' ? check for clauses and hypos
 i(G,M,CID,Cref,U,E) :- %trace,
@@ -301,7 +301,9 @@ i(G,M,CID,Cref,U,E) :- %trace,
         fail
         )),
     evalArgExpressions(G,M,NewG,CID,Cref,Uargs,Eargs), % failures in the expression (which would be weird btw...) stay directly under CID
-    myClause(NewG,M,B,Ref,IsProlog,_URL,LocalE),
+
+    (comparison_predicate(G) -> IsProlog=true, B=G, LocalE=[s(G,M,Cref,[])] ; myClause(NewG,M,B,Ref,IsProlog,_URL,LocalE)),
+
     (IsProlog==false -> i(B,M,NewID,Ref,U_,Children_) ; (
         catch( myCall(B), error(Error,_), (U_=[at(Error,M)/c(Cref)])), % should this call be qualified with M? What when M is the SWISH module...?
         (var(U_)->U_=[];true),
