@@ -552,13 +552,18 @@ expand_failure_trees([f(ID,Module,CID,Children)|Wn],U1,Un,Expanded) :-
     must_be(var,Children),
     findall(f(ChildID,M,ID,_),failed(ChildID,M,ID,_Cref,_ChildG),Children),
     expand_failure_trees(Children,U1,U2_,NewChildren_),
-    ((NewChildren_==[],failed_success(ID,SU,Why)) -> ( % no failure suspects, but we have a (last) solution:
+    ((NewChildren_==[],failed_success(ID,SU,Why), \+(( failed(ID,_,_,_,G), ground(G), G\=not(_) ))) -> ( 
+        % no failure suspects, but we have a (last) solution: consider it
         append(U2_,SU,U2__), expand_failure_trees(Why,U2__,U2,NewChildren)) 
         ; (U2_=U2, NewChildren_ = NewChildren)  
         ),
 
     expand_failure_trees(Wn,U2,Un,EWn),
-    (failed(ID,Module,CID,Cref,G) -> Expanded=[f(G,Module,Cref,NewChildren)|EWn]; append(NewChildren,EWn,Expanded)).
+    ((failed(ID,Module,CID,Cref,G), \+ (( ground(G), G\=not(_), failed_success(ID,_,_)  )) ) -> 
+        Expanded=[f(G,Module,Cref,NewChildren)|EWn]
+        ; 
+        append(NewChildren,EWn,Expanded)
+    ).
 expand_failure_trees([],U,U,[]).
 
 % simplify_explanation(+ExpandedWhy,-LeanerWhy)
