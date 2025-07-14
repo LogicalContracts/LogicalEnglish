@@ -63,6 +63,9 @@
 % :- debug(http(header)).
 % :- debug(http(hook)).
 
+:- multifile prolog:message//1.
+prolog:message(S-Args) --> {atomic(S),is_list(Args)},[S-Args].
+
 
 % Start with simple_server_main.
 :- initialization(simple_server_main, main).
