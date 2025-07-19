@@ -287,7 +287,7 @@ answer_all(English, Arg, Results) :- %trace, !,
             retract_facts(Module, Facts)). 
 
 answer_all(English, Arg, [ _{answer:'Failure', explanation:E}])  :-
-    print_message(error, "Failed to answer question: ~w"-[English]),
+    %print_message(error, "Failed to answer question: ~w"-[English]),
     with_output_to(string(E), 
         format("Failed to answer question: ~w scenario: ~w", [English, Arg])), !.    
 
@@ -574,7 +574,7 @@ show(rules) :- %trace,
     (psem(Module); this_capsule(Module)), 
     findall(Pr, le_input:filtered_dictionary(Pr), Preds), 
     remove_duplicates(Preds, PredsClean), 
-    print_message(informational, "Module ~w"-[Module]), 
+    %print_message(informational, "Module ~w"-[Module]), 
     findall((Pred :- Body), 
         ( member(Pred, PredsClean), clause(Module:Pred, Body_), unwrapBody(Body_, Body)), Predicates),
     %print_message(informational, "Rules  ~w"-[Predicates]),
@@ -820,13 +820,13 @@ restore_dicts(DictEntries) :- %trace,
     %myDeclaredModule(SwishModule),
     this_capsule(SwishModule), 
     %SwishModule=user,
-    print_message(informational, "the dictionaries are being restored into module ~w"-[SwishModule]),
+    %print_message(informational, "the dictionaries are being restored into module ~w"-[SwishModule]),
     (SwishModule:local_dict(_,_,_) -> findall(dict(A,B,C), SwishModule:local_dict(A,B,C), ListDict) ; ListDict = []),
     (SwishModule:local_meta_dict(_,_,_) -> findall(meta_dict(A,B,C), SwishModule:local_meta_dict(A,B,C), ListMetaDict); ListMetaDict = []),
     %(local_dict(_,_,_) -> findall(dict(A,B,C), local_dict(A,B,C), ListDict) ; ListDict = []),
     %(local_meta_dict(_,_,_) -> findall(meta_dict(A,B,C), local_meta_dict(A,B,C), ListMetaDict); ListMetaDict = []),
     append(ListDict, ListMetaDict, DictEntries), 
-    print_message(informational, "the dictionaries being restored are ~w"-[DictEntries]),
+    %print_message(informational, "the dictionaries being restored are ~w"-[DictEntries]),
     collect_all_preds(SwishModule, DictEntries, Preds),
     %print_message(informational, "the dictionaries being set dynamics are ~w"-[Preds]),
     declare_preds_as_dynamic(SwishModule, Preds). 

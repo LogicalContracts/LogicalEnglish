@@ -98,7 +98,7 @@ handle_api(Request) :-
     %print_message(informational,"Request Payload: ~w"-[Payload]),
     assertion(Payload.token=='myToken123'),
     (entry_point(Payload,Result)->true;Result=_{error:"No answer"}),
-    print_message(informational,"returning Result: ~w"-[Result]),
+    %print_message(informational,"returning Result: ~w"-[Result]),
     reply_json_dict(Result).
 
 :- discontiguous api:entry_point/2.
@@ -143,7 +143,7 @@ entry_point(R, _{answer:AnswerExplanation}) :- get_dict(operation,R,answer), !,
 % Added for API LE
 entry_point(R, _{results:AnswerExplanation}) :- get_dict(operation,R,explain), !, 
     %term_string(Query,R.theQuery,[variable_names(_VarPairs_)]),
-    print_message(informational,"Query ~w  Scenario ~w\n"-[R.theQuery, R.scenario]),
+    %print_message(informational,"Query ~w  Scenario ~w\n"-[R.theQuery, R.scenario]),
     le_answer:parse_and_query_all_answers(R.file, en(R.document), R.theQuery, with(R.scenario), AnswerExplanation).
 
 % Example:
