@@ -17,7 +17,8 @@ limitations under the License.
 :- module(reasoner,[query/4, query_with_facts/5, query_once_with_facts/5, explanation_node_type/2, render_questions/2,
     run_examples/0, run_examples/1, myClause2/9, myClause/4, taxlogWrapper/10, niceModule/2, refToOrigin/2,
     isafter/2, is_not_before/2, isbefore/2, immediately_before/2, same_date/2, subtract_days/3, this_year/1, uk_tax_year/4, in/2,
-    isExpressionFunctor/1, set_time_of_day/3, start_of_day/2, end_of_day/2, is_days_after/3, is_1_day_after/2, unparse_time/2
+    isExpressionFunctor/1, set_time_of_day/3, start_of_day/2, end_of_day/2, is_days_after/3, is_1_day_after/2, unparse_time/2,
+    isafterorequal/2, isbeforeorequal/2, isafter/2, isbefore/2, is_not_before/2, has_as_head_before/3
     ]).
 
 /** <module> Tax-KB reasoner and utils
@@ -674,17 +675,34 @@ nodeAttributes(at(G,K), [color=green,label=S]) :- format(string(S),"~w",G).
 
 %%%% Common background knowledge, probably to go elsewhere:
 
-%Time predicates; they assume times are atoms in iso_8601 format
+%Time predicates; they assume times are atoms in iso_8601 format or as seconds from 1970-01-01T00:00:00
 
 %!  after(+Later,+Earlier) is det.
 %   Arguments must be dates in iso_8601 format, e.g. '20210206' or '2021-02-06T08:25:34'
+%  parse_time(+TimeString,-TimeInSeconds) parses a time string in iso_8601 format, left here for completeness.
+%  it is done by the tokenizer 
 isafter(Later,Earlier) :- 
-    parse_time(Later,L), parse_time(Earlier,E), L>E.
+    parse_time(Later,L), parse_time(Earlier,E), L>E, !.  
+isafter(Later,Earlier) :- 
+    number(Later), number(Earlier), Earlier<Later.
+
+isafterorequal(Later,Earlier) :- 
+    parse_time(Later,L), parse_time(Earlier,E), L>=E, !.
+isafterorequal(Later,Earlier) :- 
+    number(Later), number(Earlier), Later>=Earlier.
+
 is_not_before(Later,Earlier) :-
-    parse_time(Later,L), parse_time(Earlier,E), L>=E.
+    parse_time(Later,L), parse_time(Earlier,E), L>=E, !.
+is_not_before(Later,Earlier) :-
+    number(Later), number(Earlier), Later>=Earlier.
+
+isbeforeorequal(Earlier,Later) :-
+    parse_time(Later,L), parse_time(Earlier,E), E=<L, !.
+isbeforeorequal(Earlier,Later) :-
+    number(Later), number(Earlier), Earlier=<Later.
+
 isbefore(Earlier,Later) :-
     parse_time(Later,L), parse_time(Earlier,E), E<L, !.
-% an argument can be any number
 isbefore(Earlier,Later) :-
     number(Later), number(Earlier), Earlier<Later.
 

@@ -180,7 +180,7 @@ semantics2prolog(metapredicates(Assumptions), delimiter-[classify,classify],meta
     declare_facts_as_dynamic(Module, Assumptions), !. 
 semantics2prolog(predicates(Assumptions), delimiter-[classify,classify],predicates([N])) :- 
     (le_answer:psem(Module); this_capsule(Module)), lists:length(Assumptions,N),
-    declare_facts_as_dynamic(Module, Assumptions). 
+    declare_facts_as_dynamic(Module, Assumptions).  
     %print_message(informational, "asserted: ~w"-[Assumptions]).
 semantics2prolog(events(Assumptions), delimiter-[classify,classify],events([N])) :- 
     (le_answer:psem(Module); this_capsule(Module)), lists:length(Assumptions,N),
@@ -200,6 +200,20 @@ declare_facts_as_dynamic(M, [F|R]) :- functor(F, is_a, A), % facts are the templ
     %print_message(informational, "asserted table: is_a ~w on ~w"-[A, M]),
     table((M:is_a/2) as incremental), !, 
     dynamic([M:is_a/A], [incremental(true), discontiguous(true)]), declare_facts_as_dynamic(M, R). 
+declare_facts_as_dynamic(M, [F|R]) :- functor(F, P, A), % facts are the templates now
+    %print_message(informational, "candidate for predefined:  ~w on ~w"-[P, M]),
+    le_input:user_predef_dict([P|_],_,_), %
+    %predicate_property(reasoner:P/A, defined), % it is defined in reasoner.pl
+    %\+ predicate_property(_:P/A, static),
+    %\+ predicate_property(_:P/A, built_in), % it is not a built_in
+    %\+ predicate_property(_:P/A, foreign), % nor defined in C
+    %\+ predicate_property(_:P/A, autoload(_)), % nor can be autoloaded from a library
+    %\+ predicate_property(_:P/A, imported_from(system)), % nor imported from system
+    %\+ predicate_property(_:P/A, imported_from(user)), % nor imported from user
+    %\+ predicate_property(_:P/A, imported_from(yall)), % nor imported from the current module
+    M:import(reasoner:P/A), !,  % reasoner.pl is designated as the file for new prolog predicates then
+    %print_message(informational, "asserted predefined:  ~w on ~w"-[P, M]),
+    declare_facts_as_dynamic(M, R). 
 declare_facts_as_dynamic(M, [F|R]) :- functor(F, P, A),  % facts are the templates now
     %print_message(informational, "asserted dynamic local discontiguous: ~w:~w"-[M,P]),
     dynamic([M:P/A], [discontiguous(true)]), declare_facts_as_dynamic(M, R). 

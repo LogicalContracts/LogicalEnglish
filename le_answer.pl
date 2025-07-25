@@ -273,6 +273,7 @@ answer_all(English, Arg, Results) :- %trace, !,
     % append(FactsPre, [(is_a(A, B):-(is_a(A, C),is_a(C, B))), (reasoner:is_a(X,Y) :- is_a(X,Y))], Facts),
     % append(FactsPre, [(is_a_(X,Y):-is_a(X,Y)), (is_a(A, B):-(is_a_(A, C),is_a(C, B)))], Facts),
     append(FactsPre, [(is_a(A, B):-(is_a(A, C),is_a(C, B)))], Facts),
+    print_message(informational, "Answering: ~w with ~w "-[English, Arg]),
     setup_call_catcher_cleanup(assert_facts(Module, Facts), 
             %catch((listing(SwishModule:is_a/2), reasoner:query(at(InnerGoal, SwishModule),Result,E,_)),             
             %catch((listing(Module:is_a/2), reasoner:query(at(InnerGoal, Module),_U,E,Result)), Error, ( print_message(error, Error), fail ) ),
@@ -294,7 +295,7 @@ answer_all(English, Arg, [ _{answer:'Failure', explanation:E}])  :-
 % pre_answer/5
 pre_answer(English, Arg, FactsPre, Module, InnerGoal) :- !, 
     le_input:parsed, %myDeclaredModule(Module), 
-    (psem(Module); this_capsule(Module)),  %trace, 
+    (psem(Module); this_capsule(Module)), %trace, 
     print_message(informational, "Module: ~w "-[Module]), 
     translate_command(Module, English, _, Goal, PreScenario), 
     print_message(informational, "English: ~w ~w ~w"-[English, Goal, PreScenario]), 
@@ -517,10 +518,10 @@ translate_command(Module, English_String, GoalName, Goals, Scenario) :- %trace,
     tokenize(English_String, Tokens, [cased(true), spaces(true), numbers(false)]),
     unpack_tokens(Tokens, UTokens), 
     clean_comments(UTokens, CTokens),
-    phrase(command_(GoalName, Scenario), CTokens), !, 
-    %print_message(informational, "GoalName ~w Module ~w"-[GoalName, Module]), 
+    phrase(command_(GoalName, Scenario), CTokens),  
+    print_message(informational, "GoalName ~w Module ~w"-[GoalName, Module]), 
     %Module:query(GoalName, Goals). 
-    catch_with_backtrace((Module:query(GoalName, Goals)), Error, (print_message(error, Error), fail)).  
+    catch_with_backtrace((Module:query(GoalName, Goals)), Error, (print_message(error, "No such query defined: ~w"-[Error]), fail)).  
     %( Module:query(GoalName, Goals) -> true; (print_message(informational, "No goal named: ~w"-[GoalName]), fail) ), !. 
 
 translate_command(_, English_String, GoalName, Goals, Scenario) :-
@@ -528,7 +529,7 @@ translate_command(_, English_String, GoalName, Goals, Scenario) :-
     unpack_tokens(Tokens, UTokens), 
     clean_comments(UTokens, CTokens), Scenario=noscenario, GoalName=nonamed, 
     (phrase(conditions(0, [], _, Goals), CTokens) ->  true  ;
-        ( once(le_input:error_notice(error, Me,_, ContextTokens)), print_message(informational, "~w ~w"-[Me,ContextTokens]), CTokens=[], fail )
+        ( once(le_input:error_notice(error, Me,_, ContextTokens)), print_message(informational, "Error in query definition ~w ~w"-[Me,ContextTokens]), CTokens=[], fail )
     ). 
 
 command_(Goal, Scenario) --> 
@@ -902,7 +903,7 @@ user:is_it_illegal( EnText, Scenario) :- is_it_illegal( EnText, Scenario).
 
 user:holds(Fluent, Time) :- holds(Fluent, Time). 
 
-user:has_as_head_before(List, Head, Rest) :- has_as_head_before(List, Head, Rest). 
+%user:has_as_head_before(List, Head, Rest) :- has_as_head_before(List, Head, Rest). 
 
 % for term_expansion
 %user:le_taxlog_translate( en(Text), Terms) :- le_taxlog_translate( en(Text), Terms)..
@@ -1027,7 +1028,7 @@ parse_and_query_all_answers(File, Document, Question, Scenario, AnswerExplanatio
 	%prolog_load_context(source,File), % atom_prefix(File,'pengine://'), % process only SWISH windows
 	%prolog_load_context(term_position,TP), stream_position_data(line_count,TP,Line),
     le_taxlog_translate(Document, _, 1, TaxlogTerms),
-    %print_message(informational, "TaxlogTerms to be asserted "-[TaxlogTerms]), 
+    %print_message(informational, "TaxlogTerms to be asserted ~w"-[TaxlogTerms]), 
     %print_message(informational, "Expanded to be asserted on ~w "-[M]), 
     retractall(psem(_)), % cleaning id of previously consulted modules  
     assert(psem(File)),  % setting this module for further reasoning
@@ -1079,7 +1080,7 @@ query_and_explanation_text(Question, Scenario, Answer, Result) :-
     answer(Question, Scenario, le(LE_Explanation), Result),
     produce_text_explanation(LE_Explanation, Answer). 
 
-% non_expanded_terms/2 is just as the one above, but with semantics2prolog2 instead of semantics2prolog that has many other dependencies. 
+% non_expanded_terms/2 is just as the one above
 non_expanded_terms(Name, TaxlogTerms, ExpandedTerms) :-
     %print_message(informational, " Translated ~w"-[TaxlogTerms]), 
 	(TaxlogTerms\=[]-> 

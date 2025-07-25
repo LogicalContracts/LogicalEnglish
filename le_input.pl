@@ -94,7 +94,7 @@ query three is:
     op(1150, fx, pred),
     op(1150, fx, show),
     op(1150, fx, abducible),
-    dictionary/3, meta_dictionary/3, dict/3, meta_dict/3,
+    dictionary/3, meta_dictionary/3, dict/3, meta_dict/3, user_predef_dict/3, filtered_dictionary/1, 
     parsed/0, source_lang/1, including/0, %just_saved_scasp/2,
     this_capsule/1, unpack_tokens/2, clean_comments/2,
     query_/2, extract_constant/4, spaces/3, name_as_atom/2, process_types_or_names/4,
@@ -163,13 +163,15 @@ header(Settings, In, Next) :-
     length(In, TextSize), % after comments were removed
     phrase(settings(DictEntries, Settings_), In, Next), 
     fix_settings(Settings_, Settings2), 
+    %print_message(informational, "settings: ~w"-[Settings2]),
     RulesforErrors = [(text_size(TextSize))|Settings2], % is text_size being used? % asserting the Settings too! predicates, events and fluents
     included_files(Settings2, RestoredDictEntries, CollectedRules), 
     append(Settings2, CollectedRules, Settings), 
-    append(DictEntries, RestoredDictEntries, AllDictEntries), 
+    append(DictEntries, RestoredDictEntries, AllDictEntries),
+    %print_message(informational, "All Dict Entries: ~w"-[AllDictEntries]), 
     order_templates(AllDictEntries, OrderedEntries), 
     process_types_dict(OrderedEntries, Types), 
-    %print_message(informational, "header: types ~w rules ~w"-[Types, CollectedRules]),
+    %print_message(informational, "header: types ~w rules ~w"-[Types, OrderedEntries]),
     append(OrderedEntries, RulesforErrors, SomeRules),
     append(SomeRules, Types, MRules), 
     %print_message(informational, "rules ~w"-[MRules]),
@@ -2491,27 +2493,16 @@ predef_dict([is_a, Object, Type], [object-object, type-type], [Object, is, a, Ty
 predef_dict([is_a, Object, Type], [object-object, type-type], [Object, is, of, Type]).
 
 % % Prolog
-predef_dict(A,B,C) :- prolog_predef_dict(A,B,C).
+predef_dict(A,B,C) :- user_predef_dict(A,B,C) ;  prolog_predef_dict(A,B,C). % <- this order matters, user_predef_dict must be checked first 
 
 prolog_predef_dict([length, List, Length], [member-object, list-list], [the, length, of, List, is, Length]).
 prolog_predef_dict([bagof, Thing, Condition, Bag], [bag-thing, thing-thing, condition-condition], [Bag, is, a, bag, of, Thing, such, that, Condition]).
-prolog_predef_dict([has_as_head_before, A, B, C], [list-list, symbol-term, rest_of_list-list], [A, has, B, as, head, before, C]).
 prolog_predef_dict([append, A, B, C],[first_list-list, second_list-list, third_list-list], [appending, A, then, B, gives, C]).
 prolog_predef_dict([reverse, A, B], [list-list, other_list-list], [A, is, the, reverse, of, B]).
-prolog_predef_dict([same_date, T1, T2], [time_1-time, time_2-time], [T1, is, the, same, date, as, T2]). % see reasoner.pl before/2
-prolog_predef_dict([between,Minimum,Maximum,Middle], [min-date, max-date, middle-date], 
-                [Middle, is, between, Minimum, &, Maximum]).
-prolog_predef_dict([is_1_day_after, A, B], [date-date, second_date-date],
-                [A, is, '1', day, after, B]).
-prolog_predef_dict([is_days_after, A, B, C], [date-date, number-number, second_date-date],
-                  [A, is, B, days, after, C]).
-prolog_predef_dict([immediately_before, T1, T2], [time_1-time, time_2-time], [T1, is, immediately, before, T2]). % see reasoner.pl before/2
+prolog_predef_dict([between,Minimum,Maximum,Middle], [min-date, max-date, middle-date], [Middle, is, between, Minimum, &, Maximum]).
 prolog_predef_dict([\=, T1, T2], [thing_1-thing, thing_2-thing], [T1, is, different, from, T2]).
 prolog_predef_dict([==, T1, T2], [thing_1-thing, thing_2-thing], [T1, is, equivalent, to, T2]).
-prolog_predef_dict([is_not_before, T1, T2], [time1-time, time2-time], [T1, is, not, before, T2]). % see reasoner.pl before/2
 prolog_predef_dict([=, T1, T2], [thing_1-thing, thing_2-thing], [T1, is, equal, to, T2]).
-prolog_predef_dict([<, T1, T2], [time1-time, time2-time], [T1, is, before, T2]). 
-prolog_predef_dict([>, T1, T2], [time1-time, time2-time], [T1, is, after, T2]).  
 prolog_predef_dict([member, Member, List], [member-object, list-list], [Member, is, in, List]).
 %prolog_predef_dict([is_, A, B], [term-term, expression-expression], [A, is, B]). % builtin Prolog assignment
 prolog_predef_dict([nonvar, T1], [thing_1-thing], [T1, is, known]). % is it instantiated?
@@ -2529,9 +2520,23 @@ prolog_predef_dict([>=, T1, T2], [thing_1-thing, thing_2-thing], [T1, >,=, T2]).
 prolog_predef_dict([is, T1, T2], [thing_1-thing, thing_2-thing], [T1, =, T2]).
 prolog_predef_dict([<, T1, T2], [thing_1-thing, thing_2-thing], [T1, <, T2]).
 prolog_predef_dict([>, T1, T2], [thing_1-thing, thing_2-thing], [T1, >, T2]).
-prolog_predef_dict([unparse_time, Secs, Date], [secs-time, date-date], [Secs, corresponds, to, date, Date]).
-% prolog_predef_dict([must_be, Type, Term], [type-type, term-term], [Term, must, be, Type]).
-% prolog_predef_dict([must_not_be, A, B], [term-term, variable-variable], [A, must, not, be, B]). 
+
+
+user_predef_dict([has_as_head_before, A, B, C], [list-list, symbol-term, rest_of_list-list], [A, has, B, as, head, before, C]).
+user_predef_dict([same_date, T1, T2], [time_1-time, time_2-time], [T1, is, the, same, date, as, T2]). % see reasoner.pl before/2
+user_predef_dict([is_1_day_after, A, B], [date-date, second_date-date],
+                [A, is, '1', day, after, B]).
+user_predef_dict([is_days_after, A, B, C], [date-date, number-number, second_date-date],
+                  [A, is, B, days, after, C]).
+user_predef_dict([immediately_before, T1, T2], [time_1-time, time_2-time], [T1, is, immediately, before, T2]). % see reasoner.pl before/2
+user_predef_dict([is_not_before, T1, T2], [time1-time, time2-time], [T1, is, not, before, T2]). % see reasoner.pl before/2
+user_predef_dict([isbeforeorequal, T1, T2], [time1-date, time2-date], [T1, is, before, or, equal, to, T2]). 
+user_predef_dict([isafterorequal, T1, T2], [time1-date, time2-date], [T1, is, after, or, equal, to, T2]). 
+user_predef_dict([isbefore, T1, T2], [time1-date, time2-date], [T1, is, before, T2]). 
+user_predef_dict([isafter, T1, T2], [time1-date, time2-date], [T1, is, after, T2]).
+user_predef_dict([unparse_time, Secs, Date], [secs-time, date-date], [Secs, corresponds, to, date, Date]).
+% user_predef_dict([must_be, Type, Term], [type-type, term-term], [Term, must, be, Type]).
+% user_predef_dict([must_not_be, A, B], [term-term, variable-variable], [A, must, not, be, B]). 
 
 % pre_is_type/1
 pre_is_type(thing).
@@ -2550,7 +2555,7 @@ must_be(A, nonvar) :- nonvar(A).
 must_be_nonvar(A) :- nonvar(A).
 must_not_be(A,B) :- not(must_be(A,B)). 
 
-has_as_head_before([B|C], B, C). 
+%has_as_head_before([B|C], B, C). % in reasoner.pl
 
 % see reasoner.pl
 %before(A,B) :- nonvar(A), nonvar(B), number(A), number(B), A < B. 
@@ -2579,8 +2584,12 @@ proper_det(_, a).
 
 filtered_dictionary(Pred) :-
     dictionary(PredicateElements, _, _),  
-    PredicateElements\=[], 
-    not(le_input:prolog_predef_dict(PredicateElements, _, _)),  % not among the built ins. 
+    PredicateElements\=[], %PredicateElements=[P|R], length(R, A), 
+    not(le_input:prolog_predef_dict(PredicateElements, _, _)),  % not among the built ins.
+    %\+ predicate_property(_:P/A, built_in), % it is not a built_in
+    %\+ predicate_property(_:P/A, foreign), % nor defined in C
+    %\+ predicate_property(_:P/A, autoload(_)), % nor can be autoloaded from a library
+    %\+ predicate_property(_:P/A, imported_from(system)), % nor imported from system 
     Pred=..PredicateElements.
 
 % ---------------------------------------------------------------- sandbox
