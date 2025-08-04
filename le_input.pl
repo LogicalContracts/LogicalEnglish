@@ -94,7 +94,7 @@ query three is:
     op(1150, fx, pred),
     op(1150, fx, show),
     op(1150, fx, abducible),
-    dictionary/3, meta_dictionary/3, dict/3, meta_dict/3, user_predef_dict/3, filtered_dictionary/1, 
+    dictionary/3, meta_dictionary/3, dict/3, meta_dict/3, user_predef_dict/3, prolog_predef_dict/3, filtered_dictionary/1, 
     parsed/0, source_lang/1, including/0, %just_saved_scasp/2,
     this_capsule/1, unpack_tokens/2, clean_comments/2,
     query_/2, extract_constant/4, spaces/3, name_as_atom/2, process_types_or_names/4,

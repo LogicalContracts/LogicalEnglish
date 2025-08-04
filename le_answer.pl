@@ -273,13 +273,14 @@ answer_all(English, Arg, Results) :- %trace, !,
     % append(FactsPre, [(is_a(A, B):-(is_a(A, C),is_a(C, B))), (reasoner:is_a(X,Y) :- is_a(X,Y))], Facts),
     % append(FactsPre, [(is_a_(X,Y):-is_a(X,Y)), (is_a(A, B):-(is_a_(A, C),is_a(C, B)))], Facts),
     append(FactsPre, [(is_a(A, B):-(is_a(A, C),is_a(C, B)))], Facts),
-    print_message(informational, "Answering: ~w with ~w "-[English, Arg]),
+    %print_message(informational, "Answering: ~w with ~w "-[English, Arg]),
     setup_call_catcher_cleanup(assert_facts(Module, Facts), 
             %catch((listing(SwishModule:is_a/2), reasoner:query(at(InnerGoal, SwishModule),Result,E,_)),             
             %catch((listing(Module:is_a/2), reasoner:query(at(InnerGoal, Module),_U,E,Result)), Error, ( print_message(error, Error), fail ) ),
             catch_with_backtrace(
                 findall(Answer, 
-                    ( reasoner:query(at(InnerGoal, Module),_U, le(LE_Explanation), Result) ,
+                    ( %listing(Module:is_a/2),
+                      reasoner:query(at(InnerGoal, Module),_U, le(LE_Explanation), Result) ,
                       produce_html_explanation(LE_Explanation, E), correct_answer(InnerGoal, E, Result, Answer) ),
                     Results), 
                 Error, 
@@ -290,19 +291,19 @@ answer_all(English, Arg, Results) :- %trace, !,
 answer_all(English, Arg, [ _{answer:'Failure', explanation:E}])  :-
     %print_message(error, "Failed to answer question: ~w"-[English]),
     with_output_to(string(E), 
-        format("Failed to answer question: ~w scenario: ~w", [English, Arg])), !.    
+        format("Failed to answer question: ~w : ~w", [English, Arg])), !.    
 
 % pre_answer/5
 pre_answer(English, Arg, FactsPre, Module, InnerGoal) :- !, 
     le_input:parsed, %myDeclaredModule(Module), 
     (psem(Module); this_capsule(Module)), %trace, 
-    print_message(informational, "Module: ~w "-[Module]), 
+    %print_message(informational, "Module: ~w "-[Module]), 
     translate_command(Module, English, _, Goal, PreScenario), 
-    print_message(informational, "English: ~w ~w ~w"-[English, Goal, PreScenario]), 
+    %print_message(informational, "English: ~w ~w ~w"-[English, Goal, PreScenario]), 
     ((Arg = with(ScenarioName), PreScenario=noscenario) -> Scenario=ScenarioName; Scenario=PreScenario), 
-    print_message(informational, "Arg: ~w ~w"-[Arg, Scenario]), 
+    %print_message(informational, "Arg: ~w ~w"-[Arg, Scenario]), 
     extract_goal_command(Goal, Module, InnerGoal, _Command),
-    print_message(informational, "InnerGoal: ~w "-[InnerGoal]), 
+    %print_message(informational, "InnerGoal: ~w "-[InnerGoal]), 
     ((Scenario==noscenario;Scenario=='') -> FactsPre = [] ; 
         catch_with_backtrace((Module:example(Scenario, [scenario(FactsPre, _)])), Error, (print_message(error, Error), fail))). 
 
@@ -519,7 +520,7 @@ translate_command(Module, English_String, GoalName, Goals, Scenario) :- %trace,
     unpack_tokens(Tokens, UTokens), 
     clean_comments(UTokens, CTokens),
     phrase(command_(GoalName, Scenario), CTokens),  
-    print_message(informational, "GoalName ~w Module ~w"-[GoalName, Module]), 
+    %print_message(informational, "GoalName ~w Module ~w"-[GoalName, Module]), 
     %Module:query(GoalName, Goals). 
     catch_with_backtrace((Module:query(GoalName, Goals)), Error, (print_message(error, "No such query defined: ~w"-[Error]), fail)).  
     %( Module:query(GoalName, Goals) -> true; (print_message(informational, "No goal named: ~w"-[GoalName]), fail) ), !. 

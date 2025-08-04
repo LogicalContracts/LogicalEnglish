@@ -18,7 +18,7 @@ limitations under the License.
 
 */
 
-:- module(_,[print_kp_le/1, le/2, le/1, test_kp_le/2, test_kp_le/1]).
+:- module(_,[print_kp_le/1, le/2, le/1, test_kp_le/2, test_kp_le/1, le_clause_text/4]).
 
 :- use_module(syntax). 
 :- use_module(reasoner).
@@ -114,6 +114,56 @@ le_kp_html(KP, Options, div(style='font-family: "Century Schoolbook", Times, ser
 le_kp_html(KP,HTML) :- 
     le_kp_html(KP,[],HTML).
 
+% le_prolog_text/2  produces all the Prolog rules in Logical English, for the given module M
+le_prolog_text(M, English) :-
+    findall(Clause, (
+        (dictionary(PredicateElements,_,_); M:local_dict(PredicateElements,_,_)),  % check all predicates/templates
+        \+ user_predef_dict(PredicateElements,_,_),  % not defined in the reasoner module
+        \+ prolog_predef_dict(PredicateElements,_,_),% not defined in the prolog module
+        Pred =..PredicateElements,
+        %print_message(informational, "~w ~w"-[M, Pred]), 
+        le_clause_text(Pred,M,_Ref,LE), assert(prolog_le_module(M)),
+        le_html(LE,0,Clause, _HTML), retractall(prolog_le_module(_))
+        ),ClausesList),
+    with_output_to(string(English), write_list_into_le_rules(ClausesList)).
+
+write_list_into_le_rules([]) :- !.
+
+write_list_into_le_rules([H|T]) :-
+    write_list(H), write('.'), nl, nl, 
+    write_list_into_le_rules(T).
+
+write_list(H) :- !, write_list(H, 0).
+
+write_list([], _) :- !.
+
+write_list([' ',' ', ' '|Rest], Indent) :-
+    write(' '), 
+    write_list(Rest, Indent).
+
+write_list([' ', ' '|Rest], Indent) :-
+    write(' '), 
+    write_list(Rest, Indent).
+
+% write_list([if|Rest], Indent) :-
+%     tab(Indent), write(if), nl,
+%     Indent2 is Indent + 1,
+%     write_list(Rest, Indent2).
+
+write_list([H|T], Indent) :-
+    write(H), (T=[' '|_]-> true; write(' ')), 
+    write_list(T, Indent).
+
+tab_to_left_margin(Tab, Padding) :-
+    N is (Tab * 4) + 4,
+    list_of_whites(N, Padding).
+
+list_of_whites(0, []) :- !.
+list_of_whites(N, [' '|Rest]) :-
+    N > 0,
+    N1 is N - 1,
+    list_of_whites(N1, Rest).
+
 :- thread_local reported_predicate_error/1, option/1.
 shouldReportError(E) :- reported_predicate_error(E), !, fail.
 shouldReportError(E) :- assert(reported_predicate_error(E)).
@@ -125,7 +175,10 @@ le_html(if(Conclusion,Conditions),Tab,RuleWords, [div(Top), div(style='padding-l
     le_html(Conclusion,Tab,ConclusionWords,ConclusionHTML), le_html(Conditions,Tab,ConditionsWords,ConditionsHTML),
     append([ConditionsHTML, ["."]], ConditionsHTML_), % adding a dot at the end of each clause 
     append(ConclusionHTML,[span(b(' if'))], Top),
-    append([ConclusionWords,[if],ConditionsWords],RuleWords). % no dot added!
+    % plain words 
+    tab_to_left_margin(Tab, Padding),
+    append(ConclusionWords, ['if', '\n'], Conclusionif),
+    append([Conclusionif, Padding,ConditionsWords],RuleWords).
 %TOOO: to avoid this verbose form, generate negated predicates with Spacy help, or simply declare the negated forms
 le_html(not(A),Tab, [it, is, not, the, case, that|AW],HTML) :- !, le_html(A,Tab, AW,Ahtml), HTML=["it is not the case that "|Ahtml]. 
 le_html(if_then_else(Condition,true,Else),Tab, Words,HTML) :- !,
@@ -206,8 +259,9 @@ le_html(le_predicate(Functor,[A1|Args]), Tab, Words, [span([title=Tip,style=S],H
     append([PH,[" ( "],A1H,ArgsH,[")"]],HTML),
     append([Functor,["("],A1W,ArgsW,[")"]],Words),
     atomicSentenceStyle(le_predicate(Functor,[A1|Args]),Words,S,Tip).
+% from templates
 le_html(le_template(Template, Args), Tab, Words, [span([title=Tip,style=S],HTML)]) :-  
-    (meta_dictionary([_|OriginalArgs], _, Template); dictionary([_|OriginalArgs], _, Template)), 
+    (meta_dictionary([_|OriginalArgs], _, Template); dictionary([_|OriginalArgs], _, Template); (prolog_le_module(M), M:local_dict([_|OriginalArgs], _, Template))), 
     !, 
     le_fill_template(Template, Template, OriginalArgs, Args, Tab, Words, HTML),
     atomicSentenceStyle(le_predicate(Template, Args), Words, S, Tip).
@@ -367,6 +421,25 @@ le_clause(H,M,Ref,LE) :-
     (B==true -> (LE=Head, VarsN=Vars1) ; (
         conditions(B,VarNames,Vars1,VarsN,Body),
         LE=if(Head,Body)
+    )),
+    length(VarsN,N),
+    ( setof(Words,Var^member(v(Words,Var),VarsN),DistinctWords) -> true ; DistinctWords=[]),
+    length(DistinctWords,Found),
+    (Found==N->true ; throw("You need to use unambiguous variable names; avoid a trailing _ ?")).
+
+% le_clause_text(+H,+M,-Ref,-LE) maps a clause head H in module M to a Logical English term LE
+le_clause_text(H,M,Ref,LE) :- 
+    must_be(nonvar,H), 
+    myClause(H,M,_,Ref),  % hacky code extracted from clause_info/2, to make sure we do not get confused with anonymous variables 
+    % (which are ommited from the variable names list)
+    clause_property(Ref,file(File)), File\==user, clause_property(Ref,line_count(LineNo)),
+    prolog_clause:read_term_at_line(File, LineNo, M, Clause_, _TermPos0, VarNames),
+    expand_term(Clause_,RawClause),
+    (RawClause = (RealH:-Body) -> true ; (RawClause=RealH, Body=true)),
+    atomicSentence(RealH,VarNames,[],Vars1,Head),
+    (Body==true -> (LE=Head, VarsN=Vars1) ; (
+        conditions(Body,VarNames,Vars1,VarsN,FinalBody),
+        LE=if(Head,FinalBody)
     )),
     length(VarsN,N),
     ( setof(Words,Var^member(v(Words,Var),VarsN),DistinctWords) -> true ; DistinctWords=[]),
