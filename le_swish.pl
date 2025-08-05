@@ -33,9 +33,8 @@ this_capsule(M) :-
    %le_program_module(M). 
    pengine_self(M), !.
 
-%this_capsule(user).
-myDeclaredModule(M) :- 
-   pengine_self(M). % current_module(M) messes it up
+:- multifile kp_loader:myDeclaredModule/1.
+
 
 portray_clause_ind(Clause) :- 
    portray_clause(Clause). 
