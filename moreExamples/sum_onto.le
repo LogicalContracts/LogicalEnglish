@@ -6,6 +6,8 @@ the templates are:
 the ontology is:
     3 is a factor.
     2 is a factor. 
+    a is a b.
+    b is a c.
 
 the knowledge base sum includes:
     
@@ -18,3 +20,6 @@ scenario one is:
       
 query one is:
     which number is the result. 
+
+query two is:
+    which thing is of which other thing.

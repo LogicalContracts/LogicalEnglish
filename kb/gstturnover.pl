@@ -25,18 +25,23 @@ the ontology is:
 sporting club is an entity.
 charity is an entity.
 community group is an entity.
-professional association is an entity.    
+professional association is an entity.
+Uber driver is a ride-sourcing service.    
 
 an entity is a not-for-profit if the entity does not operate for profit. 
         
 the knowledge base gst includes:
+
+an entity must register for GST
+    if the entity is of a service
+    and the service is a ride-sourcing service. 
 
 an entity must register for GST 
     if the entity is a not-for-profit
     and		the entity has a turnover 
     		and the turnover >= 150000
     	or	the entity projected turnover is a projection 
-    		and the projection >= 150000. 
+    		and the projection >= 150000.  
 
 an entity must register for GST 
     if it is not the case that
@@ -103,8 +108,7 @@ Tom s Bakery must register for GST.
     
 query not-for-profit is:
 which entity is a not-for-profit. 
-    
-    
+     
 scenario typical is:
 	9090.91 is the GST included in sales to your customers.
 	0 is sales to associates that are not for payment and are not taxable. 
@@ -134,7 +138,13 @@ query tbi is:
     
 query gst_turnover is: 
     which amount is the GST Turnover.  
-    
+
+scenario uber is:
+    mario is an Uber driver. 
+
+query who is:
+	which entity must register for GST.
+
 ").
 
 /** <examples>
@@ -151,4 +161,5 @@ query gst_turnover is:
 ?- answer(gst_turnover, with('significant exports'), le(R), L).
 ?- answer(tbi, with('small business'), le(R), L).
 ?- answer(gst_turnover, with('small business'), le(R), L).
+?- answer('who', with(uber), le(R), L).
 */

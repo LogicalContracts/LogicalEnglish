@@ -34,6 +34,8 @@ this_capsule(M) :-
    pengine_self(M), !.
 
 %this_capsule(user).
+myDeclaredModule(M) :- 
+   pengine_self(M). % current_module(M) messes it up
 
 portray_clause_ind(Clause) :- 
    portray_clause(Clause). 

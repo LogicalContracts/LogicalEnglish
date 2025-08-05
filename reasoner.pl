@@ -258,19 +258,19 @@ i(findall(X,G,L),M,CID,Cref,U,E) :- !,
 %     (Q_=Format-Args -> format(string(Q__),Format,Args); Q_=Q__),
 %     U=[at(Q__,M)], E=[u(at(Q__,M),M,Cref,[])].
 i(M:G,Mod,CID,Cref,U,E) :- !, i(at(G,M),Mod,CID,Cref,U,E).
-i(G, M, CID, Cref, U,E) :- not(le_answer:abducing), G = is_a(_,_), !,   % explicitly added to handle the taxonomies when not abducing them
-    % this works but does not trace:
-    % catch(call(M:G), Error, print_message(error, "The error is ~w"-[(CID, Error)])),
-    % U = [], E=[s(G,M,Cref,[])]. 
-    % this is with trace: 
-    %catch(call(M:G), Error, print_message(error, "The error is ~w"-[(CID, Error)])),
+i(G, M, CID, Cref, U,E) :- not(le_answer:abducing), G = is_a(_,_),   % explicitly added to handle the taxonomies when not abducing them
+    % recall is_a/2 is a dynamic, tabled predicated in M. see syntax.pl declare_facts_as_dynamic/2
     myCall(M:G), 
-    E = [s(G,M,Ref,ER)],   
+    E = [s(G,M,Ref,ER)],
     myClause(G,M, BodyPre,Ref),
-    not((BodyPre=(is_a(_,Y), is_a(Y,_)), var(Y))),
     %print_message(error, "ontology ~w -> ~w ref ~w"-[G, BodyPre, Ref]), 
-    i(BodyPre, M, CID, Cref, U, ER).
-i(G,M,CID,Cref,U,E) :- system_predicate(G), \+ comparison_predicate(G), !, % 
+    ((BodyPre=(is_a(_,Y), is_a(Y,_Z)), var(Y)) ->
+        (myCall(M:BodyPre), 
+         U = [], ER = [s(BodyPre,M,Cref,[])] 
+        ) %; 
+ %       U = [], ER = [] 
+    ;   i(BodyPre, M, CID, Cref, U, ER)).
+i(G,M,CID,Cref,U,E) :- system_predicate(G), \+ comparison_predicate(G), \+ G = is_a(_,_), !, % 
     evalArgExpressions(G,M,NewG,CID,Cref,Uargs,E_),
     % floundering originates unknown:
     catch(( myCall(M:NewG), U=Uargs, E = [s(G,M,Cref,E_)] %,print_message(informational,"The goal is ~w"-[(G, NewG, U, E)])
@@ -283,10 +283,10 @@ i(At,Mod,CID,Cref,U,E) :- At=at(G,M_),!,
     ( (psem(M_); loaded_kp(M); hypothetical_fact(M,_,_,_,_,_)) -> 
                 i(G,M,CID,Cref,U,E) ; 
                 (U=[At/c(Cref)], E=[u(At,Mod,Cref,[])] )).
-i(G,M,_CID,Cref,U,E) :- \+ system_predicate(G), unknown(G,M), do_not_fail_undefined_preds, !, 
+i(G,M,_CID,Cref,U,E) :- \+ system_predicate(G), \+ G = is_a(_,_), unknown(G,M), do_not_fail_undefined_preds, !, 
     (U=[at(G,M)/c(Cref)],E=[ u(at(G,M),M,Cref,[]) ]).
 %TODO: on(G,2020) means "G true on some instant in 2020"; who matches that with '20210107' ? check for clauses and hypos
-i(G,M,CID,Cref,U,E) :- %trace,
+i(G,M,CID,Cref,U,E) :- \+ G = is_a(_,_), %trace,
     newGoalID(NewID), create_counter(Counter),
     LastSolutionHolder = hacky(none),
     (true ;( % before failing, save our failure information 
