@@ -463,7 +463,8 @@ starts_with_vowel(Term) :- % not needed fttb.
        member(FirstChar, ['h', 'H']), 
        member(SecondChar, ['o', 'e', 'E', 'O']))).
 
-starts_with_vowel('LLM'). 
+starts_with_vowel(Term) :-
+    atom(Term), Term='LLM'. 
 
 process_time_term(T,ExplainT) :- var(T), name_as_atom([a, time, T], ExplainT). % in case of vars
 process_time_term(T,T) :- nonvar(T), atom(T), !. 
