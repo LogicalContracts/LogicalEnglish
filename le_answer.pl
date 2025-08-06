@@ -420,6 +420,12 @@ translate_goal_into_LE((G;R), WholeAnswer) :-
     append(['('|Answer], ['\n','\t','\t',or|PRestAnswers], WholeAnswer).
 translate_goal_into_LE(aggregate_all(sum(V),Conditions,R), [R,is,the,sum,of,each,V,such,that,'\n', '\t'|Answer]) :-
     translate_goal_into_LE(Conditions, Answer), !.
+translate_goal_into_LE(forall(Conds, Goals), ProcessedWordsAnswers) :-
+    translate_goal_into_LE(Conds, CondsWords), 
+    translate_goal_into_LE(Goals, GoalsWords), 
+    !,
+    append([for, every], CondsWords, FirstPart), 
+    append( FirstPart, [it, is, the, case, that,':'|GoalsWords], ProcessedWordsAnswers). 
 translate_goal_into_LE(not(G), [it,is,not,the,case,that,'\n', '\t'|Answer]) :- 
     translate_goal_into_LE(G, Answer), !.
 translate_goal_into_LE(is_a(A,B), ProcessedWordsAnswers) :-
