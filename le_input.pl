@@ -2503,6 +2503,10 @@ prolog_predef_dict([between,Minimum,Maximum,Middle], [min-date, max-date, middle
 prolog_predef_dict([\=, T1, T2], [thing_1-thing, thing_2-thing], [T1, is, different, from, T2]).
 prolog_predef_dict([==, T1, T2], [thing_1-thing, thing_2-thing], [T1, is, equivalent, to, T2]).
 prolog_predef_dict([=, T1, T2], [thing_1-thing, thing_2-thing], [T1, is, equal, to, T2]).
+prolog_predef_dict([=<, T1, T2], [thing_1-thing, thing_2-thing], [T1, is, less, or, equal, to, T2]).
+prolog_predef_dict([<, T1, T2], [thing_1-thing, thing_2-thing], [T1, is, less, than, T2]).
+prolog_predef_dict([>=, T1, T2], [thing_1-thing, thing_2-thing], [T1, is, greater, or, equal, to, T2]).
+prolog_predef_dict([>, T1, T2], [thing_1-thing, thing_2-thing], [T1, is, greater, than, T2]).
 prolog_predef_dict([member, Member, List], [member-object, list-list], [Member, is, in, List]).
 %prolog_predef_dict([is_, A, B], [term-term, expression-expression], [A, is, B]). % builtin Prolog assignment
 prolog_predef_dict([nonvar, T1], [thing_1-thing], [T1, is, known]). % is it instantiated?
@@ -2514,7 +2518,6 @@ prolog_predef_dict([\==, T1, T2], [thing_1-thing, thing_2-thing], [T1, \,=,=, T2
 prolog_predef_dict([=\=, T1, T2], [thing_1-thing, thing_2-thing], [T1, =,\,=, T2]).
 prolog_predef_dict([=@=, T1, T2], [thing_1-thing, thing_2-thing], [T1, =,@,=, T2]).
 prolog_predef_dict([==, T1, T2], [thing_1-thing, thing_2-thing], [T1, =,=, T2]).
-prolog_predef_dict([=<, T1, T2], [thing_1-thing, thing_2-thing], [T1, =,<, T2]).
 prolog_predef_dict([=<, T1, T2], [thing_1-thing, thing_2-thing], [T1, =,<, T2]).
 prolog_predef_dict([>=, T1, T2], [thing_1-thing, thing_2-thing], [T1, >,=, T2]).
 prolog_predef_dict([is, T1, T2], [thing_1-thing, thing_2-thing], [T1, =, T2]).

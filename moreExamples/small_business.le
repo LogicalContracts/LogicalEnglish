@@ -1,0 +1,84 @@
+the target language is: prolog. 
+    
+the templates are:
+
+*an entity* is a small business entity for *an income year*. 
+*an entity* carries on a business in *a year*. 
+*an entity* carried on a business in *a year*.
+*an entity* has an aggregated turnover of *an amount* for *a year*.
+*an entity* has a probable aggregated turnover of *an amount* for *a year*.
+*an entity* is entitled to a concession with *a threshold*.
+
+the knowledge base small business includes:
+
+% based on https://www.austlii.edu.au/cgi-bin/viewdoc/au/legis/cth/consol_act/itaa1997240/s328.110.html
+% INCOME TAX ASSESSMENT ACT 1997 - SECT 328.110 Meaning of small business entity 
+
+% You are a small business entity for an income year (the current year ) if:
+%
+%  (a)   you carry on a * business in the current year; and
+%
+%  (b)   one or both of the following applies:
+%
+%  (i)   you carried on a business in the income year (the previous year ) before the current year and your * aggregated turnover for the previous year was less than $10 million;
+%
+%  (ii)   your aggregated turnover for the current year is likely to be less than $10 million. 
+%  
+% Note 1:   The $10 million thresholds in this subsection and in subsections   (3) and (4) have been increased to $50 million for certain concessions (for example, see subsection   328 - 285(2)). 
+
+an entity is a small business entity for a current year if
+    the entity carries on a business in the current year
+    and the entity is entitled to a concession with a threshold
+    and     the entity carried on a business in a previous year
+            and the entity has an aggregated turnover of an amount for the previous year
+            and the amount is less than the threshold
+        or  the entity has a probable aggregated turnover of an expected amount for the current year
+            and the expected amount is less than the threshold.
+
+scenario one is:
+Cherrio Charity carried on a business in 2024.
+Cherrio Charity carries on a business in 2025. 
+Cherrio Charity is entitled to a concession with 10000000.
+Cherrio Charity has a probable aggregated turnover of 9000000 for 2025. 
+    
+query one is:
+Cherrio Charity is a small business entity for which year.  
+
+scenario two is:
+Tech Innovations Ltd carried on a business in 2024.
+Tech Innovations Ltd carries on a business in 2025.
+Tech Innovations Ltd is entitled to a concession with 10000000.
+Tech Innovations Ltd has an aggregated turnover of 11000000 for 2024.
+Tech Innovations Ltd has a probable aggregated turnover of 9000000 for 2025.
+
+query two is:
+Tech Innovations Ltd is a small business entity for which year.
+
+scenario three is:
+Bakehouse Bliss Partnership carries on a business in 2025.
+Bakehouse Bliss Partnership carried on a business in 2024.
+Bakehouse Bliss Partnership is entitled to a concession with 10000000.
+Bakehouse Bliss Partnership has a probable aggregated turnover of 9500000 for 2025.
+
+query three is:
+Bakehouse Bliss Partnership is a small business entity for which year.
+
+scenario four is:
+River View Trust carried on a business in 2024.
+River View Trust carries on a business in 2025.
+River View Trust is entitled to a concession with 10000000.
+River View Trust has an aggregated turnover of 8000000 for 2024.
+River View Trust has a probable aggregated turnover of 11000000 for 2025.
+
+query four is:
+River View Trust is a small business entity for which year.
+
+scenario five is:
+Australian Trust carried on a business in 2024.
+Australian Trust carries on a business in 2025.
+Australian Trust is entitled to a concession with 10000000.
+Australian Trust has an aggregated turnover of 8000000 for 2024.
+Australian Trust has a probable aggregated turnover of 9000000 for 2025.
+
+query five is:
+Australian Trust is a small business entity for which year.
