@@ -421,12 +421,18 @@ translate_goal_into_LE((G;R), WholeAnswer) :-
 translate_goal_into_LE(aggregate_all(sum(V),Conditions,R), [R,is,the,sum,of,each,V,such,that,'\n', '\t'|Answer]) :-
     translate_goal_into_LE(Conditions, Answer), !.
 translate_goal_into_LE(forall(Conds, Goals), ProcessedWordsAnswers) :-
-    print_message(informational, "translate_goal_into_LE: for all ~w ~w\n"-[Conds, Goals]),
+    %print_message(informational, "translate_goal_into_LE: for all ~w ~w\n"-[Conds, Goals]),
     translate_goal_into_LE(Conds, CondsWords), 
     translate_goal_into_LE(Goals, GoalsWords), 
     !,
     append([for, every], CondsWords, FirstPart), 
     append( FirstPart, [it, is, the, case, that,':'|GoalsWords], ProcessedWordsAnswers). 
+translate_goal_into_LE(findall(Pattern, _Conds, Solutions), [for, Pattern, found|Solutions]).
+    % print_message(informational, "translate_goal_into_LE: for all ~w ~w\n"-[Conds, Goals]),
+    % translate_goal_into_LE(Conds, CondsWords), 
+    % translate_goal_into_LE(Solutions, SolutionsWords), 
+    % !,
+    % append([for, Pattern, found], SolutionsWords, ProcessedWordsAnswers). 
 translate_goal_into_LE(not(G), [it,is,not,the,case,that,'\n', '\t'|Answer]) :- 
     translate_goal_into_LE(G, Answer), !.
 translate_goal_into_LE(is_a(A,B), ProcessedWordsAnswers) :-
