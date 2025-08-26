@@ -4,23 +4,23 @@ en("the target language is: prolog.
     
 the templates are:
     the varied amount payable for *a quarter* by *an entity* is calculated as *an amount*.
-    the estimated tax for the year of *an entity* is *an amount*. 
+    the estimated tax for *a year* for *an entity* is *an amount*. 
     the year-to-date fraction for *a quarter* is *a fraction*.
     the year-to-date instalment adjustment for *an entity* at *a quarter* is calculated as *an amount*.
-    the new varied rate for *an entity* at *a quarter* is *an amount*.
-    PAYG instalment income for *an entity* at *a quarter* is *an amount*.
-    EBITDA-based income for *an entity* at *a quarter* is *an amount*.
-    ordinary income for *an entity* at *a quarter* is *an amount*.
-    profit or loss for *an entity* at *a quarter* is *an amount*.
-    tax for *an entity* at *a quarter* is *an amount*.
-    depreciation for *an entity* at *a quarter* is *an amount*.
-    amortisation EBITDA for *an entity* at *a quarter* is *an amount*.
-    non-deductible expenses for *an entity* at *a quarter* is *an amount*.
-    income with tax removed for *an entity* at *a quarter* of *an amount*.
-    tax offsets for *an entity* at *a quarter* of *an amount*.
-    net capital gains for *an entity* at *a quarter* of *an amount*.
-    SB depreciation & capital works deduction for *an entity* at *a quarter* of *an amount*.
-    unused prior year loss for *an entity* at *a quarter* of *an amount*.
+    the new varied rate for *an entity* for *a year* is *an amount*.
+    PAYG instalment income for *an entity* for *a year* is *an amount*.
+    EBITDA-based income for *an entity* for *a year* is *an amount*.
+    ordinary income for *an entity* for *a year* is *an amount*.
+    profit or loss for *an entity* for *a year* is *an amount*.
+    tax for *an entity* for *a year* is *an amount*.
+    depreciation for *an entity* for *a year* is *an amount*.
+    amortisation EBITDA for *an entity* for *a year* is *an amount*.
+    non-deductible expenses for *an entity* for *a year* is *an amount*.
+    income with tax removed for *an entity* for *a year* of *an amount*.
+    tax offsets for *an entity* for *a year* of *an amount*.
+    net capital gains for *an entity* for *a year* of *an amount*.
+    SB depreciation & capital works deduction for *an entity* for *a year* of *an amount*.
+    unused prior year loss for *an entity* for *a year* of *an amount*.
     prior BAS period PAYGI calculation loss of *an amount*.
     Estimated annual net tax payable for *an entity* is *an amount*.
     Estimated taxable income for *an entity* is *an amount*.
@@ -32,10 +32,11 @@ the templates are:
 the knowledge base payg includes:
  
 the varied amount payable for a quarter Q by an entity E is calculated as a value A
-    if the estimated tax for the year of E is an amount ET
+    if the estimated tax for a year for E is an amount ET
     and the year-to-date fraction for Q is an fraction F
     and the year-to-date instalment adjustment for E at Q is calculated as an amount Y
     and A = ET * F - Y.
+
 
 the year-to-date fraction for a quarter Q is a fraction F
     if Q is quarter 1 
@@ -47,6 +48,7 @@ the year-to-date fraction for a quarter Q is a fraction F
     or Q is quarter 4 
         and F is 1.0.
 
+
 the year-to-date instalment adjustment for an entity at a quarter is calculated as a value V 
     if a value IR is the sum of each amount such that
         the amount was reported as an instalment on the quarter of the income year
@@ -54,31 +56,32 @@ the year-to-date instalment adjustment for an entity at a quarter is calculated 
         the value was reported as a variation on the quarter of the income year
     and V = IR - IVC.
 
-    
-the new varied rate for an entity at a quarter is an amount VR
-    if the estimated tax for the year of the entity is a value ET
-    and PAYG instalment income for the entity at the quarter is a value I
+
+the new varied rate for an entity for a year is an amount VR
+    if the estimated tax for the year for the entity is a value ET
+    and PAYG instalment income for the entity for the year is a value I
     and VR = (ET/I)*100.
 
 
-PAYG instalment income for an entity at a quarter is an amount I
-    if EBITDA-based income for the entity at the quarter is I
-    or ordinary income for the entity at the quarter is I.
+PAYG instalment income for an entity for a year is an amount I
+    if EBITDA-based income for the entity for the year is I
+    or ordinary income for the entity for the year is I.
 
 
-EBITDA-based income for an entity at a quarter is an amount E
-    if profit or loss for the entity at the quarter is a value P
-    and non-deductible expenses for the entity at the quarter is a value ND
+EBITDA-based income for an entity for a year is an amount E
+    if profit or loss for the entity for the year is a value P
+    and non-deductible expenses for the entity for the year is a value ND
     and a value L is the sum of each amount such that
-        income with tax removed for the entity at the quarter of the amount
-        or tax offsets for the entity at the quarter of the amount
-        or net capital gains for the entity at the quarter of the amount
-        or SB depreciation & capital works deduction for the entity at the quarter of the amount
-        or unused prior year loss for the entity at the quarter of the amount
+        income with tax removed for the entity for the year of the amount
+        or tax offsets for the entity for the year of the amount
+        or net capital gains for the entity for the year of the amount
+        or SB depreciation & capital works deduction for the entity for the year of the amount
+        or unused prior year loss for the entity for the year of the amount
         or prior BAS period PAYGI calculation loss of the amount
     and E = P + ND - L. 
 
-the estimated tax for the year of an entity is an amount ET
+
+the estimated tax for a year for an entity is an amount ET
     if Estimated annual net tax payable for the entity is ET
         and ET > 0
     or ET = 0. 
@@ -93,13 +96,13 @@ Estimated annual net tax payable for an entity is a value ET
 
 
 scenario test is:
-    profit or loss for Australian entity at quarter 4 is 40000.
-    non-deductible expenses for Australian entity at quarter 4 is 5000.
-    income with tax removed for Australian entity at quarter 4 of 3000.
-    tax offsets for Australian entity at quarter 4 of 2000.
-    net capital gains for Australian entity at quarter 4 of 1000.
-    SB depreciation & capital works deduction for Australian entity at quarter 4 of 4000.
-    unused prior year loss for Australian entity at quarter 4 of 5000.
+    profit or loss for Australian entity for 2025 is 40000.
+    non-deductible expenses for Australian entity for 2025 is 5000.
+    income with tax removed for Australian entity for 2025 of 3000.
+    tax offsets for Australian entity for 2025 of 2000.
+    net capital gains for Australian entity for 2025 of 1000.
+    SB depreciation & capital works deduction for Australian entity for 2025 of 4000.
+    unused prior year loss for Australian entity for 2025 of 5000.
     prior BAS period PAYGI calculation loss of 1000.
     Estimated annual net tax payable for Australian entity is 10000.
     Estimated taxable income for Australian entity is 60000.
@@ -107,13 +110,17 @@ scenario test is:
     non-refundable tax offsets for Australian entity is 2000.
     1000 was reported as an instalment on quarter 4 of the income year.
     2000 was reported as a variation on quarter 4 of the income year.
+
+scenario harmander is:
+    the estimated tax for 2025 for Harmander is 10125.
+    ordinary income for Harmander for 2025 is 82480.
     
 
 query normal is:
     the varied amount payable for quarter 4 by Australian entity is calculated as which amount.
 
 query payg is:
-    the new varied rate for Australian entity at quarter 4 is which amount.
+    the new varied rate for which entity for 2025 is which amount.
 
 "). 
 
@@ -123,4 +130,5 @@ query payg is:
 ?- answer("payg with test").
 ?- answer(normal, with(test), le(E), R). 
 ?- answer(payg, with(test), le(E), R). 
+?- answer(payg, with(harmander), le(E), R). 
 */
