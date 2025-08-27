@@ -18,8 +18,8 @@ un conjunto A es un subconjunto de un conjunto B
     	la cosa pertenece a el conjunto B. 
 
 escenario hechos es:
-	familia uno es un conjunto.
-	familia dos es un conjunto.
+	la familia uno es un conjunto.
+	la familia dos es un conjunto.
 
 	Roberto pertenece a la familia uno.
 	Alicia pertenece a la familia uno.
@@ -39,5 +39,8 @@ escenario listas es:
 
 /** <examples>
 ?- show prolog.
-?- responde dos con dos.
+?- responde subconjunto con hechos.
+?- responde subconjunto con listas.
+?- answer(subconjunto, with(listas), le(E), R).
+?- answer(subconjunto, with(hechos), le(E), R).
 */

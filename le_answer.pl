@@ -353,10 +353,10 @@ prepare_query(English, Arg, Module, Goal, Facts) :- %trace,
     translate_command(Module, English, GoalName, Goal, PreScenario),
     %enrich_goal(PreGoal, Goal), 
     %print_message(informational, "Module: ~w, English ~w, GoalName ~w, Goal ~w, Scenario ~w"-[Module, English, GoalName, Goal, PreScenario]),
-    copy_term(Goal, CopyOfGoal),  
+    copy_term(Goal, CopyOfGoal),   
     translate_goal_into_LE(CopyOfGoal, RawGoal), name_as_atom(RawGoal, EnglishQuestion), 
     ((Arg = with(ScenarioName), PreScenario=noscenario) -> Scenario=ScenarioName; Scenario=PreScenario),
-    show_question(GoalName, Scenario, EnglishQuestion), 
+    show_question(GoalName, Scenario, EnglishQuestion),  
     %print_message(informational, "Scenario: ~w"-[Scenario]),
     (Scenario==noscenario -> Facts = [] ; 
         (Module:example(Scenario, [scenario(Facts, _)]) -> 
@@ -409,52 +409,59 @@ show_answer(Goal) :- %trace,
 
 % translate_goal_into_LE/2
 % translate_goal_into_LE(+Goals_after_being_queried, -Goals_translated_into_LEnglish_as_answers)
-translate_goal_into_LE((G,R), WholeAnswer) :- 
-    translate_goal_into_LE(G, Answer), 
-    translate_goal_into_LE(R, RestAnswers), !, 
+translate_goal_into_LE(Goal, LE) :- %trace, 
+    translate_goal_into_LE([], Goal, LE).
+
+translate_goal_into_LE(V, (G,R), WholeAnswer) :- 
+    translate_goal_into_LE(V, G, Answer), 
+    term_variables(G, Vars), % extract all the variables form the Goal
+    append(Vars, V, NewV), % add them to the list of already known variables
+    translate_goal_into_LE(NewV, R, RestAnswers), !, 
     append(Answer, ['\n','\t',and|RestAnswers], WholeAnswer).
-translate_goal_into_LE((G;R), WholeAnswer) :- 
-    translate_goal_into_LE(G, Answer), 
-    translate_goal_into_LE(R, RestAnswers), !, 
+translate_goal_into_LE(V, (G;R), WholeAnswer) :- 
+    translate_goal_into_LE(V, G, Answer), 
+    translate_goal_into_LE(V, R, RestAnswers), !, 
     append(RestAnswers, [')'], PRestAnswers), 
     append(['('|Answer], ['\n','\t','\t',or|PRestAnswers], WholeAnswer).
-translate_goal_into_LE(aggregate_all(sum(V),Conditions,R), [R,is,the,sum,of,each,V,such,that,'\n', '\t'|Answer]) :-
-    translate_goal_into_LE(Conditions, Answer), !.
-translate_goal_into_LE(forall(Conds, Goals), ProcessedWordsAnswers) :-
+translate_goal_into_LE(V, aggregate_all(sum(S),Conditions,R), [R,is,the,sum,of,each,S,such,that,'\n', '\t'|Answer]) :-
+    translate_goal_into_LE([S|V], Conditions, Answer), !.
+translate_goal_into_LE(V, forall(Conds, Goals), ProcessedWordsAnswers) :-
     %print_message(informational, "translate_goal_into_LE: for all ~w ~w\n"-[Conds, Goals]),
-    translate_goal_into_LE(Conds, CondsWords), 
-    translate_goal_into_LE(Goals, GoalsWords), 
+    translate_goal_into_LE(V, Conds, CondsWords), 
+    term_variables(Conds, Vars), % extract all the variables form the Goal
+    append(Vars, V, NewV),
+    translate_goal_into_LE(NewV, Goals, GoalsWords), 
     !,
     append([for, every], CondsWords, FirstPart), 
     append( FirstPart, [it, is, the, case, that,':'|GoalsWords], ProcessedWordsAnswers). 
-translate_goal_into_LE(findall(Pattern, _Conds, Solutions), [for, Pattern, found|Solutions]).
+translate_goal_into_LE(_V, findall(Pattern, _Conds, Solutions), [for, Pattern, found|Solutions]).
     % print_message(informational, "translate_goal_into_LE: for all ~w ~w\n"-[Conds, Goals]),
     % translate_goal_into_LE(Conds, CondsWords), 
     % translate_goal_into_LE(Solutions, SolutionsWords), 
     % !,
     % append([for, Pattern, found], SolutionsWords, ProcessedWordsAnswers). 
-translate_goal_into_LE(not(G), [it,is,not,the,case,that,'\n', '\t'|Answer]) :- 
-    translate_goal_into_LE(G, Answer), !.
-translate_goal_into_LE(is_a(A,B), ProcessedWordsAnswers) :-
+translate_goal_into_LE(V, not(G), [it,is,not,the,case,that,'\n', '\t'|Answer]) :- 
+    translate_goal_into_LE(V, G, Answer), !.
+translate_goal_into_LE(_V, is_a(A,B), ProcessedWordsAnswers) :- % check this one!
     (starts_with_vowel(B)->ProcessedWordsAnswers=[A, is, an, B]; ProcessedWordsAnswers=[A, is, a, B]), !.  
-translate_goal_into_LE(Goal, ProcessedWordsAnswers) :- 
+translate_goal_into_LE(V, Goal, ProcessedWordsAnswers) :- 
     %print_message(informational, "translated_goal_into_LE: (meta) from  ~w\n"-[Goal]), 
     Goal =.. [Pred|GoalElements], meta_dictionary([Pred|GoalElements], Types, WordsAnswer),
-    process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), !.
+    process_types_or_names(V, WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), !.
     %print_message(informational, "translated_goal_into_LE: from  ~w to ~w "-[Goal, ProcessedWordsAnswers]). 
-translate_goal_into_LE(Goal, ProcessedWordsAnswers) :- 
+translate_goal_into_LE(V, Goal, ProcessedWordsAnswers) :- %trace, 
     %print_message(informational, "translated_goal_into_LE: from  ~w\n"-[Goal]),  
     Goal =.. [Pred|GoalElements], dictionary([Pred|GoalElements], Types, WordsAnswer), 
-    process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), !.
+    process_types_or_names(V, WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), !.
     %print_message(informational, "translated_goal_into_LE: from  ~w to ~w "-[Goal, ProcessedWordsAnswers]).
-translate_goal_into_LE(happens(Goal,T), Answer) :-    % simple goals do not return a list, just a literal
+translate_goal_into_LE(V, happens(Goal,T), Answer) :-    % simple goals do not return a list, just a literal
     Goal =.. [Pred|GoalElements], dictionary([Pred|GoalElements], Types, WordsAnswer), 
-    process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), 
+    process_types_or_names(V, WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), 
     process_time_term(T, TimeExplain), !, 
     Answer = ['At', TimeExplain, it, occurs, that|ProcessedWordsAnswers].
-translate_goal_into_LE(holds(Goal,T), Answer) :- 
+translate_goal_into_LE(V, holds(Goal,T), Answer) :- 
     Goal =.. [Pred|GoalElements], dictionary([Pred|GoalElements], Types, WordsAnswer), 
-    process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), 
+    process_types_or_names(V, WordsAnswer, GoalElements, Types, ProcessedWordsAnswers), 
     process_time_term(T, TimeExplain),
     Answer = ['At', TimeExplain, it, holds, that|ProcessedWordsAnswers], !. 
 
@@ -629,7 +636,7 @@ show(templates) :-
     findall(EnglishAnswer, 
         ( ( meta_dictionary([_|GoalElements], Types, WordsAnswer) ; 
             dictionary([_|GoalElements], Types, WordsAnswer)),
-        process_types_or_names(WordsAnswer, GoalElements, Types, ProcessedWordsAnswers),
+        process_types_or_names([], WordsAnswer, GoalElements, Types, ProcessedWordsAnswers),
         name_as_atom(ProcessedWordsAnswers, EnglishAnswer)), Templates), 
     forall(member(T, Templates), print_message(informational, "~w"-[T])). 
 
