@@ -104,7 +104,8 @@ the new varied rate for an entity for a year is an amount VR
 % https://www.ato.gov.au/businesses-and-organisations/income-deductions-and-concessions/payg-instalments/calculate-your-payg-instalments/instalment-income
 
 the PAYG instalment income for an entity for a year is a total amount 
-    if the total amount is the sum of each partial such that
+    if the instalment income for the entity for a X of the year is an Y
+    and the total amount is the sum of each partial such that
         the instalment income for the entity for a quarter of the year is the partial. 
 
 % --- General Rule --- (as sketched by Gemini and Andrew)
@@ -113,6 +114,7 @@ the PAYG instalment income for an entity for a year is a total amount
 % Your instalment income is all the ordinary income you earned from your business and investment activities for the quarter (excluding GST).
 the instalment income for an entity for a quarter of a year is a quarter amount 
     if the year is the current year
+    and an X is an ordinary income for the entity for the quarter
     and quarter amount is the sum of each partial such that
         partial is an ordinary income for the entity for the quarter.
 
@@ -243,6 +245,7 @@ scenario alex is:
     an amount was withheld from 5000 under the PAYG withholding system.
     200 is interest for Alex for quarter 1.
     1500 is GST for Alex for quarter 1.
+    1000 is royalties for Alex for quarter 2.
 
 query normal is:
     the varied amount payable for quarter 4 by Australian entity is calculated as which amount.
@@ -265,5 +268,6 @@ query payg is:
 ?- answer(rate, with(example2), le(E), R). 
 ?- answer(rate, with(mine), le(E), R). 
 ?- answer(payg, with(alex), le(E), R).
+?- answer(payg, with(alex)).
 
 */

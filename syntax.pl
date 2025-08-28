@@ -287,9 +287,9 @@ taxlogBodySpec(bagof(_X,G,_L),control-[classify,SpecG,classify]) :- !,
 taxlogBodySpec(_^G,delimiter-[classify,SpecG]) :- !,
     taxlogBodySpec(G,SpecG).
 % this is needed only to deal with multiline instances of aggregate... (or of any predicate of our own colouring, apparently:-( )
-taxlogBodySpec(aggregate(_X,G,_L),control-[classify,SpecG,classify]) :- !, 
+taxlogBodySpec(aggregate(_X,_P,G,_L),control-[classify,SpecG,classify]) :- !, 
     taxlogBodySpec(G,SpecG). 
-taxlogBodySpec(aggregate_all(_X,G,_L),control-[classify,SpecG,classify]) :- !, 
+taxlogBodySpec(aggregate_all(_X,_P,G,_L),control-[classify,SpecG,classify]) :- !, 
     taxlogBodySpec(G,SpecG). 
 taxlogBodySpec(findall(_X,G,_L),control-[classify,SpecG,classify]) :- !, 
     taxlogBodySpec(G,SpecG). 

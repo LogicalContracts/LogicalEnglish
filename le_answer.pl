@@ -437,7 +437,10 @@ translate_goal_into_LE(V0, forall(Conds, Goals), ProcessedWordsAnswers, V2) :-
     !,
     %print_message(informational, "translate_goal_into_LE: for all ~w ~w ~w\n"-[V0, V1, V2]),
     append([for, every], CondsWords, FirstPart), 
-    append( FirstPart, [it, is, the, case, that,':'|GoalsWords], ProcessedWordsAnswers). 
+    append( FirstPart, [it, is, the, case, that,':'|GoalsWords], ProcessedWordsAnswers).  
+translate_goal_into_LE(V, setof(Pattern, _Conds, []), [no, solutions, were, found], [(Pattern,key-key)|V]).
+translate_goal_into_LE(V, setof(Pattern, _Conds, Solutions), 
+    [for, every, value, of, a, key, the, solutions, are, ':'|Solutions], [(Pattern,key-key)|V]).
 translate_goal_into_LE(V, findall(Pattern, _Conds, []), [no, solutions, were, found], [(Pattern,key-key)|V]).
 translate_goal_into_LE(V, findall(Pattern, _Conds, Solutions), 
     [for, every, value, of, a, key, the, solutions, are, ':'|Solutions], [(Pattern,key-key)|V]).

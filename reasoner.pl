@@ -223,7 +223,7 @@ i(bagof(X,G,L),M,CID,Cref,U,E) :- !, E=[s(bagof(X,G,L),M,meta,Children)],
     wrapTemplateGoal(G,M,CID,Cref,Ui,Ei,Wrapped),
     bagof(X/Ui/Ei, Wrapped, Tuples),
     squeezeTuples(Tuples,L,U,Children).
-i(aggregate(Template,G,Result),M,CID,Cref,U,E) :- !, E=[s(aggregate(Template,G,Result),M,meta,Children)],
+i(aggregate(Template,G,Result),M,CID,Cref,U,E) :- !, E=[s(aggregate(Template,G,Result),M,meta,Children)], %pending update
     % uses a bit too much of SWI internals at swipl-devel/library/aggregate.pl
     % note that aggregate/3 fails when there are no solutions, unlike aggregate_all (for count and sum)
     aggregate:template_to_pattern(bag, Template, Pattern, M:G, Goal, Aggregate),
@@ -232,14 +232,23 @@ i(aggregate(Template,G,Result),M,CID,Cref,U,E) :- !, E=[s(aggregate(Template,G,R
         error(instantiation_error,_Cx), 
         (append(U_,[at(instantiation_error(G),M)/c(Cref)],U), append(Children_,[u(instantiation_error(G),M,unknown,[])],Children)) 
         ).
-i(aggregate_all(Template,G,Result),M,CID,Cref,U,AggrE) :- !, AggrE=[s(aggregate_all(Template,G,Result),M,meta,E)],
+i(aggregate_all(Template,Pattern,G,Result),M,CID,Cref,U,AggrE) :- !,  %updated!
+    %print_message(informational, "**** aggregate_all INIT Template ~w Goal ~w Result ~w"-[Template, G, Result]),
+    AggrE=[s(aggregate_all(Template,G,Result),M,meta,E)],
     % uses a bit too much of SWI internals at swipl-devel/library/aggregate.pl
-    aggregate:template_to_pattern(all, Template, Pattern, M:G, Goal, Aggregate),
+    aggregate:template_to_pattern(all, Template, _Pattern, M:G, Goal, Aggregate),
+    %print_message(informational, "**** aggregate_all Template ~w Pattern ~w Goal ~w Aggregate ~w Result ~w"-[Template,Pattern, G,Aggregate, Result]),
+    %i(setof(Pattern, Goal, List),M,CID,Cref,U_,E_),
     i(findall(Pattern, Goal, List),M,CID,Cref,U_,E_),
-    catch( ( aggregate:aggregate_list(Aggregate, List, Result), U=U_, E=E_ ), 
-        error(instantiation_error,_Cx), 
-        (append(U_,[at(instantiation_error(G),M)/c(Cref)],U), append(E_,[u(instantiation_error(G),M,unknown,[])],E)) 
-        ).
+    % catch( ( aggregate:aggregate_list(Aggregate, List, Result), U=U_, E=E_ ), 
+    %     error(instantiation_error,_Cx), 
+    %     (append(U_,[at(instantiation_error(G),M)/c(Cref)],U), append(E_,[u(instantiation_error(G),M,unknown,[])],E)) 
+    %     ),
+    catch( ( aggregate_all(Template, Pattern, Goal, Result), U=U_, E=E_ ), 
+         error(instantiation_error,_Cx), 
+         (append(U_,[at(instantiation_error(G),M)/c(Cref)],U), append(E_,[u(instantiation_error(G),M,unknown,[])],E)) 
+         ).
+    %print_message(informational, "actual aggregate_all Pattern ~w Goal ~w List ~w Result ~w"-[Pattern,Goal,List, Result]).
 i(findall(X,G,L),M,CID,Cref,U,E) :- !, 
     newGoalID(FindallID),
     findall(X/Ui/Ei, i(G,M,FindallID,Cref,Ui,Ei), Tuples), 
