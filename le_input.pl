@@ -276,7 +276,7 @@ process_types_or_names(V, [Word|RestWords], Elements, Types, PrintExpression, V2
     add_def_determiner(NameWorks, PrintName), 
     %print_message(informational, "Using previous name: ~w on ~w"-[PrintName, V]),
     process_types_or_names(V, RestWords,  Elements, Types, RestPrintWords, V2),
-    print_message(informational, "process_types_or_names var in list ~w ~w"-[V, V2]),
+    %print_message(informational, "process_types_or_names var in list ~w ~w"-[V, V2]),
     append(PrintName, RestPrintWords, PrintExpression).
 process_types_or_names(V, [Word|RestWords], Elements, Types, PrintExpression, V2 ) :- 
     var(Word), %trace, 
@@ -287,7 +287,7 @@ process_types_or_names(V, [Word|RestWords], Elements, Types, PrintExpression, V2
     %print_message(informational, "Using new name: ~w"-[PrintName]),
     V1 = [(Word,Name-Type)|V], % add the variable to the list for further reference
     process_types_or_names(V1, RestWords,  Elements, Types, RestPrintWords, V2),
-    print_message(informational, "process_types_or_names var not in list ~w ~w ~w"-[V, V1, V2]),
+    %print_message(informational, "process_types_or_names var not in list ~w ~w ~w"-[V, V1, V2]),
     append(PrintName, RestPrintWords, PrintExpression).
 process_types_or_names(V, [Word|RestWords], Elements, Types, [PrintWord|RestPrintWords], V1) :- 
     matches_type(Word, Elements, Types, date), 
