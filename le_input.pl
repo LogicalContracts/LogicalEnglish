@@ -97,7 +97,7 @@ query three is:
     dictionary/3, meta_dictionary/3, dict/3, meta_dict/3, user_predef_dict/3, prolog_predef_dict/3, filtered_dictionary/1, 
     parsed/0, source_lang/1, including/0, %just_saved_scasp/2,
     this_capsule/1, unpack_tokens/2, clean_comments/2,
-    query_/2, extract_constant/4, spaces/3, name_as_atom/2, process_types_or_names/5,
+    query_/2, extract_constant/4, spaces/3, name_as_atom/2, process_types_or_names/6,
     matches_name/4, matches_type/4, delete_underscore/2, add_determiner/2, proper_det/2,
     portray_clause_ind/1, order_templates/2, process_types_dict/2,
     assertall/1,asserted/1, 
@@ -249,46 +249,65 @@ process_types_dict(Dictionary, Type_entries) :-
     (   (member(dict([_|GoalElements], Types, _), Dictionary);
         member(meta_dict([_|GoalElements], Types, _), Dictionary)), 
         member((_Name-Type), Types), 
-        process_types_or_names([], [Type], GoalElements, Types, TypeWords),
+        process_types_or_names([], [Type], GoalElements, Types, TypeWords, _),
         concat_atom(TypeWords, '_', Word), Word\=''), Templates), 
     (Templates\=[] -> setof(is_type(Ty), member(Ty, Templates), Type_entries) ; Type_entries = []).
 
-% process_types_or_names/5
-process_types_or_names(_,[], _, _, []) :- !.
+% process_types_or_names/6
+process_types_or_names(V,[], _, _, [], V) :- nonvar(V), !.
 :- if(exists_source(library(r/r_call))).
-process_types_or_names(V, [Word|RestWords], Elements, Types, [the, chart|RestPrintWords] ) :- 
+process_types_or_names(V, [Word|RestWords], Elements, Types, [the, chart|RestPrintWords], V1) :- 
     nonvar(Word), Word = plot_command(RExecuteCommand),
     copy_term(RExecuteCommand,RExecuteCommandForDisplay),
     RExecuteCommandForDisplay,  % plot the image onto the screen
     <- png("image.png"), RExecuteCommand,  % plot the image into the file
     <- graphics.off(), r_swish:r_download("image.png"), % close the device and show the download button
-    process_types_or_names(V, RestWords,  Elements, Types, RestPrintWords).
+    process_types_or_names(V, RestWords,  Elements, Types, RestPrintWords, V1).
 :- endif.
-process_types_or_names(V, [Word|RestWords], Elements, Types, PrintExpression ) :- 
+process_types_or_names(V, [Word|RestWords], Elements, Types, PrintExpression, V1) :- 
     atom(Word), concat_atom(WordList, '_', Word), !, 
-    process_types_or_names(V, RestWords,  Elements, Types, RestPrintWords),
+    process_types_or_names(V, RestWords,  Elements, Types, RestPrintWords, V1),
     append(WordList, RestPrintWords, PrintExpression).
-process_types_or_names(V, [Word|RestWords], Elements, Types, PrintExpression ) :- 
-    var(Word), matches_name(Word, Elements, Types, Name), !, 
-    process_types_or_names(V, RestWords,  Elements, Types, RestPrintWords),
-    tokenize_atom(Name, NameWords), delete_underscore(NameWords, CNameWords),
-    (var_in(Word,V) -> add_def_determiner(CNameWords, PrintName) ; add_determiner(CNameWords, PrintName)), 
+process_types_or_names(V, [Word|RestWords], Elements, Types, PrintExpression, V2 ) :- 
+    var(Word), %trace, 
+    %print_message(informational, "Found variable: ~w for previous ~w"-[Word, V]),
+    var_in(Word, V, PName), !, 
+    process_name_var(PName, NameWorks), !, % Privilege for previous names
+    add_def_determiner(NameWorks, PrintName), 
+    %print_message(informational, "Using previous name: ~w on ~w"-[PrintName, V]),
+    process_types_or_names(V, RestWords,  Elements, Types, RestPrintWords, V2),
+    print_message(informational, "process_types_or_names var in list ~w ~w"-[V, V2]),
     append(PrintName, RestPrintWords, PrintExpression).
-process_types_or_names(V, [Word|RestWords], Elements, Types, [PrintWord|RestPrintWords] ) :- 
+process_types_or_names(V, [Word|RestWords], Elements, Types, PrintExpression, V2 ) :- 
+    var(Word), %trace, 
+    matches_name(Word, Elements, Types, Name), !, % uses name from dict/3
+    matches_type(Word, Elements, Types, Type), 
+    process_name_var(Name, CNameWords),
+    add_determiner(CNameWords, PrintName), 
+    %print_message(informational, "Using new name: ~w"-[PrintName]),
+    V1 = [(Word,Name-Type)|V], % add the variable to the list for further reference
+    process_types_or_names(V1, RestWords,  Elements, Types, RestPrintWords, V2),
+    print_message(informational, "process_types_or_names var not in list ~w ~w ~w"-[V, V1, V2]),
+    append(PrintName, RestPrintWords, PrintExpression).
+process_types_or_names(V, [Word|RestWords], Elements, Types, [PrintWord|RestPrintWords], V1) :- 
     matches_type(Word, Elements, Types, date), 
     ((nonvar(Word), number(Word)) -> unparse_time(Word, PrintWord); PrintWord = Word), !, 
-    process_types_or_names(V, RestWords,  Elements, Types, RestPrintWords). 
-process_types_or_names(V, [Word|RestWords], Elements, Types, [PrintWord|RestPrintWords] ) :- 
+    process_types_or_names(V, RestWords,  Elements, Types, RestPrintWords, V1). 
+process_types_or_names(V, [Word|RestWords], Elements, Types, [PrintWord|RestPrintWords], V1) :- 
     matches_type(Word, Elements, Types, day), 
     ((nonvar(Word), number(Word)) -> unparse_time(Word, PrintWord); PrintWord = Word), !, 
-    process_types_or_names(V, RestWords,  Elements, Types, RestPrintWords). 
-process_types_or_names(V, [Word|RestWords],  Elements, Types, Output) :-
+    process_types_or_names(V, RestWords,  Elements, Types, RestPrintWords, V1). 
+process_types_or_names(V0, [Word|RestWords],  Elements, Types, Output, V2) :- % check it. Recursive call
     compound(Word), 
-    le_answer:translate_goal_into_LE(Word, PrintWord), !, % cut the alternatives
-    process_types_or_names(V, RestWords,  Elements, Types, RestPrintWords),
+    le_answer:translate_goal_into_LE(V0, Word, PrintWord, V1), !, % cut the alternatives
+    process_types_or_names(V1, RestWords,  Elements, Types, RestPrintWords, V2),
     append(PrintWord, RestPrintWords, Output). 
-process_types_or_names(V, [Word|RestWords],  Elements, Types, [Word|RestPrintWords] ) :-
-    process_types_or_names(V, RestWords,  Elements, Types, RestPrintWords).
+process_types_or_names(V, [Word|RestWords],  Elements, Types, [Word|RestPrintWords], V1) :-
+    process_types_or_names(V, RestWords,  Elements, Types, RestPrintWords, V1).
+
+% assumes that the name of the variable can have underscores like in amount_one or first_person
+process_name_var(Name, CNameWords) :-
+    tokenize_atom(Name, NameWords), delete_underscore(NameWords, CNameWords).
 
 % Experimental rules for reordering of templates
 % order_templates/2
@@ -2578,8 +2597,8 @@ delete_underscore([W|Rest], [W|Final]) :- delete_underscore(Rest, Final).
 add_determiner([Word|RestWords], [Det, Word|RestWords]) :-
     name(Word,[First|_]), proper_det(First, Det).
 
-var_in(Word, [V|_]) :- Word == V, !.
-var_in(Word, [_|Rest]) :- var_in(Word, Rest).
+var_in(Word, [(V,N-_)|_], N) :- Word == V, !. % using (V,N-_) to id vars and names
+var_in(Word, [_|Rest], N) :- var_in(Word, Rest, N).
 
 add_def_determiner([Word|RestWords], [the, Word|RestWords]). 
 
