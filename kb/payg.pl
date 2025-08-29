@@ -10,23 +10,7 @@ the templates are:
     the new varied rate for *an entity* for *a year* is *an amount*.
     the PAYG instalment income for *an entity* for *a year* is *an amount*.
     the instalment income for *an entity* for *a quarter* of *a year* is *an amount*.
-    EBITDA-based income for *an entity* for *a year* is *an amount*.
-    ordinary income for *an entity* for *a year* is *an amount*.
-    profit or loss for *an entity* for *a year* is *an amount*.
-    tax for *an entity* for *a year* is *an amount*.
-    depreciation for *an entity* for *a year* is *an amount*.
-    amortisation EBITDA for *an entity* for *a year* is *an amount*.
-    non-deductible expenses for *an entity* for *a year* is *an amount*.
-    income with tax removed for *an entity* for *a year* of *an amount*.
-    tax offsets for *an entity* for *a year* of *an amount*.
-    net capital gains for *an entity* for *a year* of *an amount*.
-    SB depreciation & capital works deduction for *an entity* for *a year* of *an amount*.
-    unused prior year loss for *an entity* for *a year* of *an amount*.
-    prior BAS period PAYGI calculation loss of *an amount*.
-    Estimated annual net tax payable for *an entity* is *an amount*.
-    Estimated taxable income for *an entity* is *an amount*.
     applicable tax rate for *an entity* is *a percentage*.
-    non-refundable tax offsets for *an entity* is *an amount*.
     *an amount* was reported as an instalment on *a quarter* of the income year.
     *a value* was reported as a variation on *a quarter* of the income year.
     *an amount* is a type of business or investment income for *an entity* for *a quarter*.
@@ -61,17 +45,41 @@ the templates are:
     *a thing* is a grant under the energy grants credits scheme for *an entity* for *a quarter*.
     *a thing* is a type of excluded income for *an entity* for *a quarter*.
     *a thing* is a capital gain for *an entity* for *a quarter*.
-    *a year* is the current year.
+    *a year* is a year under consideration.
     *an amount* is an ordinary income for *an entity* for *a quarter*.
     *an amount* is specially included as instalment income for *an entity* for *a quarter*.
+    *a quarter* is previous or equal to *a quarter*.
+    *a quarter* is previous to *a quarter*.
+    *an entity* is the taxpayer. 
+
+the ontology is:
+    quarter 1 is a quarter.
+    quarter 2 is a quarter.
+    quarter 3 is a quarter.
+    quarter 4 is a quarter.
+    Q1 is a quarter 1.
+    Q2 is a quarter 2.
+    Q3 is a quarter 3.
+    Q4 is a quarter 4.
+
+    a quarter X is previous or equal to a quarter Y 
+        if X is previous to Y 
+        or X is equal to Y.
+
+    quarter 1 is previous to quarter 2.
+    quarter 2 is previous to quarter 3.
+    quarter 3 is previous to quarter 4.
+    Q1 is previous to Q2.
+    Q2 is previous to Q3.
+    Q3 is previous to Q4.
 
 the knowledge base payg includes:
  
-the varied amount payable for a quarter Q by an entity E is calculated as a value A
+the varied amount payable for a quarter Q by an entity E is calculated as a value VA
     if the estimated tax for a year for E is an amount ET
     and the year-to-date fraction for Q is an fraction F
     and the year-to-date instalment adjustment for E at Q is calculated as an amount Y
-    and A = ET * F - Y.
+    and VA = ET * F - Y.
 
 
 the year-to-date fraction for a quarter Q is a fraction F
@@ -85,11 +93,14 @@ the year-to-date fraction for a quarter Q is a fraction F
         and F is 1.0.
 
 
-the year-to-date instalment adjustment for an entity at a quarter is calculated as a value V % check this
-    if a value IR is the sum of each amount such that
-        the amount was reported as an instalment on the quarter of the income year
+the year-to-date instalment adjustment for an entity E at a quarter Q is calculated as a value V
+    if E is the taxpayer
+    and a value IR is the sum of each amount such that
+            the amount was reported as an instalment on a quarter X of the income year
+        and X is previous or equal to Q
     and a value IVC is the sum of each value such that
-        the value was reported as a variation on the quarter of the income year
+            the value was reported as a variation on a quarter Y of the income year
+        and Y is previous or equal to Q
     and V = IR - IVC.
 
 
@@ -104,25 +115,18 @@ the new varied rate for an entity for a year is an amount VR
 % https://www.ato.gov.au/businesses-and-organisations/income-deductions-and-concessions/payg-instalments/calculate-your-payg-instalments/instalment-income
 
 the PAYG instalment income for an entity for a year is a total amount 
-    if the instalment income for the entity for a X of the year is an Y
+    if the entity is the taxpayer
+    and the year is a year under consideration
     and the total amount is the sum of each partial such that
-        the instalment income for the entity for a quarter of the year is the partial. 
+        partial is an ordinary income for the entity for a quarter. 
 
 % --- General Rule --- (as sketched by Gemini and Andrew)
-% The primary rule states that business/investment income is included, unless it's specifically excluded.  
-
-% Your instalment income is all the ordinary income you earned from your business and investment activities for the quarter (excluding GST).
-the instalment income for an entity for a quarter of a year is a quarter amount 
-    if the year is the current year
-    and an X is an ordinary income for the entity for the quarter
-    and quarter amount is the sum of each partial such that
-        partial is an ordinary income for the entity for the quarter.
-
+% The primary rule states that business/investment income is included, unless it's specifically excluded.          
 an amount is an ordinary income for an entity for a quarter 
     if the amount is a type of business or investment income for the entity for the quarter
     and     it is not the case that
                 the amount is a type of excluded income for the entity for the quarter
-        or the amount is specially included as instalment income for an entity for a quarter. 
+        or the amount is specially included as instalment income for the entity for the quarter. 
 
 % An exception for income where tax was withheld due to no TFN/ABN. This is always included.
 an amount is specially included as instalment income for an entity for a quarter
@@ -172,74 +176,41 @@ a thing is a type of excluded income for an entity for a quarter
         the entity is a super fund.
 
 
-% to be verified PAYG instalment income
-% PAYG instalment income for an entity for a year is an amount I
-%     if EBITDA-based income for the entity for the year is I
-%     or ordinary income for the entity for the year is I.
-
-
-% EBITDA-based income for an entity for a year is an amount E
-%     if profit or loss for the entity for the year is a value P
-%     and non-deductible expenses for the entity for the year is a value ND
-%     and a value L is the sum of each amount such that
-%         income with tax removed for the entity for the year of the amount
-%         or tax offsets for the entity for the year of the amount
-%         or net capital gains for the entity for the year of the amount
-%         or SB depreciation & capital works deduction for the entity for the year of the amount
-%         or unused prior year loss for the entity for the year of the amount
-%         or prior BAS period PAYGI calculation loss of the amount
-%     and E = P + ND - L. 
-% end of PAYG instalment income
-
-
-the estimated tax for a year for an entity is an amount ET
-    if Estimated annual net tax payable for the entity is ET
-    and ET >= 0. 
-
-Estimated annual net tax payable for an entity is a value ET
-    if Estimated taxable income for the entity is a value ETI
-    and applicable tax rate for the entity is a percentage TR
-    and a value L is the sum of each amount such that
-        non-refundable tax offsets for the entity is the amount
-    and ET = ETI * TR - L.
-
-
 scenario test is:
-    2025 is the current year.
-    profit or loss for Australian entity for 2025 is 40000.
-    non-deductible expenses for Australian entity for 2025 is 5000.
-    income with tax removed for Australian entity for 2025 of 3000.
-    tax offsets for Australian entity for 2025 of 2000.
-    net capital gains for Australian entity for 2025 of 1000.
-    SB depreciation & capital works deduction for Australian entity for 2025 of 4000.
-    unused prior year loss for Australian entity for 2025 of 5000.
-    prior BAS period PAYGI calculation loss of 1000.
-    Estimated annual net tax payable for Australian entity is 10000.
-    Estimated taxable income for Australian entity is 60000.
+    2025 is a year under consideration.
+    Australian entity is the taxpayer. 
+    the estimated tax for a year for Australian entity is 8000.
     applicable tax rate for Australian entity is 0.25.
-    non-refundable tax offsets for Australian entity is 2000.
     1000 was reported as an instalment on quarter 4 of the income year.
     2000 was reported as a variation on quarter 4 of the income year.
 
 scenario harmander is:
+    Harmander is the taxpayer. 
     the estimated tax for 2025 for Harmander is 10125.
     ordinary income for Harmander for 2025 is 82480.
 
 % https://www.ato.gov.au/businesses-and-organisations/income-deductions-and-concessions/payg-instalments/starting-payg-instalments
 scenario example1 is:
+    Rob is the taxpayer. 
+    2025 is a year under consideration.
     the estimated tax for 2025 for Rob is 7544. 
     the PAYG instalment income for Rob for 2025 is 49500. 
 
 scenario example2 is:
+    Danielle is the taxpayer. 
+    2025 is a year under consideration.
     the estimated tax for 2025 for Danielle is 20437.
     the PAYG instalment income for Danielle for 2025 is 90000.
 
 scenario mine is:
+    me is the taxpayer. 
+    2025 is a year under consideration.
     the estimated tax for 2025 for me is 16388.
     the PAYG instalment income for me for 2025 is 80000.
 
 scenario alex is:
-    2025 is the current year.
+    Alex is the taxpayer. 
+    2025 is a year under consideration.
     15000 is gross sales for Alex for quarter 1.
     5000 is salary and wages for Alex for quarter 1.
     an amount was withheld from 5000 under the PAYG withholding system.
