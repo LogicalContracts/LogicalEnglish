@@ -218,8 +218,36 @@ scenario alex is:
     1500 is GST for Alex for quarter 1.
     1000 is royalties for Alex for quarter 2.
 
+scenario overpaying_test is:
+    overpayer is the taxpayer.
+    2025 is a year under consideration.
+    the estimated tax for 2025 for overpayer is 10000.
+    120000 is gross sales for overpayer for quarter 1.
+    150000 is gross sales for overpayer for quarter 2.
+    the PAYG instalment income for overpayer for 2025 is 100000.
+    5000 was reported as an instalment on quarter 1 of the income year.
+    5000 was reported as an instalment on quarter 2 of the income year.
+
+scenario underpaying_test is:
+    underpayer is the taxpayer.
+    2025 is a year under consideration.
+    the estimated tax for 2025 for underpayer is 15000.
+    180000 is gross sales for underpayer for quarter 1.
+    200000 is gross sales for underpayer for quarter 2.
+    the PAYG instalment income for underpayer for 2025 is 250000.
+    2500 was reported as an instalment on quarter 1 of the income year.
+    2500 was reported as an instalment on quarter 2 of the income year.
+
+scenario on_track_test is:
+    on_tracker is the taxpayer.
+    2025 is a year under consideration.
+    the estimated tax for 2025 for on_tracker is 10000.
+    the PAYG instalment income for on_tracker for 2025 is 200000.
+    5000 was reported as an instalment on quarter 1 of the income year.
+    5000 was reported as an instalment on quarter 2 of the income year.
+
 query normal is:
-    the varied amount payable for quarter 4 by Australian entity is calculated as which amount.
+    the varied amount payable for quarter 4 by which entity is calculated as which amount.
 
 query rate is:
     the new varied rate for which entity for 2025 is which amount.
@@ -240,5 +268,7 @@ query payg is:
 ?- answer(rate, with(mine), le(E), R). 
 ?- answer(payg, with(alex), le(E), R).
 ?- answer(payg, with(alex)).
+?- answer(rate, with(overpaying_test), le(E), R).
+?- answer(normal, with(overpaying_test), le(E), R).
 
 */
