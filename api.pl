@@ -48,6 +48,7 @@ limitations under the License.
 :- use_module(library(http/json)).
 :- use_module(library(term_to_json)).
 :- use_module(library(http/http_parameters)).
+:- use_module(library(http/http_client)).
 
 :- use_module(reasoner).
 :- use_module('spacy/spacy.pl').
@@ -145,6 +146,162 @@ entry_point(R, _{results:AnswerExplanation}) :- get_dict(operation,R,explain), !
     %term_string(Query,R.theQuery,[variable_names(_VarPairs_)]),
     %print_message(informational,"Query ~w  Scenario ~w\n"-[R.theQuery, R.scenario]),
     le_answer:parse_and_query_all_answers(R.file, en(R.document), R.theQuery, with(R.scenario), AnswerExplanation).
+
+% NEW: Entry point for Gemini
+% curl --header "Content-Type: application/json" --request POST --data '{"token":"myToken123", "gemini_api_key": "..", "operation":"answer_via_llm", "file": "testllm", "document":" ... ", "userinput":"some input text"}' http://localhost:3050/leapi
+entry_point(R, _{results:AnswerExplanation, translation: LLMAnswer}) :- get_dict(operation,R,answer_via_llm), !, 
+    %print_message(informational,"API: answer_via_llm request received: ~w"-[R]),
+    (   catch(process_llm_request(R, Result), Error, (
+            print_message(error, Error),
+            AnswerExplanation = _{answer:'LLM request failed', details:Error}, LLMAnswer = 'I did not understand'
+        ))
+    ->  (
+        % Successfully processed the LLM request.
+        print_message(informational, "API: LLM request processed successfully: ~w"-[Result]),
+        (   Result = _{llm_answer: LLMAnswer, status: 'success'} -> (
+            %print_message(informational, "API: LLM Answer: ~w"-[LLMAnswer]),
+            string_concat("\n   \n", LLMAnswer, LLMAnswer2), 
+            string_concat(R.document, LLMAnswer2, NewDocument),
+            le_answer:parse_and_query_all_answers(R.file, en(NewDocument), new, with(new), AnswerExplanation)) 
+        ;   AnswerExplanation = Result, LLMAnswer = 'I did not understand' )
+    )
+    ;   AnswerExplanation = _{answer:'LLM request failed', details:'Unknown error'}, LLMAnswer = 'I did not understand'
+    ).
+    % AnswerExplanation = _{error:'LLM request passed', details:'LLM integration disabled in this build'}.
+
+% NEW: Helper predicate to process the request, call Gemini, and process the response
+process_llm_request(Request, Result)  :- %trace, 
+    %Result = _{error:'LLM request passed', details:'LLM integration disabled in this build'}.
+    % 1. Adapt inputs from the request
+    get_dict(userinput, Request, UserInput),
+    (get_dict(document, Request, Document) -> DocText = Document; DocText = ''),
+    (get_dict(gemini_api_key, Request, APIKey) -> true; throw(error(missing_gemini_api_key, _))),
+    %print_message(informational,"API: About the create the prompt with ~w"-[UserInput]),
+    % 2. Create a suitable prompt for Gemini
+    format(string(Prompt), 'You are an expert on legal and logical reasoning. I will provide a description of a specific situation, possible containing assumptions and questions: Description: ~w
+ 
+Turn this into a query and scenario pair using these templates shown below.
+
+Name both the new query and the new scenario (say query new, scenario new) and 
+return them with this form (no bullet points, please):
+
+scenario new is:
+
+query new is:
+
+/*?- answer(new, with(new).
+  ?- answer(new, with(new), le(E), R).
+*/
+
+(if there is nothing to put on each section, do not write the header)
+
+as illustrated in the examples in the Document bellow:
+
+Document:
+~w
+
+', [UserInput, DocText]), %Result = _{passed:'Here', details:Prompt}.
+    %print_message(informational,"API: Prompt ready ~w"-[Prompt]),    
+    % 3. Call Gemini (via HTTPS)
+    %GeminiURL = 'https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=',
+    %GeminiURL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=', 
+    GeminiURL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=',
+    atomic_list_concat([GeminiURL, APIKey], FullURL),
+    PayloadDict = _{contents: [_{parts: [_{text: Prompt}]}]},
+    %print_message(informational,"API: About to send the PayloadDict ~w"-[PayloadDict]), 
+    time(http_post(FullURL, 
+              json(PayloadDict, [json_object(dict)]), 
+              ReplyDict, 
+              [ cert_verify_hook(cert_accept_any),
+                request_header('Content-Type'='application/json')
+              ])),
+    
+    % 4. Use the new predicate to process the response
+    gemini_process_response(ReplyDict, Result),
+    % 5. Print a message based on the result
+    ( Result.status = 'success' ->
+        true %print_message(informational, "API: Ready to return ~w\n"-[Result.llm_answer])
+    ;
+        print_message(error, "API error: ~w"-['Reason:', Result.reason])    ).
+% ends process_llm_request/2
+
+% gemini_process_response(ReplyDict, Result) :-
+%     % Process the reply from Gemini
+%     ( ReplyDict = json(Dict) -> true
+%     ; Result = _{status: 'error', reason: 'Invalid JSON reply'}
+%     ),
+    
+%     ( var(Result) ->
+%         ( Dict = [candidates=Candidates|_] ->
+%             ( Candidates = [CandidatesDict|_] ->
+%                 ( CandidatesDict = json([content=Content|_]) ->
+%                     ( Content = json([parts=Parts|_]) ->
+%                         ( Parts = [json([text=LLMAnswer])|_] ->
+%                             % Success: All parts found
+%                             Result = _{llm_answer: LLMAnswer, status: 'success'}
+%                         ; Result = _{status: 'error', reason: 'Missing text part'}
+%                         )
+%                     ; Result = _{status: 'error', reason: 'Missing part'}
+%                     )
+%                 ; Result = _{status: 'error', reason: 'Missing candidates list'}
+%                 )
+%             ; Result = _{status: 'error', reason: 'Wrong Candidates format'}
+%             )
+%         ; Result = _{status: 'error', reason: 'Wrong Dict format'}
+%         )
+%     ), !.
+
+% For a single json/1 term, it unifies Value with the value associated with Key.
+% For a list of json/1 terms, it unifies Value with the value from the first
+% dictionary in the list.
+get_json_value(json(Dict), Key, Value) :-
+    !,
+    member(Key=Value, Dict).
+get_json_value([json(Dict)|_], Key, Value) :-
+    !,
+    member(Key=Value, Dict).
+
+% Predicate to process the full Gemini API JSON response.
+% It takes the raw ReplyDict and returns a structured Result.
+gemini_process_response(ReplyDict, Result) :-
+    ( get_json_value(ReplyDict, candidates, Candidates) ->
+        % Successfully extracted candidates list.
+        ( get_json_value(Candidates, content, Content) ->
+            % Successfully extracted content.
+            ( get_json_value(Content, parts, Parts) ->
+                % Successfully extracted parts.
+                ( get_json_value(Parts, text, LLMAnswer) ->
+                    % Success: All parts found.
+                    Result = _{llm_answer: LLMAnswer, status: 'success'}
+                ; Result = _{answer: 'error', reason: 'Missing text part'}
+                )
+            ; Result = _{answer: 'error', reason: 'Missing parts list'}
+            )
+        ; Result = _{answer: 'error', reason: 'Missing candidate content'}
+        )
+    ; Result = _{answer: 'error', reason: 'Wrong response format'}
+    ).
+
+% Example of how to use it
+handle_api_call(FullURL, PayloadDict, Result) :-
+    % 3. Call Gemini's API
+    time(http_post(FullURL, 
+              json(PayloadDict, [json_object(dict)]), 
+              ReplyDict, 
+              [ cert_verify_hook(cert_accept_any),
+                request_header('Content-Type'='application/json')
+              ])),
+    
+    % 4. Use the new predicate to process the response
+    gemini_process_response(ReplyDict, Result),
+    
+    % 5. Print a message based on the result
+    ( Result.status = 'success' ->
+        print_message(informational, "API: Ready to return ~w\n"-[Result.llm_answer])
+    ;
+        print_message(error, "API error: ~w\n"-[Result.reason])
+    ).
+
 
 % Example:
 %  curl --header "Content-Type: application/json" --request POST --data '{"operation":"draft", "pageURL":"http://mysite/page1#section2",  "content":[{"url":"http://mysite/page1#section2!chunk1", "text":"john flies by instruments"}, {"url":"http://mysite/page1#section2!chunk2", "text":"miguel drives with gusto"}]}' http://localhost:3050/taxkbapi

@@ -647,7 +647,7 @@ show(templates) :-
     findall(EnglishAnswer, 
         ( ( meta_dictionary([_|GoalElements], Types, WordsAnswer) ; 
             dictionary([_|GoalElements], Types, WordsAnswer)),
-        process_types_or_names([], WordsAnswer, GoalElements, Types, ProcessedWordsAnswers),
+        process_types_or_names([], WordsAnswer, GoalElements, Types, ProcessedWordsAnswers, _),
         name_as_atom(ProcessedWordsAnswers, EnglishAnswer)), Templates), 
     forall(member(T, Templates), print_message(informational, "~w"-[T])). 
 
@@ -667,7 +667,7 @@ show(types) :-
     %findall(EnglishAnswer, 
     %    ( dictionary([_|GoalElements], Types, _), 
     %      member((Name-Type), Types), 
-    %    process_types_or_names([Type], GoalElements, Types, ProcessedWordsAnswers),
+    %    process_types_or_names([Type], GoalElements, Types, ProcessedWordsAnswers, _),
     %    name_as_atom(ProcessedWordsAnswers, EnglishAnswer)), Templates), 
     print_message(information, "Pre-defined Types:"-[]),
     setof(Tpy, pre_is_type(Tpy), PreSet), 

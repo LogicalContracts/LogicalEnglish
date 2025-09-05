@@ -1,0 +1,103 @@
+body {
+    background-color: #fdf6e3;
+}
+
+.vars_table {
+    background-color: #fbfbfb;
+    border: 1px solid black;
+    border-collapse: collapse;
+    font-family: "Inconsolata";
+    font-size: 10pt;
+    line-height: 1.1;
+    overflow: auto;
+}
+
+.vars_cell {
+    border: 1px solid black;
+    padding: 5px;
+}
+
+.printed_output {
+    font-family: "Inconsolata";
+    font-weight: bold;
+    font-size: 9pt;
+}
+.box {
+  cursor: pointer;
+  -webkit-user-select: none; /* Safari 3.1+ */
+  -moz-user-select: none; /* Firefox 2+ */
+  -ms-user-select: none; /* IE 10+ */
+  user-select: none;
+}
+
+.box::before {
+  content: "▢"; /* Empty checkbox - or use "□" */
+  color: black;
+  display: inline-block;
+  margin-right: 6px;
+}
+
+.leaf {
+  cursor: pointer;
+  -webkit-user-select: none; /* Safari 3.1+ */
+  -moz-user-select: none; /* Firefox 2+ */
+  -ms-user-select: none; /* IE 10+ */
+  user-select: none;
+}
+
+.leaf::before {
+  content: "●"; /* Solid circle - or use "•" or "▪" */
+  color: black;
+  display: inline-block;
+  margin-right: 6px;
+}
+
+.check-box::before {
+  content: "☑"; /* Checked checkbox - or use "✓" or "✔" */
+  color: dodgerblue;
+}
+
+.nested {
+  display: none;
+}
+
+.active {
+  display: block;
+}
+
+/* Alternative symbol options - uncomment the ones you prefer */
+
+/* Tree-like symbols */
+/*
+.box::before {
+  content: "▶"; /* Right-pointing triangle for collapsed */
+}
+
+.check-box::before {
+  content: "▼"; /* Down-pointing triangle for expanded */
+}
+*/
+
+/* Plus/Minus style */
+/*
+.box::before {
+  content: "⊞"; /* Squared plus */
+}
+
+.check-box::before {
+  content: "⊟"; /* Squared minus */
+}
+*/
+
+/* Simple plus/minus */
+/*
+.box::before {
+  content: "+";
+  font-weight: bold;
+}
+
+.check-box::before {
+  content: "−";
+  font-weight: bold;
+}
+*/
