@@ -3,54 +3,54 @@
 en("the target language is: prolog. 
     
 the templates are:
-    the varied amount payable for *a quarter* by *an entity* is calculated as *an amount*.
-    the estimated tax for *a year* for *an entity* is *an amount*. 
+    the estimated tax for *an entity* for *a year* is *an amount*. 
+    the estimated annual net tax payable for *an entity* for *a year* is *an amount*.
+    the estimated taxable income for *an entity* for *a year* is *an amount*.
+    the applicable tax rate for *an entity* on *a year* is *a percentage*.
+    *an entity* is under the aggregated turnover threshold in *a year*. 
+    the tax offsets for *an entity* for *a year* is *an amount*.
+    the estimated tax credits for *an entity* for *a year* is *an amount*.
+    the varied amount payable for *a quarter* for *a year* by *an entity* is *an amount*.
     the year-to-date fraction for *a quarter* is *a fraction*.
-    the year-to-date instalment adjustment for *an entity* at *a quarter* is calculated as *an amount*.
+    the year-to-date instalment adjustment for *an entity* for *a year* is *an amount*.
     the new varied rate for *an entity* for *a year* is *an amount*.
-    the PAYG instalment income for *an entity* for *a year* is *an amount*.
-    the instalment income for *an entity* for *a quarter* of *a year* is *an amount*.
-    applicable tax rate for *an entity* is *a percentage*.
-    *an amount* was reported as an instalment on *a quarter* of the income year.
-    *a value* was reported as a variation on *a quarter* of the income year.
-    *an amount* is a type of business or investment income for *an entity* for *a quarter*.
-    *an amount* is a type of excluded income for *an entity* for *a quarter*.
-    tax was withheld from *an amount* because of no TFN or ABN for *an entity* for *a quarter*. 
-    *a thing* is gross rent for *an entity* for *a quarter*.
-    *a thing* is dividends for *an entity* for *a quarter*.
-    *a thing* is royalties for *an entity* for *a quarter*.
-    *a thing* is foreign pensions for *an entity* for *a quarter*.
-    *a thing* is partnership income for *an entity* for *a quarter*.
-    *a thing* is trust income for *an entity* for *a quarter*.
-    *a thing* is foreign income for *an entity* for *a quarter*.
-    *a thing* is interest for *an entity* for *a quarter*.
-    *a thing* is gross sales for *an entity* for *a quarter*.
-    *a thing* is gross fees for services for *an entity* for *a quarter*.
-    *a thing* is withdrawals from farm management deposits for *an entity* for *a quarter*.
-    *a thing* is fuel tax credits for *an entity* for *a quarter*.
-    *a thing* is JobKeeper payments for *an entity* for *a quarter*.
-    *an amount* is a capital gain for *an entity* for *a quarter*.
-    *a thing* is a type of excluded income for *an entity* for *a quarter*.
-    *a thing* is GST for *an entity* for *a quarter*.
-    *a thing* is wine equalisation tax for *an entity* for *a quarter*.
-    *a thing* is luxury car tax for *an entity* for *a quarter*.
-    *a thing* is a type of excluded income for *an entity* for *a quarter*.
-    *a thing* is salary and wages for *an entity* for *a quarter*.
-    an amount was withheld from *a thing* under the PAYG withholding system.
-    *a thing* is a type of excluded income for *an entity* for *a quarter*.
-    *a thing* is a franking credit for *an entity* for *a quarter*.
-    *a thing* is a deemed dividend for *an entity* for *a quarter*.
-    *a thing* is an exempt income for *an entity* for *a quarter*.
-    *a thing* is a payment under the National Rental Affordability Scheme for *an entity* for *a quarter*.
-    *a thing* is a grant under the energy grants credits scheme for *an entity* for *a quarter*.
-    *a thing* is a type of excluded income for *an entity* for *a quarter*.
-    *a thing* is a capital gain for *an entity* for *a quarter*.
+    the estimated PAYG instalment income for *an entity* for *a year* is *an amount*.
+    *an amount* with *an ID* is an estimated ordinary income for *an entity* for *a year*.
+    *an amount* with *an ID* is an estimated type of business or investment income for *an entity* for *a year*.
+    *an amount* with *an ID* is specially included as estimated instalment income for *an entity* for *a year*.
+    *an amount* with *an ID* is a type of estimated excluded income for *an entity* for *a year*.
+    *an amount* with *an ID* was withheld as tax because of no TFN or ABN for *an entity* for *a year*.
+    *an amount* with *an ID* was withheld from *an entity* under the PAYG withholding system.
+    *an amount* with *an ID* was reported as an instalment on *a quarter* of *a year*.
+    *an amount* with *an ID* was reported as a variation on *a quarter* of *a year*.
+    the estimated gross rent for *an entity* for *a year* is *an amount* with *an ID*.
+    the estimated dividends for *an entity* for *a year* is *an amount* with *an ID*.
+    the estimated royalties for *an entity* for *a year* is *an amount* with *an ID*.
+    the estimated foreign pensions for *an entity* for *a year* is *an amount* with *an ID*.
+    the estimated partnership income for *an entity* for *a year* is *an amount* with *an ID*.
+    the estimated trust income for *an entity* for *a year* is *an amount* with *an ID*.
+    the estimated foreign income for *an entity* for *a year* is *an amount* with *an ID*.
+    the estimated interest for *an entity* for *a year* is *an amount* with *an ID*.
+    the estimated gross sales for *an entity* for *a year* is *an amount* with *an ID*.
+    the estimated gross fees for services for *an entity* for *a year* is *an amount* with *an ID*.
+    the estimated withdrawals from farm management deposits for *an entity* for *a year* is *an amount* with *an ID*.
+    the estimated fuel tax credits for *an entity* for *a year* is *an amount* with *an ID*.
+    the estimated JobKeeper payments for *an entity* for *a year* is *an amount* with *an ID*.
+    the estimated capital gain for *an entity* for *a year* is *an amount* with *an ID*.
+    *an entity* is a super fund.
+    the estimated GST for *an entity* for *a year* is *an amount* with *an ID*.
+    the estimated wine equalisation tax for *an entity* for *a year* is *an amount* with *an ID*.
+    the estimated luxury car tax for *an entity* for *a year* is *an amount* with *an ID*.
+    the estimated salary and wages for *an entity* for *a year* is *an amount* with *an ID*.
+    the estimated franking credit for *an entity* for *a year* is *an amount* with *an ID*.
+    the estimated deemed dividend for *an entity* for *a year* is *an amount* with *an ID*.
+    the estimated exempt income for *an entity* for *a year* is *an amount* with *an ID*.
+    the estimated payment under the National Rental Affordability Scheme for *an entity* for *a year* is *an amount* with *an ID*.
+    the estimated grant under the energy grants credits scheme for *an entity* for *a year* is *an amount* with *an ID*.
+    *an entity* is the taxpayer.
     *a year* is a year under consideration.
-    *an amount* is an ordinary income for *an entity* for *a quarter*.
-    *an amount* is specially included as instalment income for *an entity* for *a quarter*.
     *a quarter* is previous or equal to *a quarter*.
     *a quarter* is previous to *a quarter*.
-    *an entity* is the taxpayer. 
 
 the ontology is:
     quarter 1 is a quarter.
@@ -74,15 +74,43 @@ the ontology is:
     Q3 is previous to Q4.
 
 the knowledge base payg includes:
- 
-the varied amount payable for a quarter Q by an entity E is calculated as a value VA
-    if the estimated tax for a year for E is an amount ET
-    and the year-to-date fraction for Q is an fraction F
-    and the year-to-date instalment adjustment for E at Q is calculated as an amount Y
+
+% Estimated tax for the year
+the estimated tax for an entity for a year is an amount ET
+    if the estimated annual net tax payable for the entity for the year is ET
+        and ET >= 0 
+    or ET = 0
+    	and it is not the case that
+       		the estimated annual net tax payable for the entity for the year is an X.
+
+% Estimated annual net tax payable for the year
+the estimated annual net tax payable for an entity for a year is an amount ENT
+    if the estimated taxable income for the entity for the year is an amount ETI
+    and the applicable tax rate for the entity on the year is a percentage ATR
+    and the tax offsets for the entity for the year is an amount TO
+    and TO >= 0
+    and the estimated tax credits for the entity for the year is an amount TC
+    and TC >= 0
+    and ENT = ETI * ATR - TO - TC. 
+
+% Applicable tax rate (simplified)
+% the entity is under the aggregated turnover threshold in the year -> Given!
+the applicable tax rate for an entity on a year is an amount ATR
+    if the entity is under the aggregated turnover threshold in the year 
+        and ATR is 0.25
+    or ATR is 0.30
+    	and it is not the case that
+    		the entity is under the aggregated turnover threshold in the year. 
+
+% Varied amount payable for the quarter
+the varied amount payable for a quarter Q for an income year by an entity E is an amount VA
+    if the estimated tax for E for the income year is an amount ET
+    and the year-to-date fraction for Q is a number F
+    and the year-to-date instalment adjustment for E for the income year is an amount Y
     and VA = ET * F - Y.
 
-
-the year-to-date fraction for a quarter Q is a fraction F
+% Year-to-date fraction for the quarter
+the year-to-date fraction for a quarter Q is a number F
     if Q is quarter 1 
         and F is 0.25
     or Q is quarter 2 
@@ -92,183 +120,174 @@ the year-to-date fraction for a quarter Q is a fraction F
     or Q is quarter 4 
         and F is 1.0.
 
-
-the year-to-date instalment adjustment for an entity E at a quarter Q is calculated as a value V
+% Year-to-date instalment adjustment for an entity for an income year
+the year-to-date instalment adjustment for an entity E for an income year is an amount V
     if E is the taxpayer
-    and a value IR is the sum of each amount such that
-            the amount was reported as an instalment on a quarter X of the income year
-        and X is previous or equal to Q
-    and a value IVC is the sum of each value such that
-            the value was reported as a variation on a quarter Y of the income year
-        and Y is previous or equal to Q
+    and the income year is a year under consideration
+    and a number IR is the sum of each amount such that
+            the amount with an ID was reported as an instalment on a quarter X of the income year
+    and a number IVC is the sum of each number such that
+            the number with an other ID was reported as a variation on a quarter Y of the income year
     and V = IR - IVC.
 
-
+% New varied rate for the year
 the new varied rate for an entity for a year is an amount VR
-    if the estimated tax for the year for the entity is a value ET
-    and the PAYG instalment income for the entity for the year is a value I
-    and I>0
-    and VR = (ET/I)*100.
+    if the estimated tax for the entity for the year is an amount ET
+    and the estimated PAYG instalment income for the entity for the year is an amount PAYG
+    and         PAYG > 0
+            and VR = (ET/PAYG)*100
+        or      PAYG = 0
+            and VR = 0.
 
-
-% instalment income
-% https://www.ato.gov.au/businesses-and-organisations/income-deductions-and-concessions/payg-instalments/calculate-your-payg-instalments/instalment-income
-
-the PAYG instalment income for an entity for a year is a total amount 
+% instalment income (adapted to estimate PAYG instalment income with yearly basis)
+the estimated PAYG instalment income for an entity for a year is a total amount 
     if the entity is the taxpayer
     and the year is a year under consideration
     and the total amount is the sum of each partial such that
-        partial is an ordinary income for the entity for a quarter. 
+        partial with an ID is an estimated ordinary income for the entity for the year. 
 
 % --- General Rule --- (as sketched by Gemini and Andrew)
 % The primary rule states that business/investment income is included, unless it's specifically excluded.          
-an amount is an ordinary income for an entity for a quarter 
-    if the amount is a type of business or investment income for the entity for the quarter
+an amount with an ID is an estimated ordinary income for an entity for a year 
+    if the amount with the ID is an estimated type of business or investment income for the entity for the year
     and     it is not the case that
-                the amount is a type of excluded income for the entity for the quarter
-        or the amount is specially included as instalment income for the entity for the quarter. 
+                the amount with the ID is a type of estimated excluded income for the entity for the year
+        or the amount with the ID is specially included as estimated instalment income for the entity for the year. 
 
 % An exception for income where tax was withheld due to no TFN/ABN. This is always included.
-an amount is specially included as instalment income for an entity for a quarter
-    if   tax was withheld from the amount because of no TFN or ABN for the entity for the quarter. 
+an amount with an ID is specially included as estimated instalment income for an entity for a year
+    if   the amount with the ID was withheld as tax because of no TFN or ABN for the entity for the year. 
 
-a thing is a type of business or investment income for an entity for a quarter
-    if the thing is gross rent for the entity for the quarter
-    or the thing is dividends for the entity for the quarter
-    or the thing is royalties for the entity for the quarter
-    or the thing is foreign pensions for the entity for the quarter
-    or the thing is partnership income for the entity for the quarter
-    or the thing is trust income for the entity for the quarter
-    or the thing is foreign income for the entity for the quarter
-    or the thing is interest for the entity for the quarter
-    or the thing is gross sales for the entity for the quarter
-    or the thing is gross fees for services for the entity for the quarter
-    or the thing is withdrawals from farm management deposits for the entity for the quarter
-    or the thing is fuel tax credits for the entity for the quarter
-    or the thing is JobKeeper payments for the entity for the quarter.
+an amount E with an ID is an estimated type of business or investment income for an entity for a year
+    if the estimated gross rent for the entity for the year is E with ID
+    or the estimated dividends for the entity for the year is E with ID
+    or the estimated royalties for the entity for the year is E with ID
+    or the estimated foreign pensions for the entity for the year is E with ID
+    or the estimated partnership income for the entity for the year is E with ID
+    or the estimated trust income for the entity for the year is E with ID
+    or the estimated foreign income for the entity for the year is E with ID
+    or the estimated interest for the entity for the year is E with ID
+    or the estimated gross sales for the entity for the year is E with ID
+    or the estimated gross fees for services for the entity for the year is E with ID
+    or the estimated withdrawals from farm management deposits for the entity for the year is E with ID
+    or the estimated fuel tax credits for the entity for the year is E with ID
+    or the estimated JobKeeper payments for the entity for the year is E with ID.
 
  % Capital gains are a special case, only included for super funds.
-an income is specially included as instalment income for an entity for a quarter
-    if the income is a capital gain for the entity for the quarter
+an amount I with an ID is specially included as estimated instalment income for an entity for a year
+    if the estimated capital gain for the entity for the year is I with ID
     and the entity is a super fund.
 
 % % --- Specific Exclusions (Types of Excluded Income) ---
-a thing is a type of excluded income for an entity for a quarter
-    if the thing is GST for the entity for the quarter
-    or the thing is wine equalisation tax for the entity for the quarter
-    or the thing is luxury car tax for the entity for the quarter.
+an amount with an ID is a type of estimated excluded income for an entity for a year
+    if the estimated GST for the entity for the year is the amount with ID
+    or the estimated wine equalisation tax for the entity for the year is the amount with ID
+    or the estimated luxury car tax for the entity for the year is the amount with ID.
 
-a thing is a type of excluded income for an entity for a quarter
-    if the thing is salary and wages for the entity for the quarter
-    and an amount was withheld from the thing under the PAYG withholding system.
+an amount with an ID is a type of estimated excluded income for an entity for a year
+    if the estimated salary and wages for the entity for the year is the amount with ID
+    and the amount with ID was withheld from the entity under the PAYG withholding system.
 
-a thing is a type of excluded income for an entity for a quarter
-    if the thing is a franking credit for the entity for the quarter
-    or the thing is a deemed dividend for the entity for the quarter
-    or the thing is an exempt income for the entity for the quarter
-    or the thing is a payment under the National Rental Affordability Scheme for the entity for the quarter
-    or the thing is a grant under the energy grants credits scheme for the entity for the quarter.
-    
+an amount with an ID is a type of estimated excluded income for an entity for a year
+    if the estimated franking credit for the entity for the year is the amount with ID
+    or the estimated deemed dividend for the entity for the year is the amount with ID
+    or the estimated exempt income for the entity for the year is the amount with ID
+    or the estimated payment under the National Rental Affordability Scheme for the entity for the year is the amount with ID
+    or the estimated grant under the energy grants credits scheme for the entity for the year is the amount with ID.
+
 % General capital gains are excluded (the super fund rule above is the exception).
-a thing is a type of excluded income for an entity for a quarter
-    if the thing is a capital gain for the entity for the quarter
+an amount with an ID is a type of estimated excluded income for an entity for a year
+    if the estimated capital gain for the entity for the year is the amount with ID
     and it is not the case that
         the entity is a super fund.
-
 
 scenario test is:
     2025 is a year under consideration.
     Australian entity is the taxpayer. 
-    the estimated tax for a year for Australian entity is 8000.
-    applicable tax rate for Australian entity is 0.25.
-    1000 was reported as an instalment on quarter 4 of the income year.
-    2000 was reported as a variation on quarter 4 of the income year.
+    the estimated taxable income for Australian entity for 2025 is 100000. % Given by ATO?
+    Australian entity is under the aggregated turnover threshold in 2025.
+    the tax offsets for Australian entity for 2025 is 0. 
+    the estimated tax credits for Australian entity for 2025 is 0.
+    2500 with idiAE202501 was reported as an instalment on quarter 1 of 2025.
 
-scenario harmander is:
-    Harmander is the taxpayer. 
-    the estimated tax for 2025 for Harmander is 10125.
-    ordinary income for Harmander for 2025 is 82480.
+query test is:
+    the varied amount payable for quarter 2 for 2025 by Australian entity is which amount.
 
-% https://www.ato.gov.au/businesses-and-organisations/income-deductions-and-concessions/payg-instalments/starting-payg-instalments
-scenario example1 is:
-    Rob is the taxpayer. 
+scenario lower is:
+    goodpayer is the taxpayer.
     2025 is a year under consideration.
-    the estimated tax for 2025 for Rob is 7544. 
-    the PAYG instalment income for Rob for 2025 is 49500. 
+    the estimated taxable income for goodpayer for 2025 is 40000. % Given by ATO
+    goodpayer is under the aggregated turnover threshold in 2025.
+    the tax offsets for goodpayer for 2025 is 0.
+    the estimated tax credits for goodpayer for 2025 is 0.
+    the estimated gross sales for goodpayer for 2025 is 30000 with idGSO2025.
+    2500 with idiO202501 was reported as an instalment on quarter 1 of 2025.
+    2500 with idiO202502 was reported as an instalment on quarter 2 of 2025.
 
-scenario example2 is:
-    Danielle is the taxpayer. 
+scenario higher is:
+    goodpayer is the taxpayer.
     2025 is a year under consideration.
-    the estimated tax for 2025 for Danielle is 20437.
-    the PAYG instalment income for Danielle for 2025 is 90000.
+    the estimated taxable income for goodpayer for 2025 is 100000. % Given by ATO
+    goodpayer is under the aggregated turnover threshold in 2025.
+    the tax offsets for goodpayer for 2025 is 0.
+    the estimated tax credits for goodpayer for 2025 is 0.
+    the estimated gross sales for goodpayer for 2025 is 120000 with idVSO2025.
+    20000 with idiR202501 was reported as an instalment on quarter 1 of 2025.
+    20000 with idiR202502 was reported as an instalment on quarter 2 of 2025.
 
-scenario mine is:
-    me is the taxpayer. 
-    2025 is a year under consideration.
-    the estimated tax for 2025 for me is 16388.
-    the PAYG instalment income for me for 2025 is 80000.
+query payable_quarter_1 is:
+    the varied amount payable for quarter 1 for which year by which entity is which amount.
 
-scenario alex is:
-    Alex is the taxpayer. 
-    2025 is a year under consideration.
-    15000 is gross sales for Alex for quarter 1.
-    5000 is salary and wages for Alex for quarter 1.
-    an amount was withheld from 5000 under the PAYG withholding system.
-    200 is interest for Alex for quarter 1.
-    1500 is GST for Alex for quarter 1.
-    1000 is royalties for Alex for quarter 2.
+query payable_quarter_2 is:
+    the varied amount payable for quarter 2 for which year by which entity is which amount.
 
-scenario overpaying_test is:
-    overpayer is the taxpayer.
-    2025 is a year under consideration.
-    the estimated tax for 2025 for overpayer is 10000.
-    120000 is gross sales for overpayer for quarter 1.
-    150000 is gross sales for overpayer for quarter 2.
-    the PAYG instalment income for overpayer for 2025 is 100000.
-    5000 was reported as an instalment on quarter 1 of the income year.
-    5000 was reported as an instalment on quarter 2 of the income year.
+query payable_quarter_3 is:
+    the varied amount payable for quarter 3 for which year by which entity is which amount.
 
-scenario underpaying_test is:
-    underpayer is the taxpayer.
-    2025 is a year under consideration.
-    the estimated tax for 2025 for underpayer is 15000.
-    180000 is gross sales for underpayer for quarter 1.
-    200000 is gross sales for underpayer for quarter 2.
-    the PAYG instalment income for underpayer for 2025 is 250000.
-    2500 was reported as an instalment on quarter 1 of the income year.
-    2500 was reported as an instalment on quarter 2 of the income year.
+query payable_quarter_4 is:
+    the varied amount payable for quarter 4 for which year by which entity is which amount.
 
-scenario on_track_test is:
-    on_tracker is the taxpayer.
-    2025 is a year under consideration.
-    the estimated tax for 2025 for on_tracker is 10000.
-    the PAYG instalment income for on_tracker for 2025 is 200000.
-    5000 was reported as an instalment on quarter 1 of the income year.
-    5000 was reported as an instalment on quarter 2 of the income year.
-
-query normal is:
-    the varied amount payable for quarter 4 by which entity is calculated as which amount.
-
-query rate is:
+% Varying by Rate
+query new_rate is:
     the new varied rate for which entity for 2025 is which amount.
 
+query estimated_tax is:
+    the estimated tax for which entity for which year is which amount.
+
+query estimated_annual_tax is:
+    the estimated annual net tax payable for which entity for which year is which amount.
+
 query payg is:
-    the PAYG instalment income for which entity for which year is which amount. 
+    the estimated PAYG instalment income for which entity for which year is which amount.
 
 "). 
 
 /** <examples>
 ?- show prolog.
-?- answer("normal with test").
-?- answer("rate with test").
-?- answer(normal, with(test), le(E), R). 
-?- answer(rate, with(test), le(E), R). 
-?- answer(rate, with(example1), le(E), R). 
-?- answer(rate, with(example2), le(E), R). 
-?- answer(rate, with(mine), le(E), R). 
-?- answer(payg, with(alex), le(E), R).
-?- answer(payg, with(alex)).
-?- answer(rate, with(overpaying_test), le(E), R).
-?- answer(normal, with(overpaying_test), le(E), R).
+?- answer(test, with(test)). 
+?- answer(test, with(test), le(E), R).
+?- answer(payable_quarter_1, with(test), le(E), R).
+?- answer(payable_quarter_2, with(test), le(E), R).
+?- answer(payable_quarter_3, with(test), le(E), R).
+?- answer(payable_quarter_4, with(test), le(E), R). 
+?- answer(estimated_tax, with(test), le(E), R).
+?- answer(estimated_annual_tax, with(test), le(E), R).
+?- answer(new_rate, with(lower)).
+?- answer(new_rate, with(lower), le(E), R).
+?- answer(payable_quarter_1, with(lower), le(E), R).
+?- answer(payable_quarter_2, with(lower), le(E), R).
+?- answer(payable_quarter_3, with(lower), le(E), R).
+?- answer(payable_quarter_4, with(lower), le(E), R).
+?- answer(estimated_tax, with(higher), le(E), R).
+?- answer(estimated_annual_tax, with(higher), le(E), R).
+?- answer(new_rate, with(higher)).
+?- answer(new_rate, with(higher), le(E), R).
+?- answer(payable_quarter_1, with(higher), le(E), R).
+?- answer(payable_quarter_2, with(higher), le(E), R).
+?- answer(payable_quarter_3, with(higher), le(E), R).
+?- answer(payable_quarter_4, with(higher), le(E), R).
+?- answer(payg, with(test), le(E), R).
+?- answer(payg, with(lower), le(E), R).
+?- answer(payg, with(higher), le(E), R).
 
 */

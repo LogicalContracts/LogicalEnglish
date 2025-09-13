@@ -178,7 +178,7 @@ process_llm_request(Request, Result)  :- %trace,
     (get_dict(gemini_api_key, Request, APIKey) -> true; throw(error(missing_gemini_api_key, _))),
     %print_message(informational,"API: About the create the prompt with ~w"-[UserInput]),
     % 2. Create a suitable prompt for Gemini
-    format(string(Prompt), 'You are an expert on legal and logical reasoning. I will provide a description of a specific situation, possible containing assumptions and questions: Description: ~w
+    format(string(Prompt), 'You are an expert on legal and logical reasoning. I will provide a description of a specific situation, possibly containing assumptions and questions: Description: ~w
  
 Turn this into a query and scenario pair using these templates shown below.
 
