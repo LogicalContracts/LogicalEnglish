@@ -1063,7 +1063,7 @@ condition(FinalExpression, _, Map1, MapN) -->
     variable([is], Value, Map1, Map2), is_the_sum_of_each_, extract_variable([such], [], NameWords, [], _), such_that_, !, 
     { name_predicate(NameWords, Name), update_map(Each, Name, Map2, Map3) }, newline, 
     spaces(Ind), conditions(Ind, Map3, Map4, Conds), 
-    modifiers(aggregate_all(sum(Each),Each,Conds,Value), Map4, MapN, FinalExpression).
+    modifiers(aggregate_all(sum(Each),Conds,Value), Map4, MapN, FinalExpression). % verify aggregate_all(sum(Each), Each, Conds, Value)
     
 % it is not the case that 
 %condition((this_capsule(M), not(M:Conds)), _, Map1, MapN) --> 

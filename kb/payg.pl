@@ -235,6 +235,36 @@ scenario higher is:
     20000 with idiR202501 was reported as an instalment on quarter 1 of 2025.
     20000 with idiR202502 was reported as an instalment on quarter 2 of 2025.
 
+scenario ato_1 is:
+    2025 is a year under consideration.
+    Australian entity is the taxpayer. 
+    the estimated taxable income for Australian entity for 2025 is 100000. % Given by ATO?
+    Australian entity is under the aggregated turnover threshold in 2025.
+    the tax offsets for Australian entity for 2025 is 5000. 
+    the estimated tax credits for Australian entity for 2025 is 2000.
+    3000 with idiAE202501 was reported as an instalment on quarter 1 of 2025.
+
+scenario ato_2 is:
+    2025 is a year under consideration.
+    Australian entity is the taxpayer. 
+    the estimated taxable income for Australian entity for 2025 is 100000. % Given by ATO?
+    Australian entity is under the aggregated turnover threshold in 2025.
+    the tax offsets for Australian entity for 2025 is 5000. 
+    the estimated tax credits for Australian entity for 2025 is 2000.
+    3000 with idiAE202501 was reported as an instalment on quarter 1 of 2025.
+    1000 with idiAE202502 was reported as a variation on quarter 2 of 2025.
+
+scenario ato_3 is:
+    2025 is a year under consideration.
+    Australian entity is the taxpayer. 
+    the estimated taxable income for Australian entity for 2025 is 100000. % Given by ATO?
+    Australian entity is under the aggregated turnover threshold in 2025.
+    the tax offsets for Australian entity for 2025 is 5000. 
+    the estimated tax credits for Australian entity for 2025 is 2000.
+    3000 with idiAE202501 was reported as an instalment on quarter 1 of 2025.
+    1000 with idiAE202502 was reported as a variation on quarter 3 of 2025.
+    3000 with idiAE202503 was reported as an instalment on quarter 2 of 2025.
+
 query payable_quarter_1 is:
     the varied amount payable for quarter 1 for which year by which entity is which amount.
 
@@ -289,5 +319,8 @@ query payg is:
 ?- answer(payg, with(test), le(E), R).
 ?- answer(payg, with(lower), le(E), R).
 ?- answer(payg, with(higher), le(E), R).
+?- answer(payable_quarter_2, with(ato_1), le(E), R).
+?- answer(payable_quarter_3, with(ato_2), le(E), R).
+?- answer(payable_quarter_4, with(ato_3), le(E), R).
 
 */

@@ -232,11 +232,11 @@ i(aggregate(Template,G,Result),M,CID,Cref,U,E) :- !, E=[s(aggregate(Template,G,R
         error(instantiation_error,_Cx), 
         (append(U_,[at(instantiation_error(G),M)/c(Cref)],U), append(Children_,[u(instantiation_error(G),M,unknown,[])],Children)) 
         ).
-i(aggregate_all(Template,Pattern,G,Result),M,CID,Cref,U,AggrE) :- !,  %updated!
+i(aggregate_all(Template,G,Result),M,CID,Cref,U,AggrE) :- !,  %updated!
     %print_message(informational, "**** aggregate_all INIT Template ~w Goal ~w Result ~w"-[Template, G, Result]),
     AggrE=[s(aggregate_all(Template,G,Result),M,meta,E)],
     % uses a bit too much of SWI internals at swipl-devel/library/aggregate.pl
-    aggregate:template_to_pattern(all, Template, _Pattern, M:G, Goal, _Aggregate),
+    aggregate:template_to_pattern(all, Template, Pattern, M:G, Goal, _Aggregate), % watch out for 'sum' here with Pattern and
     %print_message(informational, "**** aggregate_all Template ~w Pattern ~w Goal ~w Aggregate ~w Result ~w"-[Template,Pattern, G,Aggregate, Result]),
     %i(setof(Pattern, Goal, List),M,CID,Cref,U_,E_),
     i(findall(Pattern, Goal, _List),M,CID,Cref,U_,E_),
@@ -244,7 +244,7 @@ i(aggregate_all(Template,Pattern,G,Result),M,CID,Cref,U,AggrE) :- !,  %updated!
     %     error(instantiation_error,_Cx), 
     %     (append(U_,[at(instantiation_error(G),M)/c(Cref)],U), append(E_,[u(instantiation_error(G),M,unknown,[])],E)) 
     %     ),
-    catch( ( aggregate_all(Template, Pattern, Goal, Result), U=U_, E=E_ ), 
+    catch( ( aggregate_all(Template, Goal, Result), U=U_, E=E_ ), 
          error(instantiation_error,_Cx), 
          (append(U_,[at(instantiation_error(G),M)/c(Cref)],U), append(E_,[u(instantiation_error(G),M,unknown,[])],E)) 
          ).
