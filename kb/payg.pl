@@ -8,8 +8,9 @@ the templates are:
     the estimated taxable income for *an entity* for *a year* is *an amount*.
     the applicable tax rate for *an entity* on *a year* is *a percentage*.
     *an entity* is under the aggregated turnover threshold in *a year*. 
+    *an entity* is a base rate entity. 
     the tax offsets for *an entity* for *a year* is *an amount*.
-    the estimated tax credits for *an entity* for *a year* is *an amount*.
+    the estimated tax credits for *an entity* for *a year* are *an amount*.
     the varied amount payable for *a quarter* for *a year* by *an entity* is *an amount*.
     the year-to-date fraction for *a quarter* is *a fraction*.
     the year-to-date instalment adjustment for *an entity* for *a year* is *an amount*.
@@ -89,18 +90,21 @@ the estimated annual net tax payable for an entity for a year is an amount ENT
     and the applicable tax rate for the entity on the year is a percentage ATR
     and the tax offsets for the entity for the year is an amount TO
     and TO >= 0
-    and the estimated tax credits for the entity for the year is an amount TC
+    and the estimated tax credits for the entity for the year are an amount TC
     and TC >= 0
     and ENT = ETI * ATR - TO - TC. 
 
 % Applicable tax rate (simplified)
 % the entity is under the aggregated turnover threshold in the year -> Given!
-the applicable tax rate for an entity on a year is an amount ATR
-    if the entity is under the aggregated turnover threshold in the year 
+the applicable tax rate for an entity on a year is a number ATR
+    if         the entity is under the aggregated turnover threshold in the year 
+            or the entity is a base rate entity
         and ATR is 0.25
-    or ATR is 0.30
+    or      ATR is 0.30
     	and it is not the case that
-    		the entity is under the aggregated turnover threshold in the year. 
+    		the entity is under the aggregated turnover threshold in the year
+        and it is not the case that
+        	the entity is a base rate entity.
 
 % Varied amount payable for the quarter
 the varied amount payable for a quarter Q for an income year by an entity E is an amount VA
@@ -131,11 +135,12 @@ the year-to-date instalment adjustment for an entity E for an income year is an 
     and V = IR - IVC.
 
 % New varied rate for the year
-the new varied rate for an entity for a year is an amount VR
+the new varied rate for an entity for a year is a percentage VR
     if the estimated tax for the entity for the year is an amount ET
+    and the year-to-date instalment adjustment for the entity for the year is an amount P
     and the estimated PAYG instalment income for the entity for the year is an amount PAYG
     and         PAYG > 0
-            and VR = (ET/PAYG)*100
+            and VR = ((ET-P)/PAYG)*100
         or      PAYG = 0
             and VR = 0.
 
@@ -205,62 +210,45 @@ scenario test is:
     2025 is a year under consideration.
     Australian entity is the taxpayer. 
     the estimated taxable income for Australian entity for 2025 is 100000. % Given by ATO?
-    Australian entity is under the aggregated turnover threshold in 2025.
+    Australian entity is a base rate entity.
     the tax offsets for Australian entity for 2025 is 0. 
-    the estimated tax credits for Australian entity for 2025 is 0.
-    2500 with idiAE202501 was reported as an instalment on quarter 1 of 2025.
+    the estimated tax credits for Australian entity for 2025 are 0.
+    6250 with idiAE202501 was reported as an instalment on quarter 1 of 2025.
+    6250 with idiAE202502 was reported as an instalment on quarter 2 of 2025.
+    6250 with idiAE202503 was reported as an instalment on quarter 3 of 2025.
+    the estimated dividends for Australian entity for 2025 is 40000 with iddAE2025.
+    the estimated royalties for Australian entity for 2025 is 35000 with idrAE2025.
 
 query test is:
     the varied amount payable for quarter 2 for 2025 by Australian entity is which amount.
 
-scenario lower is:
-    goodpayer is the taxpayer.
-    2025 is a year under consideration.
-    the estimated taxable income for goodpayer for 2025 is 40000. % Given by ATO
-    goodpayer is under the aggregated turnover threshold in 2025.
-    the tax offsets for goodpayer for 2025 is 0.
-    the estimated tax credits for goodpayer for 2025 is 0.
-    the estimated gross sales for goodpayer for 2025 is 30000 with idGSO2025.
-    2500 with idiO202501 was reported as an instalment on quarter 1 of 2025.
-    2500 with idiO202502 was reported as an instalment on quarter 2 of 2025.
-
-scenario higher is:
-    goodpayer is the taxpayer.
-    2025 is a year under consideration.
-    the estimated taxable income for goodpayer for 2025 is 100000. % Given by ATO
-    goodpayer is under the aggregated turnover threshold in 2025.
-    the tax offsets for goodpayer for 2025 is 0.
-    the estimated tax credits for goodpayer for 2025 is 0.
-    the estimated gross sales for goodpayer for 2025 is 120000 with idVSO2025.
-    20000 with idiR202501 was reported as an instalment on quarter 1 of 2025.
-    20000 with idiR202502 was reported as an instalment on quarter 2 of 2025.
-
 scenario ato_1 is:
     2025 is a year under consideration.
     Australian entity is the taxpayer. 
-    the estimated taxable income for Australian entity for 2025 is 100000. % Given by ATO?
-    Australian entity is under the aggregated turnover threshold in 2025.
+    the estimated taxable income for Australian entity for 2025 is 100000. % Given by ATO
+    Australian entity is a base rate entity. 
     the tax offsets for Australian entity for 2025 is 5000. 
-    the estimated tax credits for Australian entity for 2025 is 2000.
+    the estimated tax credits for Australian entity for 2025 are 2000.
     3000 with idiAE202501 was reported as an instalment on quarter 1 of 2025.
+    the estimated gross rent for Australian entity for 2025 is 80000 with idegAE2025.
 
 scenario ato_2 is:
     2025 is a year under consideration.
     Australian entity is the taxpayer. 
-    the estimated taxable income for Australian entity for 2025 is 100000. % Given by ATO?
-    Australian entity is under the aggregated turnover threshold in 2025.
+    the estimated taxable income for Australian entity for 2025 is 100000. % Given by ATO
+    Australian entity is a base rate entity.
     the tax offsets for Australian entity for 2025 is 5000. 
-    the estimated tax credits for Australian entity for 2025 is 2000.
+    the estimated tax credits for Australian entity for 2025 are 2000.
     3000 with idiAE202501 was reported as an instalment on quarter 1 of 2025.
     1000 with idiAE202502 was reported as a variation on quarter 2 of 2025.
 
 scenario ato_3 is:
     2025 is a year under consideration.
     Australian entity is the taxpayer. 
-    the estimated taxable income for Australian entity for 2025 is 100000. % Given by ATO?
-    Australian entity is under the aggregated turnover threshold in 2025.
+    the estimated taxable income for Australian entity for 2025 is 100000. % Given by ATO
+    Australian entity is a base rate entity.
     the tax offsets for Australian entity for 2025 is 5000. 
-    the estimated tax credits for Australian entity for 2025 is 2000.
+    the estimated tax credits for Australian entity for 2025 are 2000.
     3000 with idiAE202501 was reported as an instalment on quarter 1 of 2025.
     1000 with idiAE202502 was reported as a variation on quarter 3 of 2025.
     3000 with idiAE202503 was reported as an instalment on quarter 2 of 2025.
@@ -279,21 +267,19 @@ query payable_quarter_4 is:
 
 % Varying by Rate
 query new_rate is:
-    the new varied rate for which entity for 2025 is which amount.
+    the new varied rate for which entity for 2025 is which percentage.
 
 query estimated_tax is:
     the estimated tax for which entity for which year is which amount.
 
-query estimated_annual_tax is:
-    the estimated annual net tax payable for which entity for which year is which amount.
-
-query payg is:
+query payg_income is:
     the estimated PAYG instalment income for which entity for which year is which amount.
 
 "). 
 
-/** <examples>
-?- show prolog.
+/** <examples> To test the rules, these are possible combinations of queries and scenarios
+?- show prolog.  % check translation into Prolog`
+% basic tests
 ?- answer(test, with(test)). 
 ?- answer(test, with(test), le(E), R).
 ?- answer(payable_quarter_1, with(test), le(E), R).
@@ -301,26 +287,13 @@ query payg is:
 ?- answer(payable_quarter_3, with(test), le(E), R).
 ?- answer(payable_quarter_4, with(test), le(E), R). 
 ?- answer(estimated_tax, with(test), le(E), R).
-?- answer(estimated_annual_tax, with(test), le(E), R).
-?- answer(new_rate, with(lower)).
-?- answer(new_rate, with(lower), le(E), R).
-?- answer(payable_quarter_1, with(lower), le(E), R).
-?- answer(payable_quarter_2, with(lower), le(E), R).
-?- answer(payable_quarter_3, with(lower), le(E), R).
-?- answer(payable_quarter_4, with(lower), le(E), R).
-?- answer(estimated_tax, with(higher), le(E), R).
-?- answer(estimated_annual_tax, with(higher), le(E), R).
-?- answer(new_rate, with(higher)).
-?- answer(new_rate, with(higher), le(E), R).
-?- answer(payable_quarter_1, with(higher), le(E), R).
-?- answer(payable_quarter_2, with(higher), le(E), R).
-?- answer(payable_quarter_3, with(higher), le(E), R).
-?- answer(payable_quarter_4, with(higher), le(E), R).
-?- answer(payg, with(test), le(E), R).
-?- answer(payg, with(lower), le(E), R).
-?- answer(payg, with(higher), le(E), R).
-?- answer(payable_quarter_2, with(ato_1), le(E), R).
-?- answer(payable_quarter_3, with(ato_2), le(E), R).
-?- answer(payable_quarter_4, with(ato_3), le(E), R).
+?- answer(payg_income, with(test), le(E), R).
+?- answer(new_rate, with(test), le(E), R).
+% specific tests starting with payable amount in a given quarter
+?- answer(payable_quarter_2, with(ato_1), le(E), R). % use it to test ATO scenario
+?- answer(payable_quarter_3, with(ato_2), le(E), R). % use it to test ATO scenario
+?- answer(payable_quarter_4, with(ato_3), le(E), R). % use it to test ATO scenario
+% calculating new rate 
+?- answer(new_rate, with(ato_1), le(E), R). % use it to test ATO scenario
 
 */
