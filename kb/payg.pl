@@ -226,7 +226,6 @@ scenario test_quarter_2 is:
     the tax offsets for Australian entity for 2025 is 0. 
     the estimated tax credits for Australian entity for 2025 are 0.
     6250 with idiAE202501 was reported as an instalment on quarter 1 of 2025.
-    6250 with idiAE202502 was reported as an instalment on quarter 2 of 2025.
     the estimated dividends for Australian entity for 2025 is 40000 with iddAE2025.
     the estimated royalties for Australian entity for 2025 is 35000 with idrAE2025.
     the estimated capital gain for Australian entity for 2025 is 10000 with idcAE2025. % excluded not a superfund

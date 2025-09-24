@@ -50,6 +50,7 @@ the templates are:
     *a year* is a year under consideration.
     *a quarter* is previous or equal to *a quarter*.
     *a quarter* is previous to *a quarter*.
+    the current quarter is *a quarter*.
 
 the ontology is:
     quarter 1 is a quarter.
@@ -66,10 +67,16 @@ the ontology is:
         or X is equal to Y.
 
     quarter 1 is previous to quarter 2.
+    quarter 1 is previous to quarter 3.
+    quarter 1 is previous to quarter 4.
     quarter 2 is previous to quarter 3.
+    quarter 2 is previous to quarter 4.
     quarter 3 is previous to quarter 4.
     Q1 is previous to Q2.
+    Q1 is previous to Q3.
+    Q1 is previous to Q4.
     Q2 is previous to Q3.
+    Q2 is previous to Q4.
     Q3 is previous to Q4.
 
 the knowledge base payg includes:
@@ -106,7 +113,8 @@ the applicable tax rate for an entity on a year is a number ATR
 
 % Varied amount payable for the quarter
 the varied amount payable for a quarter Q for an income year by an entity E is an amount VA
-    if the estimated tax for E for the income year is an amount ET
+    if the current quarter is Q
+    and the estimated tax for E for the income year is an amount ET
     and the year-to-date fraction for Q is a number F
     and the year-to-date instalment adjustment for E for the income year is an amount Y
     and VA = ET * F - Y.
@@ -125,11 +133,14 @@ the year-to-date fraction for a quarter Q is a number F
 % Year-to-date instalment adjustment for an entity for an income year
 the year-to-date instalment adjustment for an entity E for an income year is an amount V
     if E is the taxpayer
+    and the current quarter is a quarter C
     and the income year is a year under consideration
     and a number IR is the sum of each amount such that
             the amount with an ID was reported as an instalment on a quarter X of the income year
+            and X is previous to C
     and a number IVC is the sum of each number such that
             the number with an other ID was reported as a variation on a quarter Y of the income year
+            and Y is previous to C
     and V = IR - IVC.
 
 % New varied rate for the year
@@ -204,35 +215,37 @@ an amount with an ID is a type of estimated excluded income for an entity for a 
     and it is not the case that
         the entity is a super fund.
 
-scenario test is:
-    2025 is a year under consideration.
+scenario test_quarter_2 is:
     Australian entity is the taxpayer. 
+    2025 is a year under consideration.
+    the current quarter is quarter 2.
     the estimated taxable income for Australian entity for 2025 is 100000. % Given by ATO?
     Australian entity is a base rate entity.
     the tax offsets for Australian entity for 2025 is 0. 
     the estimated tax credits for Australian entity for 2025 are 0.
     6250 with idiAE202501 was reported as an instalment on quarter 1 of 2025.
-    6250 with idiAE202502 was reported as an instalment on quarter 2 of 2025.
-    6250 with idiAE202503 was reported as an instalment on quarter 3 of 2025.
     the estimated dividends for Australian entity for 2025 is 40000 with iddAE2025.
     the estimated royalties for Australian entity for 2025 is 35000 with idrAE2025.
+    the estimated capital gain for Australian entity for 2025 is 10000 with idcAE2025. % excluded not a superfund
+    the estimated GST for Australian entity for 2025 is 20000 with idgAE2025. % just excluded
 
 query test is:
-    the varied amount payable for quarter 2 for 2025 by Australian entity is which amount.
+    the varied amount payable for which quarter for which year by Australian entity is which amount.
 
-scenario ato_1 is:
-    2025 is a year under consideration.
+scenario ato_1_quarter_2 is:
     Australian entity is the taxpayer. 
+    2025 is a year under consideration.
+    the current quarter is quarter 2.
     the estimated taxable income for Australian entity for 2025 is 100000. % Given by ATO
     Australian entity is a base rate entity. 
     the tax offsets for Australian entity for 2025 is 5000. 
     the estimated tax credits for Australian entity for 2025 are 2000.
     3000 with idiAE202501 was reported as an instalment on quarter 1 of 2025.
-    the estimated gross rent for Australian entity for 2025 is 80000 with idegAE2025.
 
-scenario ato_2 is:
-    2025 is a year under consideration.
+scenario ato_2_quarter_3 is:
     Australian entity is the taxpayer. 
+    2025 is a year under consideration.
+    the current quarter is quarter 3.
     the estimated taxable income for Australian entity for 2025 is 100000. % Given by ATO
     Australian entity is a base rate entity.
     the tax offsets for Australian entity for 2025 is 5000. 
@@ -240,9 +253,10 @@ scenario ato_2 is:
     3000 with idiAE202501 was reported as an instalment on quarter 1 of 2025.
     1000 with idiAE202502 was reported as a variation on quarter 2 of 2025.
 
-scenario ato_3 is:
-    2025 is a year under consideration.
+scenario ato_3_quarter_4 is:
     Australian entity is the taxpayer. 
+    2025 is a year under consideration.
+    the current quarter is quarter 4.
     the estimated taxable income for Australian entity for 2025 is 100000. % Given by ATO
     Australian entity is a base rate entity.
     the tax offsets for Australian entity for 2025 is 5000. 
@@ -251,17 +265,19 @@ scenario ato_3 is:
     1000 with idiAE202502 was reported as a variation on quarter 3 of 2025.
     3000 with idiAE202503 was reported as an instalment on quarter 2 of 2025.
 
-query payable_quarter_1 is:
-    the varied amount payable for quarter 1 for which year by which entity is which amount.
+scenario ato_4_quarter_2 is:
+    Australian entity is the taxpayer. 
+    2025 is a year under consideration.
+    the current quarter is quarter 2.
+    the estimated taxable income for Australian entity for 2025 is 100000. % Given by ATO
+    Australian entity is a base rate entity. 
+    the tax offsets for Australian entity for 2025 is 5000. 
+    the estimated tax credits for Australian entity for 2025 are 2000.
+    3000 with idiAE202501 was reported as an instalment on quarter 1 of 2025.
+    the estimated gross rent for Australian entity for 2025 is 80000 with idegAE2025.
 
-query payable_quarter_2 is:
-    the varied amount payable for quarter 2 for which year by which entity is which amount.
-
-query payable_quarter_3 is:
-    the varied amount payable for quarter 3 for which year by which entity is which amount.
-
-query payable_quarter_4 is:
-    the varied amount payable for quarter 4 for which year by which entity is which amount.
+query payable is:
+    the varied amount payable for which quarter for which year by which entity is which amount.
 
 % Varying by Rate
 query new_rate is:
