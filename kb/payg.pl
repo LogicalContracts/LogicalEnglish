@@ -276,7 +276,7 @@ scenario ato_4_quarter_2 is:
     the tax offsets for Australian entity for 2025 is 5000. 
     the estimated tax credits for Australian entity for 2025 are 2000.
     3000 with idiAE202501 was reported as an instalment on quarter 1 of 2025.
-    the estimated gross rent for Australian entity for 2025 is 80000 with idegAE2025.
+    the estimated gross rent for Australian entity for 2025 is 100000 with idegAE2025.
 
 query payable is:
     the varied amount payable for which quarter for which year by which entity is which amount.
