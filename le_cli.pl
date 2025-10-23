@@ -1,11 +1,45 @@
 % Simple wrapper to use LogicalEnglish from the PROLOG command line
 
-:- use_module(le_answer).
-
 :- multifile prolog:message//1.
 prolog:message(S-Args) --> {atomic(S),is_list(Args)},[S-Args].
 
-example_en("the target language is: prolog.
+:- use_module(le_answer).
+
+load_program(FileOrTerm,Language,DeleteFile,Module,TaxlogTerms,ExpandedTerms) :- 
+    must_be(boolean,DeleteFile),
+    (var(Module) -> uuid(Module) ; true),
+    ((atomic(FileOrTerm), exists_file(FileOrTerm)) -> 
+        (var(Language) -> Language=en; true),
+        read_file_to_string(FileOrTerm, Text, [])
+        ;
+        FileOrTerm=..[Language,Text]
+    ),
+    assertion(member(Language,[en,fr,es,it])),
+    LEterm=..[Language,Text],
+    parse_and_load(Module, LEterm,TaxlogTerms,ExpandedTerms,File),
+    (DeleteFile==true -> delete_file(File); true).
+
+load_program(FileOrTerm) :- 
+    load_program(FileOrTerm,_Language,true,Module,_TaxlogTerms,_ExpandedTerms),
+    print_message(informational,"Loaded into ~w"-[Module]).
+
+query_program_one(Module,Question, Scenario, AnswerExplanation) :-
+    set_psem(Module),
+    le_answer:answer( Question, Scenario, AnswerExplanation).
+
+query_program_one(Question, Scenario, AnswerExplanation) :-
+    psem(Module),
+    query_program_one(Module,Question, Scenario, AnswerExplanation).
+
+query_program_all(Module,Question, Scenario, AnswerExplanation) :-
+    set_psem(Module),
+    le_answer:answer_all( Question, Scenario, AnswerExplanation).
+
+query_program_all(Question, Scenario, AnswerExplanation) :-
+    psem(Module),
+    query_program_all(Module,Question, Scenario, AnswerExplanation).
+
+example1(en("the target language is: prolog.
 
 
 the templates are:
@@ -47,9 +81,11 @@ Alice became a British citizen on 1990-10-09.
         
 query one is:
     
-which person acquires British citizenship on which date.").
+which person acquires British citizenship on which date.")).
 
 % Example:
-% example_en(LE), parse_and_query(foobar, en(LE), one, with(alice), AnswerExplanation).
-% example_en(LE), parse_and_query_all_answers(foobar, en(LE), one, with(alice), AnswerExplanation).
-% example_en(LE), parse_and_query_and_explanation(foobar, en(LE), one, with(alice), AnswerExplanation,Result).
+% example1(LE), parse_and_query(foobar, LE, one, with(alice), AnswerExplanation).
+% example1(LE), parse_and_query_all_answers(foobar, LE, one, with(alice), AnswerExplanation).
+% example1(LE), parse_and_query_and_explanation(foobar, LE, one, with(alice), AnswerExplanation,Result).
+% example1(LE), parse_and_query_and_explanation_text(foobar, LE, one, with(alice), AnswerExplanation,Result).
+% load_program('/Users/mc/git/LogicalEnglish/moreExamples/payg.le'), ...

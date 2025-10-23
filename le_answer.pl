@@ -32,9 +32,10 @@ which can be used on the new command interface of LE on SWISH
     op(800,fx,user:responde), % to support querying in spanish
     %op(1150,fx,user:show), % to support querying
     op(850,xfx,user:of), % to support querying
-    dump/4, dump/3, dump/2, dump_scasp/3, split_module_name/3, just_saved_scasp/2, psem/1, 
+    dump/4, dump/3, dump/2, dump_scasp/3, split_module_name/3, just_saved_scasp/2, psem/1, set_psem/1,
     prepare_query/6, assert_facts/2, retract_facts/2, parse_and_query/5, parse_and_query_and_explanation/6, parse_and_query_all_answers/5,
-    parse_and_query_and_explanation_text/6, le_expanded_terms/2, show/1, source_lang/1, targetBody/6, query_and_explanation_text/4
+    parse_and_query_and_explanation_text/6, le_expanded_terms/2, show/1, source_lang/1, targetBody/6, query_and_explanation_text/4,
+    parse_and_load/5
     ]).
 
 
@@ -88,6 +89,11 @@ which can be used on the new command interface of LE on SWISH
 :- discontiguous statement/3, declaration/4, _:example/2, _:query/2, _:is_/2. 
 
 :- thread_local  just_saved_scasp/2, abducing/0, psem/1. 
+
+set_psem(File) :-
+    retractall(psem(_)), % cleaning id of previously consulted modules  
+    assert(psem(File)).  % setting this module for further reasoning
+
 
 /* ---------------------------------------------------------------  meta predicates CLI */
 
@@ -259,9 +265,8 @@ answer_all(English, Arg, Results) :- %trace, !,
     % append(FactsPre, [(is_a_(X,Y):-is_a(X,Y)), (is_a(A, B):-(is_a_(A, C),is_a(C, B)))], Facts),
     append(FactsPre, [(is_a(A, B):-(is_a(A, C),is_a(C, B)))], Facts),
     %print_message(informational, "Answering: ~w with ~w "-[English, Arg]),
-    setup_call_catcher_cleanup(assert_facts(Module, Facts), 
-            %catch((listing(SwishModule:is_a/2), reasoner:query(at(InnerGoal, SwishModule),Result,E,_)),             
-            %catch((listing(Module:is_a/2), reasoner:query(at(InnerGoal, Module),_U,E,Result)), Error, ( print_message(error, Error), fail ) ),
+    setup_call_catcher_cleanup( 
+            assert_facts(Module, Facts), 
             catch_with_backtrace(
                 findall(Answer, 
                     ( %listing(Module:is_a/2),
@@ -272,9 +277,12 @@ answer_all(English, Arg, Results) :- %trace, !,
                       ),
                     Results), 
                 Error, 
-                ( print_message(error, Error)) ),
+                ( print_message(error, Error)) 
+                ),
             _Result, 
-            retract_facts(Module, Facts)). 
+            retract_facts(Module, Facts)),
+    Results \== [],
+    !. 
 
 answer_all(English, Arg, [ _{answer:'Failure', explanation:E}])  :-
     %print_message(error, "Failed to answer question: ~w"-[English]),
@@ -541,7 +549,8 @@ translate_command(Module, English_String, GoalName, Goals, Scenario) :- %trace,
     phrase(command_(GoalName, Scenario), CTokens),  
     %print_message(informational, "GoalName ~w Module ~w"-[GoalName, Module]), 
     %Module:query(GoalName, Goals). 
-    catch_with_backtrace((Module:query(GoalName, Goals)), Error, (print_message(error, "No such query defined: ~w"-[Error]), fail)).  
+    catch_with_backtrace((Module:query(GoalName, Goals)), Error, (print_message(error, "No such query defined: ~w"-[Error]), fail)),
+    !.
     %( Module:query(GoalName, Goals) -> true; (print_message(informational, "No goal named: ~w"-[GoalName]), fail) ), !. 
 
 translate_command(_, English_String, GoalName, Goals, Scenario) :-
@@ -1027,49 +1036,34 @@ retracting(File, ExpandedTerms) :-
     % cleaning memory
     forall(member(T, [(:-module(File,[])), source_lang(en)|ExpandedTerms]), 
         ( %print_message(informational, "Removing File:T ~w:~w"-[File,T]), 
-         retract(File:T))).
+         retractall(File:T))).
+
+parse_and_load(File, Document,TaxlogTerms,ExpandedTerms,NewFileName) :-
+    %print_message(informational, "parse_and_query ~w ~w ~w ~w"-[File, Document, Question, Scenario]),
+	%prolog_load_context(source,File), % atom_prefix(File,'pengine://'), % process only SWISH windows
+	%prolog_load_context(term_position,TP), stream_position_data(line_count,TP,Line),
+    le_taxlog_translate(Document, _, 1, TaxlogTerms),
+    set_psem(File),
+	non_expanded_terms(File, TaxlogTerms, ExpandedTerms,NewFileName_),
+    absolute_file_name(NewFileName_, NewFileName),
+    asserting(File, ExpandedTerms).
 
 % parse_and_query(+OutputFileName, +Document, +QuestionOrQueryName, +ScenarioName, -AnswerExplanation)
 % Document is a Language(LEtext) term, where Language is either of en, fr, it, es
 % Returns ONLY the first answer
 parse_and_query(File, Document, Question, Scenario, AnswerExplanation) :-
-    %print_message(informational, "parse_and_query ~w ~w ~w ~w"-[File, Document, Question, Scenario]),
-	%prolog_load_context(source,File), % atom_prefix(File,'pengine://'), % process only SWISH windows
-	%prolog_load_context(term_position,TP), stream_position_data(line_count,TP,Line),
-    le_taxlog_translate(Document, _, 1, TaxlogTerms),
-    %print_message(informational, "TaxlogTerms to be asserted "-[TaxlogTerms]), 
-    %print_message(informational, "Expanded to be asserted on ~w "-[M]), 
-    retractall(psem(_)), % cleaning id of previously consulted modules  
-    assert(psem(File)),  % setting this module for further reasoning
-	non_expanded_terms(File, TaxlogTerms, ExpandedTerms),
-    asserting(File, ExpandedTerms), 
+    parse_and_load(File, Document,_,ExpandedTerms,_), 
     answer( Question, Scenario, AnswerExplanation), 
     retracting(File, ExpandedTerms). 
 
 parse_and_query_all_answers(File, Document, Question, Scenario, AnswerExplanation) :-
-    %print_message(informational, "parse_and_query ~w ~w ~w ~w"-[File, Document, Question, Scenario]),
-	%prolog_load_context(source,File), % atom_prefix(File,'pengine://'), % process only SWISH windows
-	%prolog_load_context(term_position,TP), stream_position_data(line_count,TP,Line),
-    le_taxlog_translate(Document, _, 1, TaxlogTerms),
-    %print_message(informational, "TaxlogTerms to be asserted ~w"-[TaxlogTerms]), 
-    %print_message(informational, "Expanded to be asserted on ~w "-[M]), 
-    retractall(psem(_)), % cleaning id of previously consulted modules  
-    assert(psem(File)),  % setting this module for further reasoning
-	non_expanded_terms(File, TaxlogTerms, ExpandedTerms),
-    asserting(File, ExpandedTerms), 
+    parse_and_load(File, Document,_,ExpandedTerms,_), 
     answer_all(Question, Scenario, AnswerExplanation), !, 
     retracting(File, ExpandedTerms).  
 
 % Generate an answer in html, with a nested list representing the explanation.
 parse_and_query_and_explanation(File, Document, Question, Scenario, Answer, Result) :-
-    %print_message(informational, "parse_and_query and explanation ~w ~w ~w ~w"-[File, Document, Question, Scenario]),
-    le_taxlog_translate(Document, _, 1, TaxlogTerms),
-    %this_capsule(M), 
-    retractall(psem(_)), % cleaning id of previously consulted modules 
-    assert(psem(File)),  % setting this module for further reasoning
-	non_expanded_terms(File, TaxlogTerms, ExpandedTerms),
-    %M:assertz(myDeclaredModule_(File)), % to enable the reasoner
-    asserting(File, ExpandedTerms), % simulating term expansion
+    parse_and_load(File, Document,_,ExpandedTerms,_), 
     hack_module_for_taxlog(File), % to enable the reasoner
     %print_message(informational, " Asserted ~w"-[ExpandedTerms]), 
     answer( Question, Scenario, le(LE_Explanation), Result), 
@@ -1080,16 +1074,7 @@ parse_and_query_and_explanation(File, Document, Question, Scenario, Answer, Resu
 % Generate a text-based answer, with a nested list representing the explanation.
 % This does not retract the kb, to permit multiple queries.
 parse_and_query_and_explanation_text(File, Document, Question, Scenario, Answer, Result) :-
-    %print_message(informational, "parse_and_query and explanation ~w ~w ~w ~w"-[File, Document, Question, Scenario]),
-    le_taxlog_translate(Document, _, 1, TaxlogTerms),
-    %print_message(informational, "TaxlogTerms to be asserted "-[TaxlogTerms]), 
-    %this_capsule(M), , 
-    retractall(psem(_)), % cleaning id of previously consulted modules 
-    assert(psem(File)),  % setting this module for further reasoning
-    non_expanded_terms(File, TaxlogTerms, ExpandedTerms),
-    %print_message(informational, "Expanded to be asserted on ~w this ~w"-[M, ExpandedTerms]),
-    %M:assertz(myDeclaredModule_(File)), 
-    asserting(File, ExpandedTerms), % simulating term expansion
+    parse_and_load(File, Document,TaxlogTerms,_,_),
     hack_module_for_taxlog(File),
     (member(target(scasp),TaxlogTerms) -> answer(Question, Scenario);
     answer( Question, Scenario, le(LE_Explanation), Result)),    % cleaning memory
@@ -1104,7 +1089,7 @@ query_and_explanation_text(Question, Scenario, Answer, Result) :-
     produce_text_explanation(LE_Explanation, Answer). 
 
 % non_expanded_terms/2 is just as the one above
-non_expanded_terms(Name, TaxlogTerms, ExpandedTerms) :-
+non_expanded_terms(Name, TaxlogTerms, ExpandedTerms, NewFileName) :-
     %print_message(informational, " Translated ~w"-[TaxlogTerms]), 
 	(TaxlogTerms\=[]-> 
         findall(PrologTerm, (
