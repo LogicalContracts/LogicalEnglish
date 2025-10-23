@@ -37,41 +37,25 @@ which can be used on the new command interface of LE on SWISH
     parse_and_query_and_explanation_text/6, le_expanded_terms/2, show/1, source_lang/1, targetBody/6, query_and_explanation_text/4
     ]).
 
-%:- use_module(library(sandbox)).
+
 :- if(exists_source(library(pengines_sandbox))).
-:- use_module(library(pengines_sandbox)). 
+    :- use_module(library(pengines_sandbox)). 
 :- endif.
 
 % required for sCASP justification (from ~/git/swish/pack/sCASP/examples)
 
 :- if(exists_source(library(scasp))).
-:- use_module(library(scasp)).
-:- use_module(library(scasp/html)).
-:- use_module(library(scasp/output)).
-:- use_module(library(scasp/json)).
+    :- use_module(library(scasp)).
+    :- use_module(library(scasp/html)).
+    :- use_module(library(scasp/output)).
+    :- use_module(library(scasp/json)).
 :- endif.
 
-% :- use_module(library(http/http_server)).
-% :- use_module(library(http/html_write)).
-% :- use_module(library(http/js_write)).
-% :- use_module(library(http/html_head)).
-% :- use_module(library(http/http_path)).
-% :- use_module(library(http/http_error)).
-% :- use_module(library(http/jquery)).
-% :- use_module(library(http/http_dispatch)).
-% :- use_module(library(dcg/high_order)).
-% :- use_module(library(http/term_html)).
-% :- use_module(library(http/http_json)).
-% :- use_module(library(http/http_client)).
-% :- use_module(library(http/http_host)).
-
-%:- multifile sandbox:safe_primitive/1.
-%:- multifile sandbox:safe_meta/2.
 
 :- use_module('le_input.pl').  
 :- use_module('syntax.pl').
 :- if(\+current_module(wasm)).
-:- use_module('api.pl'). 
+    :- use_module('api.pl'). 
 :- endif.
 :- use_module('reasoner.pl'). 
 :- use_module('./tokenize/prolog/tokenize.pl').
@@ -81,14 +65,14 @@ which can be used on the new command interface of LE on SWISH
 :- use_module(library(http/html_write)).
 :- use_module(library(http/term_html)).
 :- if(exists_source(library(http/js_write))).
-:- use_module(library(http/js_write)).
+    :- use_module(library(http/js_write)).
 :- endif.
 
 :- if(exists_source(library(r/r_call))).
-:- use_module(library(r/r_call)).
+    :- use_module(library(r/r_call)).
 :- endif.
 :- if(exists_source(library(r/r_data))).
-:- use_module(library(r/r_data)).
+    :- use_module(library(r/r_data)).
 :- endif.
 
 
@@ -212,7 +196,7 @@ answer(English, Arg) :- %trace,
     show_answer(Goal). 
 
 % answer/3
-% answer(+English, with(+Scenario), -Result)
+% answer(+QuestionOrQueryName, with(+Scenario), -Result)
 answer(English, Arg, EnglishAnswer) :- %trace, 
     le_input:parsed, 
     prepare_query(English, Arg, SwishModule, Goal, FactsPre), 
@@ -282,7 +266,10 @@ answer_all(English, Arg, Results) :- %trace, !,
                 findall(Answer, 
                     ( %listing(Module:is_a/2),
                       reasoner:query(at(InnerGoal, Module),_U, le(LE_Explanation), Result) ,
-                      produce_html_explanation(LE_Explanation, E), correct_answer(InnerGoal, E, Result, Answer) ),
+                      produce_html_explanation(LE_Explanation, E), correct_answer(InnerGoal, E, Result, Answer_),
+                      term_string(InnerGoal,Bindings),
+                      put_dict(bindings, Answer_, Bindings, Answer)                      
+                      ),
                     Results), 
                 Error, 
                 ( print_message(error, Error)) ),
@@ -347,6 +334,7 @@ parse_scenario_from_file(ScenarioModuleName, Assumptions) :- %trace,
     % print_message(informational, "CTokens: ~w "-[CTokens]), 
     phrase(le_input:assumptions_(Assumptions), CTokens).
 
+% prepare_query(+QuestionOrQueryName, +Arguments, ?Module, -Goal, -Facts, -Command)
 prepare_query(English, Arg, Module, Goal, Facts) :- %trace, 
     %restore_dicts, 
     var(Module), (psem(Module); this_capsule(Module)), % !, 
@@ -366,7 +354,6 @@ prepare_query(English, Arg, Module, Goal, Facts) :- %trace,
     %extract_goal_command(Goal, Module, _InnerGoal, Command), !.   
     %print_message(informational, "Command: ~w"-[Command]). 
 
-% prepare_query(+English, +Arguments, +Module, -Goal, -Facts, -Command)
 prepare_query(English, Arg, SwishModule, Goal, Facts) :- %trace, 
     %restore_dicts, 
     nonvar(SwishModule),
@@ -560,7 +547,7 @@ translate_command(Module, English_String, GoalName, Goals, Scenario) :- %trace,
 translate_command(_, English_String, GoalName, Goals, Scenario) :-
     tokenize(English_String, Tokens, [cased(true), spaces(true), numbers(false)]),
     unpack_tokens(Tokens, UTokens), 
-    clean_comments(UTokens, CTokens), Scenario=noscenario, GoalName=nonamed, 
+    clean_comments(UTokens, CTokens), Scenario=noscenario, GoalName=unamed, 
     (phrase(conditions(0, [], _, Goals), CTokens) ->  true  ;
         ( once(le_input:error_notice(error, Me,_, ContextTokens)), print_message(informational, "Error in query definition ~w ~w"-[Me,ContextTokens]), CTokens=[], fail )
     ). 
@@ -1042,6 +1029,9 @@ retracting(File, ExpandedTerms) :-
         ( %print_message(informational, "Removing File:T ~w:~w"-[File,T]), 
          retract(File:T))).
 
+% parse_and_query(+OutputFileName, +Document, +QuestionOrQueryName, +ScenarioName, -AnswerExplanation)
+% Document is a Language(LEtext) term, where Language is either of en, fr, it, es
+% Returns ONLY the first answer
 parse_and_query(File, Document, Question, Scenario, AnswerExplanation) :-
     %print_message(informational, "parse_and_query ~w ~w ~w ~w"-[File, Document, Question, Scenario]),
 	%prolog_load_context(source,File), % atom_prefix(File,'pengine://'), % process only SWISH windows
