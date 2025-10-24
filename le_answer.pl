@@ -949,15 +949,11 @@ user:restore_dicts :- restore_dicts.
 le_taxlog_translate( EnText, Terms) :- le_taxlog_translate( EnText, someFile, 1, Terms).
 
 % Baseline is the line number of the start of Logical English text
-le_taxlog_translate( en(Text), File, BaseLine, Terms) :-
-    %print_message(informational,"en( ~w )"-[Text]), 
-    le_input:text_to_logic(Text, Terms) -> true; showErrors(File,BaseLine). 
-le_taxlog_translate( fr(Text), File, BaseLine, Terms) :-
-    le_input:text_to_logic(Text, Terms) -> true; showErrors(File,BaseLine). 
-le_taxlog_translate( it(Text), File, BaseLine, Terms) :-
-    le_input:text_to_logic(Text, Terms) -> true; showErrors(File,BaseLine). 
-le_taxlog_translate( es(Text), File, BaseLine, Terms) :-
-    le_input:text_to_logic(Text, Terms) -> true; showErrors(File,BaseLine).
+le_taxlog_translate( LEterm, File, BaseLine, Terms) :-
+    LEterm =.. [Lang,Text],
+    assertion( memberchk(Lang,[en,fr,it,es]) ),
+    clear_errors,
+    (le_input:text_to_logic(Text, Terms) -> clear_errors; showErrors(File,BaseLine)).
 le_taxlog_translate( prolog_le(verified), _, _, prolog_le(verified)) :- %trace, % running from prolog file
     assertz(le_input:parsed), %this_capsule(M),  
     %assertz(M:just_saved_scasp(null, null)), 
@@ -1042,7 +1038,7 @@ parse_and_load(File, Document,TaxlogTerms,ExpandedTerms,NewFileName) :-
     %print_message(informational, "parse_and_query ~w ~w ~w ~w"-[File, Document, Question, Scenario]),
 	%prolog_load_context(source,File), % atom_prefix(File,'pengine://'), % process only SWISH windows
 	%prolog_load_context(term_position,TP), stream_position_data(line_count,TP,Line),
-    le_taxlog_translate(Document, _, 1, TaxlogTerms),
+    le_taxlog_translate(Document, File, 1, TaxlogTerms),
     set_psem(File),
 	non_expanded_terms(File, TaxlogTerms, ExpandedTerms,NewFileName_),
     absolute_file_name(NewFileName_, NewFileName),
