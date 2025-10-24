@@ -16,8 +16,13 @@ load_program(FileOrTerm,Language,DeleteFile,Module,TaxlogTerms,ExpandedTerms) :-
     ),
     assertion(member(Language,[en,fr,es,it])),
     LEterm=..[Language,Text],
-    parse_and_load(Module, LEterm,TaxlogTerms,ExpandedTerms,File),
-    (DeleteFile==true -> delete_file(File); true).
+    %TODO: this NOT deleting file when parsing fails:
+    setup_call_cleanup(
+        true, 
+        parse_and_load(Module, LEterm,TaxlogTerms,ExpandedTerms,File),
+        (DeleteFile==true -> nonvar(File), delete_file(File); true)
+    ).
+
 
 load_program(FileOrTerm) :- 
     load_program(FileOrTerm,_Language,true,Module,_TaxlogTerms,_ExpandedTerms),
