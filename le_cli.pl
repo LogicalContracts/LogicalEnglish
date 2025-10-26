@@ -25,24 +25,138 @@ load_program(FileOrTerm,Language,DeleteFile,Module,TaxlogTerms,ExpandedTerms) :-
 
 
 load_program(FileOrTerm) :- 
-    load_program(FileOrTerm,_Language,true,Module,_TaxlogTerms,_ExpandedTerms),
-    print_message(informational,"Loaded into ~w"-[Module]).
+    load_program(FileOrTerm,_Language,true,_Module,_TaxlogTerms,_ExpandedTerms).
 
-query_program_one(Module,Question, Scenario, AnswerExplanation) :-
+query_program_one(Module,Question, Scenario_, AnswerExplanation) :-
     set_psem(Module),
+    (Scenario_=with(_) -> Scenario=Scenario_ ; Scenario=with(Scenario_)),
     le_answer:answer( Question, Scenario, AnswerExplanation).
 
 query_program_one(Question, Scenario, AnswerExplanation) :-
     psem(Module),
     query_program_one(Module,Question, Scenario, AnswerExplanation).
 
-query_program_all(Module,Question, Scenario, AnswerExplanation) :-
+% query_program_all(+Module,+Question, +Scenario, -AnswerExplanations,-Answers)
+query_program_all(Module,Question, Scenario_, AnswerExplanations,Answers) :-
     set_psem(Module),
-    le_answer:answer_all( Question, Scenario, AnswerExplanation).
+    (Scenario_=with(_) -> Scenario=Scenario_ ; Scenario=with(Scenario_)),
+    le_answer:answer_all( Question, Scenario, AnswerExplanations),
+    findall(Answer, (
+            member(AnswerExplanation,AnswerExplanations), 
+            get_dict(bindings, AnswerExplanation, Answer_),
+            term_string(Answer,Answer_)
+            ), Answers).
 
-query_program_all(Question, Scenario, AnswerExplanation) :-
+query_program_all(Question, Scenario, AnswerExplanations,Answers) :-
     psem(Module),
-    query_program_all(Module,Question, Scenario, AnswerExplanation).
+    query_program_all(Module,Question, Scenario, AnswerExplanations,Answers).
+
+% generate_expectations(+LEfileOrDir)
+% WARNIKNG: this will OVERWRITE all test results files
+generate_expectations(TestsDir) :- exists_directory(TestsDir), !,
+    all_files_in(TestsDir,'.le',[],LEfiles),
+    forall(member(LEfile,LEfiles), (
+        print_message(informational,"Generating expectations for ~w"-[LEfile]),
+        generate_expectations(LEfile)
+        )).
+
+generate_expectations(LEfile) :-
+    Language = en, %TODO: how to accept other languages?
+    (load_program(LEfile,Language,true,Module,_TaxlogTerms,ExpandedTerms) -> 
+        findall(example(Name,Facts), (member(example(Name,Facts),ExpandedTerms), Name\==null), Examples),
+        findall(query(Name,Goal), (member(query(Name,Goal),ExpandedTerms), Name\==null), Queries),
+        findall(expected(Query,Scenario,Answers), (
+            member(query(Query,Goal),Queries), member(example(Scenario,Facts),Examples),
+            query_program_all(Module,Query, with(Scenario), _AnswerExplanations, Answers)
+            ), Expectations)
+            ; Expectations = []),
+    format(string(NewFile),"~a.tests",[LEfile]),
+    open(NewFile,write,Stream),
+    forall(member(Expectation,Expectations), format(Stream,"~q.~n",[Expectation])),
+    close(Stream).
+
+verify_expectations(TestsDir) :- exists_directory(TestsDir), !,
+    all_files_in(TestsDir,'.tests',[],TestFiles),
+    length(TestFiles,Nfiles),
+    get_time(Start),
+    findall(TestFile-Result,(
+        member(TestPath,TestFiles),
+        file_base_name(TestPath, TestFile),
+        print_message(informational,"Running tests in ~w..."-[TestPath]),
+        verify_expectations(TestPath,Result)
+        ), 
+        Results),
+    get_time(End), Duration is round((End-Start)*1000)/1000,
+    findall(Ntests, (member(_-Result,Results), Result=..[_,Ntests|_]), TestCounts),
+    sum_list(TestCounts, NtestsTotal),
+    print_message(informational,"Ran ~w tests in ~w files in ~w seconds~nResults:~n"-[NtestsTotal,Nfiles,Duration]),
+    forall(member(File-Result,Results),(
+        (Result=..[ok|_] -> Kind=informational ; Kind=warning),
+        print_message(Kind,"~w: ~q"-[File,Result])
+    )),
+    ( forall(member(_-Result,Results), Result=..[ok|_]) -> print_message(informational,"~nALL GOOD :-)"-[]) ;
+        print_message(error,"~nTESTS HAVE FAILED :-("-[])).
+
+
+verify_expectations(TestFile,Result) :-
+    atom_concat(LEfile,'.tests',TestFile),
+    read_file_to_terms(TestFile, Expectations, []),
+    ( load_program(LEfile) ->
+        findall(Outcome,(
+            member(expected(Query,Scenario,ExpectedAnswers),Expectations),
+            (query_program_all(Query, with(Scenario), _AnswerExplanations,Answers) -> 
+                (ExpectedAnswers=Answers -> Outcome=ok ; Outcome=expected(ExpectedAnswers)-got(Answers))
+                ;
+                Outcome=failed
+            )
+            ),Outcomes)
+        ; Outcomes = [failed(load_program)]),
+    length(Expectations,Ntests),
+    (forall(member(Outcome,Outcomes),Outcome==ok) -> 
+        Result=ok(Ntests) ;
+        member(failed(What),Outcomes) -> 
+            Result=failed(Ntests,What) ;
+        nth1(Index, Outcomes, failed) -> 
+            nth1(Index,Expectations,FailedExpectation), Result=failed(Ntests,FailedExpectation) ;
+        findall(Expected-Got, member(Expected-Got,Outcomes), Unexpecteds), 
+        Result=unexpected(Ntests,Unexpecteds)
+    ).
+
+
+% Show a HTML fragment in the user's browser
+show_html(H) :-
+    tmp_file(explanation, TmpName_),
+    format(string(TmpName),"~a.html",[TmpName_]),
+    open(TmpName,write,Stream),
+    format(Stream,"<html><body>",[]),
+    writeln(Stream,H),
+    format(Stream,"</body></html>",[]),
+    close(Stream),
+    www_open_url(TmpName).
+
+% Suffix typically being .extension
+% collects all files with given extension suffix in Directory subtree, recursively
+% excludes base filenames in the Except arg
+all_files_in(Directory,Suffix,Except,Files) :-
+    must_be(list,Except),
+    (is_list(Suffix)->Suffix=SuffixCodes;atom_codes(Suffix,SuffixCodes)),
+    directory_files(Directory,DFiles), 
+	findall( File, (
+        member(F,DFiles), 
+		F \== '.', F \== '..', \+ member(F,Except),
+		concat_atom([Directory,'/',F],FullF),
+		(exists_directory(FullF) -> 
+			all_files_in(FullF,Suffix,DFiles), member(File,DFiles) 
+			; 
+			atom_codes(F,FC), 
+			append(_PFcodes,SuffixCodes,FC), 
+			concat_atom([Directory,'/',F],File))
+		),
+		Files).
+
+all_files_in(Directory,Suffix,Files) :- all_files_in(Directory,Suffix,[],Files).
+
+%%% EXAMPLES
 
 example1(en("the target language is: prolog.
 

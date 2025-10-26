@@ -272,6 +272,7 @@ answer_all(English, Arg, Results) :- %trace, !,
                     ( %listing(Module:is_a/2),
                       reasoner:query(at(InnerGoal, Module),_U, le(LE_Explanation), Result) ,
                       produce_html_explanation(LE_Explanation, E), correct_answer(InnerGoal, E, Result, Answer_),
+                      % stringify to avoid breaking existing clients of this predicate:
                       term_string(InnerGoal,Bindings),
                       put_dict(bindings, Answer_, Bindings, Answer)                      
                       ),
