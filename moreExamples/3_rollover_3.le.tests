@@ -1,0 +1,6 @@
+expected(one,'Testing',"[the_small_business_restructure_rollover_applies_to('event 123')]").
+expected(one,'Andrew email Feb 4 2021',"[]").
+expected(one,'Andrew email Feb 4 2021 version 2',"[]").
+expected(two,'Testing',"[is_a_party_of(company1,'event 123')]").
+expected(two,'Andrew email Feb 4 2021',"[is_a_party_of(company1,'event 123')]").
+expected(two,'Andrew email Feb 4 2021 version 2',"[is_a_party_of(company1,'event 123')]").
