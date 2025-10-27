@@ -35,7 +35,7 @@ which can be used on the new command interface of LE on SWISH
     dump/4, dump/3, dump/2, dump_scasp/3, split_module_name/3, just_saved_scasp/2, psem/1, set_psem/1,
     prepare_query/6, assert_facts/2, retract_facts/2, parse_and_query/5, parse_and_query_and_explanation/6, parse_and_query_all_answers/5,
     parse_and_query_and_explanation_text/6, le_expanded_terms/2, show/1, source_lang/1, targetBody/6, query_and_explanation_text/4,
-    parse_and_load/5
+    parse_and_load/5, term_to_clean_string/2
     ]).
 
 
@@ -259,7 +259,7 @@ answer(English, Arg, E, Output) :- %trace,
 % answer_all/3
 % answer_all(+English, with(+Scenario), -Explanations) :-
 answer_all(English, Arg, Results) :- %trace, !, 
-    pre_answer(English, Arg, FactsPre, Module, InnerGoal),
+    once( pre_answer(English, Arg, FactsPre, Module, InnerGoal) ),
     % adding isa_a/2 connections 
     % append(FactsPre, [(is_a(A, B):-(is_a(A, C),is_a(C, B))), (reasoner:is_a(X,Y) :- is_a(X,Y))], Facts),
     % append(FactsPre, [(is_a_(X,Y):-is_a(X,Y)), (is_a(A, B):-(is_a_(A, C),is_a(C, B)))], Facts),
@@ -273,7 +273,7 @@ answer_all(English, Arg, Results) :- %trace, !,
                       reasoner:query(at(InnerGoal, Module),_U, le(LE_Explanation), Result) ,
                       produce_html_explanation(LE_Explanation, E), correct_answer(InnerGoal, E, Result, Answer_),
                       % stringify to avoid breaking existing clients of this predicate:
-                      term_string(InnerGoal,Bindings),
+                      numbervars(InnerGoal), term_string(InnerGoal,Bindings,[numbervars(true)]),
                       put_dict(bindings, Answer_, Bindings, Answer)                      
                       ),
                     Results), 
@@ -289,6 +289,12 @@ answer_all(English, Arg, [ _{answer:'Failure', explanation:E}])  :-
     %print_message(error, "Failed to answer question: ~w"-[English]),
     with_output_to(string(E), 
         format("Failed to answer question: ~w : ~w", [English, Arg])), !.    
+
+% term_string/2 but normalizing variable names to A,B,...
+% BEWARE as this BINDS T
+term_to_clean_string(T,S) :-
+    must_be(nonvar,T),
+    numbervars(T), term_string(T,S,[numbervars(true)]).
 
 % pre_answer/5
 pre_answer(English, Arg, FactsPre, Module, InnerGoal) :- !, 
@@ -534,13 +540,26 @@ escape_uppercased(Word, EscapedWord) :-
     append([92, First|Rest], [92], NewCodes),
     name(EscapedWord, NewCodes).
 
-assert_facts(_, []) :- !. 
-assert_facts(SwishModule, [F|R]) :- nonvar(F),  %print_message(informational, "asserting: ~w"-[SwishModule:F]),
-    assertz(SwishModule:F), assert_facts(SwishModule, R).
+assert_facts(M,F) :- 
+    % print_message(informational,"~q"-[assert_facts(M,F)]),
+    assert_facts_(M,F).
 
-retract_facts(_, []) :- !. 
-retract_facts(SwishModule, [F|R]) :- nonvar(F),  %print_message(informational, "retracting: ~w"-[SwishModule:F]),
-    retract(SwishModule:F), retract_facts(SwishModule, R). 
+assert_facts_(_, []) :- !. 
+assert_facts_(SwishModule, [F|R]) :- must_be(nonvar,F),  %print_message(informational, "asserting: ~w"-[SwishModule:F]),
+    assertz(SwishModule:F), assert_facts_(SwishModule, R).
+
+retract_facts(M,F) :- 
+    % print_message(informational,"~q"-[retract_facts(M,F)]),
+    retract_facts_(M,F).
+
+retract_facts_(_, []) :- !. 
+retract_facts_(SwishModule, [F|R]) :-  % print_message(informational, "retracting: ~w"-[SwishModule:F]),
+    (nonvar(F) -> 
+        (F=(Fact:-_) -> true ; F=Fact),
+        retractall(SwishModule:Fact) 
+        ; 
+        true), 
+    retract_facts_(SwishModule, R). 
 
 % translate_command/5
 translate_command(Module, English_String, GoalName, Goals, Scenario) :- %trace, 
@@ -704,7 +723,8 @@ targetBody(G, false, _, '', [], _) :-
 
 dump(templates, String) :-
     findall(local_dict(Prolog, NamesTypes, Templates), 
-    (le_input:dict(Prolog, NamesTypes, Templates)), PredicatesDict), 
+        (le_input:dict(Prolog, NamesTypes, Templates)), 
+        PredicatesDict), 
     with_output_to(string(String01), forall(member(Clause1, PredicatesDict), portray_clause_ind(Clause1))),
     (PredicatesDict==[] -> string_concat("local_dict([],[],[]).\n", String01, String1); String1 = String01), 
     findall(local_meta_dict(Prolog, NamesTypes, Templates), (le_input:meta_dict(Prolog, NamesTypes, Templates)), PredicatesMeta),
@@ -1039,6 +1059,7 @@ parse_and_load(File, Document,TaxlogTerms,ExpandedTerms,NewFileName) :-
     %print_message(informational, "parse_and_query ~w ~w ~w ~w"-[File, Document, Question, Scenario]),
 	%prolog_load_context(source,File), % atom_prefix(File,'pengine://'), % process only SWISH windows
 	%prolog_load_context(term_position,TP), stream_position_data(line_count,TP,Line),
+    clear_dicts,
     le_taxlog_translate(Document, File, 1, TaxlogTerms),
     set_psem(File),
 	non_expanded_terms(File, TaxlogTerms, ExpandedTerms,NewFileName_),

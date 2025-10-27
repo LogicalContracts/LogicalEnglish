@@ -25,7 +25,8 @@ load_program(FileOrTerm,Language,DeleteFile,Module,TaxlogTerms,ExpandedTerms) :-
 
 
 load_program(FileOrTerm) :- 
-    load_program(FileOrTerm,_Language,true,_Module,_TaxlogTerms,_ExpandedTerms).
+    load_program(FileOrTerm,_Language,true,Module,_TaxlogTerms,_ExpandedTerms),
+    print_message(informational,"Loaded into module ~w"-[Module]).
 
 query_program_one(Module,Question, Scenario_, AnswerExplanation) :-
     set_psem(Module),
@@ -37,15 +38,19 @@ query_program_one(Question, Scenario, AnswerExplanation) :-
     query_program_one(Module,Question, Scenario, AnswerExplanation).
 
 % query_program_all(+Module,+Question, +Scenario, -AnswerExplanations,-Answers)
+% Answers is a list of positive answers; if Answers is [], AnswerExplanations will contain items with the negative explanations
 query_program_all(Module,Question, Scenario_, AnswerExplanations,Answers) :-
     set_psem(Module),
     (Scenario_=with(_) -> Scenario=Scenario_ ; Scenario=with(Scenario_)),
     le_answer:answer_all( Question, Scenario, AnswerExplanations),
     findall(Answer, (
             member(AnswerExplanation,AnswerExplanations), 
+            get_dict(answer,AnswerExplanation,'Yes'),
             get_dict(bindings, AnswerExplanation, Answer_),
             term_string(Answer,Answer_)
-            ), Answers).
+            ), Answers),
+    length(Answers,Positives), length(AnswerExplanations,All),
+    assertion(Positives+1>=All).
 
 query_program_all(Question, Scenario, AnswerExplanations,Answers) :-
     psem(Module),
@@ -67,7 +72,9 @@ generate_expectations(LEfile) :-
         findall(query(Name,Goal), (member(query(Name,Goal),ExpandedTerms), Name\==null), Queries),
         findall(expected(Query,Scenario,Answers), (
             member(query(Query,Goal),Queries), member(example(Scenario,Facts),Examples),
-            query_program_all(Module,Query, with(Scenario), _AnswerExplanations, Answers)
+            % print_message(informational,"Generating for query ~w, scenario ~w"-[Query,Scenario]),
+            query_program_all(Module,Query, with(Scenario), _AnswerExplanations, Answers_),
+            term_to_clean_string(Answers_,Answers)
             ), Expectations)
             ; Expectations = []),
     format(string(NewFile),"~a.tests",[LEfile]),
@@ -89,13 +96,24 @@ verify_expectations(TestsDir) :- exists_directory(TestsDir), !,
     get_time(End), Duration is round((End-Start)*1000)/1000,
     findall(Ntests, (member(_-Result,Results), Result=..[_,Ntests|_]), TestCounts),
     sum_list(TestCounts, NtestsTotal),
-    print_message(informational,"Ran ~w tests in ~w files in ~w seconds~nResults:~n"-[NtestsTotal,Nfiles,Duration]),
+    print_message(informational,"Ran ~w tests in ~w files in ~w seconds~n~nRESULTS:~n"-[NtestsTotal,Nfiles,Duration]),
+    format(string(ResultsFile),"~a/LEtests.log",[TestsDir]),
+    open(ResultsFile,write,Stream),
     forall(member(File-Result,Results),(
-        (Result=..[ok|_] -> Kind=informational ; Kind=warning),
-        print_message(Kind,"~w: ~q"-[File,Result])
+        (Result=..[ok|_] -> Kind=informational, Prefix='' ; Kind=warning, Prefix='NOT OK: '),
+        print_message(Kind,"~w: ~q"-[File,Result]),
+        format(Stream,"~a~w: ~q~n",[Prefix,File,Result])
     )),
-    ( forall(member(_-Result,Results), Result=..[ok|_]) -> print_message(informational,"~nALL GOOD :-)"-[]) ;
-        print_message(error,"~nTESTS HAVE FAILED :-("-[])).
+    ( forall(member(_-Result,Results), Result=..[ok|_]) -> 
+        print_message(informational,"~nALL GOOD :-)"-[]), 
+        format(Stream,"~nALL GOOD :-)~n",[])
+        ;
+        findall(File,(member(File-Result,Results), \+ Result=..[ok|_]), BadFiles_), sort(BadFiles_,BadFiles),
+        length(BadFiles,BadFilesCount),
+        print_message(error,"~nTESTS HAVE FAILED in ~w of ~w files:-("-[BadFilesCount,Nfiles]),
+        format(Stream,"~nTESTS HAVE FAILED :-(~n",[])
+    ),
+    close(Stream).
 
 
 verify_expectations(TestFile,Result) :-
@@ -104,8 +122,15 @@ verify_expectations(TestFile,Result) :-
     ( load_program(LEfile) ->
         findall(Outcome,(
             member(expected(Query,Scenario,ExpectedAnswers),Expectations),
-            (query_program_all(Query, with(Scenario), _AnswerExplanations,Answers) -> 
-                (ExpectedAnswers=Answers -> Outcome=ok ; Outcome=expected(ExpectedAnswers)-got(Answers))
+            (   query_program_all(Query, with(Scenario), AnswerExplanations,Answers) -> 
+                    ((term_to_clean_string(Answers,ExpectedAnswers_), ExpectedAnswers_=ExpectedAnswers) -> 
+                        Outcome=ok 
+                        ; 
+                        format("scenario ~w query ~w~n",[Scenario,Query]),
+                        format("AE: ~q~n",[AnswerExplanations]),
+                        format("expected ~q got ~q~n",[ExpectedAnswers, Answers]),
+                        Outcome=expected(ExpectedAnswers)-got(Answers)
+                    )
                 ;
                 Outcome=failed
             )

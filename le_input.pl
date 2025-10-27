@@ -100,7 +100,7 @@ query three is:
     query_/2, extract_constant/4, spaces/3, name_as_atom/2, process_types_or_names/6,
     matches_name/4, matches_type/4, delete_underscore/2, add_determiner/2, proper_det/2,
     portray_clause_ind/1, order_templates/2, process_types_dict/2,
-    assertall/1,asserted/1, clear_errors/0,
+    assertall/1,asserted/1, clear_errors/0, clear_dicts/0,
     update_file/3, myDeclaredModule/1, conditions/6, op_stop/1
     ]).
 
@@ -124,6 +124,11 @@ query three is:
                 last_nl_parsed/1, kbname/1, happens/2, initiates/3, terminates/3, is_type/1, is_/2, is_a/2, 
                 predicates/1, events/1, fluents/1, metapredicates/1, parsed/0, source_lang/1, including/0. % just_saved_scasp/2. 
 :- discontiguous statement/3, declaration/4, _:example/2, _:query/2, _:is_/2. 
+
+clear_dicts :-
+    retractall(dict(_,_,_)),
+    retractall(meta_dict(_,_,_)).
+
 
 % Main clause: text_to_logic(+String,-Clauses) is det
 % Errors are added to error_notice 
