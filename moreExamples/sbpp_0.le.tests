@@ -1,0 +1,2 @@
+expected(indirect,test,"[the_indirect_small_business_participation_percentage_of_in_is(individual,unit,0.43200000000000005)]").
+expected(direct,test,"[]").

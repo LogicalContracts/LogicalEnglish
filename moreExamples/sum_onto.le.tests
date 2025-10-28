@@ -1,0 +1,2 @@
+expected(one,one,"[is_the_result(5)]").
+expected(two,one,"[is_a(0,factor)]").

@@ -1,0 +1,25 @@
+expected(one,one,"[is_a_small_business_entity_for('Cherrio Charity',2025)]").
+expected(one,two,"[]").
+expected(one,three,"[]").
+expected(one,four,"[]").
+expected(one,five,"[]").
+expected(two,one,"[]").
+expected(two,two,"[is_a_small_business_entity_for('Tech Innovations Ltd',2025)]").
+expected(two,three,"[]").
+expected(two,four,"[]").
+expected(two,five,"[]").
+expected(three,one,"[]").
+expected(three,two,"[]").
+expected(three,three,"[is_a_small_business_entity_for('Bakehouse Bliss Partnership',2025)]").
+expected(three,four,"[]").
+expected(three,five,"[]").
+expected(four,one,"[]").
+expected(four,two,"[]").
+expected(four,three,"[]").
+expected(four,four,"[is_a_small_business_entity_for('River View Trust',2025)]").
+expected(four,five,"[]").
+expected(five,one,"[]").
+expected(five,two,"[]").
+expected(five,three,"[]").
+expected(five,four,"[]").
+expected(five,five,"[is_a_small_business_entity_for('Australian Trust',2025),is_a_small_business_entity_for('Australian Trust',2025)]").

@@ -1,0 +1,12 @@
+expected('A','A',"[must_register_for_GST('Cherrio Charity')]").
+expected('A','B',"[]").
+expected('A','C',"[]").
+expected('B','A',"[]").
+expected('B','B',"[must_register_for_GST('sporting club'),must_register_for_GST('sporting club')]").
+expected('B','C',"[]").
+expected('C','A',"[]").
+expected('C','B',"[]").
+expected('C','C',"[must_register_for_GST('Tom s Bakery'),must_register_for_GST('Tom s Bakery')]").
+expected('not-for-profit','A',"[]").
+expected('not-for-profit','B',"[]").
+expected('not-for-profit','C',"[]").

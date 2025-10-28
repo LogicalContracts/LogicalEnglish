@@ -62,6 +62,7 @@ query_with_facts(Goal,Facts_,OnceUndo,unknowns(Unknowns),E,Outcome) :- %trace,
         expand_explanation_refs(E_,Facts,E) %,print_message(informational, "Explanations ~w into ~w"-[E_, E])
         ), %print_message(informational, "Caller ~w "-[Caller]), 
     retractall(hypothetical_fact(_,_,_,_,_,_)), %trace, 
+    clear_failures_trail,
     (OnceUndo==true -> (true, once_with_facts(Caller, M, Facts, true)) ; (true, call_with_facts(Caller, M, Facts))),
     list_without_variants(U,Unknowns_), % remove duplicates, keeping the first clause reference for each group
     mapModulesInUnknwons(Unknowns_,Unknowns).
@@ -336,6 +337,10 @@ myCall(G) :- sandbox:safe_call(G).
 
 :- thread_local last_goal_id/1, failed/5, failed_success/3.
 
+clear_failures_trail :-
+    retractall(failed(_,_,_,_,_)),
+    retractall(failed_success(_,_,_)).
+
 nextGoalID(ID) :- 
     (last_goal_id(Old) -> true ; Old=0), ID is Old+1.
 newGoalID(ID) :- 
@@ -503,7 +508,7 @@ once_with_facts(G,M_,Facts,DoUndo) :-
 % call_with_facts(+Goal,+Module,+AdditionalFacts) This does NOT undo the fact changes
 call_with_facts(G,M_,Facts) :-
     atom_string(M,M_),
-    (le_answer:psem(M); loaded_kp(M)), % make sure the module is loaded
+    (le_answer:psem(M) -> true ; loaded_kp(M)), % make sure the module is loaded
     assert_and_remember(Facts,M,from_with_facts,_Undo),
     call(M:G).
 

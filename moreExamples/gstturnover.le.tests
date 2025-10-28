@@ -1,0 +1,49 @@
+expected('A','A',"[must_register_for_GST('Cherrio Charity')]").
+expected('A','B',"[]").
+expected('A','C',"[]").
+expected('A',typical,"[]").
+expected('A','significant exports',"[]").
+expected('A','small business',"[]").
+expected('A',uber,"[]").
+expected('B','A',"[]").
+expected('B','B',"[must_register_for_GST('sporting club'),must_register_for_GST('sporting club')]").
+expected('B','C',"[]").
+expected('B',typical,"[]").
+expected('B','significant exports',"[]").
+expected('B','small business',"[]").
+expected('B',uber,"[]").
+expected('C','A',"[]").
+expected('C','B',"[]").
+expected('C','C',"[must_register_for_GST('Tom s Bakery'),must_register_for_GST('Tom s Bakery')]").
+expected('C',typical,"[]").
+expected('C','significant exports',"[]").
+expected('C','small business',"[]").
+expected('C',uber,"[]").
+expected('not-for-profit','A',"[]").
+expected('not-for-profit','B',"[]").
+expected('not-for-profit','C',"[]").
+expected('not-for-profit',typical,"[]").
+expected('not-for-profit','significant exports',"[]").
+expected('not-for-profit','small business',"[]").
+expected('not-for-profit',uber,"[]").
+expected(tbi,'A',"[]").
+expected(tbi,'B',"[]").
+expected(tbi,'C',"[]").
+expected(tbi,typical,"[is_the_total_business_income(105000)]").
+expected(tbi,'significant exports',"[is_the_total_business_income(137000)]").
+expected(tbi,'small business',"[is_the_total_business_income(6000)]").
+expected(tbi,uber,"[]").
+expected(gst_turnover,'A',"[]").
+expected(gst_turnover,'B',"[]").
+expected(gst_turnover,'C',"[]").
+expected(gst_turnover,typical,"[is_the_GST_Turnover(90909.09)]").
+expected(gst_turnover,'significant exports',"[is_the_GST_Turnover(68181.82)]").
+expected(gst_turnover,'small business',"[is_the_GST_Turnover(0)]").
+expected(gst_turnover,uber,"[]").
+expected(who,'A',"[must_register_for_GST('Cherrio Charity'),must_register_for_GST('Cherrio Charity')]").
+expected(who,'B',"[must_register_for_GST('sporting club'),must_register_for_GST('sporting club')]").
+expected(who,'C',"[must_register_for_GST('Tom s Bakery'),must_register_for_GST('Tom s Bakery')]").
+expected(who,typical,"[]").
+expected(who,'significant exports',"[]").
+expected(who,'small business',"[]").
+expected(who,uber,"[]").

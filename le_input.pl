@@ -100,7 +100,7 @@ query three is:
     query_/2, extract_constant/4, spaces/3, name_as_atom/2, process_types_or_names/6,
     matches_name/4, matches_type/4, delete_underscore/2, add_determiner/2, proper_det/2,
     portray_clause_ind/1, order_templates/2, process_types_dict/2,
-    assertall/1,asserted/1, 
+    assertall/1,asserted/1, clear_errors/0, clear_dicts/0,
     update_file/3, myDeclaredModule/1, conditions/6, op_stop/1
     ]).
 
@@ -124,6 +124,11 @@ query three is:
                 last_nl_parsed/1, kbname/1, happens/2, initiates/3, terminates/3, is_type/1, is_/2, is_a/2, 
                 predicates/1, events/1, fluents/1, metapredicates/1, parsed/0, source_lang/1, including/0. % just_saved_scasp/2. 
 :- discontiguous statement/3, declaration/4, _:example/2, _:query/2, _:is_/2. 
+
+clear_dicts :-
+    retractall(dict(_,_,_)),
+    retractall(meta_dict(_,_,_)).
+
 
 % Main clause: text_to_logic(+String,-Clauses) is det
 % Errors are added to error_notice 
@@ -2385,14 +2390,14 @@ assert_error_os([error(Message, LineNumber, Tokens)|Re]) :-
     assert_error_os(Re).
 
 asserterror(Me, Rest) :-
-    %print_message(error, ' Error found'), 
-    %select_first_section(Rest, 40, Context), 
-    %retractall(error_notice(_,_,_,_)), % we will report only the last
     once( nth1(N,Rest,newline(NextLine)) ), LineNumber is NextLine-2,
     RelevantN is N-1,
     length(Relevant,RelevantN), append(Relevant,_,Rest),
     findall(Token, (member(T,Relevant), (T=newline(_) -> Token='\n' ; Token=T)), Tokens),
     asserta(error_notice(error, Me, LineNumber, Tokens)). % asserting the last first!
+
+clear_errors :-
+    retractall(error_notice(_, _, _, _)).
 
 % to select just a chunck of Rest to show. 
 select_first_section([], _, []) :- !.
