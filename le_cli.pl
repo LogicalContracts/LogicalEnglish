@@ -1,4 +1,9 @@
 % Simple wrapper to use LogicalEnglish from the PROLOG command line
+% Launch with /Applications/SWI-Prolog9.3.7-1.app/Contents/MacOS/swipl -l le_cli.pl
+:- module(_,[
+    load_program/6, load_program/1, undefined_le_predicate/3, 
+    query_program_all/5, query_program_all/4]).
+
 
 :- multifile prolog:message//1.
 prolog:message(S-Args) --> {atomic(S),is_list(Args)},[S-Args].
@@ -19,17 +24,61 @@ load_program(FileOrTerm,Language,DeleteFile,Module,TaxlogTerms,ExpandedTerms) :-
     %TODO: this NOT deleting file when parsing fails:
     setup_call_cleanup(
         true, 
-        parse_and_load(Module, LEterm,TaxlogTerms,ExpandedTerms,File),
+        (
+            parse_and_load(Module, LEterm,TaxlogTerms,ExpandedTerms,File),
+            % Dict = dict(_PredAsList,_TypesAndNames, _Template),
+            % findall(Dict,le_input:Dict,Dicts),
+            (atomic(FileOrTerm) -> xref_source(File), assert(module_xref_source(Module,File,FileOrTerm)) ; true)
+        ),
         (DeleteFile==true -> nonvar(File), delete_file(File); true)
     ).
-
 
 load_program(FileOrTerm) :- 
     load_program(FileOrTerm,_Language,true,Module,_TaxlogTerms,_ExpandedTerms),
     print_message(informational,"Loaded into module ~w"-[Module]).
 
+:- dynamic module_xref_source/3. % LEmodule, Source_TemporaryFile, OriginalFile
+
+%duplicates included:
+undefined_le_predicate(Module,Called,TemplateString) :-
+	% TODO: Using inneficient Source_=Source because of
+    % xref_called weird failure: caused by hooks in kp_loader.pl, specifically xref_source_identifier
+	module_xref_source(Module,Source,_File), xref_called(Source_,Called,_By), Source_=Source, 
+    \+ ( xref_defined(Source__,Called,_How), Source__=Source_), 
+    \+ (Module:example(Name,Scenarios), Name\=null, member(scenario(Facts,_Flag),Scenarios), member(Called:-_,Facts)),
+    \+ my_system_predicate(Called),
+    Called=..CalledList,
+    catch((
+        Module:local_dict(CalledList,TypesAndNames,Template),
+        bindTemplate(Template,TypesAndNames,TemplateString)
+        ),
+        Ex,
+        (print_message(warning,"~q"-[Ex]), Template='???')
+    ).
+
+bindTemplate(Template,TypesAndNames,TemplateString) :-
+    bindTemplate(Template,TypesAndNames),
+    atomic_list_concat(Template, ' ', TemplateString).
+
+bindTemplate([Var|Template],[Type-_|TypesAndNames]) :- var(Var), !,
+        sub_atom(Type,0,1,_,First),
+        (member(First,[a,e,i,o,u,'A','E','I','O','U']) -> Prefix=an; Prefix=a),
+        format(string(Var),"*~a ~w*",[Prefix,Type]),
+        bindTemplate(Template,TypesAndNames).
+bindTemplate([_|Template],TypesAndNames) :- !,
+        bindTemplate(Template,TypesAndNames).
+bindTemplate([],_).
+
+% Not using kp_loader:system_predicate, which depends on kp_dir
+my_system_predicate(P) :- 
+    predicate_property(P,built_in), !.
+my_system_predicate(P) :- 
+    predicate_property(P,file(Path)), 
+    sub_atom(Path,_,_,_, 'swipl/library' ), !.
+
 query_program_one(Module,Question, Scenario_, AnswerExplanation) :-
     set_psem(Module),
+    le_answer:restore_dicts_from_module(Module),
     (Scenario_=with(_) -> Scenario=Scenario_ ; Scenario=with(Scenario_)),
     le_answer:answer( Question, Scenario, AnswerExplanation).
 
@@ -41,6 +90,7 @@ query_program_one(Question, Scenario, AnswerExplanation) :-
 % Answers is a list of positive answers; if Answers is [], AnswerExplanations will contain items with the negative explanations
 query_program_all(Module,Question, Scenario_, AnswerExplanations,Answers) :-
     set_psem(Module),
+    le_answer:restore_dicts_from_module(Module),
     (Scenario_=with(_) -> Scenario=Scenario_ ; Scenario=with(Scenario_)),
     le_answer:answer_all( Question, Scenario, AnswerExplanations),
     findall(Answer, (

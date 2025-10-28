@@ -721,13 +721,18 @@ targetBody(G, false, _, '', [], _) :-
     %call(Command).
     catch(Command,Caught,print_message(error, "Caught: ~w:~q~n"-[Module, Caught])). 
 
-dump(templates, String) :-
+collect_current_dicts(PredicatesDict,PredicatesMeta) :-
     findall(local_dict(Prolog, NamesTypes, Templates), 
-        (le_input:dict(Prolog, NamesTypes, Templates)), 
-        PredicatesDict), 
+        le_input:dict(Prolog, NamesTypes, Templates), 
+        PredicatesDict),
+    findall(local_meta_dict(Prolog, NamesTypes, Templates), 
+        le_input:meta_dict(Prolog, NamesTypes, Templates), 
+        PredicatesMeta).
+
+dump(templates, String) :-
+    collect_current_dicts(PredicatesDict,PredicatesMeta), 
     with_output_to(string(String01), forall(member(Clause1, PredicatesDict), portray_clause_ind(Clause1))),
     (PredicatesDict==[] -> string_concat("local_dict([],[],[]).\n", String01, String1); String1 = String01), 
-    findall(local_meta_dict(Prolog, NamesTypes, Templates), (le_input:meta_dict(Prolog, NamesTypes, Templates)), PredicatesMeta),
     with_output_to(string(String02), forall(member(Clause2, PredicatesMeta), portray_clause_ind(Clause2))),
     (PredicatesMeta==[] -> string_concat("local_meta_dict([],[],[]).\n", String02, String2); String2 = String02), 
     string_concat(String1, String2, String). 
@@ -859,28 +864,27 @@ dump_scasp(Module, List, String) :-
 	string_concat(String1, StringRules, String2),
     string_concat(String2, StringQueriesScenarios, String). 
 
-restore_dicts :- %trace, 
-    %print_message(informational, "dictionaries being restored"),
-    restore_dicts(DictEntries), 
+restore_dicts :- 
+    this_capsule(SwishModule), 
+    restore_dicts_from_module(SwishModule). 
+
+restore_dicts_from_module(Module) :-
+    restore_dicts(Module,DictEntries), 
     order_templates(DictEntries, OrderedEntries), 
     process_types_dict(OrderedEntries, Types), 
     append(OrderedEntries, Types, MRules), 
     assertall(MRules), !. % asserting contextual information
 
-restore_dicts(DictEntries) :- %trace, 
-    %myDeclaredModule(SwishModule),
-    this_capsule(SwishModule), 
-    %SwishModule=user,
-    %print_message(informational, "the dictionaries are being restored into module ~w"-[SwishModule]),
-    (SwishModule:local_dict(_,_,_) -> findall(dict(A,B,C), SwishModule:local_dict(A,B,C), ListDict) ; ListDict = []),
-    (SwishModule:local_meta_dict(_,_,_) -> findall(meta_dict(A,B,C), SwishModule:local_meta_dict(A,B,C), ListMetaDict); ListMetaDict = []),
+restore_dicts(Module,DictEntries) :- 
+    findall(dict(A,B,C), catch(Module:local_dict(A,B,C),_,fail), ListDict),
+    findall(meta_dict(A,B,C), catch(Module:local_meta_dict(A,B,C),_,fail), ListMetaDict),
     %(local_dict(_,_,_) -> findall(dict(A,B,C), local_dict(A,B,C), ListDict) ; ListDict = []),
     %(local_meta_dict(_,_,_) -> findall(meta_dict(A,B,C), local_meta_dict(A,B,C), ListMetaDict); ListMetaDict = []),
     append(ListDict, ListMetaDict, DictEntries), 
     %print_message(informational, "the dictionaries being restored are ~w"-[DictEntries]),
-    collect_all_preds(SwishModule, DictEntries, Preds),
+    collect_all_preds(Module, DictEntries, Preds),
     %print_message(informational, "the dictionaries being set dynamics are ~w"-[Preds]),
-    declare_preds_as_dynamic(SwishModule, Preds). 
+    declare_preds_as_dynamic(Module, Preds). 
 
 % collect_all_preds/3
 collect_all_preds(_, DictEntries, ListPreds) :-
@@ -888,7 +892,9 @@ collect_all_preds(_, DictEntries, ListPreds) :-
 
 declare_preds_as_dynamic(_, []) :- !. 
 declare_preds_as_dynamic(M, [F|R]) :- functor(F, P, A),  % facts are the templates now
-        dynamic([M:P/A], [thread(local), discontiguous(true)]), declare_preds_as_dynamic(M, R). 
+        catch( dynamic([M:P/A], [thread(local), discontiguous(true)]), _,true), 
+        %HACK: we may be repeating this onto existing predicates, so we just skip them
+        declare_preds_as_dynamic(M, R). 
 
 %split_module_name(user, temporal, '') :- !. 
 
@@ -1064,7 +1070,13 @@ parse_and_load(File, Document,TaxlogTerms,ExpandedTerms,NewFileName) :-
     set_psem(File),
 	non_expanded_terms(File, TaxlogTerms, ExpandedTerms,NewFileName_),
     absolute_file_name(NewFileName_, NewFileName),
-    asserting(File, ExpandedTerms).
+    asserting(File, ExpandedTerms),
+    % now save dicts ointo the local dict and meta relations in the module:
+    collect_current_dicts(PredicatesDict,PredicatesMeta),
+    append(PredicatesDict,PredicatesMeta,Dicts),
+    asserting(File, Dicts).
+
+
 
 % parse_and_query(+OutputFileName, +Document, +QuestionOrQueryName, +ScenarioName, -AnswerExplanation)
 % Document is a Language(LEtext) term, where Language is either of en, fr, it, es
