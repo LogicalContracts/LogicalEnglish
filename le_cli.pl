@@ -1,8 +1,9 @@
 % Simple wrapper to use LogicalEnglish from the PROLOG command line
 % Launch with /Applications/SWI-Prolog9.3.7-1.app/Contents/MacOS/swipl -l le_cli.pl
 :- module(_,[
-    load_program/6, load_program/1, undefined_le_predicate/3, 
-    query_program_all/5, query_program_all/4]).
+    load_program/6, load_program/1, undefined_le_predicates/2, 
+    query_program_all/5, query_program_all/4,
+    verify_expectations/1]).
 
 
 :- multifile prolog:message//1.
@@ -39,12 +40,18 @@ load_program(FileOrTerm) :-
 
 :- dynamic module_xref_source/3. % LEmodule, Source_TemporaryFile, OriginalFile
 
+undefined_le_predicates(TemplateStrings) :-
+    psem(Module),
+    undefined_le_predicates(Module,TemplateStrings).
+
+undefined_le_predicates(Module,TemplateStrings) :-
+    findall(TemplateString, undefined_le_predicate(Module,_Called,TemplateString), TemplateStrings_),
+    sort(TemplateStrings_,TemplateStrings).
+
 %duplicates included:
 undefined_le_predicate(Module,Called,TemplateString) :-
-	% TODO: Using inneficient Source_=Source because of
-    % xref_called weird failure: caused by hooks in kp_loader.pl, specifically xref_source_identifier
-	module_xref_source(Module,Source,_File), xref_called(Source_,Called,_By), Source_=Source, 
-    \+ ( xref_defined(Source__,Called,_How), Source__=Source_), 
+	module_xref_source(Module,Source,_File), xref_called(Source,Called,_By), 
+    \+ xref_defined(Source,Called,_How), 
     \+ (Module:example(Name,Scenarios), Name\=null, member(scenario(Facts,_Flag),Scenarios), member(Called:-_,Facts)),
     \+ my_system_predicate(Called),
     Called=..CalledList,
@@ -55,6 +62,9 @@ undefined_le_predicate(Module,Called,TemplateString) :-
         Ex,
         (print_message(warning,"~q"-[Ex]), Template='???')
     ).
+
+:- multifile prolog:xref_source_identifier/2. % missing this would cause xref_called etc to fail:
+prolog:xref_source_identifier(File, File).
 
 bindTemplate(Template,TypesAndNames,TemplateString) :-
     bindTemplate(Template,TypesAndNames),
@@ -170,6 +180,10 @@ verify_expectations(TestFile,Result) :-
     atom_concat(LEfile,'.tests',TestFile),
     read_file_to_terms(TestFile, Expectations, []),
     ( load_program(LEfile) ->
+        undefined_le_predicates(TemplateStrings),
+        (TemplateStrings \= [] -> 
+            forall(member(TS,TemplateStrings),print_message(warning," Undefined: ~q"-[TS]))
+            ; true),
         findall(Outcome,(
             member(expected(Query,Scenario,ExpectedAnswers),Expectations),
             (   query_program_all(Query, with(Scenario), AnswerExplanations,Answers) -> 
