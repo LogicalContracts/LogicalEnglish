@@ -70,7 +70,8 @@ query_program_all(Question, Scenario, AnswerExplanations,Answers) :-
     query_program_all(Module,Question, Scenario, AnswerExplanations,Answers).
 
 % generate_expectations(+LEfileOrDir)
-% WARNIKNG: this will OVERWRITE all test results files
+% Example: generate_expectations('/Users/mc/git/LogicalEnglish/moreExamples').
+% WARNING: this will OVERWRITE all test results files
 generate_expectations(TestsDir) :- exists_directory(TestsDir), !,
     all_files_in(TestsDir,'.le',[],LEfiles),
     forall(member(LEfile,LEfiles), (
@@ -95,6 +96,7 @@ generate_expectations(LEfile) :-
     forall(member(Expectation,Expectations), format(Stream,"~q.~n",[Expectation])),
     close(Stream).
 
+% Example: verify_expectations('/Users/mc/git/LogicalEnglish/moreExamples').
 verify_expectations(TestsDir) :- exists_directory(TestsDir), !,
     all_files_in(TestsDir,'.tests',[],TestFiles),
     length(TestFiles,Nfiles),

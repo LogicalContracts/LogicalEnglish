@@ -1,0 +1,4 @@
+expected(andrew,'feb 5 2021',"[satisfies_maximum_net_asset_value_test_at(andrew,1612483200.0)]").
+expected(taxpayer,'feb 5 2021',"[satisfies_maximum_net_asset_value_test_at(andrew,1612483200.0),satisfies_maximum_net_asset_value_test_at(affiliate1,'EARNOUT')]").
+expected(date,'feb 5 2021',"[satisfies_maximum_net_asset_value_test_at(andrew,1612483200.0)]").
+expected(asset,'feb 5 2021',"[]").
