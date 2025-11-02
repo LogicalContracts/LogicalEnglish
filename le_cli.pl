@@ -3,7 +3,7 @@
 :- module(_,[
     load_program/6, load_program/1, undefined_le_predicates/2, 
     query_program_all/5, query_program_all/4,
-    verify_expectations/1]).
+    generate_expectations/1, verify_expectations/1]).
 
 
 :- multifile prolog:message//1.
@@ -32,7 +32,12 @@ load_program(FileOrTerm,Language,DeleteFile,Module,TaxlogTerms,ExpandedTerms) :-
             (atomic(FileOrTerm) -> xref_source(File), assert(module_xref_source(Module,File,FileOrTerm)) ; true)
         ),
         (DeleteFile==true -> nonvar(File), delete_file(File); true)
-    ).
+    ),
+    undefined_le_predicates(TemplateStrings),
+        (TemplateStrings \= [] -> 
+            forall(member(TS,TemplateStrings),print_message(warning,"Undefined predicate ~q"-[TS]))
+            ; true).
+
 
 load_program(FileOrTerm) :- 
     load_program(FileOrTerm,_Language,true,Module,_TaxlogTerms,_ExpandedTerms),
@@ -57,6 +62,7 @@ undefined_le_predicate(Module,Called,TemplateString) :-
     Called=..CalledList,
     catch((
         Module:local_dict(CalledList,TypesAndNames,Template),
+        % TODO: could also consider user_predef_dict, prolog_predef_dict, mostly system predicates
         bindTemplate(Template,TypesAndNames,TemplateString)
         ),
         Ex,
@@ -180,10 +186,6 @@ verify_expectations(TestFile,Result) :-
     atom_concat(LEfile,'.tests',TestFile),
     read_file_to_terms(TestFile, Expectations, []),
     ( load_program(LEfile) ->
-        undefined_le_predicates(TemplateStrings),
-        (TemplateStrings \= [] -> 
-            forall(member(TS,TemplateStrings),print_message(warning," Undefined: ~q"-[TS]))
-            ; true),
         findall(Outcome,(
             member(expected(Query,Scenario,ExpectedAnswers),Expectations),
             (   query_program_all(Query, with(Scenario), AnswerExplanations,Answers) -> 

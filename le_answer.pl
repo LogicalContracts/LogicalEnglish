@@ -1049,9 +1049,14 @@ le_expanded_terms(TaxlogTerms, ExpandedTerms) :-
 % asserting/2
 asserting(File, ExpandedTerms) :-
     %print_message(error, "Asserting on ~w this ~w"-[M, ExpandedTerms]), 
-    forall(member(T, [(:-module(File,[])), source_lang(en)|ExpandedTerms]), 
-        ( %print_message(informational, "Asserting File:T ~w:~w"-[File,T]), 
-         assertz(File:T))). % simulating term expansion
+    forall(member(T, [(:-module(File,[])), source_lang(en)|ExpandedTerms]), (
+        %print_message(informational, "Asserting File:T ~w:~w"-[File,T]), 
+            T = (A=B:-_) -> 
+                (var(A) -> Term=B ; Term=A),
+                assert_semantic_error(error,"Missing template for ~w"-[Term],'rule head') 
+            ; 
+            assertz(File:T)
+    )). % simulating term expansion
 
 %retracting/2
 retracting(File, ExpandedTerms) :- 
@@ -1066,6 +1071,7 @@ parse_and_load(File, Document,TaxlogTerms,ExpandedTerms,NewFileName) :-
 	%prolog_load_context(source,File), % atom_prefix(File,'pengine://'), % process only SWISH windows
 	%prolog_load_context(term_position,TP), stream_position_data(line_count,TP,Line),
     clear_dicts,
+    clear_semantic_errors,
     le_taxlog_translate(Document, File, 1, TaxlogTerms),
     set_psem(File),
 	non_expanded_terms(File, TaxlogTerms, ExpandedTerms,NewFileName_),
@@ -1074,9 +1080,25 @@ parse_and_load(File, Document,TaxlogTerms,ExpandedTerms,NewFileName) :-
     % now save dicts ointo the local dict and meta relations in the module:
     collect_current_dicts(PredicatesDict,PredicatesMeta),
     append(PredicatesDict,PredicatesMeta,Dicts),
-    asserting(File, Dicts).
+    asserting(File, Dicts),
+    % base syntax errors are shown by showerrors called from le_taxlog_translate:
+    show_semantic_errors.
 
+:- thread_local semantic_error_notice/3. % error/warning, Message, Context
+clear_semantic_errors :- 
+    retractall(semantic_error_notice(_,_,_)).
 
+% Message can be string or Format-Args
+assert_semantic_error(Type,Message,Context) :-
+    assertion(Type==error;Type==warning),
+    assert(semantic_error_notice(Type,Message,Context)).
+
+show_semantic_errors :-
+    forall(semantic_error_notice(Type,Message_,Context),(
+        (Message_ = Format_-Args -> format(string(Format),"~a in ~w",[Format_,Context]) ; 
+            format(string(Format),"~w in ~w",[Message_,Context]), Args=[] ),
+        print_message(Type,Format-Args)
+    )).
 
 % parse_and_query(+OutputFileName, +Document, +QuestionOrQueryName, +ScenarioName, -AnswerExplanation)
 % Document is a Language(LEtext) term, where Language is either of en, fr, it, es
