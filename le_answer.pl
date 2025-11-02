@@ -1081,8 +1081,61 @@ parse_and_load(File, Document,TaxlogTerms,ExpandedTerms,NewFileName) :-
     collect_current_dicts(PredicatesDict,PredicatesMeta),
     append(PredicatesDict,PredicatesMeta,Dicts),
     asserting(File, Dicts),
+    xref_source(NewFileName), assert(module_xref_source(File,NewFileName)),
+    undefined_le_predicates(TemplateStrings),
+    forall(member(TS,TemplateStrings),assert_semantic_error(warning,"Undefined predicate ~q"-[TS],"rule body")),
     % base syntax errors are shown by showerrors called from le_taxlog_translate:
     show_semantic_errors.
+
+:- dynamic module_xref_source/2. % LEmodule, Source_TemporaryFile
+
+undefined_le_predicates(TemplateStrings) :-
+    psem(Module),
+    undefined_le_predicates(Module,TemplateStrings).
+
+undefined_le_predicates(Module,TemplateStrings) :-
+    findall(TemplateString, undefined_le_predicate(Module,_Called,TemplateString), TemplateStrings_),
+    sort(TemplateStrings_,TemplateStrings).
+
+%duplicates included:
+undefined_le_predicate(Module,Called,TemplateString) :-
+	module_xref_source(Module,Source), xref_called(Source,Called,_By), 
+    \+ xref_defined(Source,Called,_How), 
+    \+ (Module:example(Name,Scenarios), Name\=null, member(scenario(Facts,_Flag),Scenarios), member(Called:-_,Facts)),
+    \+ my_system_predicate(Called),
+    Called=..CalledList,
+    catch((
+        Module:local_dict(CalledList,TypesAndNames,Template),
+        % TODO: could also consider user_predef_dict, prolog_predef_dict, mostly system predicates
+        bindTemplate(Template,TypesAndNames,TemplateString)
+        ),
+        Ex,
+        (print_message(warning,"~q"-[Ex]), Template='???')
+    ).
+
+:- multifile prolog:xref_source_identifier/2. % missing this would cause xref_called etc to fail:
+prolog:xref_source_identifier(File, File).
+
+bindTemplate(Template,TypesAndNames,TemplateString) :-
+    bindTemplate(Template,TypesAndNames),
+    atomic_list_concat(Template, ' ', TemplateString).
+
+bindTemplate([Var|Template],[Type-_|TypesAndNames]) :- var(Var), !,
+        sub_atom(Type,0,1,_,First),
+        (member(First,[a,e,i,o,u,'A','E','I','O','U']) -> Prefix=an; Prefix=a),
+        format(string(Var),"*~a ~w*",[Prefix,Type]),
+        bindTemplate(Template,TypesAndNames).
+bindTemplate([_|Template],TypesAndNames) :- !,
+        bindTemplate(Template,TypesAndNames).
+bindTemplate([],_).
+
+% Not using kp_loader:system_predicate, which depends on kp_dir
+my_system_predicate(P) :- 
+    predicate_property(P,built_in), !.
+my_system_predicate(P) :- 
+    predicate_property(P,file(Path)), 
+    sub_atom(Path,_,_,_, 'swipl/library' ), !.
+
 
 :- thread_local semantic_error_notice/3. % error/warning, Message, Context
 clear_semantic_errors :- 
