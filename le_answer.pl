@@ -724,9 +724,11 @@ targetBody(G, false, _, '', [], _) :-
 collect_current_dicts(PredicatesDict,PredicatesMeta) :-
     findall(local_dict(Prolog, NamesTypes, Templates), 
         le_input:dict(Prolog, NamesTypes, Templates), 
+        %TODO: Ideally we should use the following, but it hangs after loading the first test in the suite (cgt_assets.le):
+        % le_input:dictionary(Prolog, NamesTypes, Templates), 
         PredicatesDict),
     findall(local_meta_dict(Prolog, NamesTypes, Templates), 
-        le_input:meta_dict(Prolog, NamesTypes, Templates), 
+        le_input:meta_dictionary(Prolog, NamesTypes, Templates), 
         PredicatesMeta).
 
 dump(templates, String) :-
