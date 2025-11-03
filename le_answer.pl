@@ -721,13 +721,18 @@ targetBody(G, false, _, '', [], _) :-
     %call(Command).
     catch(Command,Caught,print_message(error, "Caught: ~w:~q~n"-[Module, Caught])). 
 
-dump(templates, String) :-
+collect_current_dicts(PredicatesDict,PredicatesMeta) :-
     findall(local_dict(Prolog, NamesTypes, Templates), 
-        (le_input:dict(Prolog, NamesTypes, Templates)), 
-        PredicatesDict), 
+        le_input:dict(Prolog, NamesTypes, Templates), 
+        PredicatesDict),
+    findall(local_meta_dict(Prolog, NamesTypes, Templates), 
+        le_input:meta_dict(Prolog, NamesTypes, Templates), 
+        PredicatesMeta).
+
+dump(templates, String) :-
+    collect_current_dicts(PredicatesDict,PredicatesMeta), 
     with_output_to(string(String01), forall(member(Clause1, PredicatesDict), portray_clause_ind(Clause1))),
     (PredicatesDict==[] -> string_concat("local_dict([],[],[]).\n", String01, String1); String1 = String01), 
-    findall(local_meta_dict(Prolog, NamesTypes, Templates), (le_input:meta_dict(Prolog, NamesTypes, Templates)), PredicatesMeta),
     with_output_to(string(String02), forall(member(Clause2, PredicatesMeta), portray_clause_ind(Clause2))),
     (PredicatesMeta==[] -> string_concat("local_meta_dict([],[],[]).\n", String02, String2); String2 = String02), 
     string_concat(String1, String2, String). 
@@ -859,28 +864,27 @@ dump_scasp(Module, List, String) :-
 	string_concat(String1, StringRules, String2),
     string_concat(String2, StringQueriesScenarios, String). 
 
-restore_dicts :- %trace, 
-    %print_message(informational, "dictionaries being restored"),
-    restore_dicts(DictEntries), 
+restore_dicts :- 
+    this_capsule(SwishModule), 
+    restore_dicts_from_module(SwishModule). 
+
+restore_dicts_from_module(Module) :-
+    restore_dicts(Module,DictEntries), 
     order_templates(DictEntries, OrderedEntries), 
     process_types_dict(OrderedEntries, Types), 
     append(OrderedEntries, Types, MRules), 
     assertall(MRules), !. % asserting contextual information
 
-restore_dicts(DictEntries) :- %trace, 
-    %myDeclaredModule(SwishModule),
-    this_capsule(SwishModule), 
-    %SwishModule=user,
-    %print_message(informational, "the dictionaries are being restored into module ~w"-[SwishModule]),
-    (SwishModule:local_dict(_,_,_) -> findall(dict(A,B,C), SwishModule:local_dict(A,B,C), ListDict) ; ListDict = []),
-    (SwishModule:local_meta_dict(_,_,_) -> findall(meta_dict(A,B,C), SwishModule:local_meta_dict(A,B,C), ListMetaDict); ListMetaDict = []),
+restore_dicts(Module,DictEntries) :- 
+    findall(dict(A,B,C), catch(Module:local_dict(A,B,C),_,fail), ListDict),
+    findall(meta_dict(A,B,C), catch(Module:local_meta_dict(A,B,C),_,fail), ListMetaDict),
     %(local_dict(_,_,_) -> findall(dict(A,B,C), local_dict(A,B,C), ListDict) ; ListDict = []),
     %(local_meta_dict(_,_,_) -> findall(meta_dict(A,B,C), local_meta_dict(A,B,C), ListMetaDict); ListMetaDict = []),
     append(ListDict, ListMetaDict, DictEntries), 
     %print_message(informational, "the dictionaries being restored are ~w"-[DictEntries]),
-    collect_all_preds(SwishModule, DictEntries, Preds),
+    collect_all_preds(Module, DictEntries, Preds),
     %print_message(informational, "the dictionaries being set dynamics are ~w"-[Preds]),
-    declare_preds_as_dynamic(SwishModule, Preds). 
+    declare_preds_as_dynamic(Module, Preds). 
 
 % collect_all_preds/3
 collect_all_preds(_, DictEntries, ListPreds) :-
@@ -888,7 +892,9 @@ collect_all_preds(_, DictEntries, ListPreds) :-
 
 declare_preds_as_dynamic(_, []) :- !. 
 declare_preds_as_dynamic(M, [F|R]) :- functor(F, P, A),  % facts are the templates now
-        dynamic([M:P/A], [thread(local), discontiguous(true)]), declare_preds_as_dynamic(M, R). 
+        catch( dynamic([M:P/A], [thread(local), discontiguous(true)]), _,true), 
+        %HACK: we may be repeating this onto existing predicates, so we just skip them
+        declare_preds_as_dynamic(M, R). 
 
 %split_module_name(user, temporal, '') :- !. 
 
@@ -1043,9 +1049,14 @@ le_expanded_terms(TaxlogTerms, ExpandedTerms) :-
 % asserting/2
 asserting(File, ExpandedTerms) :-
     %print_message(error, "Asserting on ~w this ~w"-[M, ExpandedTerms]), 
-    forall(member(T, [(:-module(File,[])), source_lang(en)|ExpandedTerms]), 
-        ( %print_message(informational, "Asserting File:T ~w:~w"-[File,T]), 
-         assertz(File:T))). % simulating term expansion
+    forall(member(T, [(:-module(File,[])), source_lang(en)|ExpandedTerms]), (
+        %print_message(informational, "Asserting File:T ~w:~w"-[File,T]), 
+            T = (A=B:-_) -> 
+                (var(A) -> Term=B ; Term=A),
+                assert_semantic_error(error,"Missing template for ~w"-[Term],'rule head') 
+            ; 
+            assertz(File:T)
+    )). % simulating term expansion
 
 %retracting/2
 retracting(File, ExpandedTerms) :- 
@@ -1060,11 +1071,87 @@ parse_and_load(File, Document,TaxlogTerms,ExpandedTerms,NewFileName) :-
 	%prolog_load_context(source,File), % atom_prefix(File,'pengine://'), % process only SWISH windows
 	%prolog_load_context(term_position,TP), stream_position_data(line_count,TP,Line),
     clear_dicts,
+    clear_semantic_errors,
     le_taxlog_translate(Document, File, 1, TaxlogTerms),
     set_psem(File),
 	non_expanded_terms(File, TaxlogTerms, ExpandedTerms,NewFileName_),
     absolute_file_name(NewFileName_, NewFileName),
-    asserting(File, ExpandedTerms).
+    asserting(File, ExpandedTerms),
+    % now save dicts ointo the local dict and meta relations in the module:
+    collect_current_dicts(PredicatesDict,PredicatesMeta),
+    append(PredicatesDict,PredicatesMeta,Dicts),
+    asserting(File, Dicts),
+    xref_source(NewFileName), assert(module_xref_source(File,NewFileName)),
+    undefined_le_predicates(TemplateStrings),
+    forall(member(TS,TemplateStrings),assert_semantic_error(warning,"Undefined predicate ~q"-[TS],"rule body")),
+    % base syntax errors are shown by showerrors called from le_taxlog_translate:
+    show_semantic_errors.
+
+:- dynamic module_xref_source/2. % LEmodule, Source_TemporaryFile
+
+undefined_le_predicates(TemplateStrings) :-
+    psem(Module),
+    undefined_le_predicates(Module,TemplateStrings).
+
+undefined_le_predicates(Module,TemplateStrings) :-
+    findall(TemplateString, undefined_le_predicate(Module,_Called,TemplateString), TemplateStrings_),
+    sort(TemplateStrings_,TemplateStrings).
+
+%duplicates included:
+undefined_le_predicate(Module,Called,TemplateString) :-
+	module_xref_source(Module,Source), xref_called(Source,Called,_By), 
+    \+ xref_defined(Source,Called,_How), 
+    \+ (Module:example(Name,Scenarios), Name\=null, member(scenario(Facts,_Flag),Scenarios), member(Called:-_,Facts)),
+    \+ my_system_predicate(Called),
+    Called=..CalledList,
+    catch((
+        Module:local_dict(CalledList,TypesAndNames,Template),
+        % TODO: could also consider user_predef_dict, prolog_predef_dict, mostly system predicates
+        bindTemplate(Template,TypesAndNames,TemplateString)
+        ),
+        Ex,
+        (print_message(warning,"~q"-[Ex]), Template='???')
+    ).
+
+:- multifile prolog:xref_source_identifier/2. % missing this would cause xref_called etc to fail:
+prolog:xref_source_identifier(File, File).
+
+bindTemplate(Template,TypesAndNames,TemplateString) :-
+    bindTemplate(Template,TypesAndNames),
+    atomic_list_concat(Template, ' ', TemplateString).
+
+bindTemplate([Var|Template],[Type-_|TypesAndNames]) :- var(Var), !,
+        sub_atom(Type,0,1,_,First),
+        (member(First,[a,e,i,o,u,'A','E','I','O','U']) -> Prefix=an; Prefix=a),
+        format(string(Var),"*~a ~w*",[Prefix,Type]),
+        bindTemplate(Template,TypesAndNames).
+bindTemplate([_|Template],TypesAndNames) :- !,
+        bindTemplate(Template,TypesAndNames).
+bindTemplate([],_).
+
+% Not using kp_loader:system_predicate, which depends on kp_dir
+my_system_predicate(P) :- 
+    predicate_property(P,built_in), !.
+my_system_predicate(P) :- 
+    predicate_property(P,file(Path)), 
+    sub_atom(Path,_,_,_, 'swipl/library' ), !.
+
+
+:- thread_local semantic_error_notice/3. % error/warning, Message, Context
+clear_semantic_errors :- 
+    retractall(semantic_error_notice(_,_,_)).
+
+% Message can be string or Format-Args
+assert_semantic_error(Type,Message,Context) :-
+    assertion(Type==error;Type==warning),
+    assert(semantic_error_notice(Type,Message,Context)).
+
+show_semantic_errors :-
+    forall(semantic_error_notice(Type,Message_,Context),(
+        (Message_ = Format_-Args -> format(string(Format),"~a in ~w",[Format_,Context]) ; 
+            format(string(Format),"~w in ~w",[Message_,Context]), Args=[] ),
+        print_message(Type,Format-Args)
+    )).
 
 % parse_and_query(+OutputFileName, +Document, +QuestionOrQueryName, +ScenarioName, -AnswerExplanation)
 % Document is a Language(LEtext) term, where Language is either of en, fr, it, es

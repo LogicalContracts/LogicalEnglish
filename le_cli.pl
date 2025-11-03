@@ -1,4 +1,10 @@
 % Simple wrapper to use LogicalEnglish from the PROLOG command line
+% Launch with /Applications/SWI-Prolog9.3.7-1.app/Contents/MacOS/swipl -l le_cli.pl
+:- module(_,[
+    load_program/6, load_program/1, 
+    query_program_all/5, query_program_all/4,
+    generate_expectations/1, verify_expectations/1]).
+
 
 :- multifile prolog:message//1.
 prolog:message(S-Args) --> {atomic(S),is_list(Args)},[S-Args].
@@ -19,7 +25,12 @@ load_program(FileOrTerm,Language,DeleteFile,Module,TaxlogTerms,ExpandedTerms) :-
     %TODO: this NOT deleting file when parsing fails:
     setup_call_cleanup(
         true, 
-        parse_and_load(Module, LEterm,TaxlogTerms,ExpandedTerms,File),
+        (
+            parse_and_load(Module, LEterm,TaxlogTerms,ExpandedTerms,File)
+            % Dict = dict(_PredAsList,_TypesAndNames, _Template),
+            % findall(Dict,le_input:Dict,Dicts),
+            
+        ),
         (DeleteFile==true -> nonvar(File), delete_file(File); true)
     ).
 
@@ -30,6 +41,7 @@ load_program(FileOrTerm) :-
 
 query_program_one(Module,Question, Scenario_, AnswerExplanation) :-
     set_psem(Module),
+    le_answer:restore_dicts_from_module(Module),
     (Scenario_=with(_) -> Scenario=Scenario_ ; Scenario=with(Scenario_)),
     le_answer:answer( Question, Scenario, AnswerExplanation).
 
@@ -41,6 +53,7 @@ query_program_one(Question, Scenario, AnswerExplanation) :-
 % Answers is a list of positive answers; if Answers is [], AnswerExplanations will contain items with the negative explanations
 query_program_all(Module,Question, Scenario_, AnswerExplanations,Answers) :-
     set_psem(Module),
+    le_answer:restore_dicts_from_module(Module),
     (Scenario_=with(_) -> Scenario=Scenario_ ; Scenario=with(Scenario_)),
     le_answer:answer_all( Question, Scenario, AnswerExplanations),
     findall(Answer, (
@@ -57,7 +70,8 @@ query_program_all(Question, Scenario, AnswerExplanations,Answers) :-
     query_program_all(Module,Question, Scenario, AnswerExplanations,Answers).
 
 % generate_expectations(+LEfileOrDir)
-% WARNIKNG: this will OVERWRITE all test results files
+% Example: generate_expectations('/Users/mc/git/LogicalEnglish/moreExamples').
+% WARNING: this will OVERWRITE all test results files
 generate_expectations(TestsDir) :- exists_directory(TestsDir), !,
     all_files_in(TestsDir,'.le',[],LEfiles),
     forall(member(LEfile,LEfiles), (
@@ -82,6 +96,7 @@ generate_expectations(LEfile) :-
     forall(member(Expectation,Expectations), format(Stream,"~q.~n",[Expectation])),
     close(Stream).
 
+% Example: verify_expectations('/Users/mc/git/LogicalEnglish/moreExamples').
 verify_expectations(TestsDir) :- exists_directory(TestsDir), !,
     all_files_in(TestsDir,'.tests',[],TestFiles),
     length(TestFiles,Nfiles),
