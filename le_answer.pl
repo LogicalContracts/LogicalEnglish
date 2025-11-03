@@ -1055,7 +1055,7 @@ asserting(File, ExpandedTerms) :-
         %print_message(informational, "Asserting File:T ~w:~w"-[File,T]), 
             T = (A=B:-_) -> 
                 (var(A) -> Term=B ; Term=A),
-                assert_semantic_error(error,"Missing template for ~w"-[Term],'rule head') 
+                assert_semantic_error(error,"Missing template for '~w'"-[Term],'rule head') 
             ; 
             assertz(File:T)
     )). % simulating term expansion
@@ -1083,11 +1083,26 @@ parse_and_load(File, Document,TaxlogTerms,ExpandedTerms,NewFileName) :-
     collect_current_dicts(PredicatesDict,PredicatesMeta),
     append(PredicatesDict,PredicatesMeta,Dicts),
     asserting(File, Dicts),
+    assert_missing_templates_in_bodies(File),
     xref_source(NewFileName), assert(module_xref_source(File,NewFileName)),
     undefined_le_predicates(TemplateStrings),
     forall(member(TS,TemplateStrings),assert_semantic_error(warning,"Undefined predicate ~q"-[TS],"rule body")),
     % base syntax errors are shown by showerrors called from le_taxlog_translate:
     show_semantic_errors.
+
+% HACK: discover atoms that are LIKELY to be missing templates, as they map to bad =/2 subgoals
+% TODO: there should be a much better way to obtain these more precisely near literal_(..) et. al. ;-)
+assert_missing_templates_in_bodies(Module) :-
+    forall((
+        current_predicate(Module:F/N), functor(Pred,F,N), clause(Module:Pred,Body), 
+        sub_term(T,Body), nonvar(T), T=(A=B), 
+        ((atomic(A),var(B)) -> Term=A ; (atomic(B),var(A)) -> Term=B),
+        \+ number(Term),
+        atomic_list_concat([_,_|_],' ',Term) % at least one space
+        ),
+            assert_semantic_error(warning,"Missing template for '~w'"-[Term],'rule body') 
+            
+    ).
 
 :- dynamic module_xref_source/2. % LEmodule, Source_TemporaryFile
 
