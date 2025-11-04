@@ -283,6 +283,7 @@ answer_all(English, Arg, Results) :- %trace, !,
             _Result, 
             retract_facts(Module, Facts)),
     Results \== [],
+    clean_memory_le_answer(Module), 
     !. 
 
 answer_all(English, Arg, [ _{answer:'Failure', explanation:E}])  :-
@@ -1318,6 +1319,21 @@ hack_module_for_taxlog(M) :-
     retractall(kp_loader:module_api_hack(_)),
     assert(kp_loader:module_api_hack(M)).
 :- endif.
+
+% % Clean all predicates in a module. It does not work well with threads because abolish/1 is not thread-safe.
+%clean_memory_le_answer(Module) :-
+%    findall(Module:Name/Arity, (current_predicate(Module:Name/Arity)), Predicates), 
+%    forall(member(P, Predicates), abolish(P)).
+
+clean_memory_le_answer(Module) :-
+    findall(Module:Term, (current_predicate(Module:Name/Arity), 
+                          functor(Term, Name, Arity), 
+                          not(Name = aggregate_all), % not touching aggregate_all/3
+                          not(predicate_property(system:Term, built_in)), % not touching system predicates
+                          not(predicate_property(Module:Term,imported_from(reasoner))) % not touching imported reasoner predicates   
+                          ), Predicates), 
+    print_message(informational, " Cleaning predicates ~w"-[Predicates]),
+    forall(member(P, Predicates), retractall(P)).
 
 %sandbox:safe_meta(term_singletons(X,Y), [X,Y]).
 :- if(exists_source(library(pengines_sandbox))).
