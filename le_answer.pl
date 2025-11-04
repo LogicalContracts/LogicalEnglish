@@ -1085,8 +1085,10 @@ parse_and_load(File, Document,TaxlogTerms,ExpandedTerms,NewFileName) :-
     asserting(File, Dicts),
     assert_missing_templates_in_bodies(File),
     xref_source(NewFileName), assert(module_xref_source(File,NewFileName)),
-    undefined_le_predicates(TemplateStrings),
-    forall(member(TS,TemplateStrings),assert_semantic_error(warning,"Undefined predicate ~q"-[TS],"rule body")),
+    undefined_le_predicates(UndefinedTemplateStrings),
+    forall(member(TS,UndefinedTemplateStrings),assert_semantic_error(warning,"Undefined predicate ~q"-[TS],"rule body")),
+    unqueried_predicates(UnqueriedTemplateStrings),
+    forall(member(TS,UnqueriedTemplateStrings),assert_semantic_error(warning,"This predicate is not tested by any query: ~q"-[TS],"queries")),
     % base syntax errors are shown by showerrors called from le_taxlog_translate:
     show_semantic_errors.
 
@@ -1105,6 +1107,35 @@ assert_missing_templates_in_bodies(Module) :-
     ).
 
 :- dynamic module_xref_source/2. % LEmodule, Source_TemporaryFile
+
+unqueried_predicates(TemplateStrings) :-
+    psem(Module),
+    unqueried_predicates(Module,TemplateStrings).
+
+unqueried_predicates(Module,TemplateStrings) :-
+    findall(TemplateString, unqueried_predicate(Module,TemplateString), TemplateStrings_),
+    sort(TemplateStrings_,TemplateStrings).
+
+unqueried_predicate(Module,TemplateString) :-
+    module_xref_source(Module,Source), 
+    xref_defined(Source,Unqueried,_How), 
+    \+ Module:query(_,Unqueried),
+    \+ (  a_caller(Unqueried,[],Source,Query), Module:query(_Name,Query)),
+    Unqueried=..Ulist,
+    catch((
+        Module:local_dict(Ulist,TypesAndNames,Template),
+        bindTemplate(Template,TypesAndNames,TemplateString)
+        ),
+        Ex,
+        (print_message(warning,"~q"-[Ex]), Template='???')
+    ).
+
+
+% a_caller(?Called,+AncestorsPath,+XREFSource,-Caller) is nondet
+a_caller(Called,Path,Source,Caller) :- 
+    xref_called(Source,Called,By), 
+    \+ member(By,Path), 
+    (Caller = By ; a_caller(By,[By|Path],Source,Caller)).
 
 undefined_le_predicates(TemplateStrings) :-
     psem(Module),

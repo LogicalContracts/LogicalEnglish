@@ -11,6 +11,17 @@ prolog:message(S-Args) --> {atomic(S),is_list(Args)},[S-Args].
 
 :- use_module(le_answer).
 
+%TODO: add command line options to verify a LE program and exit immediately
+% use https://www.swi-prolog.org/pldoc/man?section=optparse to do something and halt, or not
+% :- initialization(main).
+% main :-
+%     current_prolog_flag(argv,Args),
+%     print_message(informational,"Hello LE with -- arguments: ~q"-[Args]),
+%     (Args=[] -> true ; statistics, halt). %TODO: not exiting well
+
+
+
+
 load_program(FileOrTerm,Language,DeleteFile,Module,TaxlogTerms,ExpandedTerms) :- 
     must_be(boolean,DeleteFile),
     (var(Module) -> uuid(Module) ; true),
