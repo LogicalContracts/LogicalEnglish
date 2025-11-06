@@ -95,11 +95,15 @@ generate_expectations(LEfile) :-
     (load_program(LEfile,Language,true,Module,_TaxlogTerms,ExpandedTerms) -> 
         findall(example(Name,Facts), (member(example(Name,Facts),ExpandedTerms), Name\==null), Examples),
         findall(query(Name,Goal), (member(query(Name,Goal),ExpandedTerms), Name\==null), Queries),
-        findall(expected(Query,Scenario,Answers), (
+        findall(expected(Query,Scenario,Sentences), (
             member(query(Query,Goal),Queries), member(example(Scenario,Facts),Examples),
             % print_message(informational,"Generating for query ~w, scenario ~w"-[Query,Scenario]),
             query_program_all(Module,Query, with(Scenario), _AnswerExplanations, Answers_),
-            term_to_clean_string(Answers_,Answers)
+            findall(Sentence,(
+                member(Answer_,Answers_), literal_to_sentence(Answer_,Module,Sentence_),
+                term_to_clean_string(Sentence_,Sentence)
+                ), Sentences)
+            
             ), Expectations)
             ; Expectations = []),
     format(string(NewFile),"~a.tests",[LEfile]),
@@ -145,11 +149,17 @@ verify_expectations(TestsDir) :- exists_directory(TestsDir), !,
 verify_expectations(TestFile,Result) :-
     atom_concat(LEfile,'.tests',TestFile),
     read_file_to_terms(TestFile, Expectations, []),
-    ( load_program(LEfile) ->
+    ( load_program(LEfile,_,true,Module,_,_) ->
         findall(Outcome,(
             member(expected(Query,Scenario,ExpectedAnswers),Expectations),
             (   query_program_all(Query, with(Scenario), AnswerExplanations,Answers) -> 
-                    ((term_to_clean_string(Answers,ExpectedAnswers_), ExpectedAnswers_=ExpectedAnswers) -> 
+                    ((
+                        findall(Sentence,(
+                            member(Answer,Answers), literal_to_sentence(Answer,Module,Sentence_),
+                            term_to_clean_string(Sentence_,Sentence)
+                            ), Sentences),
+                        Sentences=ExpectedAnswers
+                        ) -> 
                         Outcome=ok 
                         ; 
                         format("scenario ~w query ~w~n",[Scenario,Query]),
@@ -172,6 +182,13 @@ verify_expectations(TestFile,Result) :-
         findall(Expected-Got, member(Expected-Got,Outcomes), Unexpecteds), 
         Result=unexpected(Ntests,Unexpecteds)
     ).
+
+% term_string/2 but normalizing variable names to A,B,...
+% BEWARE as this BINDS T
+term_to_clean_string(T,S) :-
+    must_be(nonvar,T),
+    numbervars(T), 
+    format(string(S),"~W",[T,[numbervars(true)]]).
 
 
 % Show a HTML fragment in the user's browser

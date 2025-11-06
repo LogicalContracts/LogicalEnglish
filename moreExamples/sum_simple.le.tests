@@ -1,1 +1,1 @@
-expected(one,one,"[is_the_result(5)]").
+expected(one,one,["5 is the result"]).

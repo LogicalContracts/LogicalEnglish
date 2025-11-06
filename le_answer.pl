@@ -35,7 +35,7 @@ which can be used on the new command interface of LE on SWISH
     dump/4, dump/3, dump/2, dump_scasp/3, split_module_name/3, just_saved_scasp/2, psem/1, set_psem/1,
     prepare_query/6, assert_facts/2, retract_facts/2, parse_and_query/5, parse_and_query_and_explanation/6, parse_and_query_all_answers/5,
     parse_and_query_and_explanation_text/6, le_expanded_terms/2, show/1, source_lang/1, targetBody/6, query_and_explanation_text/4,
-    parse_and_load/5, term_to_clean_string/2
+    parse_and_load/5, literal_to_sentence/3
     ]).
 
 
@@ -289,12 +289,6 @@ answer_all(English, Arg, [ _{answer:'Failure', explanation:E}])  :-
     %print_message(error, "Failed to answer question: ~w"-[English]),
     with_output_to(string(E), 
         format("Failed to answer question: ~w : ~w", [English, Arg])), !.    
-
-% term_string/2 but normalizing variable names to A,B,...
-% BEWARE as this BINDS T
-term_to_clean_string(T,S) :-
-    must_be(nonvar,T),
-    numbervars(T), term_string(T,S,[numbervars(true)]).
 
 % pre_answer/5
 pre_answer(English, Arg, FactsPre, Module, InnerGoal) :- !, 
@@ -1164,6 +1158,20 @@ undefined_le_predicate(Module,Called,TemplateString) :-
 :- multifile prolog:xref_source_identifier/2. % missing this would cause xref_called etc to fail:
 prolog:xref_source_identifier(File, File).
 
+literal_to_sentence(Literal,Module,Sentence) :-
+    Literal =..CalledList,
+    catch((
+        Module:local_dict(CalledList,_,Sentence_),
+        atomic_list_concat(Sentence_,' ',Sentence)
+        ),
+        Ex,
+        (print_message(warning,"Missing template for ~q ? ~q"-[Literal,Ex]), fail)
+    ).
+
+
+% bindTemplate('Template,+TypesAndNames,-TemplateString)
+% Template is [Functor,Arg1,..,ArgN]
+% TypesAndNames is a list of Type-Name
 bindTemplate(Template,TypesAndNames,TemplateString) :-
     bindTemplate(Template,TypesAndNames),
     atomic_list_concat(Template, ' ', TemplateString).
