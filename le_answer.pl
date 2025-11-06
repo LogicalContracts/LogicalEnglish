@@ -1061,34 +1061,45 @@ asserting(File, ExpandedTerms) :-
     )). % simulating term expansion
 
 %retracting/2
-retracting(File, ExpandedTerms) :- 
-    %print_message(error, "Cleaning ~w of ~w"-[M, ExpandedTerms]), 
+retracting(Module, _ExpandedTerms) :- 
+    %print_message(error, "Cleaning ~w of ~w"-[File, ExpandedTerms]), 
     % cleaning memory
-    forall(member(T, [(:-module(File,[])), source_lang(en)|ExpandedTerms]), 
-        ( %print_message(informational, "Removing File:T ~w:~w"-[File,T]), 
-         retractall(File:T))).
+    %forall(member(T, [(:-module(File,[])), source_lang(en)|ExpandedTerms]), 
+    %    ( print_message(informational, "Removing File:T ~w:~w"-[File,T]), 
+    %     retract(File:T))).
+    %
+    findall(Module:Term, (current_predicate(Module:Name/Arity), 
+                          functor(Term, Name, Arity), 
+                          not(Name = is_a), % not touching is_a/2
+                          not(Name = aggregate_all), % not touching aggregate_all/3
+                          not(predicate_property(system:Term, built_in)), % not touching system predicates
+                          not(predicate_property(Module:Term,imported_from(reasoner))) % not touching imported reasoner predicates   
+                          ), Predicates), 
+    print_message(informational, " Cleaning predicates ~w"-[Predicates]),
+    forall(member(P, Predicates), retractall(P)).
+
 
 parse_and_load(File, Document,TaxlogTerms,ExpandedTerms,NewFileName) :-
     %print_message(informational, "parse_and_query ~w ~w ~w ~w"-[File, Document, Question, Scenario]),
 	%prolog_load_context(source,File), % atom_prefix(File,'pengine://'), % process only SWISH windows
 	%prolog_load_context(term_position,TP), stream_position_data(line_count,TP,Line),
-    clear_dicts,
+    %clear_dicts,
     clear_semantic_errors,
     le_taxlog_translate(Document, File, 1, TaxlogTerms),
     set_psem(File),
 	non_expanded_terms(File, TaxlogTerms, ExpandedTerms,NewFileName_),
     absolute_file_name(NewFileName_, NewFileName),
-    asserting(File, ExpandedTerms),
+    asserting(File, ExpandedTerms).
     % now save dicts ointo the local dict and meta relations in the module:
-    collect_current_dicts(PredicatesDict,PredicatesMeta),
-    append(PredicatesDict,PredicatesMeta,Dicts),
-    asserting(File, Dicts),
-    assert_missing_templates_in_bodies(File),
-    xref_source(NewFileName), assert(module_xref_source(File,NewFileName)),
-    undefined_le_predicates(TemplateStrings),
-    forall(member(TS,TemplateStrings),assert_semantic_error(warning,"Undefined predicate ~q"-[TS],"rule body")),
+    %collect_current_dicts(PredicatesDict,PredicatesMeta),
+    %append(PredicatesDict,PredicatesMeta,Dicts),
+    %asserting(File, Dicts),
+    %assert_missing_templates_in_bodies(File),
+    %xref_source(NewFileName), assert(module_xref_source(File,NewFileName)),
+    %undefined_le_predicates(TemplateStrings),
+    %forall(member(TS,TemplateStrings),assert_semantic_error(warning,"Undefined predicate ~q"-[TS],"rule body")),
     % base syntax errors are shown by showerrors called from le_taxlog_translate:
-    show_semantic_errors.
+    %show_semantic_errors.
 
 % HACK: discover atoms that are LIKELY to be missing templates, as they map to bad =/2 subgoals
 % TODO: there should be a much better way to obtain these more precisely near literal_(..) et. al. ;-)
