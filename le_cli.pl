@@ -11,17 +11,6 @@ prolog:message(S-Args) --> {atomic(S),is_list(Args)},[S-Args].
 
 :- use_module(le_answer).
 
-%TODO: add command line options to verify a LE program and exit immediately
-% use https://www.swi-prolog.org/pldoc/man?section=optparse to do something and halt, or not
-% :- initialization(main).
-% main :-
-%     current_prolog_flag(argv,Args),
-%     print_message(informational,"Hello LE with -- arguments: ~q"-[Args]),
-%     (Args=[] -> true ; statistics, halt). %TODO: not exiting well
-
-
-
-
 load_program(FileOrTerm,Language,DeleteFile,Module,TaxlogTerms,ExpandedTerms) :- 
     must_be(boolean,DeleteFile),
     (var(Module) -> uuid(Module) ; true),
@@ -112,8 +101,10 @@ generate_expectations(LEfile) :-
     close(Stream).
 
 % Example: verify_expectations('/Users/mc/git/LogicalEnglish/moreExamples').
-verify_expectations(TestsDir) :- exists_directory(TestsDir), !,
-    all_files_in(TestsDir,'.tests',[],TestFiles),
+
+
+
+verify_expectations(TestFiles) :- is_list(TestFiles), !,
     length(TestFiles,Nfiles),
     get_time(Start),
     findall(TestFile-Result,(
@@ -127,6 +118,8 @@ verify_expectations(TestsDir) :- exists_directory(TestsDir), !,
     findall(Ntests, (member(_-Result,Results), Result=..[_,Ntests|_]), TestCounts),
     sum_list(TestCounts, NtestsTotal),
     print_message(informational,"Ran ~w tests in ~w files in ~w seconds~n~nRESULTS:~n"-[NtestsTotal,Nfiles,Duration]),
+    TestFiles = [SomeFile|_], file_directory_name(SomeFile, TestsDir),
+
     format(string(ResultsFile),"~a/LEtests.log",[TestsDir]),
     open(ResultsFile,write,Stream),
     forall(member(File-Result,Results),(
@@ -144,15 +137,19 @@ verify_expectations(TestsDir) :- exists_directory(TestsDir), !,
         format(Stream,"~nTESTS HAVE FAILED :-(~n",[])
     ),
     close(Stream).
+verify_expectations(TestsDir) :- exists_directory(TestsDir), !,
+    all_files_in(TestsDir,'.tests',[],TestFiles),
+    verify_expectations(TestFiles).
+verify_expectations(TestsFile) :- 
+    verify_expectations([TestsFile]).
 
-
-verify_expectations(TestFile,Result) :-
-    atom_concat(LEfile,'.tests',TestFile),
+verify_expectations(TestFile_,Result) :-
+    (atom_concat(LEfile,'.tests',TestFile_) -> TestFile_=TestFile ; atom_concat(TestFile_,'.tests',TestFile), TestFile_=LEfile),
     read_file_to_terms(TestFile, Expectations, []),
     ( load_program(LEfile,_,true,Module,_,_) ->
         findall(Outcome,(
             member(expected(Query,Scenario,ExpectedAnswers),Expectations),
-            (   query_program_all(Query, with(Scenario), AnswerExplanations,Answers) -> 
+            (   query_program_all(Query, with(Scenario), _AnswerExplanations,Answers) -> 
                     ((
                         findall(Sentence,(
                             member(Answer,Answers), literal_to_sentence(Answer,Module,Sentence_),
@@ -162,8 +159,8 @@ verify_expectations(TestFile,Result) :-
                         ) -> 
                         Outcome=ok 
                         ; 
-                        format("scenario ~w query ~w~n",[Scenario,Query]),
-                        format("AE: ~q~n",[AnswerExplanations]),
+                        format("Test failure in scenario ~w for query ~w:~n",[Scenario,Query]),
+                        % format("AE: ~q~n",[AnswerExplanations]),
                         format("expected ~q got ~q~n",[ExpectedAnswers, Answers]),
                         Outcome=expected(ExpectedAnswers)-got(Answers)
                     )
