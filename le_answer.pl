@@ -1070,6 +1070,9 @@ retracting(Module, _ExpandedTerms) :-
     %
     findall(Module:Term, (current_predicate(Module:Name/Arity), 
                           functor(Term, Name, Arity), 
+                          not(Name = '$table_mode'), % not touching tabled predicates
+                          not(Name = '$tabled'), % not touching tabled predicates
+                          not(Name = '$wrap$is_a'), 
                           not(Name = is_a), % not touching is_a/2
                           not(Name = aggregate_all), % not touching aggregate_all/3
                           not(predicate_property(system:Term, built_in)), % not touching system predicates
