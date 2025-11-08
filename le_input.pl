@@ -156,6 +156,7 @@ document(Translation, In, Rest) :-
     (parsed -> retractall(parsed); true), 
     (including -> retract(including); true), 
     (source_lang(_L) -> retractall(source_lang(_)) ; true),
+    clear_dicts,
     phrase(header(Settings), In, AfterHeader), !, %print_message(informational, "Declarations completed: ~w"-[Settings]),
     phrase(content(Content), AfterHeader, Rest), %print_message(informational, "Content: ~w"-[AfterHeader]), 
     append(Settings, Content, Translation), !,
