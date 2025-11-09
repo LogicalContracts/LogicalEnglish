@@ -361,7 +361,7 @@ bindArcs([],_).
 
 
 :- use_module(library(http/http_client)).
-:- use_module(library(http/json)).
+:- use_module(library(json)).
 
 %%% spaCy testing, https://github.com/jgontrum/spacy-api-docker ; requires SPACY_HOST environment variable set
 
