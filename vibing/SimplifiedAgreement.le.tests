@@ -1,0 +1,6 @@
+expected(payments_due,loan_executed,["Payment 1 is due on 1433116800.0 in 550","Payment 2 is due on 1464739200.0 in 525"]).
+expected(loan_advance,loan_executed,["Lender Bank Co advances 1000 to Borrower Corp on 1401667200.0"]).
+expected(default_status,loan_executed,[]).
+expected(payments_due,payment_default,["Payment 1 is due on 1433116800.0 in 550","Payment 2 is due on 1464739200.0 in 525"]).
+expected(loan_advance,payment_default,["Lender Bank Co advances 1000 to Borrower Corp on 1401667200.0"]).
+expected(default_status,payment_default,[]).

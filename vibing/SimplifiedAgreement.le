@@ -1,0 +1,50 @@
+the target language is: prolog.
+
+the templates are:
+    *a lender* advances *an amount* to *a borrower* on *a date*,
+    *a borrower* requests a loan advance from *a lender* on *a date*,
+    *a borrower* pays *an amount* to *a lender* on *a date*,
+    *a payment* is due on *a date* in *an amount*,
+    *a borrower* is in default on *a date*,
+    *a borrower* fails to pay *an amount* on *a date*,
+    *a date* is *a number* day after *another date*,
+    *a date* is *a number* days after *another date*.
+
+the knowledge base loan includes:
+
+a borrower fails to pay an amount on a date if
+    a lender advances some loan amount to the borrower on some earlier date
+    and a payment is due on the date in the amount
+    and it is not the case that
+        the borrower pays the amount to the lender on the date.
+
+a borrower is in default on a date if
+    the borrower fails to pay an amount on an earlier date
+    and the date is 1 day after the earlier date.
+
+scenario loan_executed is:
+    Borrower Corp requests a loan advance from Lender Bank Co on 2014-06-01.
+    2014-06-02 is 1 day after 2014-06-01.
+    Lender Bank Co advances 1000 to Borrower Corp on 2014-06-02.
+    Payment 1 is due on 2015-06-01 in 550.
+    Payment 2 is due on 2016-06-01 in 525.
+    Borrower Corp pays 550 to Lender Bank Co on 2015-06-01.
+    Borrower Corp pays 525 to Lender Bank Co on 2016-06-01.
+
+scenario payment_default is:
+    Borrower Corp requests a loan advance from Lender Bank Co on 2014-06-01.
+    2014-06-02 is 1 day after 2014-06-01.
+    2015-06-02 is 1 day after 2015-06-01.
+    2016-06-02 is 1 day after 2016-06-01.
+    Lender Bank Co advances 1000 to Borrower Corp on 2014-06-02.
+    Payment 1 is due on 2015-06-01 in 550.
+    Payment 2 is due on 2016-06-01 in 525.
+
+query payments_due is:
+    which payment is due on which date in which amount.
+
+query loan_advance is:
+    which lender advances which amount to which borrower on which date.
+
+query default_status is:
+    which borrower is in default on which date.
