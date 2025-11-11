@@ -1,50 +1,73 @@
 the target language is: prolog.
 
 the templates are:
-    *a lender* advances *an amount* to *a borrower* on *a date*,
-    *a borrower* requests a loan advance from *a lender* on *a date*,
-    *a borrower* pays *an amount* to *a lender* on *a date*,
-    *a payment* is due on *a date* in *an amount*,
-    *a borrower* is in default on *a date*,
-    *a borrower* fails to pay *an amount* on *a date*,
-    *a date* is *a number* day after *another date*,
-    *a date* is *a number* days after *another date*.
+*a party* requests a loan advance of *an amount* on *a date*,
+*a lender* advances *an amount* to *a borrower* on *a date*,
+*a borrower* owes *an amount* to *a lender* on *a date*,
+a payment of *an amount* is due from *a borrower* to *a lender* on *a date*,
+*a borrower* makes a payment of *an amount* to *a lender* on *a date*,
+*a borrower* fails to make a payment of *an amount* to *a lender* on *a date*,
+*a borrower* is in default under *an agreement* on *a date*,
+*a borrower* files for bankruptcy on *a date*,
+all outstanding amounts become immediately due from *a borrower* to *a lender* on *a date*,
+*a notice* is given by *a lender* to *a borrower* on *a date*.
 
-the knowledge base loan includes:
+the knowledge base SimplifiedAgreement includes:
 
-a borrower fails to pay an amount on a date if
-    a lender advances some loan amount to the borrower on some earlier date
-    and a payment is due on the date in the amount
+% Loan advance rules
+Lender Bank Co advances 1000 to Borrower Corp on a date if
+    Borrower Corp requests a loan advance of 1000 on 2014-06-01
+    and the date >= 2014-06-01
+    and the date <= 2014-06-02.
+
+Borrower Corp owes 1000 to Lender Bank Co on a date if
+    Lender Bank Co advances 1000 to Borrower Corp on an advance date
+    and the date >= the advance date.
+
+% Payment schedule - these are facts
+a payment of 550 is due from Borrower Corp to Lender Bank Co on 2015-06-01.
+a payment of 525 is due from Borrower Corp to Lender Bank Co on 2016-06-01.
+
+% Default events
+Borrower Corp fails to make a payment of an amount to Lender Bank Co on a date if
+    a payment of the amount is due from Borrower Corp to Lender Bank Co on the date
     and it is not the case that
-        the borrower pays the amount to the lender on the date.
+        Borrower Corp makes a payment of the amount to Lender Bank Co on the date.
 
-a borrower is in default on a date if
-    the borrower fails to pay an amount on an earlier date
-    and the date is 1 day after the earlier date.
+% Default determination
+Borrower Corp is in default under the agreement on a default date if
+    Borrower Corp fails to make a payment of an amount to Lender Bank Co on a payment date
+    and a notice is given by Lender Bank Co to Borrower Corp on a notice date
+    and the notice date >= the payment date.
 
-scenario loan_executed is:
-    Borrower Corp requests a loan advance from Lender Bank Co on 2014-06-01.
-    2014-06-02 is 1 day after 2014-06-01.
-    Lender Bank Co advances 1000 to Borrower Corp on 2014-06-02.
-    Payment 1 is due on 2015-06-01 in 550.
-    Payment 2 is due on 2016-06-01 in 525.
-    Borrower Corp pays 550 to Lender Bank Co on 2015-06-01.
-    Borrower Corp pays 525 to Lender Bank Co on 2016-06-01.
+Borrower Corp is in default under the agreement on a default date if
+    Borrower Corp files for bankruptcy on the default date.
 
-scenario payment_default is:
-    Borrower Corp requests a loan advance from Lender Bank Co on 2014-06-01.
-    2014-06-02 is 1 day after 2014-06-01.
-    2015-06-02 is 1 day after 2015-06-01.
-    2016-06-02 is 1 day after 2016-06-01.
-    Lender Bank Co advances 1000 to Borrower Corp on 2014-06-02.
-    Payment 1 is due on 2015-06-01 in 550.
-    Payment 2 is due on 2016-06-01 in 525.
+% Acceleration of payments
+all outstanding amounts become immediately due from Borrower Corp to Lender Bank Co on a date if
+    Borrower Corp is in default under the agreement on the date.
 
-query payments_due is:
-    which payment is due on which date in which amount.
+scenario normal_case is:
+    Borrower Corp requests a loan advance of 1000 on 2014-06-01.
+    Borrower Corp makes a payment of 550 to Lender Bank Co on 2015-06-01.
+    Borrower Corp makes a payment of 525 to Lender Bank Co on 2016-06-01.
+
+scenario missed_payment is:
+    Borrower Corp requests a loan advance of 1000 on 2014-06-01.
+    a notice is given by Lender Bank Co to Borrower Corp on 2015-06-02.
+
+scenario bankruptcy is:
+    Borrower Corp requests a loan advance of 1000 on 2014-06-01.
+    Borrower Corp files for bankruptcy on 2015-03-01.
 
 query loan_advance is:
     which lender advances which amount to which borrower on which date.
 
+query payment_obligations is:
+    a payment of which amount is due from which borrower to which lender on which date.
+
 query default_status is:
-    which borrower is in default on which date.
+    which borrower is in default under which agreement on which date.
+
+query acceleration is:
+    all outstanding amounts become immediately due from which borrower to which lender on which date.

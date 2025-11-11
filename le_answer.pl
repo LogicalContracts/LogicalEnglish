@@ -1083,8 +1083,20 @@ parse_and_load(File, Document,TaxlogTerms,ExpandedTerms,NewFileName) :-
     forall(member(TS,UndefinedTemplateStrings),assert_semantic_error(warning,"Undefined predicate ~q"-[TS],"rule body")),
     unqueried_predicates(UnqueriedTemplateStrings),
     forall(member(TS,UnqueriedTemplateStrings),assert_semantic_error(warning,"This predicate is not tested by any query: ~q"-[TS],"queries")),
+    warn_about_ground_rules,
     % base syntax errors are shown by showerrors called from le_taxlog_translate:
     show_semantic_errors.
+
+warn_about_ground_rules :-
+    psem(Module),
+    forall((
+        current_predicate(Module:F/N), functor(Pred,F,N), \+ my_system_predicate(Pred), 
+        clause(Module:Pred,Body_), 
+        (unwrapBody(Body_, Body) -> true ; Body=Body_),
+        Body\==true, ground(Pred:-Body)
+        ),
+        assert_semantic_error(warning,"Rule without variables: ~w"-[Pred:-Body],"rule")
+    ).
 
 % HACK: discover atoms that are LIKELY to be missing templates, as they map to bad =/2 subgoals
 % TODO: there should be a much better way to obtain these more precisely near literal_(..) et. al. ;-)
