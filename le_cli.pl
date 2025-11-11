@@ -166,7 +166,7 @@ verify_expectations(TestsFile) :-
 verify_expectations(TestFile_,Result) :-
     (atom_concat(LEfile,'.tests',TestFile_) -> TestFile_=TestFile ; atom_concat(TestFile_,'.tests',TestFile), TestFile_=LEfile),
     read_file_to_terms(TestFile, Expectations, []),
-    ( load_program(LEfile,'',_,true,Module,_,_) ->
+    ( load_program(LEfile,'',_,true,Module,_,ExpandedTerms) ->
         findall(Outcome,(
             member(expected(Query,Scenario,ExpectedAnswers),Expectations),
             (   query_program_all(Module,Query, with(Scenario), _AnswerExplanations,Answers,Sentences) -> 
@@ -177,13 +177,20 @@ verify_expectations(TestFile_,Result) :-
                         ; 
                         format("Test failure in scenario ~w for query ~w:~n",[Scenario,Query]),
                         % format("AE: ~q~n",[AnswerExplanations]),
-                        format("expected ~q got ~q~n",[ExpectedAnswers, Answers]),
+                        format("expected ~q got ~q~n",[ExpectedAnswers, Sentences]),
                         Outcome=expected(ExpectedAnswers)-got(Answers)
                     )
                 ;
                 Outcome=failed
             )
-            ),Outcomes)
+            ),Outcomes),
+        findall(example(Name,Facts), (member(example(Name,Facts),ExpandedTerms), Name\==null), Examples),
+        findall(query(Name,Goal), (member(query(Name,Goal),ExpandedTerms), Name\==null), Queries),
+        forall((
+            member(example(S,_),Examples), member(query(Q,_),Queries),
+            \+ member(expected(Q,S,_),Expectations)
+            ), format("Missing expected result for query '~w' with scenario '~w'",[Q,S])
+        )
         ; Outcomes = [failed(load_program)]),
     length(Expectations,Ntests),
     (forall(member(Outcome,Outcomes),Outcome==ok) -> 
