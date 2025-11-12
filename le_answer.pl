@@ -265,12 +265,17 @@ answer_all(English, Arg, Results) :- %trace, !,
     % append(FactsPre, [(is_a_(X,Y):-is_a(X,Y)), (is_a(A, B):-(is_a_(A, C),is_a(C, B)))], Facts),
     append(FactsPre, [(is_a(A, B):-(is_a(A, C),is_a(C, B)))], Facts),
     %print_message(informational, "Answering: ~w with ~w "-[English, Arg]),
+    MAX_SECONDS=0.4, % anticipating the reasoner's default limit of 0.5
     setup_call_catcher_cleanup( 
             assert_facts(Module, Facts), 
             catch_with_backtrace(
                 findall(Answer, 
                     ( %listing(Module:is_a/2),
-                      reasoner:query(at(InnerGoal, Module),_U, le(LE_Explanation), Result) ,
+                      catch(
+                            call_with_time_limit(MAX_SECONDS, reasoner:query(at(InnerGoal, Module),_U, le(LE_Explanation), Result) ),
+                            time_limit_exceeded,
+                            (print_message(error,"Non terminating goal ~q"-[InnerGoal]), fail)
+                        ) ,
                       produce_html_explanation(LE_Explanation, E), correct_answer(InnerGoal, E, Result, Answer_),
                       % stringify to avoid breaking existing clients of this predicate:
                       numbervars(InnerGoal), term_string(InnerGoal,Bindings,[numbervars(true)]),
