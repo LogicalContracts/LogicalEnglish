@@ -35,7 +35,7 @@ which can be used on the new command interface of LE on SWISH
     dump/4, dump/3, dump/2, dump_scasp/3, split_module_name/3, just_saved_scasp/2, psem/1, set_psem/1,
     prepare_query/6, assert_facts/2, retract_facts/2, parse_and_query/5, parse_and_query_and_explanation/6, parse_and_query_all_answers/5,
     parse_and_query_and_explanation_text/6, le_expanded_terms/2, show/1, source_lang/1, targetBody/6, query_and_explanation_text/4,
-    parse_and_load/5, literal_to_sentence/3
+    parse_and_load/5, literal_to_sentence/3, top2levels_predicate/3
     ]).
 
 
@@ -1092,6 +1092,7 @@ parse_and_load(File, Document,TaxlogTerms,ExpandedTerms,NewFileName) :-
     % base syntax errors are shown by showerrors called from le_taxlog_translate:
     show_semantic_errors.
 
+%%%% some lint-like verifications, mostly dependent on xref
 warn_about_ground_rules :-
     psem(Module),
     forall((
@@ -1135,12 +1136,34 @@ unqueried_predicate(Module,TemplateString) :-
     Unqueried=..Ulist,
     catch((
         Module:local_dict(Ulist,TypesAndNames,Template),
-        bindTemplate(Template,TypesAndNames,TemplateString)
+        bindTemplate(Template,TypesAndNames,true,TemplateString,_Types)
         ),
         Ex,
         (print_message(warning,"~q"-[Ex]), Template='???')
     ).
 
+top_intensional_predicate(Module,TemplateString,Types) :-
+    module_xref_source(Module,Source), 
+    intensional_predicate(Module,Top),
+    \+ xref_called(Source,Top,_By),
+    predicate_to_template_sentence(Top,Module,false,TemplateString,Types).
+
+intensional_predicate(Module,Pred) :-
+    module_xref_source(Module,Source), 
+    xref_defined(Source,Pred,_How), 
+    once(xref_called(Source,_,Pred)).
+
+% top2levels_predicate(+Module,-TemplateString,-Types) is nondet
+% Returns either a top level or second level predicate in the program, with its template sentence and type names
+% Thsi is intended to introspect the potentially more informative/useful predicates for a program client
+top2levels_predicate(Module,TemplateString,Types) :- 
+    top_intensional_predicate(Module,TemplateString,Types).
+top2levels_predicate(Module,TemplateString,Types) :-
+    module_xref_source(Module,Source), 
+    intensional_predicate(Module,Top),  \+ xref_called(Source,Top,_By),
+    xref_called(Source,Pred,Top), Pred\=Top,
+    intensional_predicate(Module,Pred),
+    predicate_to_template_sentence(Pred,Module,false,TemplateString,Types).
 
 % a_caller(?Called,+AncestorsPath,+XREFSource,-Caller) is nondet
 a_caller(Called,Path,Source,Caller) :- 
@@ -1162,15 +1185,7 @@ undefined_le_predicate(Module,Called,TemplateString) :-
     \+ xref_defined(Source,Called,_How), 
     \+ (Module:example(Name,Scenarios), Name\=null, member(scenario(Facts,_Flag),Scenarios), member(Called:-_,Facts)),
     \+ my_system_predicate(Called),
-    Called=..CalledList,
-    catch((
-        Module:local_dict(CalledList,TypesAndNames,Template),
-        % TODO: could also consider user_predef_dict, prolog_predef_dict, mostly system predicates
-        bindTemplate(Template,TypesAndNames,TemplateString)
-        ),
-        Ex,
-        (print_message(warning,"~q"-[Ex]), Template='???')
-    ).
+    predicate_to_template_sentence(Called,Module,TemplateString).
 
 :- multifile prolog:xref_source_identifier/2. % missing this would cause xref_called etc to fail:
 prolog:xref_source_identifier(File, File).
@@ -1185,22 +1200,38 @@ literal_to_sentence(Literal,Module,Sentence) :-
         (print_message(warning,"Missing template for ~q ? ~q"-[Literal,Ex]), fail)
     ).
 
+predicate_to_template_sentence(Pred,Module,TemplateString) :-
+    predicate_to_template_sentence(Pred,Module,true,TemplateString,_).
 
-% bindTemplate('Template,+TypesAndNames,-TemplateString)
+predicate_to_template_sentence(Pred,Module,WithAsteriscs,TemplateString,Types) :-
+    Pred=..PredList,
+    catch((
+        Module:local_dict(PredList,TypesAndNames,Template),
+        % TODO: could also consider user_predef_dict, prolog_predef_dict, mostly system predicates
+        bindTemplate(Template,TypesAndNames,WithAsteriscs,TemplateString,Types)
+        ),
+        Ex,
+        (print_message(warning,"~q"-[Ex]), Template='???')
+    ).
+
+
+% bindTemplate('Template,+TypesAndNames,+WithAsteriscs,-TemplateString,-Types)
 % Template is [Functor,Arg1,..,ArgN]
 % TypesAndNames is a list of Type-Name
-bindTemplate(Template,TypesAndNames,TemplateString) :-
-    bindTemplate(Template,TypesAndNames),
+bindTemplate(Template,TypesAndNames,WithAsteriscs,TemplateString,Types) :-
+    must_be(boolean,WithAsteriscs),
+    bindTemplate_(Template,TypesAndNames,WithAsteriscs,Types),
     atomic_list_concat(Template, ' ', TemplateString).
 
-bindTemplate([Var|Template],[Type-_|TypesAndNames]) :- var(Var), !,
+bindTemplate_([Var|Template],[Type-_|TypesAndNames],WithAsteriscs,[Type|Types]) :- var(Var), !,
         sub_atom(Type,0,1,_,First),
         (member(First,[a,e,i,o,u,'A','E','I','O','U']) -> Prefix=an; Prefix=a),
-        format(string(Var),"*~a ~w*",[Prefix,Type]),
-        bindTemplate(Template,TypesAndNames).
-bindTemplate([_|Template],TypesAndNames) :- !,
-        bindTemplate(Template,TypesAndNames).
-bindTemplate([],_).
+        (WithAsteriscs==true -> format(string(Var),"*~a ~w*",[Prefix,Type]) ; 
+            format(string(Var),"~a ~w",[Prefix,Type])),
+        bindTemplate_(Template,TypesAndNames,WithAsteriscs,Types).
+bindTemplate_([_|Template],TypesAndNames,WithAsteriscs,Types) :- !,
+        bindTemplate_(Template,TypesAndNames,WithAsteriscs,Types).
+bindTemplate_([],_,_,[]).
 
 % Not using kp_loader:system_predicate, which depends on kp_dir
 my_system_predicate(P) :- 
@@ -1225,6 +1256,8 @@ show_semantic_errors :-
             format(string(Format),"~w in ~w",[Message_,Context]), Args=[] ),
         print_message(Type,Format-Args)
     )).
+
+%%%% end of "lint-like" related predicates
 
 % parse_and_query(+OutputFileName, +Document, +QuestionOrQueryName, +ScenarioName, -AnswerExplanation)
 % Document is a Language(LEtext) term, where Language is either of en, fr, it, es

@@ -3,7 +3,7 @@
 :- module(_,[
     load_program/7, load_program/1, load_and_query_program_all/6,
     query_program_all/6, query_program_all/4,
-    generate_expectations/1, verify_expectations/1
+    generate_expectations/1, verify_expectations/1, print_programs_and_main_predicates/1
     ]).
 
 
@@ -202,6 +202,27 @@ verify_expectations(TestFile_,Result) :-
         findall(Expected-Got, member(Expected-Got,Outcomes), Unexpecteds), 
         Result=unexpected(Ntests,Unexpecteds)
     ).
+
+% print_programs_and_main_predicates(Dir)
+print_programs_and_main_predicates(Dir) :-
+    all_files_in(Dir,'.le',[],LEfiles),
+    length(LEfiles,N),
+    format("Loading ~w .le files...~n",[N]),
+    findall(LEfile_-Predicates, (
+        member(LEfile,LEfiles), load_program(LEfile,'',_,true,Module,_TaxlogTerms,_), 
+        file_base_name(LEfile, LEfile_),
+        findall(TemplateString-Types, top2levels_predicate(Module,TemplateString,Types),  Predicates)
+        ), Pairs),
+    format("~n== Logical English loadable files in ~w:~n~n",[Dir]),
+    forall(member(File-Predicates,Pairs),(
+        format("~a:~n",[File]),
+        forall(member(P-Types_,Predicates), (
+            atomic_list_concat(Types_, ',', Types),
+            format("   ~a (~w)~n",[P,Types])
+            ))
+        )).
+
+
 
 % term_string/2 but normalizing variable names to A,B,...
 % BEWARE as this BINDS T
