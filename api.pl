@@ -45,7 +45,7 @@ limitations under the License.
 :- multifile sandbox:safe_primitive/1.
 
 :- use_module(library(http/http_json)).
-:- use_module(library(json)).
+% :- use_module(library(json)).
 :- use_module(library(term_to_json)).
 :- use_module(library(http/http_parameters)).
 :- use_module(library(http/http_client)).

@@ -979,7 +979,7 @@ le_taxlog_translate( EnText, Terms) :- le_taxlog_translate( EnText, someFile, 1,
 % Baseline is the line number of the start of Logical English text
 le_taxlog_translate( LEterm, File, BaseLine, Terms) :-
     LEterm =.. [Lang,Text],
-    assertion( memberchk(Lang,[en,fr,it,es]) ),
+    memberchk(Lang,[en,fr,it,es]),
     clear_errors,
     (le_input:text_to_logic(Text, Terms) -> clear_errors; showErrors(File,BaseLine)).
 le_taxlog_translate( prolog_le(verified), _, _, prolog_le(verified)) :- %trace, % running from prolog file
