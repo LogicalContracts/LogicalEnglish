@@ -1,0 +1,98 @@
+the target language is: prolog.
+
+the templates are:
+*a tenant* has a lease for *a property*,
+*a tenant* owes rent,
+*a tenant* is late with rent,
+*a tenant* owes late fee of *an amount*,
+*a tenant* has vehicle *a vehicle*,
+*a tenant* has pet *a pet*,
+*a tenant* pays pet rent,
+*a tenant* is responsible for *a utility*,
+*a tenant* had a bad check,
+*a tenant* owes bad check fee of *an amount*,
+*a tenant* must pay cash only,
+*a tenant* owes security deposit of *an amount*,
+*a tenant* owes cleaning fee of *an amount*.
+
+the knowledge base rental_agreement includes:
+
+% From Section 5: Late payment rules
+% Represents: base $25 + $5 per day (simplified as $35 for 2 days late)
+a tenant T is late with rent if
+    T owes rent.
+
+a tenant T owes late fee of 35 if
+    T is late with rent.
+
+% From Section 6: Bad check servicing charge - $25 fee
+a tenant T owes bad check fee of 25 if
+    T had a bad check.
+
+a tenant T must pay cash only if
+    T had a bad check.
+
+% From Section 7: Security deposit - equals monthly rent ($685)
+a tenant T owes security deposit of 685 if
+    T has a lease for apartment_426.
+
+% From Section 8: Cleaning fee - $200 minimum
+a tenant T owes cleaning fee of 200 if
+    T has a lease for apartment_426.
+
+% From Section 13: Pet rent
+a tenant T pays pet rent if
+    T has pet fluffy_cat.
+    
+scenario basic_lease is:
+    silvia_mando has a lease for apartment_426.
+    silvia_mando owes rent.
+
+scenario returned_check is:
+    silvia_mando has a lease for apartment_426.
+    silvia_mando had a bad check.
+
+scenario with_vehicle is:
+    silvia_mando has a lease for apartment_426.
+    silvia_mando has vehicle honda_civic.
+
+scenario with_pet is:
+    silvia_mando has a lease for apartment_426.
+    silvia_mando has pet fluffy_cat.
+
+scenario utilities is:
+    silvia_mando has a lease for apartment_426.
+    silvia_mando is responsible for electricity.
+      
+query leases is:
+    which tenant has a lease for which property.
+
+query late_payments is:
+    which tenant is late with rent.
+
+query late_fees is:
+    which tenant owes late fee of which amount.
+
+query bad_check_fees is:
+    which tenant owes bad check fee of which amount.
+
+query cash_only is:
+    which tenant must pay cash only.
+
+query security_deposits is:
+    which tenant owes security deposit of which amount.
+
+query cleaning_fees is:
+    which tenant owes cleaning fee of which amount.
+
+query vehicles is:
+    which tenant has vehicle which vehicle.
+
+query pet_rent is:
+    which tenant pays pet rent.
+
+query utility_responsibility is:
+    which tenant is responsible for which utility.
+
+query pets is:
+    which tenant has pet which pet.
