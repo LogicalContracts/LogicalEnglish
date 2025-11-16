@@ -44,6 +44,7 @@ main(Argv) :-
             Command == verify -> verify_expectations(File) ;
             Command == list -> print_programs_and_main_predicates(File) ;
             Command == mcp -> mcpLoop(File) ;
+            Command == top_predicates -> print_top_predicates(File) ;
             Command == query -> 
                 memberchk(query(Q), Opts), memberchk(scenario(S), Opts),
                 load_and_query_program_all(File,S,Q,AnswerExplanations,_Answers,Sentences),

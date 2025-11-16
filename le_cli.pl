@@ -1,7 +1,7 @@
 % Simple wrapper to use LogicalEnglish from the PROLOG command line
 % Launch with /Applications/SWI-Prolog9.3.7-1.app/Contents/MacOS/swipl -l le_cli.pl
 :- module(_,[
-    load_program/7, load_program/1, load_and_query_program_all/6,
+    load_program/7, load_program/3, load_program/1, load_and_query_program_all/6,
     query_program_all/6, query_program_all/4,
     generate_expectations/1, verify_expectations/1, print_programs_and_main_predicates/1, introspect_programs_and_main_predicates/2
     ]).
@@ -35,6 +35,9 @@ load_program(FileOrTerm,ExtraText,Language,DeleteFile,Module,TaxlogTerms,Expande
         ),
         (DeleteFile==true -> nonvar(File), delete_file(File); true)
     ).
+
+load_program(FileOrTerm,DeleteFile,Module) :- 
+    load_program(FileOrTerm,'',_Language,DeleteFile,Module,_TaxlogTerms,_ExpandedTerms).
 
 
 load_program(FileOrTerm) :- 
@@ -226,6 +229,11 @@ introspect_programs_and_main_predicates(Dir,Pairs) :-
         findall(TemplateString-Types, top2levels_predicate(Module,TemplateString,Types),  Predicates)
         ), Pairs).
 
+print_top_predicates(File) :-
+    load_program(File,'',_,true,Module,_,_ExpandedTerms),
+    forall(top_intensional_predicate(Module,TemplateString,_Types),
+        writeln(TemplateString)
+        ).
 
 % term_string/2 but normalizing variable names to A,B,...
 % BEWARE as this BINDS T

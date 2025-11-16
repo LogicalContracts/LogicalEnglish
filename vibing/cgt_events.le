@@ -1,0 +1,69 @@
+the target language is: prolog.
+
+the templates are:
+*a person* has a cgt event of type *a event type* on *a date* for *an asset*,
+*a person* makes a capital gain of *an amount* on *a date* for *an asset*,
+*a person* owns *an asset*,
+*a person* enters into a contract to sell *an asset* on *a date*,
+*an asset* is lost or destroyed on *a date*,
+*a person* receives compensation of *an amount* for *an asset* on *a date*,
+*an asset* has a cost base of *an amount*,
+*an asset* has capital proceeds of *an amount*,
+*a person* has no compensation for *an asset*,
+
+the knowledge base cgt includes:
+
+% A1 - Disposal of a CGT asset
+a person has a cgt event of type a1 on a date for an asset
+if the person enters into a contract to sell the asset on the date.
+
+% C1 - Loss or destruction with compensation  
+a person has a cgt event of type c1 on a date for an asset
+if the person receives compensation of an amount for the asset on the date
+and the asset is lost or destroyed on a loss date.
+
+% C1 - Loss or destruction with no compensation
+a person has a cgt event of type c1 on a date for an asset
+if the asset is lost or destroyed on the date
+and the person owns the asset
+and the person has no compensation for the asset.
+
+% Capital gain for A1 disposal
+a person makes a capital gain of a gain on a date for an asset
+if the person has a cgt event of type a1 on the date for the asset
+and the asset has capital proceeds of a proceeds
+and the asset has a cost base of a cost base
+and the gain = the proceeds - the cost base
+and the gain > 0.
+
+% Capital gain for C1 with compensation
+a person makes a capital gain of a gain on a date for an asset
+if the person has a cgt event of type c1 on the date for the asset  
+and the person receives compensation of a compensation for the asset on the date
+and the asset has a cost base of a cost base
+and the gain = the compensation - the cost base
+and the gain > 0.
+
+scenario sue_land_sale is:
+sue owns land.
+sue enters into a contract to sell land on 2024-06-15.
+land has a cost base of 200000.
+land has capital proceeds of 350000.
+
+scenario laurie_fire_insurance is:
+laurie owns rental property.
+rental property is lost or destroyed on 2024-06-10.
+laurie receives compensation of 180000 for rental property on 2024-10-15.
+rental property has a cost base of 150000.
+
+scenario christine_flood_no_insurance is:
+christine owns flood property.
+flood property is lost or destroyed on 2024-05-20.
+christine has no compensation for flood property.
+flood property has a cost base of 120000.
+
+query query_1 is:
+which person has a cgt event of type which event type on which date for which asset.
+
+query query_2 is:
+which person makes a capital gain of which amount on which date for which asset.
