@@ -980,9 +980,10 @@ le_taxlog_translate( EnText, Terms) :- le_taxlog_translate( EnText, someFile, 1,
 % Baseline is the line number of the start of Logical English text
 le_taxlog_translate( LEterm, File, BaseLine, Terms) :-
     LEterm =.. [Lang,Text],
-    assertion( memberchk(Lang,[en,fr,it,es]) ),
+    memberchk(Lang,[en,fr,it,es]),
     clear_errors,
     (le_input:text_to_logic(Text, Terms) -> clear_errors; showErrors(File,BaseLine)).
+% for cases in which we load the prolog previously translated (which contains prolog_le(verified))
 le_taxlog_translate( prolog_le(verified), _, _, prolog_le(verified)) :- %trace, % running from prolog file
     assertz(le_input:parsed), %this_capsule(M),  
     %assertz(M:just_saved_scasp(null, null)), 
@@ -1067,7 +1068,8 @@ retracting(Module, _ExpandedTerms) :-
     %forall(member(T, [(:-module(File,[])), source_lang(en)|ExpandedTerms]), 
     %    ( print_message(informational, "Removing File:T ~w:~w"-[File,T]), 
     %     retract(File:T))).
-    %
+    retractall(le_input:is_type(_)), % clean all is_type/1 to avoid hidden type conflicts
+    % clean all predicates except tabled and system ones
     findall(Module:Term, (current_predicate(Module:Name/Arity), 
                           functor(Term, Name, Arity), 
                           not(Name = '$table_mode'), % not touching tabled predicates
@@ -1078,7 +1080,7 @@ retracting(Module, _ExpandedTerms) :-
                           not(predicate_property(system:Term, built_in)), % not touching system predicates
                           not(predicate_property(Module:Term,imported_from(reasoner))) % not touching imported reasoner predicates   
                           ), Predicates), 
-    print_message(informational, " Cleaning predicates ~w"-[Predicates]),
+    %print_message(informational, " Cleaning predicates ~w"-[Predicates]),
     forall(member(P, Predicates), retractall(P)).
 
 
