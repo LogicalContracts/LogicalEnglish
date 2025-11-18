@@ -172,6 +172,12 @@ verify_expectations(TestsFile) :-
 verify_expectations(TestFile_,Result) :-
     (atom_concat(LEfile,'.tests',TestFile_) -> TestFile_=TestFile ; atom_concat(TestFile_,'.tests',TestFile), TestFile_=LEfile),
     read_file_to_terms(TestFile, Expectations, []),
+
+    % for all queries, there should be at least one expected (non empty) answer in some scenario
+    findall(Query, member(expected(Query,_,_),Expectations), Queries_), sort(Queries_,Queries),
+    forall((member(Query,Queries), \+ member(expected(Query,_,[_|_]),Expectations)), 
+        print_message(warning,"Query ~w has only empty answers in all scenarios; it should be tested also with some other scenario for which the query has an answer"-[Query])),
+
     ( load_program(LEfile,'',_,true,true,Module,_,_ExpandedTerms) ->
         findall(Outcome,(
             member(expected(Query,Scenario,ExpectedAnswers),Expectations),
