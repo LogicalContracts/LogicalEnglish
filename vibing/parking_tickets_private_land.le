@@ -1,0 +1,50 @@
+% Logical English program for parking tickets on private land in Scotland
+% Source: https://www.citizensadvice.org.uk/scotland/law-and-courts/parking-tickets/parking-tickets-on-private-land-s/
+
+the target language is: prolog.
+
+the templates are:
+*a person* has a valid parking charge notice from *a parking operator* for *an amount* at *a location*,
+*a parking operator* can issue a parking ticket to *a person*,
+*a parking rule* is displayed at *a location*,
+*a person* breached parking conditions at *a location*,
+*an amount* exceeds the maximum charge,
+*a parking operator* is a member of *a trade association*.
+
+the knowledge base parking_tickets includes:
+
+an amount exceeds the maximum charge
+if the amount > 100.
+
+a person has a valid parking charge notice from a parking operator for an amount at a location
+if a parking rule is displayed at the location
+and the person breached parking conditions at the location
+and it is not the case that
+    the amount exceeds the maximum charge
+and the parking operator can issue a parking ticket to the person.
+
+a parking operator can issue a parking ticket to a person
+if the parking operator is a member of a trade association.
+
+scenario valid_ticket is:
+a parking rule is displayed at shopcentre.
+john breached parking conditions at shopcentre.
+parkrite_company is a member of bpa.
+
+scenario challenge_case is:
+mary breached parking conditions at office_park.
+quickpark_ltd is a member of ipc.
+
+scenario excessive_charge is:
+a parking rule is displayed at hospital.
+sarah breached parking conditions at hospital.
+fastpark_services is a member of bpa.
+
+query q1 is:
+john has a valid parking charge notice from parkrite_company for 60 at shopcentre.
+
+query q2 is:
+parkrite_company can issue a parking ticket to john.
+
+query q3 is:
+sarah has a valid parking charge notice from fastpark_services for 150 at hospital.

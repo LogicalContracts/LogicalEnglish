@@ -31,3 +31,5 @@ To look at explanations, paste the program into a public SWISH LE window, or use
 
     fetch web page https://www.refworld.org/legal/legislation/natlegbod/1981/en/17879, and convert only its Part I (sections 1-14) into a new LE program. Do not fetch any more web pages.
 
+    fetch web page https://www.citizensadvice.org.uk/scotland/law-and-courts/parking-tickets/parking-tickets-on-private-land-s/ and convert it fully into a new LE program. Do not fetch any more web pages.
+
