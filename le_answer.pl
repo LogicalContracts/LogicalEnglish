@@ -35,7 +35,7 @@ which can be used on the new command interface of LE on SWISH
     dump/4, dump/3, dump/2, dump_scasp/3, split_module_name/3, just_saved_scasp/2, psem/1, set_psem/1,
     prepare_query/6, assert_facts/2, retract_facts/2, parse_and_query/5, parse_and_query_and_explanation/6, parse_and_query_all_answers/5,
     parse_and_query_and_explanation_text/6, le_expanded_terms/2, show/1, source_lang/1, targetBody/6, query_and_explanation_text/4,
-    parse_and_load/5, literal_to_sentence/3, top2levels_predicate/3, top_intensional_predicate/3
+    parse_and_load/5, parse_and_load/6, literal_to_sentence/3, top2levels_predicate/3, top_intensional_predicate/3
     ]).
 
 
@@ -1068,6 +1068,10 @@ retracting(File, ExpandedTerms) :-
          retractall(File:T))).
 
 parse_and_load(File, Document,TaxlogTerms,ExpandedTerms,NewFileName) :-
+    parse_and_load(File, Document,false,TaxlogTerms,ExpandedTerms,NewFileName).
+
+parse_and_load(File, Document,StrictWarnings,TaxlogTerms,ExpandedTerms,NewFileName) :-
+    must_be(boolean,StrictWarnings),
     %print_message(informational, "parse_and_query ~w ~w ~w ~w"-[File, Document, Question, Scenario]),
 	%prolog_load_context(source,File), % atom_prefix(File,'pengine://'), % process only SWISH windows
 	%prolog_load_context(term_position,TP), stream_position_data(line_count,TP,Line),
@@ -1089,6 +1093,9 @@ parse_and_load(File, Document,TaxlogTerms,ExpandedTerms,NewFileName) :-
     unqueried_predicates(UnqueriedTemplateStrings),
     forall(member(TS,UnqueriedTemplateStrings),assert_semantic_error(warning,"This predicate is not tested by any query: ~q"-[TS],"queries")),
     warn_about_ground_rules,
+    (StrictWarnings==true -> 
+        warn_too_many_facts 
+        ; true),
     % base syntax errors are shown by showerrors called from le_taxlog_translate:
     show_semantic_errors.
 
@@ -1096,13 +1103,33 @@ parse_and_load(File, Document,TaxlogTerms,ExpandedTerms,NewFileName) :-
 warn_about_ground_rules :-
     psem(Module),
     forall((
-        current_predicate(Module:F/N), functor(Pred,F,N), \+ my_system_predicate(Pred), 
-        clause(Module:Pred,Body_), 
-        (unwrapBody(Body_, Body) -> true ; Body=Body_),
-        Body\==true, ground(Pred:-Body)
+        my_clause(Module,Head,Body),
+        Body\==true, ground(Head:-Body)
         ),
-        assert_semantic_error(warning,"Rule without variables: ~w"-[Pred:-Body],"rule")
+        assert_semantic_error(warning,"Rule without variables: ~w"-[Head:-Body],"rule")
     ).
+
+warn_too_many_facts :-
+    psem(Module),
+    findall(one, my_clause(Module,_,true), Facts), length(Facts,Nfacts),
+    findall(one,(my_clause(Module,_,Body), Body\==true), Rules), length(Rules,Nrules),
+    (Nrules == 0 -> assert_semantic_error(warning,"Missing rules, only facts are present"-[],program) ;
+        Nfacts>5*Nrules -> assert_semantic_error(warning,"Too many facts, only ~w rules present"-[Nrules],program);
+        true).
+
+my_clause(Module,Head,TheBody) :-
+    module_xref_source(Module,_),
+    (nonvar(Head) -> true ; current_predicate(Module:F/N), functor(Head,F,N)),
+    \+ my_system_predicate(Head), 
+    clause(Module:Head,Body_), 
+    \+ member( Head,
+        [':-'(_), query(_,_),example(_,_),target(_),source_lang(_),'$tabled'(_,_),just_saved_scasp(_,_),
+            predicates(_),local_meta_dict(_,_,_),local_dict(_,_,_),'$wrap$is_a'(_,_),abducible(_,_),'$table_mode'(_,_,_)]),
+    Head =.. List,
+    \+ user_predef_dict(List, _NamesTypes, _Template),
+    (unwrapBody(Body_, Body) -> true ; Body=Body_),
+    nonvar(Body), % too strict for LE ?
+    Body=TheBody.
 
 % HACK: discover atoms that are LIKELY to be missing templates, as they map to bad =/2 subgoals
 % TODO: there should be a much better way to obtain these more precisely near literal_(..) et. al. ;-)

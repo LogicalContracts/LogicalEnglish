@@ -13,6 +13,9 @@ prolog:message(S-Args) --> {atomic(S),is_list(Args)},[S-Args].
 :- use_module(le_answer).
 
 load_program(FileOrTerm,ExtraText,Language,DeleteFile,Module,TaxlogTerms,ExpandedTerms) :- 
+    load_program(FileOrTerm,ExtraText,Language,DeleteFile,false,Module,TaxlogTerms,ExpandedTerms).
+
+load_program(FileOrTerm,ExtraText,Language,DeleteFile,StrictWarnings,Module,TaxlogTerms,ExpandedTerms) :- 
     must_be(boolean,DeleteFile),
     (var(Module) -> uuid(Module) ; true),
     ((atomic(FileOrTerm), exists_file(FileOrTerm)) -> 
@@ -28,7 +31,7 @@ load_program(FileOrTerm,ExtraText,Language,DeleteFile,Module,TaxlogTerms,Expande
     setup_call_cleanup(
         true, 
         (
-            parse_and_load(Module, LEterm,TaxlogTerms,ExpandedTerms,File)
+            parse_and_load(Module, LEterm,StrictWarnings,TaxlogTerms,ExpandedTerms,File)
             % Dict = dict(_PredAsList,_TypesAndNames, _Template),
             % findall(Dict,le_input:Dict,Dicts),
             
@@ -169,7 +172,7 @@ verify_expectations(TestsFile) :-
 verify_expectations(TestFile_,Result) :-
     (atom_concat(LEfile,'.tests',TestFile_) -> TestFile_=TestFile ; atom_concat(TestFile_,'.tests',TestFile), TestFile_=LEfile),
     read_file_to_terms(TestFile, Expectations, []),
-    ( load_program(LEfile,'',_,true,Module,_,_ExpandedTerms) ->
+    ( load_program(LEfile,'',_,true,true,Module,_,_ExpandedTerms) ->
         findall(Outcome,(
             member(expected(Query,Scenario,ExpectedAnswers),Expectations),
             (   query_program_all(Module,Query, with(Scenario), _AnswerExplanations,Answers,Sentences) -> 

@@ -22,6 +22,8 @@ React to the errors and warnings produced by the LE verify command. First edit t
 Generate a template for the sentence and add it to the program 
 ## Rule without variables
 Rules should not refer concrete data, which should be in scenarios; predicates in rules are mostly to refer to variables.
+## Missing rules
+A LE program must have more than just facts, it needs rules.
 ## Predicate is not tested by any query
 Ask the user to provide a query for the predicate, as well as expected answers for all scenarios
 ## Undefined predicate
