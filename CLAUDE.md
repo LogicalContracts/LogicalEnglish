@@ -34,7 +34,7 @@ Ask the user
 This includes a second line with 
     expected ExpectedAnswers got ComputedAnswers
 Be creative and edit the program to fix this.
-## Non terminating goal
+## time_limit_exceeded
 Look for uncontrolled recursions in the program rules and fix them
 # How to convert regulatory text to a LE program
 Perform 3 steps in sequence: 

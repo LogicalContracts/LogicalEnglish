@@ -269,19 +269,16 @@ answer_all(English, Arg, Results) :- %trace, !,
     setup_call_catcher_cleanup( 
             assert_facts(Module, Facts), 
             catch_with_backtrace(
-                findall(Answer, 
+                call_with_time_limit(MAX_SECONDS, findall(Answer, 
                     ( %listing(Module:is_a/2),
-                      catch(
-                            call_with_time_limit(MAX_SECONDS, reasoner:query(at(InnerGoal, Module),_U, le(LE_Explanation), Result) ),
-                            time_limit_exceeded,
-                            (print_message(error,"Non terminating goal ~q"-[InnerGoal]), fail)
-                        ) ,
+                      reasoner:query(at(InnerGoal, Module),_U, le(LE_Explanation), Result) ,
                       produce_html_explanation(LE_Explanation, E), correct_answer(InnerGoal, E, Result, Answer_),
                       % stringify to avoid breaking existing clients of this predicate:
                       numbervars(InnerGoal), term_string(InnerGoal,Bindings,[numbervars(true)]),
                       put_dict(bindings, Answer_, Bindings, Answer)                      
                       ),
-                    Results), 
+                    Results))
+                , 
                 Error, 
                 ( print_message(error, Error)) 
                 ),
@@ -289,7 +286,6 @@ answer_all(English, Arg, Results) :- %trace, !,
             retract_facts(Module, Facts)),
     Results \== [],
     !. 
-
 answer_all(English, Arg, [ _{answer:'Failure', explanation:E}])  :-
     %print_message(error, "Failed to answer question: ~w"-[English]),
     with_output_to(string(E), 
