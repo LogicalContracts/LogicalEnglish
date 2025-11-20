@@ -48,7 +48,7 @@ Focusing on the given text only:
 * Extract rules in the text that define the truth of those predicates. 
 * Extract examples from the text, if any present, that show how the regulatory text applies to concrete scenarios: data in the scenario, a query and the expected answers
 * If the given text contains no examples, summarise the text in a short sentence S, search the web with "examples for S", and collect a few examples from the top page
-Finally, summarise your findings in a new .txt file
+Finally, you MUST summarise your findings in a new .txt file, prior to writing the LE program.
 ## Write the LE program
 Before each LE element, put a PROLOG comment with its provenance within the given text, or web URL if the element originated in a web search.
 * Write the templates based on the predicates found 
