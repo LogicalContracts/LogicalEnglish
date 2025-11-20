@@ -1216,7 +1216,7 @@ prolog:xref_source_identifier(File, File).
 literal_to_sentence(Literal,Module,Sentence) :-
     Literal =..CalledList,
     catch((
-        Module:local_dict(CalledList,_,Sentence_),
+        (dictionary(CalledList, _, Sentence_) -> true ; Module:local_dict(CalledList,_,Sentence_)),
         atomic_list_concat(Sentence_,' ',Sentence)
         ),
         Ex,
