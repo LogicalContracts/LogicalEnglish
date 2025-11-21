@@ -551,7 +551,10 @@ retract_facts_(_, []) :- !.
 retract_facts_(SwishModule, [F|R]) :-  % print_message(informational, "retracting: ~w"-[SwishModule:F]),
     (nonvar(F) -> 
         (F=(Fact:-_) -> true ; F=Fact),
-        retractall(SwishModule:Fact) 
+        (\+ member(Fact,[is_a(_,_)]) -> % HACK to protect some special predicates
+            retractall(SwishModule:Fact) 
+            ; 
+            true)
         ; 
         true), 
     retract_facts_(SwishModule, R). 
