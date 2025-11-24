@@ -1,2 +1,2 @@
 expected(one,one,["5 is the result"]).
-expected(two,one,[]).
+expected(two,one,["3 is an factor","2 is an factor","0 is an factor","a is an c","a is an b","b is an c"]).

@@ -6,7 +6,7 @@ expected('A','significant exports',[]).
 expected('A','small business',[]).
 expected('A',uber,[]).
 expected('B','A',[]).
-expected('B','B',["sporting club must register for GST","sporting club must register for GST"]).
+expected('B','B',[]).
 expected('B','C',[]).
 expected('B',typical,[]).
 expected('B','significant exports',[]).
@@ -19,8 +19,8 @@ expected('C',typical,[]).
 expected('C','significant exports',[]).
 expected('C','small business',[]).
 expected('C',uber,[]).
-expected('not-for-profit','A',[]).
-expected('not-for-profit','B',[]).
+expected('not-for-profit','A',["Cherrio Charity is an not - for - profit"]).
+expected('not-for-profit','B',["sporting club is an not - for - profit"]).
 expected('not-for-profit','C',[]).
 expected('not-for-profit',typical,[]).
 expected('not-for-profit','significant exports',[]).
@@ -40,10 +40,10 @@ expected(gst_turnover,typical,["90909.09 is the GST Turnover"]).
 expected(gst_turnover,'significant exports',["68181.82 is the GST Turnover"]).
 expected(gst_turnover,'small business',["0 is the GST Turnover"]).
 expected(gst_turnover,uber,[]).
-expected(who,'A',["Cherrio Charity must register for GST","Cherrio Charity must register for GST"]).
-expected(who,'B',["sporting club must register for GST","sporting club must register for GST"]).
+expected(who,'A',["Cherrio Charity must register for GST"]).
+expected(who,'B',[]).
 expected(who,'C',["Tom s Bakery must register for GST","Tom s Bakery must register for GST"]).
 expected(who,typical,[]).
 expected(who,'significant exports',[]).
 expected(who,'small business',[]).
-expected(who,uber,[]).
+expected(who,uber,["mario must register for GST"]).
