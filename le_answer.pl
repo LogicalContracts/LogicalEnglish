@@ -550,11 +550,11 @@ retract_facts(M,F) :-
 retract_facts_(_, []) :- !. 
 retract_facts_(SwishModule, [F|R]) :-  % print_message(informational, "retracting: ~w"-[SwishModule:F]),
     (nonvar(F) -> 
-        (F=(Fact:-_) -> true ; F=Fact),
-        (\+ member(Fact,[is_a(_,_)]) -> % HACK to protect some special predicates
-            retractall(SwishModule:Fact) 
-            ; 
-            true)
+        %(F=(Fact:-_) -> true ; F=Fact),
+        %(\+ member(Fact,[is_a(_,_)]) -> % HACK to protect some special predicates %% but an is_a in the scenario should be retracted!
+        retract(SwishModule:F) 
+        %    ; 
+        %    true)
         ; 
         true), 
     retract_facts_(SwishModule, R). 
@@ -981,6 +981,7 @@ le_taxlog_translate( LEterm, File, BaseLine, Terms) :-
     memberchk(Lang,[en,fr,it,es]),
     clear_errors,
     (le_input:text_to_logic(Text, Terms) -> clear_errors; showErrors(File,BaseLine)).
+% for cases in which we load the prolog previously translated (which contains prolog_le(verified))
 le_taxlog_translate( prolog_le(verified), _, _, prolog_le(verified)) :- %trace, % running from prolog file
     assertz(le_input:parsed), %this_capsule(M),  
     %assertz(M:just_saved_scasp(null, null)), 
@@ -1058,13 +1059,30 @@ asserting(File, ExpandedTerms) :-
             assertz(File:T)
     )). % simulating term expansion
 
-%retracting/2
-retracting(File, ExpandedTerms) :- 
-    %print_message(error, "Cleaning ~w of ~w"-[M, ExpandedTerms]), 
+%retracting/2 ExpandedTerms is not actually needed here
+retracting(Module, _ExpandedTerms) :- 
+    %print_message(error, "Cleaning ~w of ~w"-[File, ExpandedTerms]), 
     % cleaning memory
-    forall(member(T, [(:-module(File,[])), source_lang(en)|ExpandedTerms]), 
-        ( %print_message(informational, "Removing File:T ~w:~w"-[File,T]), 
-         retractall(File:T))).
+    %forall(member(T, [(:-module(File,[])), source_lang(en)|ExpandedTerms]), 
+    %    ( print_message(informational, "Removing File:T ~w:~w"-[File,T]), 
+    %     retract(File:T))).
+    retractall(le_input:is_type(_)), % clean all is_type/1 to avoid hidden type conflicts
+    retractall(Module:is_a(_,_)), % clean all is_a/2 to avoid taxonomy conflicts 
+    % clean all predicates except tabled and system ones
+    findall(Module:Term, (current_predicate(Module:Name/Arity), 
+                          functor(Term, Name, Arity), 
+                          not(Name = '$table_mode'), % not touching tabled predicates
+                          not(Name = '$tabled'), % not touching tabled predicates
+                          not(Name = '$wrap$is_a'), 
+                          not(Name = is_a), % not touching is_a/2 again
+                          not(Name = listing), 
+                          not(Name = aggregate_all), % not touching aggregate_all/3
+                          not(predicate_property(system:Term, built_in)), % not touching system predicates
+                          not(predicate_property(Module:Term,imported_from(reasoner))) % not touching imported reasoner predicates   
+                          ), Predicates), 
+    %print_message(informational, " Cleaning predicates ~w"-[Predicates]),
+    forall(member(P, Predicates), retractall(P)).
+
 
 parse_and_load(File, Document,TaxlogTerms,ExpandedTerms,NewFileName) :-
     parse_and_load(File, Document,false,TaxlogTerms,ExpandedTerms,NewFileName).
@@ -1074,7 +1092,7 @@ parse_and_load(File, Document,StrictWarnings,TaxlogTerms,ExpandedTerms,NewFileNa
     %print_message(informational, "parse_and_query ~w ~w ~w ~w"-[File, Document, Question, Scenario]),
 	%prolog_load_context(source,File), % atom_prefix(File,'pengine://'), % process only SWISH windows
 	%prolog_load_context(term_position,TP), stream_position_data(line_count,TP,Line),
-    clear_dicts,
+    %clear_dicts,
     clear_semantic_errors,
     le_taxlog_translate(Document, File, 1, TaxlogTerms),
     set_psem(File),
@@ -1094,9 +1112,9 @@ parse_and_load(File, Document,StrictWarnings,TaxlogTerms,ExpandedTerms,NewFileNa
     warn_about_ground_rules,
     (StrictWarnings==true -> 
         warn_too_many_facts 
-        ; true),
+        ; true).
     % base syntax errors are shown by showerrors called from le_taxlog_translate:
-    show_semantic_errors.
+    %show_semantic_errors.
 
 %%%% some lint-like verifications, mostly dependent on xref
 warn_about_ground_rules :-
