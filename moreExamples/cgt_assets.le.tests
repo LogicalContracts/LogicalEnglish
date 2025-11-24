@@ -5,8 +5,8 @@ expected('cgt asset','Legal',[]).
 expected('cgt asset','Loan',[]).
 expected('cgt asset','Insurance',[]).
 expected('cgt asset','Mixed',["asset fridge is an CGT asset"]).
-expected('exempt asset','Colin',["asset two is an CGT exempt asset","asset one is an CGT exempt asset"]).
-expected('exempt asset','Crypto',["asset nft_gift is an CGT exempt asset","asset bitcoin is an CGT exempt asset"]).
+expected('exempt asset','Colin',["asset one is an CGT exempt asset","asset two is an CGT exempt asset"]).
+expected('exempt asset','Crypto',["asset bitcoin is an CGT exempt asset","asset nft_gift is an CGT exempt asset"]).
 expected('exempt asset','Farmer',[]).
 expected('exempt asset','Legal',["asset lawsuit_settlement is an CGT exempt asset"]).
 expected('exempt asset','Loan',["asset stamps is an CGT exempt asset"]).

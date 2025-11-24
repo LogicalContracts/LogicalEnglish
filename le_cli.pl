@@ -181,7 +181,7 @@ verify_expectations(TestFile_,Result) :-
     ( load_program(LEfile,'',_,true,true,Module,_,_ExpandedTerms) ->
         findall(Outcome,(
             member(expected(Query,Scenario,ExpectedAnswers),Expectations),
-            (   query_program_all(Module,Query, with(Scenario), _AnswerExplanations,Answers,Sentences) -> 
+            (   query_program_all(Module,Query, with(Scenario), _AnswerExplanations,_Answers,Sentences) -> 
                     ((
                         Sentences=ExpectedAnswers
                         ) -> 
@@ -190,7 +190,7 @@ verify_expectations(TestFile_,Result) :-
                         format("Test failure in scenario ~w for query ~w:~n",[Scenario,Query]),
                         % format("AE: ~q~n",[AnswerExplanations]),
                         format("expected ~q got ~q~n",[ExpectedAnswers, Sentences]),
-                        Outcome=expected(ExpectedAnswers)-got(Answers)
+                        Outcome=expected(ExpectedAnswers)-got(Sentences)
                     )
                 ;
                 Outcome=failed
