@@ -35,7 +35,7 @@ which can be used on the new command interface of LE on SWISH
     dump/4, dump/3, dump/2, dump_scasp/3, split_module_name/3, just_saved_scasp/2, psem/1, set_psem/1,
     prepare_query/6, assert_facts/2, retract_facts/2, parse_and_query/5, parse_and_query_and_explanation/6, parse_and_query_all_answers/5,
     parse_and_query_and_explanation_text/6, le_expanded_terms/2, show/1, source_lang/1, targetBody/6, query_and_explanation_text/4,
-    parse_and_load/5, parse_and_load/6, literal_to_sentence/3, top2levels_predicate/3, top_intensional_predicate/3
+    parse_and_load/5, parse_and_load/6, literal_to_sentence/3, top2levels_predicate/3, top_intensional_predicate/3, retracting/2
     ]).
 
 
@@ -721,9 +721,7 @@ targetBody(G, false, _, '', [], _) :-
 
 collect_current_dicts(PredicatesDict,PredicatesMeta) :-
     findall(local_dict(Prolog, NamesTypes, Templates), 
-        le_input:dict(Prolog, NamesTypes, Templates), 
-        %TODO: Ideally we should use the following, but it hangs after loading the first test in the suite (cgt_assets.le):
-        % le_input:dictionary(Prolog, NamesTypes, Templates), 
+        le_input:dictionary(Prolog, NamesTypes, Templates), 
         PredicatesDict),
     findall(local_meta_dict(Prolog, NamesTypes, Templates), 
         le_input:meta_dictionary(Prolog, NamesTypes, Templates), 

@@ -68,7 +68,8 @@ query_program_one(Module,Question, Scenario_, AnswerExplanation) :-
     set_psem(Module),
     le_answer:restore_dicts_from_module(Module),
     (Scenario_=with(_) -> Scenario=Scenario_ ; Scenario=with(Scenario_)),
-    le_answer:answer( Question, Scenario, AnswerExplanation).
+    le_answer:answer( Question, Scenario, AnswerExplanation),
+    retractall(le_input:is_type(_)). % clean all is_type/1 to avoid hidden type conflicts
 
 query_program_one(Question, Scenario, AnswerExplanation) :-
     psem(Module),
@@ -89,7 +90,8 @@ query_program_all(Module,Question, Scenario_, AnswerExplanations,Answers,Sentenc
             ), Answers),
     length(Answers,Positives), length(AnswerExplanations,All),
     assertion(Positives+1>=All),
-    answers_to_sentences(Answers,Module,Sentences).
+    answers_to_sentences(Answers,Module,Sentences),
+    retractall(le_input:is_type(_)). % clean all is_type/1 to avoid hidden type conflicts
 
 query_program_all(Question, Scenario, AnswerExplanations,Answers) :-
     psem(Module),
