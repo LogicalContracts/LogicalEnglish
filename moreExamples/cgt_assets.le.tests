@@ -1,6 +1,6 @@
 expected('cgt asset','Colin',[]).
 expected('cgt asset','Crypto',["asset bitcoin is an CGT asset"]).
-expected('cgt asset','Farmer',["asset commercial_farm is an CGT asset","asset hobby_farm is an CGT asset","asset tractor_business is an CGT asset","asset tractor_business is an CGT asset"]).
+expected('cgt asset','Farmer',["asset tractor_business is an CGT asset","asset tractor_business is an CGT asset","asset hobby_farm is an CGT asset","asset commercial_farm is an CGT asset"]).
 expected('cgt asset','Legal',[]).
 expected('cgt asset','Loan',[]).
 expected('cgt asset','Insurance',[]).
