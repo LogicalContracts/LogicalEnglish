@@ -18,7 +18,8 @@ limitations under the License.
     run_examples/0, run_examples/1, myClause2/9, myClause/4, taxlogWrapper/10, niceModule/2, refToOrigin/2,
     isafter/2, is_not_before/2, isbefore/2, immediately_before/2, same_date/2, subtract_days/3, this_year/1, uk_tax_year/4, in/2,
     isExpressionFunctor/1, set_time_of_day/3, start_of_day/2, end_of_day/2, is_days_after/3, is_1_day_after/2, unparse_time/2,
-    isafterorequal/2, isbeforeorequal/2, isafter/2, isbefore/2, is_not_before/2, has_as_head_before/3
+    isafterorequal/2, isbeforeorequal/2, isafter/2, isbefore/2, is_not_before/2, has_as_head_before/3,
+    translate_to_le/2
     ]).
 
 /** <module> Tax-KB reasoner and utils

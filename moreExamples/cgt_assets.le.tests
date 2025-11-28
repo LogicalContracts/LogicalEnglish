@@ -1,15 +1,15 @@
 expected('cgt asset','Colin',[]).
-expected('cgt asset','Crypto',["asset bitcoin is an CGT asset"]).
-expected('cgt asset','Farmer',["asset tractor_business is an CGT asset","asset tractor_business is an CGT asset","asset commercial_farm is an CGT asset","asset hobby_farm is an CGT asset"]).
+expected('cgt asset','Crypto',["asset bitcoin is a CGT asset"]).
+expected('cgt asset','Farmer',["asset hobby_farm is a CGT asset","asset tractor_business is a CGT asset","asset tractor_business is a CGT asset","asset commercial_farm is a CGT asset"]).
 expected('cgt asset','Legal',[]).
 expected('cgt asset','Loan',[]).
 expected('cgt asset','Insurance',[]).
-expected('cgt asset','Mixed',["asset fridge is an CGT asset"]).
-expected('exempt asset','Colin',["asset one is an CGT exempt asset","asset two is an CGT exempt asset"]).
-expected('exempt asset','Crypto',["asset nft_gift is an CGT exempt asset","asset bitcoin is an CGT exempt asset"]).
+expected('cgt asset','Mixed',["asset fridge is a CGT asset"]).
+expected('exempt asset','Colin',["asset one is a CGT exempt asset","asset two is a CGT exempt asset"]).
+expected('exempt asset','Crypto',["asset nft_gift is a CGT exempt asset","asset bitcoin is a CGT exempt asset"]).
 expected('exempt asset','Farmer',[]).
-expected('exempt asset','Legal',["asset lawsuit_settlement is an CGT exempt asset"]).
-expected('exempt asset','Loan',["asset stamps is an CGT exempt asset"]).
+expected('exempt asset','Legal',["asset lawsuit_settlement is a CGT exempt asset"]).
+expected('exempt asset','Loan',["asset stamps is a CGT exempt asset"]).
 expected('exempt asset','Insurance',[]).
 expected('exempt asset','Mixed',[]).
 expected(predate,'Colin',[]).

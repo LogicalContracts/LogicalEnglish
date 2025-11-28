@@ -125,9 +125,10 @@ generate_expectations(LEfile) :-
 
 % Example: verify_expectations('/Users/mc/git/LogicalEnglish/moreExamples').
 
-answers_to_sentences(Answers_,Module,Sentences) :-
+answers_to_sentences(Answers_,_Module,Sentences) :-
     findall(Sentence,(
-        member(Answer_,Answers_), literal_to_sentence(Answer_,Module,Sentence_),
+        member(Answer_,Answers_), 
+        literal_to_sentence(Answer_,Sentence_), % now using the version dependent on current dictionary(..)
         term_to_clean_string(Sentence_,Sentence)
         ), Sentences).
 

@@ -7,6 +7,6 @@ expected('B','C',[]).
 expected('C','A',[]).
 expected('C','B',[]).
 expected('C','C',["Tom s Bakery must register for GST"]).
-expected('not-for-profit','A',["Cherrio Charity is an not - for - profit"]).
-expected('not-for-profit','B',["sporting club is an not - for - profit"]).
+expected('not-for-profit','A',["Cherrio Charity is a not - for - profit"]).
+expected('not-for-profit','B',["sporting club is a not - for - profit"]).
 expected('not-for-profit','C',[]).
