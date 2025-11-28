@@ -1,0 +1,130 @@
+the target language is: prolog.
+
+the templates are:
+*a person* acquires British citizenship by birth,
+*a person* acquires British citizenship by descent,
+*a person* acquires British citizenship,
+*a person* is born in the UK on *a date*,
+*a person* is born outside the UK on *a date*,
+*a parent* is a British citizen on *a date*,
+*a parent* is a British citizen otherwise than by descent on *a date*,
+*a parent* is settled in the UK on *a date*,
+*a person* has a father *a parent*,
+*a person* has a mother *a parent*,
+*a person* is a British citizen on *a date*,
+*a person* is a British citizen by descent on *a date*,
+*a person* is a British citizen otherwise than by descent on *a date*,
+*a date* is after commencement.
+
+the knowledge base bna includes:
+
+% Section 1: Birth citizenship rules - when a person is born in the UK after commencement
+% and their father or mother is a British citizen or settled in the UK
+
+a person acquires British citizenship by birth if
+    the person is born in the UK on a date
+    and the date is after commencement
+    and the person has a father a parent
+    and the parent is a British citizen on the date.
+
+a person acquires British citizenship by birth if
+    the person is born in the UK on a date
+    and the date is after commencement
+    and the person has a mother a parent
+    and the parent is a British citizen on the date.
+
+a person acquires British citizenship by birth if
+    the person is born in the UK on a date
+    and the date is after commencement
+    and the person has a father a parent
+    and the parent is settled in the UK on the date.
+
+a person acquires British citizenship by birth if
+    the person is born in the UK on a date
+    and the date is after commencement
+    and the person has a mother a parent
+    and the parent is settled in the UK on the date.
+
+% Section 2: Descent citizenship rules - when a person is born outside the UK after commencement
+% and their father or mother is a British citizen otherwise than by descent
+
+a person acquires British citizenship by descent if
+    the person is born outside the UK on a date
+    and the date is after commencement
+    and the person has a father a parent
+    and the parent is a British citizen otherwise than by descent on the date.
+
+a person acquires British citizenship by descent if
+    the person is born outside the UK on a date
+    and the date is after commencement
+    and the person has a mother a parent
+    and the parent is a British citizen otherwise than by descent on the date.
+
+% General rule: A person acquires British citizenship if they acquire it by any specific means
+a person acquires British citizenship if
+    the person acquires British citizenship by birth.
+
+a person acquires British citizenship if
+    the person acquires British citizenship by descent.
+
+% General citizenship status rules
+a person is a British citizen on a date if
+    the person acquires British citizenship by birth
+    and the person is born in the UK on the date.
+
+a person is a British citizen on a date if
+    the person acquires British citizenship by descent
+    and the person is born outside the UK on the date.
+
+% Classification as British citizen by descent (Section 14)
+a person is a British citizen by descent on a date if
+    the person acquires British citizenship by descent
+    and the person is born outside the UK on the date.
+
+a person is a British citizen otherwise than by descent on a date if
+    the person acquires British citizenship by birth
+    and the person is born in the UK on the date.
+
+% Facts about dates after commencement (Act commenced on 1983-01-01)
+1983 is after commencement.
+1985 is after commencement.
+1990 is after commencement.
+2000 is after commencement.
+
+scenario birth_citizenship is:
+    John is born in the UK on 1985.
+    John has a father Peter.
+    Peter is a British citizen on 1985.
+
+scenario descent_citizenship is:
+    Mary is born outside the UK on 1990.
+    Mary has a mother Sarah.
+    Sarah is a British citizen otherwise than by descent on 1990.
+
+scenario settled_parent is:
+    David is born in the UK on 2000.
+    David has a father Robert.
+    Robert is settled in the UK on 2000.
+
+scenario mixed_family is:
+    Emma is born in the UK on 1985.
+    Emma has a mother Kate.
+    Kate is a British citizen on 1985.
+    Tom is born outside the UK on 1990.
+    Tom has a father James.
+    James is a British citizen otherwise than by descent on 1990.
+
+query birth_citizenship is:
+    which person acquires British citizenship by birth.
+
+query descent_citizenship is:
+    which person acquires British citizenship by descent.
+
+query general_citizenship is:
+    which person acquires British citizenship.
+
+query citizenship_status is:
+    which person is a British citizen on 1985.
+
+query descent_classification is:
+    which person is a British citizen by descent on 1990.

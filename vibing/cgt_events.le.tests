@@ -1,0 +1,21 @@
+% Test case from ATO example: Sue's land sale contract in June 2024, settlement October 2024
+% CGT event occurs on contract date (June), not settlement date (October)
+expected(query_1, sue_land_sale, ["sue has a cgt event of type a1 on 1718409600.0 for land"]).
+
+% Capital gain calculation: $350,000 (proceeds) - $200,000 (cost base) = $150,000 gain  
+expected(query_2, sue_land_sale, ["sue makes a capital gain of 150000 on 1718409600.0 for land"]).
+
+% Test case from ATO example: Laurie's rental property destroyed by fire June 2024, 
+% insurance compensation received October 2024
+% CGT event occurs when compensation is received (October), not when destruction occurred (June)
+expected(query_1, laurie_fire_insurance, ["laurie has a cgt event of type c1 on 1728950400.0 for rental property"]).
+
+% Capital gain calculation: $180,000 (compensation) - $150,000 (cost base) = $30,000 gain
+expected(query_2, laurie_fire_insurance, ["laurie makes a capital gain of 30000 on 1728950400.0 for rental property"]).
+
+% Test case from ATO example: Christine's property damaged by flood May 2024, no compensation  
+% CGT event occurs when damage occurred (May) since no compensation received
+expected(query_1, christine_flood_no_insurance, ["christine has a cgt event of type c1 on 1716163200.0 for flood property"]).
+
+% Christine has no capital gain because she received no compensation (would be a capital loss scenario)
+expected(query_2, christine_flood_no_insurance, []).

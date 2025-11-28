@@ -1,0 +1,65 @@
+ANALYSIS OF CITIZENS ADVICE SCOTLAND PARKING TICKETS ON PRIVATE LAND REGULATIONS
+
+SOURCE: https://www.citizensadvice.org.uk/scotland/law-and-courts/parking-tickets/parking-tickets-on-private-land-s/
+
+MAIN PREDICATES IDENTIFIED:
+1. A parking charge notice is valid for person P, operator O, amount A, on date D
+2. A person P can challenge a parking ticket T on grounds G
+3. A parking operator O can issue a ticket T to person P for amount A
+4. Parking rules R are clearly displayed at location L
+5. A person P breached parking conditions C at location L
+6. A charge amount A is reasonable for breach B
+7. An appeal A can be made to service S for ticket T
+8. A parking operator O is member of trade association TA
+9. A person P has valid challenge grounds G for ticket T
+
+TYPES/ONTOLOGY:
+- Person: driver, vehicle owner, disabled person
+- Parking operator: private company, landowner agent
+- Landowner: property owner, business owner
+- Parking charge notice/ticket: PCN with amount, date, location
+- Appeal: informal appeal, POPLA appeal, IAS appeal
+- Private land: private car park, business premises, residential area
+- Amount: monetary value (max £100)
+- Date/Time: ticket issue date, parking time, appeal deadline
+- Trade association: BPA (British Parking Association), IPC (International Parking Community)
+- Appeals service: POPLA, IAS (Independent Appeals Service)
+- Challenge grounds: unclear rules, discrimination, emergency, wrong person
+
+KEY RULES EXTRACTED:
+1. A parking charge notice is valid if:
+   - Issued on private land
+   - Clear parking signs are displayed
+   - Person breached parking conditions
+   - Charge does not exceed £100
+
+2. A person can challenge a ticket if:
+   - Parking rules were not clearly visible
+   - No parking rules were actually breached
+   - Someone else was driving the car
+   - There was a valid reason for breaking the rules
+   - The charge seems discriminatory
+   - The charge amount is unreasonably high
+
+3. Appeals process follows sequence:
+   - Informal appeal to parking operator
+   - Formal appeal to independent service (POPLA/IAS)
+   - Complaint to trade association if applicable
+   - Report to Trading Standards
+
+4. Parking operators should be members of trade associations for credibility
+
+EXAMPLES/SCENARIOS EXTRACTED:
+1. Person parks without permission where clear signs exist → Valid ticket can be issued
+2. Person parks where parking rules are unclear/not visible → Valid grounds to challenge
+3. Disabled person parks illegally due to medical emergency → Valid challenge grounds
+4. Person receives £150 charge → Can challenge as exceeds £100 limit
+5. Wrong person receives ticket (car was driven by someone else) → Valid challenge grounds
+
+QUERIES TO BE TESTED:
+- Is a parking charge notice valid?
+- Can a person challenge a parking ticket?
+- What are the valid challenge grounds?
+- Can a parking operator issue a ticket?
+- Is a charge amount reasonable?
+- What is the appeals process?

@@ -1,0 +1,15 @@
+expected(loan_advance, normal_case, []).
+expected(loan_advance, missed_payment, []).
+expected(loan_advance, bankruptcy, []).
+
+expected(payment_obligations, normal_case, ["a payment of 550 is due from Borrower Corp to Lender Bank Co on 1433116800.0", "a payment of 525 is due from Borrower Corp to Lender Bank Co on 1464739200.0"]).
+expected(payment_obligations, missed_payment, ["a payment of 550 is due from Borrower Corp to Lender Bank Co on 1433116800.0", "a payment of 525 is due from Borrower Corp to Lender Bank Co on 1464739200.0"]).  
+expected(payment_obligations, bankruptcy, ["a payment of 550 is due from Borrower Corp to Lender Bank Co on 1433116800.0", "a payment of 525 is due from Borrower Corp to Lender Bank Co on 1464739200.0"]).
+
+expected(default_status, normal_case, []).
+expected(default_status, missed_payment, []).
+expected(default_status, bankruptcy, ["Borrower Corp is in default under the agreement on 1425168000.0"]).
+
+expected(acceleration, normal_case, []).
+expected(acceleration, missed_payment, []).
+expected(acceleration, bankruptcy, ["all outstanding amounts become immediately due from Borrower Corp to Lender Bank Co on 1425168000.0"]).

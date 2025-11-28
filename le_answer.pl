@@ -35,7 +35,7 @@ which can be used on the new command interface of LE on SWISH
     dump/4, dump/3, dump/2, dump_scasp/3, split_module_name/3, just_saved_scasp/2, psem/1, set_psem/1,
     prepare_query/6, assert_facts/2, retract_facts/2, parse_and_query/5, parse_and_query_and_explanation/6, parse_and_query_all_answers/5,
     parse_and_query_and_explanation_text/6, le_expanded_terms/2, show/1, source_lang/1, targetBody/6, query_and_explanation_text/4,
-    parse_and_load/5, term_to_clean_string/2
+    parse_and_load/5, parse_and_load/6, literal_to_sentence/3, literal_to_sentence/2, top2levels_predicate/3, top_intensional_predicate/3, retracting/2
     ]).
 
 
@@ -265,10 +265,11 @@ answer_all(English, Arg, Results) :- %trace, !,
     % append(FactsPre, [(is_a_(X,Y):-is_a(X,Y)), (is_a(A, B):-(is_a_(A, C),is_a(C, B)))], Facts),
     append(FactsPre, [(is_a(A, B):-(is_a(A, C),is_a(C, B)))], Facts),
     %print_message(informational, "Answering: ~w with ~w "-[English, Arg]),
+    MAX_SECONDS=0.4, % anticipating the reasoner's default limit of 0.5
     setup_call_catcher_cleanup( 
             assert_facts(Module, Facts), 
             catch_with_backtrace(
-                findall(Answer, 
+                call_with_time_limit(MAX_SECONDS, findall(Answer, 
                     ( %listing(Module:is_a/2),
                       reasoner:query(at(InnerGoal, Module),_U, le(LE_Explanation), Result) ,
                       produce_html_explanation(LE_Explanation, E), correct_answer(InnerGoal, E, Result, Answer_),
@@ -276,7 +277,8 @@ answer_all(English, Arg, Results) :- %trace, !,
                       numbervars(InnerGoal), term_string(InnerGoal,Bindings,[numbervars(true)]),
                       put_dict(bindings, Answer_, Bindings, Answer)                      
                       ),
-                    Results), 
+                    Results))
+                , 
                 Error, 
                 ( print_message(error, Error)) 
                 ),
@@ -284,17 +286,10 @@ answer_all(English, Arg, Results) :- %trace, !,
             retract_facts(Module, Facts)),
     Results \== [],
     !. 
-
 answer_all(English, Arg, [ _{answer:'Failure', explanation:E}])  :-
     %print_message(error, "Failed to answer question: ~w"-[English]),
     with_output_to(string(E), 
         format("Failed to answer question: ~w : ~w", [English, Arg])), !.    
-
-% term_string/2 but normalizing variable names to A,B,...
-% BEWARE as this BINDS T
-term_to_clean_string(T,S) :-
-    must_be(nonvar,T),
-    numbervars(T), term_string(T,S,[numbervars(true)]).
 
 % pre_answer/5
 pre_answer(English, Arg, FactsPre, Module, InnerGoal) :- !, 
@@ -555,8 +550,11 @@ retract_facts(M,F) :-
 retract_facts_(_, []) :- !. 
 retract_facts_(SwishModule, [F|R]) :-  % print_message(informational, "retracting: ~w"-[SwishModule:F]),
     (nonvar(F) -> 
-        (F=(Fact:-_) -> true ; F=Fact),
-        retractall(SwishModule:Fact) 
+        %(F=(Fact:-_) -> true ; F=Fact),
+        %(\+ member(Fact,[is_a(_,_)]) -> % HACK to protect some special predicates %% but an is_a in the scenario should be retracted!
+        retract(SwishModule:F) 
+        %    ; 
+        %    true)
         ; 
         true), 
     retract_facts_(SwishModule, R). 
@@ -723,9 +721,7 @@ targetBody(G, false, _, '', [], _) :-
 
 collect_current_dicts(PredicatesDict,PredicatesMeta) :-
     findall(local_dict(Prolog, NamesTypes, Templates), 
-        le_input:dict(Prolog, NamesTypes, Templates), 
-        %TODO: Ideally we should use the following, but it hangs after loading the first test in the suite (cgt_assets.le):
-        % le_input:dictionary(Prolog, NamesTypes, Templates), 
+        le_input:dictionary(Prolog, NamesTypes, Templates), 
         PredicatesDict),
     findall(local_meta_dict(Prolog, NamesTypes, Templates), 
         le_input:meta_dictionary(Prolog, NamesTypes, Templates), 
@@ -980,9 +976,10 @@ le_taxlog_translate( EnText, Terms) :- le_taxlog_translate( EnText, someFile, 1,
 % Baseline is the line number of the start of Logical English text
 le_taxlog_translate( LEterm, File, BaseLine, Terms) :-
     LEterm =.. [Lang,Text],
-    assertion( memberchk(Lang,[en,fr,it,es]) ),
+    memberchk(Lang,[en,fr,it,es]),
     clear_errors,
     (le_input:text_to_logic(Text, Terms) -> clear_errors; showErrors(File,BaseLine)).
+% for cases in which we load the prolog previously translated (which contains prolog_le(verified))
 le_taxlog_translate( prolog_le(verified), _, _, prolog_le(verified)) :- %trace, % running from prolog file
     assertz(le_input:parsed), %this_capsule(M),  
     %assertz(M:just_saved_scasp(null, null)), 
@@ -1060,19 +1057,40 @@ asserting(File, ExpandedTerms) :-
             assertz(File:T)
     )). % simulating term expansion
 
-%retracting/2
-retracting(File, ExpandedTerms) :- 
-    %print_message(error, "Cleaning ~w of ~w"-[M, ExpandedTerms]), 
+%retracting/2 ExpandedTerms is not actually needed here
+retracting(Module, _ExpandedTerms) :- 
+    %print_message(error, "Cleaning ~w of ~w"-[File, ExpandedTerms]), 
     % cleaning memory
-    forall(member(T, [(:-module(File,[])), source_lang(en)|ExpandedTerms]), 
-        ( %print_message(informational, "Removing File:T ~w:~w"-[File,T]), 
-         retractall(File:T))).
+    %forall(member(T, [(:-module(File,[])), source_lang(en)|ExpandedTerms]), 
+    %    ( print_message(informational, "Removing File:T ~w:~w"-[File,T]), 
+    %     retract(File:T))).
+    retractall(le_input:is_type(_)), % clean all is_type/1 to avoid hidden type conflicts
+    retractall(Module:is_a(_,_)), % clean all is_a/2 to avoid taxonomy conflicts 
+    % clean all predicates except tabled and system ones
+    findall(Module:Term, (current_predicate(Module:Name/Arity), 
+                          functor(Term, Name, Arity), 
+                          not(Name = '$table_mode'), % not touching tabled predicates
+                          not(Name = '$tabled'), % not touching tabled predicates
+                          not(Name = '$wrap$is_a'), 
+                          not(Name = is_a), % not touching is_a/2 again
+                          not(Name = listing), 
+                          not(Name = aggregate_all), % not touching aggregate_all/3
+                          not(predicate_property(system:Term, built_in)), % not touching system predicates
+                          not(predicate_property(Module:Term,imported_from(reasoner))) % not touching imported reasoner predicates   
+                          ), Predicates), 
+    %print_message(informational, " Cleaning predicates ~w"-[Predicates]),
+    forall(member(P, Predicates), retractall(P)).
+
 
 parse_and_load(File, Document,TaxlogTerms,ExpandedTerms,NewFileName) :-
+    parse_and_load(File, Document,false,TaxlogTerms,ExpandedTerms,NewFileName).
+
+parse_and_load(File, Document,StrictWarnings,TaxlogTerms,ExpandedTerms,NewFileName) :-
+    must_be(boolean,StrictWarnings),
     %print_message(informational, "parse_and_query ~w ~w ~w ~w"-[File, Document, Question, Scenario]),
 	%prolog_load_context(source,File), % atom_prefix(File,'pengine://'), % process only SWISH windows
 	%prolog_load_context(term_position,TP), stream_position_data(line_count,TP,Line),
-    clear_dicts,
+    %clear_dicts,
     clear_semantic_errors,
     le_taxlog_translate(Document, File, 1, TaxlogTerms),
     set_psem(File),
@@ -1085,10 +1103,48 @@ parse_and_load(File, Document,TaxlogTerms,ExpandedTerms,NewFileName) :-
     asserting(File, Dicts),
     assert_missing_templates_in_bodies(File),
     xref_source(NewFileName), assert(module_xref_source(File,NewFileName)),
-    undefined_le_predicates(TemplateStrings),
-    forall(member(TS,TemplateStrings),assert_semantic_error(warning,"Undefined predicate ~q"-[TS],"rule body")),
+    undefined_le_predicates(UndefinedTemplateStrings),
+    forall(member(TS,UndefinedTemplateStrings),assert_semantic_error(warning,"Undefined predicate ~q"-[TS],"rule body")),
+    unqueried_predicates(UnqueriedTemplateStrings),
+    forall(member(TS,UnqueriedTemplateStrings),assert_semantic_error(warning,"This predicate is not tested by any query: ~q"-[TS],"queries")),
+    warn_about_ground_rules,
+    (StrictWarnings==true -> 
+        warn_too_many_facts 
+        ; true).
     % base syntax errors are shown by showerrors called from le_taxlog_translate:
-    show_semantic_errors.
+    %show_semantic_errors.
+
+%%%% some lint-like verifications, mostly dependent on xref
+warn_about_ground_rules :-
+    psem(Module),
+    forall((
+        my_clause(Module,Head,Body),
+        Body\==true, ground(Head:-Body)
+        ),
+        assert_semantic_error(warning,"Rule without variables: ~w"-[Head:-Body],"rule")
+    ).
+
+warn_too_many_facts :-
+    psem(Module),
+    findall(one, my_clause(Module,_,true), Facts), length(Facts,Nfacts),
+    findall(one,(my_clause(Module,_,Body), Body\==true), Rules), length(Rules,Nrules),
+    (Nrules == 0 -> assert_semantic_error(warning,"Missing rules, only facts are present"-[],program) ;
+        Nfacts>5*Nrules -> assert_semantic_error(warning,"Too many facts, only ~w rules present"-[Nrules],program);
+        true).
+
+my_clause(Module,Head,TheBody) :-
+    module_xref_source(Module,_),
+    (nonvar(Head) -> true ; current_predicate(Module:F/N), functor(Head,F,N)),
+    \+ my_system_predicate(Head), 
+    clause(Module:Head,Body_), 
+    \+ member( Head,
+        [':-'(_), query(_,_),example(_,_),target(_),source_lang(_),'$tabled'(_,_),just_saved_scasp(_,_),
+            predicates(_),local_meta_dict(_,_,_),local_dict(_,_,_),'$wrap$is_a'(_,_),abducible(_,_),'$table_mode'(_,_,_)]),
+    Head =.. List,
+    \+ user_predef_dict(List, _NamesTypes, _Template),
+    (unwrapBody(Body_, Body) -> true ; Body=Body_),
+    nonvar(Body), % too strict for LE ?
+    Body=TheBody.
 
 % HACK: discover atoms that are LIKELY to be missing templates, as they map to bad =/2 subgoals
 % TODO: there should be a much better way to obtain these more precisely near literal_(..) et. al. ;-)
@@ -1106,6 +1162,57 @@ assert_missing_templates_in_bodies(Module) :-
 
 :- dynamic module_xref_source/2. % LEmodule, Source_TemporaryFile
 
+unqueried_predicates(TemplateStrings) :-
+    psem(Module),
+    unqueried_predicates(Module,TemplateStrings).
+
+unqueried_predicates(Module,TemplateStrings) :-
+    findall(TemplateString, unqueried_predicate(Module,TemplateString), TemplateStrings_),
+    sort(TemplateStrings_,TemplateStrings).
+
+unqueried_predicate(Module,TemplateString) :-
+    module_xref_source(Module,Source), 
+    xref_defined(Source,Unqueried,_How), 
+    \+ Module:query(_,Unqueried),
+    \+ (  a_caller(Unqueried,[],Source,Query), Module:query(_Name,Query)),
+    Unqueried=..Ulist,
+    catch((
+        Module:local_dict(Ulist,TypesAndNames,Template),
+        bindTemplate(Template,TypesAndNames,true,TemplateString,_Types)
+        ),
+        Ex,
+        (print_message(warning,"~q"-[Ex]), Template='???')
+    ).
+
+top_intensional_predicate(Module,TemplateString,Types) :-
+    module_xref_source(Module,Source), 
+    intensional_predicate(Module,Top),
+    \+ xref_called(Source,Top,_By),
+    predicate_to_template_sentence(Top,Module,false,TemplateString,Types).
+
+intensional_predicate(Module,Pred) :-
+    module_xref_source(Module,Source), 
+    xref_defined(Source,Pred,_How), 
+    once(xref_called(Source,_,Pred)).
+
+% top2levels_predicate(+Module,-TemplateString,-Types) is nondet
+% Returns either a top level or second level predicate in the program, with its template sentence and type names
+% Thsi is intended to introspect the potentially more informative/useful predicates for a program client
+top2levels_predicate(Module,TemplateString,Types) :- 
+    top_intensional_predicate(Module,TemplateString,Types).
+top2levels_predicate(Module,TemplateString,Types) :-
+    module_xref_source(Module,Source), 
+    intensional_predicate(Module,Top),  \+ xref_called(Source,Top,_By),
+    xref_called(Source,Pred,Top), Pred\=Top,
+    intensional_predicate(Module,Pred),
+    predicate_to_template_sentence(Pred,Module,false,TemplateString,Types).
+
+% a_caller(?Called,+AncestorsPath,+XREFSource,-Caller) is nondet
+a_caller(Called,Path,Source,Caller) :- 
+    xref_called(Source,Called,By), 
+    \+ member(By,Path), 
+    (Caller = By ; a_caller(By,[By|Path],Source,Caller)).
+
 undefined_le_predicates(TemplateStrings) :-
     psem(Module),
     undefined_le_predicates(Module,TemplateStrings).
@@ -1120,31 +1227,57 @@ undefined_le_predicate(Module,Called,TemplateString) :-
     \+ xref_defined(Source,Called,_How), 
     \+ (Module:example(Name,Scenarios), Name\=null, member(scenario(Facts,_Flag),Scenarios), member(Called:-_,Facts)),
     \+ my_system_predicate(Called),
-    Called=..CalledList,
+    predicate_to_template_sentence(Called,Module,TemplateString).
+
+:- multifile prolog:xref_source_identifier/2. % missing this would cause xref_called etc to fail:
+prolog:xref_source_identifier(File, File).
+
+literal_to_sentence(Literal,Module,Sentence) :-
+    Literal =..CalledList,
     catch((
-        Module:local_dict(CalledList,TypesAndNames,Template),
+        (dictionary(CalledList, _, Sentence_) -> true ; Module:local_dict(CalledList,_,Sentence_)),
+        atomic_list_concat(Sentence_,' ',Sentence)
+        ),
+        Ex,
+        (print_message(warning,"Missing template for ~q ? ~q"-[Literal,Ex]), fail)
+    ).
+
+% uses current dictionary:
+literal_to_sentence(Literal,Sentence) :-
+    translate_to_le(Literal, Sentence).
+
+predicate_to_template_sentence(Pred,Module,TemplateString) :-
+    predicate_to_template_sentence(Pred,Module,true,TemplateString,_).
+
+predicate_to_template_sentence(Pred,Module,WithAsteriscs,TemplateString,Types) :-
+    Pred=..PredList,
+    catch((
+        Module:local_dict(PredList,TypesAndNames,Template),
         % TODO: could also consider user_predef_dict, prolog_predef_dict, mostly system predicates
-        bindTemplate(Template,TypesAndNames,TemplateString)
+        bindTemplate(Template,TypesAndNames,WithAsteriscs,TemplateString,Types)
         ),
         Ex,
         (print_message(warning,"~q"-[Ex]), Template='???')
     ).
 
-:- multifile prolog:xref_source_identifier/2. % missing this would cause xref_called etc to fail:
-prolog:xref_source_identifier(File, File).
 
-bindTemplate(Template,TypesAndNames,TemplateString) :-
-    bindTemplate(Template,TypesAndNames),
+% bindTemplate('Template,+TypesAndNames,+WithAsteriscs,-TemplateString,-Types)
+% Template is [Functor,Arg1,..,ArgN]
+% TypesAndNames is a list of Type-Name
+bindTemplate(Template,TypesAndNames,WithAsteriscs,TemplateString,Types) :-
+    must_be(boolean,WithAsteriscs),
+    bindTemplate_(Template,TypesAndNames,WithAsteriscs,Types),
     atomic_list_concat(Template, ' ', TemplateString).
 
-bindTemplate([Var|Template],[Type-_|TypesAndNames]) :- var(Var), !,
+bindTemplate_([Var|Template],[Type-_|TypesAndNames],WithAsteriscs,[Type|Types]) :- var(Var), !,
         sub_atom(Type,0,1,_,First),
         (member(First,[a,e,i,o,u,'A','E','I','O','U']) -> Prefix=an; Prefix=a),
-        format(string(Var),"*~a ~w*",[Prefix,Type]),
-        bindTemplate(Template,TypesAndNames).
-bindTemplate([_|Template],TypesAndNames) :- !,
-        bindTemplate(Template,TypesAndNames).
-bindTemplate([],_).
+        (WithAsteriscs==true -> format(string(Var),"*~a ~w*",[Prefix,Type]) ; 
+            format(string(Var),"~a ~w",[Prefix,Type])),
+        bindTemplate_(Template,TypesAndNames,WithAsteriscs,Types).
+bindTemplate_([_|Template],TypesAndNames,WithAsteriscs,Types) :- !,
+        bindTemplate_(Template,TypesAndNames,WithAsteriscs,Types).
+bindTemplate_([],_,_,[]).
 
 % Not using kp_loader:system_predicate, which depends on kp_dir
 my_system_predicate(P) :- 
@@ -1169,6 +1302,8 @@ show_semantic_errors :-
             format(string(Format),"~w in ~w",[Message_,Context]), Args=[] ),
         print_message(Type,Format-Args)
     )).
+
+%%%% end of "lint-like" related predicates
 
 % parse_and_query(+OutputFileName, +Document, +QuestionOrQueryName, +ScenarioName, -AnswerExplanation)
 % Document is a Language(LEtext) term, where Language is either of en, fr, it, es

@@ -15,8 +15,7 @@
 :- dynamic kp_dir/1, taxkb_dir/1.
 :- prolog_load_context(directory, D), 
     retractall(taxkb_dir(_)), assert(taxkb_dir(D)), 
-    retractall(kp_dir(_)), atomic_list_concat([D,'/kb'], KD), assert(kp_dir(KD)), 
-    print_message(informational,"KB directory is ~a"-[KD]).
+    retractall(kp_dir(_)), atomic_list_concat([D,'/kb'], KD), assert(kp_dir(KD)). 
 
 /** <module> Dynamic module loader.
 

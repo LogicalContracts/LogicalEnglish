@@ -156,6 +156,7 @@ document(Translation, In, Rest) :-
     (parsed -> retractall(parsed); true), 
     (including -> retract(including); true), 
     (source_lang(_L) -> retractall(source_lang(_)) ; true),
+    clear_dicts,
     phrase(header(Settings), In, AfterHeader), !, %print_message(informational, "Declarations completed: ~w"-[Settings]),
     phrase(content(Content), AfterHeader, Rest), %print_message(informational, "Content: ~w"-[AfterHeader]), 
     append(Settings, Content, Translation), !,
@@ -1064,7 +1065,7 @@ condition(FinalExpression, _, Map1, MapN) -->
     modifiers(forall(Conds,Goals), Map3, MapN, FinalExpression).
 
 % the Value is the sum of each Asset Net such that
-condition(FinalExpression, _, Map1, MapN) --> 
+condition(FinalExpression, _, Map1, MapN) -->
     variable([is], Value, Map1, Map2), is_the_sum_of_each_, extract_variable([such], [], NameWords, [], _), such_that_, !, 
     { name_predicate(NameWords, Name), update_map(Each, Name, Map2, Map3) }, newline, 
     spaces(Ind), conditions(Ind, Map3, Map4, Conds), 
@@ -1676,8 +1677,8 @@ match([Element|RestElements], [Word|PossibleLiteral], Map1, MapN, [Element|RestS
     nonvar(Element), Word = Element, 
     match(RestElements, PossibleLiteral, Map1, MapN, RestSelected). 
 match([Element|RestElements], [Det|PossibleLiteral], Map1, MapN, [Var|RestSelected]) :-
-    var(Element), 
-    phrase(indef_determiner,[Det|PossibleLiteral], RPossibleLiteral), stop_words(RestElements, StopWords), 
+    var(Element),
+    phrase(indef_determiner,[Det|PossibleLiteral], RPossibleLiteral), stop_words(RestElements, StopWords),
     extract_variable(StopWords, [], NameWords, [], _, RPossibleLiteral, NextWords),  NameWords \= [], % <- leave that _ unbound!
     name_predicate(NameWords, Name), 
     update_map(Var, Name, Map1, Map2), !,  % <-- CUT!  

@@ -1,4 +1,4 @@
-expected(one,alice,"[acquires_British_citizenship_on('John',1633737600.0)]").
-expected(one,harry,"[acquires_British_citizenship_on('John',1633737600.0)]").
-expected(one,trust_harry,"[]").
-expected(one,alice_harry,"[]").
+expected(one,alice,["John acquires British citizenship on 2021-10-9T0:0:0.0"]).
+expected(one,harry,["John acquires British citizenship on 2021-10-9T0:0:0.0"]).
+expected(one,trust_harry,["John acquires British citizenship on 2021-10-9T0:0:0.0"]).
+expected(one,alice_harry,["John acquires British citizenship on 2021-10-9T0:0:0.0"]).

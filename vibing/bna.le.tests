@@ -1,0 +1,29 @@
+% Expected results for British Nationality Act queries
+
+% Birth citizenship scenario tests
+expected(birth_citizenship, birth_citizenship, ["John acquires British citizenship by birth"]).
+expected(descent_citizenship, birth_citizenship, []).
+expected(general_citizenship, birth_citizenship, ["John acquires British citizenship"]).
+expected(citizenship_status, birth_citizenship, ["Peter is a British citizen on 1985"]).
+expected(descent_classification, birth_citizenship, []).
+
+% Descent citizenship scenario tests  
+expected(birth_citizenship, descent_citizenship, []).
+expected(descent_citizenship, descent_citizenship, ["Mary acquires British citizenship by descent"]).
+expected(general_citizenship, descent_citizenship, ["Mary acquires British citizenship"]).
+expected(citizenship_status, descent_citizenship, []).
+expected(descent_classification, descent_citizenship, ["Mary is a British citizen by descent on 1990"]).
+
+% Settled parent scenario tests  
+expected(birth_citizenship, settled_parent, ["David acquires British citizenship by birth"]).
+expected(descent_citizenship, settled_parent, []).
+expected(general_citizenship, settled_parent, ["David acquires British citizenship"]).
+expected(citizenship_status, settled_parent, []).
+expected(descent_classification, settled_parent, []).
+
+% Mixed family scenario tests
+expected(birth_citizenship, mixed_family, ["Emma acquires British citizenship by birth"]).
+expected(descent_citizenship, mixed_family, ["Tom acquires British citizenship by descent"]).
+expected(general_citizenship, mixed_family, ["Emma acquires British citizenship"]).
+expected(citizenship_status, mixed_family, ["Kate is a British citizen on 1985"]).
+expected(descent_classification, mixed_family, ["Tom is a British citizen by descent on 1990"]).

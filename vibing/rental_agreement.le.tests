@@ -1,0 +1,15 @@
+expected(leases, basic_lease, ["silvia_mando has a lease for apartment _426"]).
+expected(late_payments, basic_lease, ["silvia_mando is late with rent"]).
+expected(late_fees, basic_lease, ["silvia_mando owes late fee of 35"]).
+expected(security_deposits, basic_lease, ["silvia_mando owes security deposit of 685"]).
+expected(cleaning_fees, basic_lease, ["silvia_mando owes cleaning fee of 200"]).
+
+expected(bad_check_fees, returned_check, ["silvia_mando owes bad check fee of 25"]).
+expected(cash_only, returned_check, ["silvia_mando must pay cash only"]).
+
+expected(vehicles, with_vehicle, ["silvia_mando has vehicle honda _civic"]).
+
+expected(pet_rent, with_pet, ["silvia_mando pays pet rent"]).
+expected(pets, with_pet, ["silvia_mando has pet fluffy _cat"]).
+
+expected(utility_responsibility, utilities, ["silvia_mando is responsible for electricity"]).

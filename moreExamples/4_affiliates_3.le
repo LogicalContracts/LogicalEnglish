@@ -5,15 +5,16 @@ the predicates are:
     *a term* must be nonvar,
     *an entity* has affiliated with *an affiliate* at *a date*,
     *a date* is not earlier than *a second date*,
-    *an affiliate* is an individual or is a company,
-    *an affiliate* is a trust,
-    *an affiliate* is a partnership,
-    *an affiliate* is a superannuation fund,
+% commenting out some templates for now, cf. Jacinto's email Nov 25 2025 to Miguel:
+%    *an affiliate* is an individual or is a company,
+%    *an affiliate* is a trust,
+%    *an affiliate* is a partnership,
+%    *an affiliate* is a superannuation fund,
     *an affiliate* acts in accordance with directions from *an entity*,
     *an affiliate* acts in concert with *an entity*,
     *an affiliate* is affiliated per older legislation with *an entity*,
     *an entity* is a trust according to other legislation,
-    *an entity* is a partnership,
+%    *an entity* is a partnership,
     *an entity* is a partnership according to other legislation,
     *an entity* is a superannuation fund according to other legislation.
     
@@ -55,12 +56,12 @@ a date P is not earlier than a date A
     	and A is before P. 
     
 scenario test is:
-    company is a company. 
-    company acts in accordance with directions from andrew.
-    company is affiliated per older legislation with andrew.
+    his company is a company. 
+    his company acts in accordance with directions from andrew.
+    his company is affiliated per older legislation with andrew.
     
 query one is:
-    andrew has affiliated with company at 2020-01-02.
+    andrew has affiliated with his company at 2020-01-02.
 
 query two is:
     who affiliated with which entity at which date. 

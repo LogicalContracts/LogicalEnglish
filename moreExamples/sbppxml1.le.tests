@@ -1,2 +1,2 @@
-expected(indirect,one,"[the_indirect_small_business_participation_percentage_of_in_is('Tom Fry','Tallow Unit Trust',0.04000000000000001)]").
-expected(direct,one,"[]").
+expected(indirect,one,["the indirect small business participation percentage of Tom Fry in Tallow Unit Trust is 0.04000000000000001"]).
+expected(direct,one,[]).
