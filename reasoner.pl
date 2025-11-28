@@ -146,7 +146,7 @@ i((A;B), M, CID, Cref, U, E) :- !,
     (i(A,M,CID,Cref,U,E) ; i(B,M,CID,Cref,U,E)).
 i(must(I,M), Mod, CID, Cref, U, E) :- !, i(then(I,M), Mod, CID, Cref, U, E).
 i(\+ G,M,CID, Cref, U,E) :- !, i( not(G),M,CID,Cref,U,E).
-i(not(G), M, CID, Cref, NotU, NotE) :- 
+i(not(G), M, CID, Cref, NotU, NotE) :- !, 
     newGoalID(NotID),
     % our negation as failure requires no unknowns:
     ( i( G, M, NotID, Cref, U, E1) -> (
@@ -156,14 +156,16 @@ i(not(G), M, CID, Cref, NotU, NotE) :-
     ) ; (
         % NotE = [f(NotID,M,CID,_NotHere_TheyAreAsserted)], NotU=[]
         (failed_success(NotID, U_, E_) -> (    
-            NotE=[f(not(G),meta,E_,NotU)], NotU = U_
+            NotE=[s(not(G),meta,E_,NotU)], NotU = U_ , !
             % NotE = [s(NotID,M,CID, E_)], NotU=U_
-            %NotU = U_, NotE=[s(NotID,M,CID,E_)], E=[f(not(G),M,meta,NotE)] %, print_message(error, "explanation ~w"-[E])
+            %NotU = U_, NotE=[s(NotID,M,CID,E_)], E=[f(not(G),M,meta,NotE)] %
+            %, print_message(error, "explanation ~w"-[NotE])
         )
-        ; ( NotE = [], NotU=[]
+        ; ( NotE = [s(not(G),meta,[f(G,M,meta,NotU)],[])], NotU=[]  
             %NotE = [f(NotID,M,CID,_NotHere_TheyAreAsserted)], NotU=[]
-            %NotE = [f(NotID,M,CID,_)], NotU=[],  E=[s(not(G),M,meta,NotE)] )%, print_message(error, "explanation NOT ~w"-[E]) )
-    ) ) 
+            %NotE = [f(NotID,M,CID,_)], NotU=[],  E=[s(not(G),M,meta,NotE)] )%
+            %, print_message(error, "explanation NOT ~w"-[NotE]) 
+        ) ) 
     ) ).
 i(!,_,_,_,_,_) :- throw(no_cuts_allowed).
 i(';'(C->T,Else), M, CID, Cref, U, E) :- !,% should we forbid Prolog if-then-elses..?
