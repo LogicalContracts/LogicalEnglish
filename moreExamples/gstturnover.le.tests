@@ -14,7 +14,7 @@ expected('B','small business',[]).
 expected('B',uber,[]).
 expected('C','A',[]).
 expected('C','B',[]).
-expected('C','C',["Tom s Bakery must register for GST","Tom s Bakery must register for GST"]).
+expected('C','C',["Tom s Bakery must register for GST"]).
 expected('C',typical,[]).
 expected('C','significant exports',[]).
 expected('C','small business',[]).
@@ -42,7 +42,7 @@ expected(gst_turnover,'small business',["0 is the GST Turnover"]).
 expected(gst_turnover,uber,[]).
 expected(who,'A',["Cherrio Charity must register for GST"]).
 expected(who,'B',[]).
-expected(who,'C',["Tom s Bakery must register for GST","Tom s Bakery must register for GST"]).
+expected(who,'C',["Tom s Bakery must register for GST"]).
 expected(who,typical,[]).
 expected(who,'significant exports',[]).
 expected(who,'small business',[]).
