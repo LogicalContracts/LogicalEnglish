@@ -4,7 +4,7 @@ import axios from 'axios';
 const SERVER_URL_BASE = "http://localhost:3052";
 const SERVER_URL = SERVER_URL_BASE + "/leapi";
 const MY_TOKEN = "myToken123";
-const ApiKey = "..."; 
+//const ApiKey = "..."; // on the server side now
 //const axiosConfig = {/*headers:{'Access-Control-Allow-Origin':'*'}*/};
 //const axiosConfig = {headers:{'Access-Control-Allow-Origin':'*', 'Sec-Fetch-Mode': 'cors', 'Sec-Fetch-Dest': SERVER_URL}};
 
@@ -22,7 +22,7 @@ function App() {
     const data = {
       operation: operation, 
       token: MY_TOKEN,
-      gemini_api_key: ApiKey, 
+      //gemini_api_key: ApiKey, 
       file: filename,
       document: document,
       userinput: userinput,

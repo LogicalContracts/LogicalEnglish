@@ -175,7 +175,8 @@ process_llm_request(Request, Result)  :- %trace,
     % 1. Adapt inputs from the request
     get_dict(userinput, Request, UserInput),
     (get_dict(document, Request, Document) -> DocText = Document; DocText = ''),
-    (get_dict(gemini_api_key, Request, APIKey) -> true; throw(error(missing_gemini_api_key, _))),
+    %(get_dict(gemini_api_key, Request, APIKey) -> true; throw(error(missing_gemini_api_key, _))),
+    getenv('LE_LLM_K', Value) -> APIKey = Value ; throw(error(missing_gemini_api_key, _)),
     %print_message(informational,"API: About the create the prompt with ~w"-[UserInput]),
     % 2. Create a suitable prompt for Gemini
     format(string(Prompt), 'You are an expert on legal and logical reasoning. I will provide a description of a specific situation, possibly containing assumptions and questions: Description: ~w
