@@ -1,9 +1,10 @@
 % Simple wrapper to use LogicalEnglish from the PROLOG command line
 % Launch with /Applications/SWI-Prolog9.3.7-1.app/Contents/MacOS/swipl -l le_cli.pl
 :- module(_,[
-    load_program/6, load_program/1, 
-    query_program_all/5, query_program_all/4,
-    generate_expectations/1, verify_expectations/1]).
+    load_program/7, load_program/3, load_program/1, load_and_query_program_all/6,
+    query_program_all/6, query_program_all/4,
+    generate_expectations/1, verify_expectations/1, print_programs_and_main_predicates/1, introspect_programs_and_main_predicates/2
+    ]).
 
 
 :- multifile prolog:message//1.
@@ -11,7 +12,10 @@ prolog:message(S-Args) --> {atomic(S),is_list(Args)},[S-Args].
 
 :- use_module(le_answer).
 
-load_program(FileOrTerm,Language,DeleteFile,Module,TaxlogTerms,ExpandedTerms) :- 
+load_program(FileOrTerm,ExtraText,Language,DeleteFile,Module,TaxlogTerms,ExpandedTerms) :- 
+    load_program(FileOrTerm,ExtraText,Language,DeleteFile,false,Module,TaxlogTerms,ExpandedTerms).
+
+load_program(FileOrTerm,ExtraText,Language,DeleteFile,StrictWarnings,Module,TaxlogTerms,ExpandedTerms) :- 
     must_be(boolean,DeleteFile),
     (var(Module) -> uuid(Module) ; true),
     ((atomic(FileOrTerm), exists_file(FileOrTerm)) -> 
@@ -21,12 +25,13 @@ load_program(FileOrTerm,Language,DeleteFile,Module,TaxlogTerms,ExpandedTerms) :-
         FileOrTerm=..[Language,Text]
     ),
     assertion(member(Language,[en,fr,es,it])),
-    LEterm=..[Language,Text],
+    atom_concat(Text,ExtraText,FullText),
+    LEterm=..[Language,FullText],
     %TODO: this NOT deleting file when parsing fails:
     setup_call_cleanup(
         true, 
         (
-            parse_and_load(Module, LEterm,TaxlogTerms,ExpandedTerms,File)
+            parse_and_load(Module, LEterm,StrictWarnings,TaxlogTerms,ExpandedTerms,File)
             % Dict = dict(_PredAsList,_TypesAndNames, _Template),
             % findall(Dict,le_input:Dict,Dicts),
             
@@ -34,24 +39,45 @@ load_program(FileOrTerm,Language,DeleteFile,Module,TaxlogTerms,ExpandedTerms) :-
         (DeleteFile==true -> nonvar(File), delete_file(File); true)
     ).
 
+load_program(FileOrTerm,DeleteFile,Module) :- 
+    load_program(FileOrTerm,'',_Language,DeleteFile,Module,_TaxlogTerms,_ExpandedTerms).
+
 
 load_program(FileOrTerm) :- 
-    load_program(FileOrTerm,_Language,true,Module,_TaxlogTerms,_ExpandedTerms),
+    load_program(FileOrTerm,'',_Language,true,Module,_TaxlogTerms,_ExpandedTerms),
     print_message(informational,"Loaded into module ~w"-[Module]).
+
+% load_and_query_program_all(+FileOrTerm,+ScenarioSentences,+QuerySentence,-AnswerExplanations,-Answers,-Sentences)
+load_and_query_program_all(FileOrTerm,ScenarioSentences,QuerySentence,AnswerExplanations,Answers,Sentences) :-
+    extraScenarioName(ScenarionName), extraQueryName(QueryName),
+    format(string(ExtraText),"scenario ~w is:~n~a~nquery ~w is:~n~a",[ScenarionName,ScenarioSentences,QueryName,QuerySentence]),
+    load_program(FileOrTerm,ExtraText,_Language,false,Module,_TaxlogTerms,_ExpandedTerms),
+    query_program_all(Module,QueryName, ScenarionName, AnswerExplanations,Answers,Sentences).
+
+:- thread_local extras_counter/1. % number for last extra query or scenarion name
+next_extra_number(N) :-
+    (retract(extras_counter(Previous)) -> true ; Previous=0),
+    N is Previous+1,
+    assert(extras_counter(N)).
+
+extraScenarioName(Name) :- next_extra_number(N), format(atom(Name),"myScenario_~w",[N]).
+extraQueryName(Name) :- next_extra_number(N), format(atom(Name),"myQuery_~w",[N]).
+
 
 query_program_one(Module,Question, Scenario_, AnswerExplanation) :-
     set_psem(Module),
     le_answer:restore_dicts_from_module(Module),
     (Scenario_=with(_) -> Scenario=Scenario_ ; Scenario=with(Scenario_)),
-    le_answer:answer( Question, Scenario, AnswerExplanation).
+    le_answer:answer( Question, Scenario, AnswerExplanation),
+    retractall(le_input:is_type(_)). % clean all is_type/1 to avoid hidden type conflicts
 
 query_program_one(Question, Scenario, AnswerExplanation) :-
     psem(Module),
     query_program_one(Module,Question, Scenario, AnswerExplanation).
 
-% query_program_all(+Module,+Question, +Scenario, -AnswerExplanations,-Answers)
+% query_program_all(+Module,+Question, +Scenario, -AnswerExplanations,-Answers,-Sentences)
 % Answers is a list of positive answers; if Answers is [], AnswerExplanations will contain items with the negative explanations
-query_program_all(Module,Question, Scenario_, AnswerExplanations,Answers) :-
+query_program_all(Module,Question, Scenario_, AnswerExplanations,Answers,Sentences) :-
     set_psem(Module),
     le_answer:restore_dicts_from_module(Module),
     (Scenario_=with(_) -> Scenario=Scenario_ ; Scenario=with(Scenario_)),
@@ -63,11 +89,13 @@ query_program_all(Module,Question, Scenario_, AnswerExplanations,Answers) :-
             term_string(Answer,Answer_)
             ), Answers),
     length(Answers,Positives), length(AnswerExplanations,All),
-    assertion(Positives+1>=All).
+    assertion(Positives+1>=All),
+    answers_to_sentences(Answers,Module,Sentences),
+    retractall(le_input:is_type(_)). % clean all is_type/1 to avoid hidden type conflicts
 
 query_program_all(Question, Scenario, AnswerExplanations,Answers) :-
     psem(Module),
-    query_program_all(Module,Question, Scenario, AnswerExplanations,Answers).
+    query_program_all(Module,Question, Scenario, AnswerExplanations,Answers,_).
 
 % generate_expectations(+LEfileOrDir)
 % Example: generate_expectations('/Users/mc/git/LogicalEnglish/moreExamples').
@@ -81,14 +109,13 @@ generate_expectations(TestsDir) :- exists_directory(TestsDir), !,
 
 generate_expectations(LEfile) :-
     Language = en, %TODO: how to accept other languages?
-    (load_program(LEfile,Language,true,Module,_TaxlogTerms,ExpandedTerms) -> 
+    (load_program(LEfile,'',Language,true,Module,_TaxlogTerms,ExpandedTerms) -> 
         findall(example(Name,Facts), (member(example(Name,Facts),ExpandedTerms), Name\==null), Examples),
         findall(query(Name,Goal), (member(query(Name,Goal),ExpandedTerms), Name\==null), Queries),
-        findall(expected(Query,Scenario,Answers), (
+        findall(expected(Query,Scenario,Sentences), (
             member(query(Query,Goal),Queries), member(example(Scenario,Facts),Examples),
             % print_message(informational,"Generating for query ~w, scenario ~w"-[Query,Scenario]),
-            query_program_all(Module,Query, with(Scenario), _AnswerExplanations, Answers_),
-            term_to_clean_string(Answers_,Answers)
+            query_program_all(Module,Query, with(Scenario), _AnswerExplanations, _Answers,Sentences)            
             ), Expectations)
             ; Expectations = []),
     format(string(NewFile),"~a.tests",[LEfile]),
@@ -97,21 +124,35 @@ generate_expectations(LEfile) :-
     close(Stream).
 
 % Example: verify_expectations('/Users/mc/git/LogicalEnglish/moreExamples').
-verify_expectations(TestsDir) :- exists_directory(TestsDir), !,
-    all_files_in(TestsDir,'.tests',[],TestFiles),
+
+answers_to_sentences(Answers_,_Module,Sentences) :-
+    findall(Sentence,(
+        member(Answer_,Answers_), 
+        literal_to_sentence(Answer_,Sentence_), % now using the version dependent on current dictionary(..)
+        term_to_clean_string(Sentence_,Sentence)
+        ), Sentences).
+
+%BUG in reasoner (?): currently the test suite needs to be run in the same SWI session....otherwise answer order may be different :-(
+%   as a temporary "workaround" we have the RequireOrderedAnswers flag, to tolerate this order mangling but still verify answers as a set
+verify_expectations(TestFiles) :-
+    verify_expectations(TestFiles,false).
+
+verify_expectations(TestFiles,RequireOrderedAnswers) :- is_list(TestFiles), !,
     length(TestFiles,Nfiles),
     get_time(Start),
     findall(TestFile-Result,(
         member(TestPath,TestFiles),
         file_base_name(TestPath, TestFile),
         print_message(informational,"Running tests in ~w..."-[TestPath]),
-        verify_expectations(TestPath,Result)
+        verify_expectations(TestPath,RequireOrderedAnswers,Result)
         ), 
         Results),
     get_time(End), Duration is round((End-Start)*1000)/1000,
     findall(Ntests, (member(_-Result,Results), Result=..[_,Ntests|_]), TestCounts),
     sum_list(TestCounts, NtestsTotal),
     print_message(informational,"Ran ~w tests in ~w files in ~w seconds~n~nRESULTS:~n"-[NtestsTotal,Nfiles,Duration]),
+    TestFiles = [SomeFile|_], file_directory_name(SomeFile, TestsDir),
+
     format(string(ResultsFile),"~a/LEtests.log",[TestsDir]),
     open(ResultsFile,write,Stream),
     forall(member(File-Result,Results),(
@@ -129,27 +170,50 @@ verify_expectations(TestsDir) :- exists_directory(TestsDir), !,
         format(Stream,"~nTESTS HAVE FAILED :-(~n",[])
     ),
     close(Stream).
+verify_expectations(TestsDir,RequireOrderedAnswers) :- exists_directory(TestsDir), !,
+    all_files_in(TestsDir,'.tests',[],TestFiles),
+    verify_expectations(TestFiles,RequireOrderedAnswers).
+verify_expectations(TestsFile,RequireOrderedAnswers) :- 
+    verify_expectations([TestsFile],RequireOrderedAnswers).
 
-
-verify_expectations(TestFile,Result) :-
-    atom_concat(LEfile,'.tests',TestFile),
+verify_expectations(TestFile_,RequireOrderedAnswers,Result) :-
+    must_be(boolean,RequireOrderedAnswers),
+    (atom_concat(LEfile,'.tests',TestFile_) -> TestFile_=TestFile ; atom_concat(TestFile_,'.tests',TestFile), TestFile_=LEfile),
     read_file_to_terms(TestFile, Expectations, []),
-    ( load_program(LEfile) ->
+
+    % for all queries, there should be at least one expected (non empty) answer in some scenario
+    findall(Query, member(expected(Query,_,_),Expectations), Queries_), sort(Queries_,Queries),
+    forall((member(Query,Queries), \+ member(expected(Query,_,[_|_]),Expectations)), 
+        print_message(warning,"Query ~w has only empty answers in all scenarios; it should be tested also with some other scenario for which the query has an answer"-[Query])),
+
+    ( load_program(LEfile,'',_,true,true,Module,_,_ExpandedTerms) ->
         findall(Outcome,(
             member(expected(Query,Scenario,ExpectedAnswers),Expectations),
-            (   query_program_all(Query, with(Scenario), AnswerExplanations,Answers) -> 
-                    ((term_to_clean_string(Answers,ExpectedAnswers_), ExpectedAnswers_=ExpectedAnswers) -> 
+            (   query_program_all(Module,Query, with(Scenario), _AnswerExplanations,_Answers,Sentences) -> 
+                    ((
+                        RequireOrderedAnswers==true -> Sentences=ExpectedAnswers ; 
+                            sort(ExpectedAnswers,SortedExpectedAnswers), sort(Sentences,SortedSentences), 
+                            SortedExpectedAnswers=SortedSentences                       
+                        ) -> 
                         Outcome=ok 
                         ; 
-                        format("scenario ~w query ~w~n",[Scenario,Query]),
-                        format("AE: ~q~n",[AnswerExplanations]),
-                        format("expected ~q got ~q~n",[ExpectedAnswers, Answers]),
-                        Outcome=expected(ExpectedAnswers)-got(Answers)
+                        format("Test failure in scenario ~w for query ~w:~n",[Scenario,Query]),
+                        % format("AE: ~q~n",[AnswerExplanations]),
+                        format("expected ~q got ~q~n",[ExpectedAnswers, Sentences]),
+                        Outcome=expected(ExpectedAnswers)-got(Sentences)
                     )
                 ;
                 Outcome=failed
             )
             ),Outcomes)
+        % Too strict, as in general some queries may be of interest only with some scenarios:
+        % findall(example(Name,Facts), (member(example(Name,Facts),ExpandedTerms), Name\==null), Examples),
+        % findall(query(Name,Goal), (member(query(Name,Goal),ExpandedTerms), Name\==null), Queries),
+        % forall((
+        %     member(example(S,_),Examples), member(query(Q,_),Queries),
+        %     \+ member(expected(Q,S,_),Expectations)
+        %     ), format("Missing expected result for query '~w' with scenario '~w'",[Q,S])
+        % )
         ; Outcomes = [failed(load_program)]),
     length(Expectations,Ntests),
     (forall(member(Outcome,Outcomes),Outcome==ok) -> 
@@ -161,6 +225,42 @@ verify_expectations(TestFile,Result) :-
         findall(Expected-Got, member(Expected-Got,Outcomes), Unexpecteds), 
         Result=unexpected(Ntests,Unexpecteds)
     ).
+
+% print_programs_and_main_predicates(+Dir)
+print_programs_and_main_predicates(Dir) :-
+    format("Loading all .le files...~n",[]),
+    introspect_programs_and_main_predicates(Dir,Pairs),
+    format("~n== Logical English loadable files in ~w:~n~n",[Dir]),
+    forall(member(File-Predicates,Pairs),(
+        format("~a:~n",[File]),
+        forall(member(P-Types_,Predicates), (
+            atomic_list_concat(Types_, ',', Types),
+            format("   ~a (~w)~n",[P,Types])
+            ))
+        )).
+
+% introspect_programs_and_main_predicates(+Dir,-Pairs)
+% Pairs is a list of File-Predicates; Predicates is a list of TemplateSentence-TypesList
+introspect_programs_and_main_predicates(Dir,Pairs) :-
+    all_files_in(Dir,'.le',[],LEfiles),
+    findall(LEfile_-Predicates, (
+        member(LEfile,LEfiles), load_program(LEfile,'',_,true,Module,_TaxlogTerms,_), 
+        file_base_name(LEfile, LEfile_),
+        findall(TemplateString-Types, top2levels_predicate(Module,TemplateString,Types),  Predicates)
+        ), Pairs).
+
+print_top_predicates(File) :-
+    load_program(File,'',_,true,Module,_,_ExpandedTerms),
+    forall(top_intensional_predicate(Module,TemplateString,_Types),
+        writeln(TemplateString)
+        ).
+
+% term_string/2 but normalizing variable names to A,B,...
+% BEWARE as this BINDS T
+term_to_clean_string(T,S) :-
+    must_be(nonvar,T),
+    numbervars(T), 
+    format(string(S),"~W",[T,[numbervars(true)]]).
 
 
 % Show a HTML fragment in the user's browser

@@ -1,25 +1,25 @@
-expected(test,test_quarter_2,"[the_varied_amount_payable_for_for_by_is('quarter 2',2025,'Australian entity',6250.0)]").
-expected(test,ato_1_quarter_2,"[the_varied_amount_payable_for_for_by_is('quarter 2',2025,'Australian entity',6000.0)]").
-expected(test,ato_2_quarter_3,"[the_varied_amount_payable_for_for_by_is('quarter 3',2025,'Australian entity',11500.0)]").
-expected(test,ato_3_quarter_4,"[the_varied_amount_payable_for_for_by_is('quarter 4',2025,'Australian entity',13000.0)]").
-expected(test,ato_4_quarter_2,"[the_varied_amount_payable_for_for_by_is('quarter 2',2025,'Australian entity',6000.0)]").
-expected(payable,test_quarter_2,"[the_varied_amount_payable_for_for_by_is('quarter 2',2025,'Australian entity',6250.0)]").
-expected(payable,ato_1_quarter_2,"[the_varied_amount_payable_for_for_by_is('quarter 2',2025,'Australian entity',6000.0)]").
-expected(payable,ato_2_quarter_3,"[the_varied_amount_payable_for_for_by_is('quarter 3',2025,'Australian entity',11500.0)]").
-expected(payable,ato_3_quarter_4,"[the_varied_amount_payable_for_for_by_is('quarter 4',2025,'Australian entity',13000.0)]").
-expected(payable,ato_4_quarter_2,"[the_varied_amount_payable_for_for_by_is('quarter 2',2025,'Australian entity',6000.0)]").
-expected(new_rate,test_quarter_2,"[the_new_varied_rate_for_for_is('Australian entity',2025,25.0)]").
-expected(new_rate,ato_1_quarter_2,"[the_new_varied_rate_for_for_is('Australian entity',2025,0)]").
-expected(new_rate,ato_2_quarter_3,"[the_new_varied_rate_for_for_is('Australian entity',2025,0)]").
-expected(new_rate,ato_3_quarter_4,"[the_new_varied_rate_for_for_is('Australian entity',2025,0)]").
-expected(new_rate,ato_4_quarter_2,"[the_new_varied_rate_for_for_is('Australian entity',2025,15.0)]").
-expected(estimated_tax,test_quarter_2,"[the_estimated_tax_for_for_is('Australian entity',2025,25000.0)]").
-expected(estimated_tax,ato_1_quarter_2,"[the_estimated_tax_for_for_is('Australian entity',2025,18000.0)]").
-expected(estimated_tax,ato_2_quarter_3,"[the_estimated_tax_for_for_is('Australian entity',2025,18000.0)]").
-expected(estimated_tax,ato_3_quarter_4,"[the_estimated_tax_for_for_is('Australian entity',2025,18000.0)]").
-expected(estimated_tax,ato_4_quarter_2,"[the_estimated_tax_for_for_is('Australian entity',2025,18000.0)]").
-expected(payg_income,test_quarter_2,"[the_estimated_PAYG_instalment_income_for_for_is('Australian entity',2025,75000)]").
-expected(payg_income,ato_1_quarter_2,"[the_estimated_PAYG_instalment_income_for_for_is('Australian entity',2025,0)]").
-expected(payg_income,ato_2_quarter_3,"[the_estimated_PAYG_instalment_income_for_for_is('Australian entity',2025,0)]").
-expected(payg_income,ato_3_quarter_4,"[the_estimated_PAYG_instalment_income_for_for_is('Australian entity',2025,0)]").
-expected(payg_income,ato_4_quarter_2,"[the_estimated_PAYG_instalment_income_for_for_is('Australian entity',2025,100000)]").
+expected(test,test_quarter_2,["the varied amount payable for quarter 2 for 2025 by Australian entity is 6250.0"]).
+expected(test,ato_1_quarter_2,["the varied amount payable for quarter 2 for 2025 by Australian entity is 6000.0"]).
+expected(test,ato_2_quarter_3,["the varied amount payable for quarter 3 for 2025 by Australian entity is 11500.0"]).
+expected(test,ato_3_quarter_4,["the varied amount payable for quarter 4 for 2025 by Australian entity is 13000.0"]).
+expected(test,ato_4_quarter_2,["the varied amount payable for quarter 2 for 2025 by Australian entity is 6000.0"]).
+expected(payable,test_quarter_2,["the varied amount payable for quarter 2 for 2025 by Australian entity is 6250.0"]).
+expected(payable,ato_1_quarter_2,["the varied amount payable for quarter 2 for 2025 by Australian entity is 6000.0"]).
+expected(payable,ato_2_quarter_3,["the varied amount payable for quarter 3 for 2025 by Australian entity is 11500.0"]).
+expected(payable,ato_3_quarter_4,["the varied amount payable for quarter 4 for 2025 by Australian entity is 13000.0"]).
+expected(payable,ato_4_quarter_2,["the varied amount payable for quarter 2 for 2025 by Australian entity is 6000.0"]).
+expected(new_rate,test_quarter_2,["the new varied rate for Australian entity for 2025 is 25.0"]).
+expected(new_rate,ato_1_quarter_2,["the new varied rate for Australian entity for 2025 is 0"]).
+expected(new_rate,ato_2_quarter_3,["the new varied rate for Australian entity for 2025 is 0"]).
+expected(new_rate,ato_3_quarter_4,["the new varied rate for Australian entity for 2025 is 0"]).
+expected(new_rate,ato_4_quarter_2,["the new varied rate for Australian entity for 2025 is 15.0"]).
+expected(estimated_tax,test_quarter_2,["the estimated tax for Australian entity for 2025 is 25000.0"]).
+expected(estimated_tax,ato_1_quarter_2,["the estimated tax for Australian entity for 2025 is 18000.0"]).
+expected(estimated_tax,ato_2_quarter_3,["the estimated tax for Australian entity for 2025 is 18000.0"]).
+expected(estimated_tax,ato_3_quarter_4,["the estimated tax for Australian entity for 2025 is 18000.0"]).
+expected(estimated_tax,ato_4_quarter_2,["the estimated tax for Australian entity for 2025 is 18000.0"]).
+expected(payg_income,test_quarter_2,["the estimated PAYG instalment income for Australian entity for 2025 is 75000"]).
+expected(payg_income,ato_1_quarter_2,["the estimated PAYG instalment income for Australian entity for 2025 is 0"]).
+expected(payg_income,ato_2_quarter_3,["the estimated PAYG instalment income for Australian entity for 2025 is 0"]).
+expected(payg_income,ato_3_quarter_4,["the estimated PAYG instalment income for Australian entity for 2025 is 0"]).
+expected(payg_income,ato_4_quarter_2,["the estimated PAYG instalment income for Australian entity for 2025 is 100000"]).

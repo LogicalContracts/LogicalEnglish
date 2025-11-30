@@ -1,0 +1,17 @@
+% Expected answers for parking tickets private land LE program
+% Each expected/3 fact specifies: expected(QueryName, ScenarioName, Answers)
+
+% Query q1: Does John have a valid parking charge notice?
+expected(q1, valid_ticket, ["john has a valid parking charge notice from parkrite_company for 60 at shopcentre"]).
+expected(q1, challenge_case, []).
+expected(q1, excessive_charge, []).
+
+% Query q2: Can parkrite issue a ticket to John?
+expected(q2, valid_ticket, ["parkrite_company can issue a parking ticket to john"]).
+expected(q2, challenge_case, []).
+expected(q2, excessive_charge, []).
+
+% Query q3: Does Sarah have valid notice for £150 charge (should fail - exceeds max)? 
+expected(q3, valid_ticket, []).
+expected(q3, challenge_case, []).
+expected(q3, excessive_charge, []).
