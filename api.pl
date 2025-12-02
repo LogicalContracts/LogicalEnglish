@@ -157,7 +157,7 @@ entry_point(R, _{results:AnswerExplanation, translation: LLMAnswer}) :- get_dict
         ))
     ->  (
         % Successfully processed the LLM request.
-        print_message(informational, "API: LLM request processed successfully: ~w"-[Result]),
+        %print_message(informational, "API: LLM request processed successfully: ~w"-[Result]),
         (   Result = _{llm_answer: LLMAnswer, status: 'success'} -> (
             %print_message(informational, "API: LLM Answer: ~w"-[LLMAnswer]),
             string_concat("\n   \n", LLMAnswer, LLMAnswer2), 
@@ -174,10 +174,12 @@ process_llm_request(Request, Result)  :- %trace,
     %Result = _{error:'LLM request passed', details:'LLM integration disabled in this build'}.
     % 1. Adapt inputs from the request
     get_dict(userinput, Request, UserInput),
+    %print_message(informational,"API: Got the User Input: ~w"-[UserInput]),
     (get_dict(document, Request, Document) -> DocText = Document; DocText = ''),
+    %print_message(informational,"API: Got the Document Text: ~w"-[DocText]),
     %(get_dict(gemini_api_key, Request, APIKey) -> true; throw(error(missing_gemini_api_key, _))),
-    getenv('LE_LLM_K', Value) -> APIKey = Value ; throw(error(missing_gemini_api_key, _)),
-    %print_message(informational,"API: About the create the prompt with ~w"-[UserInput]),
+    (getenv('LE_LLM_K', Value) -> APIKey = Value ; throw(error(missing_gemini_api_key, _))),
+    %print_message(informational,"API: Using Gemini API Key: ~w"-[APIKey]),
     % 2. Create a suitable prompt for Gemini
     format(string(Prompt), 'You are an expert on legal and logical reasoning. I will provide a description of a specific situation, possibly containing assumptions and questions: Description: ~w
  
@@ -206,11 +208,13 @@ Document:
     % 3. Call Gemini (via HTTPS)
     %GeminiURL = 'https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=',
     %GeminiURL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=', 
-    GeminiURL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=',
-    atomic_list_concat([GeminiURL, APIKey], FullURL),
+    %GeminiURL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=',
+    %GeminiURL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=',
+    GeminiURL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=',
+    concat_atom([GeminiURL, APIKey], GeminiURLFull), 
     PayloadDict = _{contents: [_{parts: [_{text: Prompt}]}]},
-    %print_message(informational,"API: About to send the PayloadDict ~w"-[PayloadDict]), 
-    time(http_post(FullURL, 
+    %print_message(informational,"API: About to send the PayloadDict ~w to ~w"-[PayloadDict, GeminiURLFull]), 
+    time(http_post(GeminiURLFull, 
               json(PayloadDict, [json_object(dict)]), 
               ReplyDict, 
               [ cert_verify_hook(cert_accept_any),
