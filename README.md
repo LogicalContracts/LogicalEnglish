@@ -112,6 +112,16 @@ The University of Bologna has actively supported the development of LE, in pursu
 
 ##  <a name='Releases'></a>Release Notes
 
+- [2025-12-02] Previous version [f6445c5edb14f5de19e6ad376c9de9f481fdd71d] (https://github.com/LogicalContracts/LogicalEnglish/commit/f6445c5edb14f5de19e6ad376c9de9f481fdd71d)
+	- LE - LLM (Gemini) interaction to produce queries and scenarios from texts in English
+		- from https://github.com/LogicalContracts/LogicalEnglish/tree/main/clientExample/llm-app
+		- export LE_LLM_K="<here the key provided by google>"
+		- swipl simple_server.pl --port=3052 --staticdir='./build'
+		- with static files being produced by: npm run build
+		    - from models in: https://github.com/LogicalContracts/LogicalEnglish/tree/main/clientExample/my-app/public
+			- make sure to update ./public/simple_clients.html header with the right .js and .css filename
+			- run npm run build again
+		- runs in the browser from URL: http://localhost:3052/static/simple_client.html
 - [2024-08-08] Previous version [328c4b7d1cb5e146a3e5175b4537d30a3f69c7e6](https://github.com/LogicalContracts/LogicalEnglish/commit/328c4b7d1cb5e146a3e5175b4537d30a3f69c7e6) 
 	- Static Prolog LE server without SWISH
 		- From https://github.com/LogicalContracts/LogicalEnglish/tree/main/clientExample/my-app
