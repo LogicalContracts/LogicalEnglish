@@ -1,6 +1,4 @@
-:- module(journal,[]).
-
-en("the target language is: prolog. 
+the target language is: prolog. 
 the templates are:
 
 *a journal entry* has as ID *an ID*.
@@ -74,10 +72,3 @@ scenario user_example is:
 
 query check_user_example is:
     JE-201 is valid.
-
-"). 
-
-/** <examples> To test the rules, these are possible combinations of queries and scenarios
-?- show prolog.  % check translation into Prolog`
-?- answer(check_user_example, with(user_example), le(E), R).  
-*/
