@@ -37,27 +37,27 @@ a journal entry J is valid
     and the journal entry J is balanced.
 
 % Rule to check for at least 2 heads (as per constraint)
-a J has at least 2 heads
+an entry has at least 2 heads
     if a number N is the sum of each I such that
     	I = 1
-        and an H is part of J
+        and an H is part of the entry
     and N >= 2.
 
 % Rule to check if the journal entry sums to zero (as per constraint)
-a J is balanced
+an entry is balanced
     if a number S is the sum of each signed amount SA such that
-        a H is part of J
+        a H is part of the entry
         and H has the signed amount SA
     and S = 0.
 
 % Rule to get the signed value for a debit (positive)
-a H has an amount S
-    if H is a debit of an amount A to an account Acc
+a header has an amount S
+    if the header is a debit of an amount A to an account Acc
     and S = A.
 
 % Rule to get the signed value for a credit (negative)
-a H has an amount S
-    if H is a credit of an amount A to an account Acc
+a header has an amount S
+    if the header is a credit of an amount A to an account Acc
     and S = 0-A.
 
 % == Trial Balance Rules ==
@@ -87,8 +87,12 @@ an account A has a net balance of an amount N
 
 % 4. A trial balance is defined if the sum of all account balances equals zero.
 a trial balance is defined
-    if a number S is the sum of each balance such that
-        an Acc is an account % Sum over all defined accounts
+    if for all cases in which
+            an entry is a journal entry
+        it is the case that
+            the entry is valid  % the following seems redundant
+    and a number S is the sum of each balance such that
+        an Acc is an account % Sum over all defined accounts. 
         and Acc has a net balance of the balance
     and S = 0.
 
@@ -137,7 +141,7 @@ scenario balanced_tb is:
     head-101-2 is a credit of 10 to cash at bank.
 
 scenario unbalanced_tb is:
-    % --- Includes all entries from balanced_tb (JE-100, JE-101) ---
+    % --- Includes all entries from balanced_tb (JE-102) ---
     % --- JE-102: Error - Single-entry Debit $50 ---
     JE-102 is a journal entry.
     JE-102 has as date 2025-11-10.
@@ -149,13 +153,28 @@ scenario unbalanced_tb is:
     % Note: JE-102 itself is *invalid* as it has only one head, but its *effect* 
     % on the TB is an uncorrected balance error.
 
-query check_balanced_tb is:
-    a trial balance is defined.
-    % Expected Result: True (Total Net Balances: Cash +90, Sales -100, GST +10. Sum = 0)
+scenario unbalanced_tb_2 is:
+    % --- Includes all entries from balanced_tb (JE-103) ---
+    % --- JE-102: Error - Single-entry Debit $50 ---
+    JE-103 is a journal entry.
+    JE-103 has as date 2025-11-10.
+    JE-103 has as description Error Cash Deposit recorded incorrect Credit.  
+    % Dr Cash $50 (but no corresponding credit was recorded)
+    head-103-1 is a journal head.
+    head-103-1 is part of JE-103.
+    head-103-1 is a debit of 50 to cash at bank.
+    % Cr Sales $10 (incorrect credit recorded)
+    head-103-2 is a journal head.
+    head-103-2 is part of JE-103.
+    head-103-2 is a credit of 10 to gst payable.
+    % Cr Sales $50 (incorrect credit recorded)
+    head-103-3 is a journal head.
+    head-103-3 is part of JE-103.
+    head-103-3 is a credit of 50 to sales revenue.
+    % the TB is an uncorrected balance error.
 
-query check_unbalanced_tb is:
+query trial_balance is:
     a trial balance is defined.
-    % Expected Result: False (Total Net Balances: Cash +140, Sales -100, GST +10. Sum = +50)
 
 query check_user_example is:
     JE-201 is valid.
@@ -164,7 +183,12 @@ query check_user_example is:
 
 /** <examples> To test the rules, these are possible combinations of queries and scenarios
 ?- show prolog.  % check translation into Prolog`
-?- answer(check_user_example, with(user_example), le(E), R).  
-?- answer(check_balanced_tb, with(balanced_tb), le(E), R). 
-?- answer(check_unbalanced_tb, with(unbalanced_tb), le(E), R). 
+?- answer(check_user_example, with(user_example), le(E), R).
+?- answer(check_user_example, with(user_example)). 
+?- answer(trial_balance, with(balanced_tb), le(E), R).  
+?- answer(trial_balance, with(balanced_tb)). 
+?- answer(trial_balance, with(unbalanced_tb), le(E), R). 
+?- answer(trial_balance, with(unbalanced_tb)). 
+?- answer(trial_balance, with(unbalanced_tb_2), le(E), R). . 
+?- answer(trial_balance, with(unbalanced_tb_2)). 
 */
