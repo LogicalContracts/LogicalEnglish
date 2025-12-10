@@ -1,0 +1,45 @@
+# Ignore Docker artifacts
+Dockerfile
+dockerfile
+.dockerignore
+.git
+.gitignore
+kb/
+bad-kb/
+fe/
+le-ui/
+pack/
+swish/
+temp/
+vibing/
+*.md
+*.txt
+*.sh
+
+# Ignore build artifacts (if applicable)
+*.o
+*.a
+*.bak
+*.swp
+
+# Ignore environment/dependency directories
+node_modules/
+__pycache__/
+
+# Ignore other apps and files in the clientExample/
+clientExample/my-app/
+clientExample/node_modules/
+clientExample/.env
+
+# Ignore files next and below the Dockerfile
+clientExample/llm-app/dockerfile
+clientExample/llm-app/.dockerignore
+clientExample/llm-app/.gitignore
+clientExample/llm-app/.swp
+clientExample/llm-app/dist/
+clientExample/llm-app/__pycache__/
+clientExample/llm-app/README.md
+clientExample/llm-app/package.json
+clientExample/llm-app/package-lock.json
+clientExample/llm-app/.vscode/
+clientExample/llm-app/*-prolog.pl

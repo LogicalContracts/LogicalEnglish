@@ -43,6 +43,7 @@
 :- use_module(library(debug)).
 :- use_module(library(optparse), [opt_arguments/3]).
 :- use_module('../../api.pl', [start_api_server/0, set_le_program_module/1, le_program_module/1, hack_module_for_taxlog/1, handle_api/1]). 
+:- use_module(library(http/http_unix_daemon)).
 
 :- thread_pool_create(compute, 8,
                       [ local(20000), global(100000), trail(50000),
@@ -65,6 +66,7 @@
 
 :- multifile prolog:message//1.
 prolog:message(S-Args) --> {atomic(S),is_list(Args)},[S-Args].
+
 
 
 % Start with simple_server_main.
@@ -107,10 +109,14 @@ http:location(json, root(json), []).
 % thread_httpd:current_server(Port, _Goal, Thread, _Queue, _Scheme, _StartTime).
 % See also: https://www.swi-prolog.org/pldoc/man?section=httpunixdaemon
 simple_server_main :-
-    simple_server_impl(Opts),
-    debug(log, 'Options: ~q', [Opts]),
-    debug(log, 'Starting REPL ...', []),
-    prolog.  % REPL - terminated with exit.
+    %simple_server_impl(Opts),
+    http_server(http_dispatch, [port(3052)]),
+    asserta(user:file_search_path(static_dir,'./build')), 
+    http_daemon([interactive(false)]),
+    debug(log, 'Simple server started on port ~d', [3052]). 
+    %debug(log, 'Options: ~q', [Opts]),
+    %debug(log, 'Starting REPL ...', []),
+    % prolog.  % REPL - terminated with exit.
     % TODO: use at_halt/1 to schedule http_stop_server(Opts.port, [])
     %       after a short time-out.
 
