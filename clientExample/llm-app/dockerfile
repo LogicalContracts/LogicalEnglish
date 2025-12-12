@@ -4,10 +4,10 @@
 FROM swipl
 
 # Copy all LE files into the container
-COPY .  /usr/.
+COPY .  /usr/src/.
 
 # Set the working directory inside the container
-WORKDIR /usr/clientExample/llm-app
+WORKDIR /usr/src/clientExample/llm-app
 
 # The default web server port for this example is 8000.
 # EXPOSE documents which ports the application uses.
@@ -17,4 +17,5 @@ EXPOSE 3052
 # We use 'swipl -l server.pl -g halt' to compile and run the file.
 # The ':- initialization(server(8000), program).' in server.pl 
 # will automatically start the server.
-CMD ["swipl", "-l", "simple_server.pl", "-g", "halt", "-t", "halt"]
+#CMD ["swipl", "-l", "simple_server.pl", "-g", "halt", "-t", "halt"]
+CMD ["swipl", "-l", "simple_server.pl", "-g", "simple_server_main", "-t", "prolog"]

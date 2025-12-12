@@ -32,7 +32,8 @@
 
 :- use_module(library(http/thread_httpd)).
 :- use_module(library(http/http_dispatch)).
-:- use_module(library(http/http_json)). 
+% library(http/json) --> library(json)
+:- use_module(library(json)). 
 :- use_module(library(http/http_server), [http_server/2, http_redirect/3,
                                           http_stop_server/2,
                                           http_read_json_dict/3, reply_json_dict/2]).
@@ -66,8 +67,6 @@
 
 :- multifile prolog:message//1.
 prolog:message(S-Args) --> {atomic(S),is_list(Args)},[S-Args].
-
-
 
 % Start with simple_server_main.
 :- initialization(simple_server_main, main).
@@ -109,11 +108,16 @@ http:location(json, root(json), []).
 % thread_httpd:current_server(Port, _Goal, Thread, _Queue, _Scheme, _StartTime).
 % See also: https://www.swi-prolog.org/pldoc/man?section=httpunixdaemon
 simple_server_main :-
-    %simple_server_impl(Opts),
-    http_server(http_dispatch, [port(3052)]),
+    format('SWI-Prolog server starting on port 3052...~n'),
     asserta(user:file_search_path(static_dir,'./build')), 
-    http_daemon([interactive(false)]),
-    debug(log, 'Simple server started on port ~d', [3052]). 
+    % Ensure binding to 0.0.0.0 for Docker access
+    http_server(http_dispatch, [port(3052)]),
+    % This blocks the main thread, keeping the container alive
+    %thread_join('http@9999', _Status). 
+    thread_get_message(forever).
+    %http_daemon([port(3052)]).
+
+    %simple_server_impl(Opts),
     %debug(log, 'Options: ~q', [Opts]),
     %debug(log, 'Starting REPL ...', []),
     % prolog.  % REPL - terminated with exit.
