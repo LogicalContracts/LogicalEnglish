@@ -289,7 +289,7 @@ answer_all(English, Arg, Results) :- %trace, !,
 answer_all(English, Arg, [ _{answer:'Failure', explanation:E}])  :-
     %print_message(error, "Failed to answer question: ~w"-[English]),
     with_output_to(string(E), 
-        format("Failed to answer question: ~w : ~w", [English, Arg])), !.    
+        format("Failed to answer question: ~w : ~w. Check your query/scenario, please.", [English, Arg])), !.    
 
 % pre_answer/5
 pre_answer(English, Arg, FactsPre, Module, InnerGoal) :- !, 

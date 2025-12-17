@@ -33,7 +33,8 @@
 :- use_module(library(http/thread_httpd)).
 :- use_module(library(http/http_dispatch)).
 % library(http/json) --> library(json)
-:- use_module(library(json)). 
+:- use_module(library(http/json)).
+%:- use_module(library(json)). 
 :- use_module(library(http/http_server), [http_server/2, http_redirect/3,
                                           http_stop_server/2,
                                           http_read_json_dict/3, reply_json_dict/2]).
@@ -43,6 +44,7 @@
 
 :- use_module(library(debug)).
 :- use_module(library(optparse), [opt_arguments/3]).
+:- use_module('../../le_en.pl', [le_en/3]).  % Load Logical English Examples
 :- use_module('../../api.pl', [start_api_server/0, set_le_program_module/1, le_program_module/1, hack_module_for_taxlog/1, handle_api/1]). 
 :- use_module(library(http/http_unix_daemon)).
 

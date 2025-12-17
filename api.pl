@@ -128,6 +128,21 @@ entry_point(R, _{results:Results}) :- get_dict(operation,R,query), !,
         makeExplanationTree(E_,E)
         ), Results).
 
+% Added for API LE LLM App
+% curl --header "Content-Type: application/json" --request POST --data '{"token":"myToken123","operation":"examples", "file":"1_net_asset_value_test_3"}' http://localhost:3050/leapi
+entry_point(R, _{results:AnswerWithDocument}) :- 
+    get_dict(operation,R,examples), !, 
+    %print_message(informational,"LE API: examples request received and extracted: ~w"-[R]),
+    Filename = R.file,
+    %print_message(informational,"Requested File Example ~w \n"-[R.file]),
+    (catch(le_en:en(Filename, _, Document), Error, (
+            print_message(error, Error),
+            AnswerExplanation = _{answer:'LLM request failed', details:Error, document:""} )
+        ) ->  
+        AnswerWithDocument = _{document: Document}
+    ;   AnswerWithDocument = _{answer:'Example request failed', details:'Unknown error', document:"Document no available"}). 
+    %print_message(informational,"LE API: examples request returning: ~w"-[AnswerWithDocument]).   
+
 % Added for API LE
 % curl --header "Content-Type: application/json" --request POST --data '{"token":"myToken123","operation":"answer", "file": "testingle", "document":" ... ", "theQuery":"one", "scenario":"alice"}' http://localhost:3050/leapi
 entry_point(R, _{answer:AnswerExplanation}) :- get_dict(operation,R,answer), !, 
@@ -143,9 +158,9 @@ entry_point(R, _{answer:AnswerExplanation}) :- get_dict(operation,R,answer), !,
 
 % Added for API LE
 entry_point(R, _{results:AnswerExplanation}) :- get_dict(operation,R,explain), !, 
-    %term_string(Query,R.theQuery,[variable_names(_VarPairs_)]),
-    %print_message(informational,"Query ~w  Scenario ~w\n"-[R.theQuery, R.scenario]),
-    le_answer:parse_and_query_all_answers(R.file, en(R.document), R.theQuery, with(R.scenario), AnswerExplanation).
+    print_message(informational,"Query ~w  Scenario ~w\n"-[R.theQuery, R.scenario]),
+    le_answer:parse_and_query_all_answers(R.file, en(R.document), R.theQuery, with(R.scenario), AnswerExplanation). 
+    %print_message(informational,"entry point explain returning: ~w"-[AnswerExplanation]).
 
 % NEW: Entry point for Gemini
 % curl --header "Content-Type: application/json" --request POST --data '{"token":"myToken123", "gemini_api_key": "..", "operation":"answer_via_llm", "file": "testllm", "document":" ... ", "userinput":"some input text"}' http://localhost:3050/leapi
@@ -166,7 +181,8 @@ entry_point(R, _{results:AnswerExplanation, translation: LLMAnswer}) :- get_dict
         ;   AnswerExplanation = Result, LLMAnswer = 'I did not understand' )
     )
     ;   AnswerExplanation = _{answer:'LLM request failed', details:'Unknown error'}, LLMAnswer = 'I did not understand'
-    ).
+    ),
+    print_message(informational,"API: answer_via_llm request returning: ~w with LLM answer: ~w"-[AnswerExplanation, LLMAnswer]).
     % AnswerExplanation = _{error:'LLM request passed', details:'LLM integration disabled in this build'}.
 
 % NEW: Helper predicate to process the request, call Gemini, and process the response
@@ -210,8 +226,11 @@ Document:
     %GeminiURL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=', 
     %GeminiURL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=',
     %GeminiURL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=',
-    GeminiURL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=',
-    concat_atom([GeminiURL, APIKey], GeminiURLFull), 
+    % USED_LLM environment variable defines the model to use like     gemini-2.5-flash
+    (getenv('USED_LLM', Model) -> LLM = Model ; throw(error(missing_llm, _))),
+    GeminiURL = 'https://generativelanguage.googleapis.com/v1beta/models/',
+    URLPost = ':generateContent?key=',
+    concat_atom([GeminiURL, LLM, URLPost, APIKey], GeminiURLFull), 
     PayloadDict = _{contents: [_{parts: [_{text: Prompt}]}]},
     % print_message(informational,"API: About to send the PayloadDict ~w to ~w"-[PayloadDict, GeminiURLFull]), 
     time(http_post(GeminiURLFull, 
