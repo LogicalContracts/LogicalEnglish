@@ -125,7 +125,7 @@ The University of Bologna has actively supported the development of LE, in pursu
 				export LE_LLM_K="..."
 			- declare the port, e.g:
 				export LE_LLM_PORT=3052
-			swipl simple_server.pl
+			- swipl simple_server.pl
 		- To produce the container:
 			- from ~/git/LogicalEnglish/ (Repo's root folder)
 			- build the container's image:
