@@ -134,7 +134,7 @@ The University of Bologna has actively supported the development of LE, in pursu
 				-  docker run -e LE_LLM_K='..' -e USED_LLM='gemini-2.5-flash' -e LE_LLM_PORT=3052 -p 3052:3052  --name lellm-server swipl-web-app
 				- you may need to ctrl-C to escape terminal. It will stay running. 
 		- To open the app, in your the browser go to:
-			- http://<your host>:3052/static/simple_client.html
+			- http://your host ip here:3052/static/simple_client.html
 - [2025-12-02] Previous version [f6445c5edb14f5de19e6ad376c9de9f481fdd71d](https://github.com/LogicalContracts/LogicalEnglish/commit/f6445c5edb14f5de19e6ad376c9de9f481fdd71d)
 	- LE - LLM (Gemini) interaction to produce queries and scenarios from texts in English
 		- from https://github.com/LogicalContracts/LogicalEnglish/tree/main/clientExample/llm-app
