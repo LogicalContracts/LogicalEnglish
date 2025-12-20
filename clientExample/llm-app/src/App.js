@@ -67,7 +67,242 @@ const DATA = [
         "Query_text": "which tax payer is a party of which event."
       }
     ]
-  }
+  },
+  {
+    "File_Example": "4_affiliates_3",
+    "Summary": "This example covers affiliates entities for tax purposes.",
+    "Scenario_ids": [
+      "test"
+    ],
+    "Queries": [
+      {
+        "Query_id": "one",
+        "Query_text": "andrew has affiliated with his company at 2020-01-02."
+      },
+      {
+        "Query_id": "two",
+        "Query_text": "who affiliated with which entity at which date."
+      },
+      {"Query_id": "three", "Query_text": "what entity affiliated with which company at which date."},
+      {"Query_id": "four", "Query_text": "when did which entity affiliate with which other entity."},
+      {"Query_id": "five", "Query_text": "on what date did which entity affiliate with which company."},
+      {"Query_id": "six", "Query_text": "is there an affiliation between which entity and which company."},
+      {"Query_id": "seven", "Query_text": "when did the affiliation between which entity and which company begin."}    
+    ]
+  }, 
+  {
+    "File_Example": "augmentedsem",
+    "Summary": "This example covers augmented semantics for ontologies.",
+    "Scenario_ids": [
+      "noscenario"
+    ],
+    "Queries": [
+      {
+        "Query_id": "thing",
+        "Query_text": "which thing is a which type."
+      },
+      {
+        "Query_id": "label",
+        "Query_text": "which label is a label for Institution Class."
+      },
+      { "Query_id": "description", "Query_text": "CBSA is a label for which description." },
+      { "Query_id": "dataset", "Query_text": "the dataset ID is which one." }, 
+      { "Query_id": "about", "Query_text": "the dataset FDIC Insured Banks is described at which text." },
+      { "Query_id": "download", "Query_text": "the dataset FDIC Insured Banks can be downloaded from which url." },
+      { "Query_id": "provider", "Query_text": "the provider of FDIC Insured Banks is which provider." },
+      { "Query_id": "platform", "Query_text": "the platform of FDIC Insured Banks is which platform." },
+      { "Query_id": "method", "Query_text": "the method of delivery of FDIC Insured Banks is which method." }, 
+      { "Query_id": "version", "Query_text": "the product version of FDIC Insured Banks included here is which version." }
+    ]
+  }, 
+  { "File_Example": "cgt_assets",
+    "Summary": "TThis example covers CGT assets as an improvement on 1_cgt_assets_and_exemptions_3",
+    "Scenario_ids": [
+      "Colin",
+      "Crypto",
+      "Farmer",
+      "Legal", 
+      "Loan", 
+      "Insurance", 
+      "Mixed"
+    ],
+    "Queries": [
+      {
+        "Query_id": "cgt asset",
+        "Query_text": "which thing is a CGT asset."
+      },
+      {
+        "Query_id": "exempt asset",
+        "Query_text": "which asset is a CGT exempt asset."
+      },
+      { "Query_id": "predate", "Query_text": "which asset is a pre-date CGT asset." } 
+    ],
+  }, 
+  { "File_Example": "citizenship",
+    "Summary": "This is the classical example about the British Nationality Act.",
+    "Scenario_ids": [
+      "alice",
+      "harry", 
+      "trust_harry",
+      "alice_harry"
+    ],
+    "Queries": [
+      {
+        "Query_id": "one",
+        "Query_text": "which person acquires British citizenship on which date."
+      }
+    ]
+  },   
+  {    "File_Example": "gst",
+    "Summary": "This example covers Goods and Services Tax (GST) concepts",
+    "Scenario_ids": [
+      "A",
+      "B",
+      "C"
+    ],
+    "Queries": [
+      {
+        "Query_id": "A",
+        "Query_text": "Cherrio Charity must register for GST."
+      },
+      { "Query_id": "B", "Query_text": "sporting club must register for GST." },
+      { "Query_id": "C", "Query_text": "Tom s Bakery must register for GST." },
+      { "Query_id": "D", "Query_text": "which entity is a not-for-profit." },
+    ]
+  }, 
+  {    "File_Example": "gstturnover",
+    "Summary": "This example covers GST turnover and total business income concepts",
+    "Scenario_ids": [
+      "A",
+      "B",
+      "C", 
+      "typical", 
+      "significant exports",
+      "small business"
+    ],
+    "Queries": [
+      {
+        "Query_id": "A",
+        "Query_text": "Cherrio Charity must register for GST."
+      },
+      { "Query_id": "B", "Query_text": "sporting club must register for GST." },
+      { "Query_id": "C", "Query_text": "Tom s Bakery must register for GST." },
+      { "Query_id": "D", "Query_text": "which entity is a not-for-profit." },
+      { "Query_id": "tbi", "Query_text": "which amount is the total business income." },  
+      { "Query_id": "gst_turnover", "Query_text": "which amount is the GST Turnover." },
+      { "Query_id": "uber", "Query_text": "mario is an Uber driver." },
+      { "Query_id": "who", "Query_text": "which entity must register for GST." }
+    ]
+},
+  {    "File_Example": "journal_balance",
+    "Summary": "This example covers journal and trail balance concepts.",
+    "Scenario_ids": [
+      "user_example",
+      "balanced_tb", 
+      "unbalanced_tb",
+      "unbalanced_tb_2"
+    ],
+    "Queries": [
+      {
+        "Query_id": "trial_balance",  
+        "Query_text": "a trial balance is defined."},
+      { "Query_id": "check_user_example", "Query_text": "JE-201 is valid." },
+]
+  },
+  {    "File_Example": "journal", 
+    "Summary": "This example covers journal concepts.",
+    "Scenario_ids": [
+      "user_example"
+    ],
+    "Queries": [
+      { "Query_id": "check_user_example", "Query_text": "JE-201 is valid." },
+    ]
+  },
+  {    "File_Example": "payg",
+    "Summary": "This example covers Pay As You Go (PAYG) withholding concepts.",
+    "Scenario_ids": [
+      "test_quarter_2",
+      "ato_1_quarter_2",
+      "ato_2_quarter_3",
+      "ato_3_quarter_4",
+      "ato_4_quarter_2"
+    ], 
+    "Queries": [
+      {
+        "Query_id": "test",  
+        "Query_text": "the varied amount payable for which quarter for which year by Australian entity is which amount."},
+      { "Query_id": "payable", "Query_text": "the varied amount payable for which quarter for which year by which entity is which amount." },
+      { "Query_id": "new_rate", "Query_text": "the new varied rate for which entity for 2025 is which percentage." },
+      { "Query_id": "estimated_tax", "Query_text": "the estimated tax for which entity for which year is which amount." },
+      { "Query_id": "payg_income", "Query_text": "the estimated PAYG instalment income for which entity for which year is which amount." }
+    ]
+  },
+  {    "File_Example": "sbpp_0",
+    "Summary": "This example covers Small Business participation percentage concepts.",
+    "Scenario_ids": [
+      "test"
+    ],
+    "Queries": [
+      {
+        "Query_id": "indirect",  
+        "Query_text": "the indirect small business participation percentage of individual in unit is which number."}, 
+      { "Query_id": "direct", "Query_text": "the direct small business participation percentage of individual in unit is which number." }
+    ]
+  },
+  {   "File_Example": "sbppxml1",
+    "Summary": "This example covers Small Business participation percentage concepts in XML format",
+    "Scenario_ids": [
+      "one"
+    ],
+    "Queries": [
+      {
+        "Query_id": "indirect",  
+        "Query_text": "the indirect small business participation percentage of Tom Fry in Tallow Unit Trust is which number."}, 
+      { "Query_id": "direct", "Query_text": "the direct small business participation percentage of Tom Fry in Tallow Unit Trust is which number." }
+    ]
+  },
+  {   "File_Example": "small_business",
+    "Summary": "This example covers Small Business concepts.",
+    "Scenario_ids": [
+      "one",
+      "two",
+      "three", 
+      "four", 
+      "five"
+    ],
+    "Queries": [
+      {
+        "Query_id": "one",  
+        "Query_text": "Cherrio Charity is a small business entity for which year."},
+        { "Query_id": "two",  "Query_text": "Tech Innovations Ltd is a small business entity for which year."},
+        { "Query_id": "three",  "Query_text": "Bakehouse Bliss Partnership is a small business entity for which year."},
+        { "Query_id": "four",  "Query_text": "River View Trust is a small business entity for which year."},
+        { "Query_id": "five",  "Query_text": "Australian Trust is a small business entity for which year."}
+    ]
+  },
+  {   "File_Example": "sum_onto",
+    "Summary": "This example covers summation over a list of numbers in an ontology.",
+    "Scenario_ids": [
+      "one"
+    ],
+    "Queries": [
+      {
+        "Query_id": "one",  
+        "Query_text": "which number is the result."},
+        { "Query_id": "two",  "Query_text": "which thing is of which other thing."}
+    ]
+}, 
+{   "File_Example": "sum_simple", 
+    "Summary": "This example covers simple summation over a list of numbers.",
+    "Scenario_ids": [
+      "one"
+    ],
+    "Queries": [
+      {
+        "Query_id": "one",  
+        "Query_text": "which number is the result."}
+    ]   
+}
 ];
 
 const SERVER_URL_BASE = "http://localhost:3052";
@@ -266,7 +501,7 @@ function App() {
             <option value="">-- Select File or Enter Manually --</option>
             {DATA.map((item) => (
               <option key={item.File_Example} value={item.File_Example}>
-                {item.File_Example}
+                {item.File_Example}: {item.Summary}
               </option>
             ))}
             <option value={MANUAL_FILE_INPUT}>[Enter File Manually]</option>
@@ -278,7 +513,7 @@ function App() {
             <div className="selector-column">
                 <input
                     type="text"
-                    placeholder="Enter file name (e.g., my_new_file.xml)"
+                    placeholder="Enter file name (e.g., my_new_file)"
                     value={manualFilename}
                     onChange={(e) => setManualFilename(e.target.value)}
                     className="manual-input-field"
@@ -366,7 +601,7 @@ function App() {
             </div>
 
             {/* 3. Manual Query Input */}
-            <div className="selector-column">
+            {/*<div className="selector-column">
               <textarea
                 placeholder="Enter your own specific query id text here."
                 value={selectedQueryID}
@@ -377,11 +612,11 @@ function App() {
                 } }
                 rows="4" />
               <label> - Custom Query ID</label>
-            </div>
+            </div> */}
               <p className="or-divider">OR</p>
           </div>
           {/* --- Option B: Direct Questions --- */}
-          <div className="manual-query-input-only">
+          <div className="manual-query-input-only">xml
             <textarea
               className="scrollable-editor"
               placeholder="Enter your question/query and a brief description of the situation."

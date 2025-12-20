@@ -137,7 +137,7 @@ entry_point(R, _{results:AnswerWithDocument}) :-
     %print_message(informational,"Requested File Example ~w \n"-[R.file]),
     (catch(le_en:en(Filename, _, Document), Error, (
             print_message(error, Error),
-            AnswerExplanation = _{answer:'LLM request failed', details:Error, document:""} )
+            AnswerWithDocument = _{answer:'LLM request failed', details:Error, document:""} )
         ) ->  
         AnswerWithDocument = _{document: Document}
     ;   AnswerWithDocument = _{answer:'Example request failed', details:'Unknown error', document:"Document no available"}). 

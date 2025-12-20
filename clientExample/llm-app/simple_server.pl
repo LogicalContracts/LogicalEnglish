@@ -110,14 +110,15 @@ http:location(json, root(json), []).
 % thread_httpd:current_server(Port, _Goal, Thread, _Queue, _Scheme, _StartTime).
 % See also: https://www.swi-prolog.org/pldoc/man?section=httpunixdaemon
 simple_server_main :-
-    format('SWI-Prolog server starting on port 3052...~n'),
+    print_message(informational, 'Starting SWI-Prolog simple server...'),
+    (getenv('LE_LLM_PORT', Value) -> atom_number(Value, Port) ; throw(error(port_number_missing, _))),
+    format('SWI-Prolog server starting on port ~q...~n', [Port]),
     asserta(user:file_search_path(static_dir,'./build')), 
     % Ensure binding to 0.0.0.0 for Docker access
-    http_server(http_dispatch, [port(3052)]),
+    http_server(http_dispatch, [port(Port), ip('0.0.0.0')]),
     % This blocks the main thread, keeping the container alive
     %thread_join('http@9999', _Status). 
     thread_get_message(forever).
-    %http_daemon([port(3052)]).
 
     %simple_server_impl(Opts),
     %debug(log, 'Options: ~q', [Opts]),
