@@ -129,7 +129,7 @@ The University of Bologna has actively supported the development of LE, in pursu
 		- To produce the container:
 			- from ~/git/LogicalEnglish/ (Repo's root folder)
 			- build the container's image:
-				- docker build -t swipl-web-app -f clientExample/llm-app/dockerfile
+				- docker build -t swipl-web-app -f clientExample/llm-app/dockerfile .
 			- run the new image in docker, passing the env vars:
 				-  docker run -e LE_LLM_K='..' -e USED_LLM='gemini-2.5-flash' -e LE_LLM_PORT=3052 -p 3052:3052  --name lellm-server swipl-web-app
 				- you may need to ctrl-C to escape terminal. It will stay running. 
