@@ -158,7 +158,7 @@ entry_point(R, _{answer:AnswerExplanation}) :- get_dict(operation,R,answer), !,
 
 % Added for API LE
 entry_point(R, _{results:AnswerExplanation}) :- get_dict(operation,R,explain), !, 
-    print_message(informational,"Query ~w  Scenario ~w\n"-[R.theQuery, R.scenario]),
+    % print_message(informational,"api.pl: Query ~w  Scenario ~w\n"-[R.theQuery, R.scenario]),
     le_answer:parse_and_query_all_answers(R.file, en(R.document), R.theQuery, with(R.scenario), AnswerExplanation). 
     %print_message(informational,"entry point explain returning: ~w"-[AnswerExplanation]).
 

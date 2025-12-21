@@ -30,6 +30,7 @@
 
 :- module(simple_server, [simple_server_main/0, simple_server_impl/1]).
 
+:- use_module(library(pldoc)).
 :- use_module(library(http/thread_httpd)).
 :- use_module(library(http/http_dispatch)).
 % library(http/json) --> library(json)
@@ -48,7 +49,7 @@
 :- use_module('../../api.pl', [start_api_server/0, set_le_program_module/1, le_program_module/1, hack_module_for_taxlog/1, handle_api/1]). 
 :- use_module(library(http/http_unix_daemon)).
 
-:- thread_pool_create(compute, 8,
+:- thread_pool_create(compute, 2,
                       [ local(20000), global(100000), trail(50000),
                         backlog(0)
                       ]).
@@ -96,7 +97,8 @@ http:location(build, root(build), []). % to use the build dir of my-app in LE
 http:location(static, root(static), []).
 http:location(json, root(json), []).
 
-%! simple_server_main/0 is det.
+%!  simple_server_main
+%   Starts the server...
 % Start the server, then start a top-level REPL.
 % TODO: start the server as a daemon (see library(http/http_unix_daemon)),
 %       which means not starting the REPL.
