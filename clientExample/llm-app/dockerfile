@@ -11,7 +11,7 @@ WORKDIR /usr/src/clientExample/llm-app
 
 # The default web server port for this example is 8000.
 # EXPOSE documents which ports the application uses.
-EXPOSE 3052
+EXPOSE 8084
 
 # The default command to run when the container starts.
 # We use 'swipl -l server.pl -g halt' to compile and run the file.

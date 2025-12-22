@@ -115,9 +115,13 @@ simple_server_main :-
     print_message(informational, 'Starting SWI-Prolog simple server...'),
     (getenv('LE_LLM_PORT', Value) -> atom_number(Value, Port) ; throw(error(port_number_missing, _))),
     format('SWI-Prolog server starting on port ~q...~n', [Port]),
+     % Use the absolute path inside the container
+    %AbsoluteBuildDir = '/usr/src/clientExample/llm-app/build',
+    %asserta(user:file_search_path(static_dir, AbsoluteBuildDir)), 
     asserta(user:file_search_path(static_dir,'./build')), 
     % Ensure binding to 0.0.0.0 for Docker access
     http_server(http_dispatch, [port(Port), ip('0.0.0.0')]),
+    %listing(le_en:_), % for debugging
     % This blocks the main thread, keeping the container alive
     %thread_join('http@9999', _Status). 
     thread_get_message(forever).

@@ -28,7 +28,7 @@ limitations under the License.
 :- use_module(library(sandbox)).
 :- use_module(library(http/http_cors)).
 :- use_module(library(settings)).
-:- set_setting(http:cors, [*]). 
+:- set_setting(http:cors, [*]).
 %:- use_module(library(http/http_digest)).  % to activate digest authorization options
 
 % :- multifile pengines:authentication_hook/3.
@@ -59,7 +59,8 @@ limitations under the License.
 :- use_module(le_answer, [parse_and_query/5, prepare_query/6, targetBody/6]). 
 :- use_module(le_input,[text_to_logic/2, source_lang/1]).
 :- use_module(library(prolog_stack)).
-%:- use_module('./clientExample/my-app/build/simple_server.pl'). 
+%:- use_module('./clientExample/my-app/build/simple_server.pl').  
+:- use_module('le_en.pl', [le_en/3]).  % Load Logical English Examples
 
 :- if(current_module(swish)). %%%%% On SWISH:
 
