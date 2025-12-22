@@ -172,7 +172,7 @@ entry_point(R, _{results:AnswerExplanation, translation: LLMAnswer}) :- get_dict
         ))
     ->  (
         % Successfully processed the LLM request.
-        print_message(informational, "API: LLM request processed successfully: ~w"-[Result]),
+        %print_message(informational, "API: LLM request processed successfully: ~w"-[Result]),
         (   Result = _{llm_answer: LLMAnswer, status: 'success'} -> (
             print_message(informational, "API: LLM Answer: ~w"-[LLMAnswer]),
             string_concat("\n   \n", LLMAnswer, LLMAnswer2), 
@@ -181,8 +181,8 @@ entry_point(R, _{results:AnswerExplanation, translation: LLMAnswer}) :- get_dict
         ;   AnswerExplanation = Result, LLMAnswer = 'I did not understand' )
     )
     ;   AnswerExplanation = _{answer:'LLM request failed', details:'Unknown error'}, LLMAnswer = 'I did not understand'
-    ),
-    print_message(informational,"API: answer_via_llm request returning: ~w with LLM answer: ~w"-[AnswerExplanation, LLMAnswer]).
+    ).
+    %print_message(informational,"API: answer_via_llm request returning: ~w with LLM answer: ~w"-[AnswerExplanation, LLMAnswer]).
     % AnswerExplanation = _{error:'LLM request passed', details:'LLM integration disabled in this build'}.
 
 % NEW: Helper predicate to process the request, call Gemini, and process the response
@@ -207,10 +207,6 @@ return them with this form (no bullet points, please):
 scenario new is:
 
 query new is:
-
-/*?- answer(new, with(new).
-  ?- answer(new, with(new), le(E), R).
-*/
 
 (if there is nothing to put on each section, do not write the header)
 

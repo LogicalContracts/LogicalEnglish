@@ -263,7 +263,7 @@ json_response(json{query: GoalString},
           handle_error(GoalString, TrueFalseError, GoalStringAfterCall, VarsResult, PrintedOutput, Error, ErrorString)
     ).
 
-%! do_query(+GoalString:string, -TrueFalseError:atom, -GoalStringAfterCall:string,
+% do_query(+GoalString:string, -TrueFalseError:atom, -GoalStringAfterCall:string,
 %           -VarsResult:list, -PrintedOutput:string, -ErrorString:string) :-
 % Parse the GoalString and call it, capturing the results, including success/error,
 % variable bindings, output.
@@ -285,7 +285,7 @@ do_query(GoalString, TrueFalseError, GoalStringAfterCall, VarsResult, PrintedOut
 format_var(Var=Value, json{var: Var, value: ValueStr}) :-
     format(string(ValueStr), '~q', [Value]).
 
-%! handle_error(+GoalString:string, -TrueFalseError:atom, -GoalStringAfterCall:string,
+% handle_error(+GoalString:string, -TrueFalseError:atom, -GoalStringAfterCall:string,
 %               -VarsResult:list, -PrintedOutput:string, +Error, -ErrorString:string) is det.
 % Catch handler for json_response/2 - sets the output variables and also
 % processes the error term.

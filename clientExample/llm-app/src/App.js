@@ -616,7 +616,7 @@ function App() {
               <p className="or-divider">OR</p>
           </div>
           {/* --- Option B: Direct Questions --- */}
-          <div className="manual-query-input-only">xml
+          <div className="manual-query-input-only">
             <textarea
               className="scrollable-editor"
               placeholder="Enter your question/query and a brief description of the situation."
