@@ -112,15 +112,19 @@ http:location(json, root(json), []).
 % thread_httpd:current_server(Port, _Goal, Thread, _Queue, _Scheme, _StartTime).
 % See also: https://www.swi-prolog.org/pldoc/man?section=httpunixdaemon
 simple_server_main :-
-    print_message(informational, 'Starting SWI-Prolog simple server...'),
+    print_message(informational, 'Starting SWI-Prolog simple server....'-[]),
     (getenv('LE_LLM_PORT', Value) -> atom_number(Value, Port) ; throw(error(port_number_missing, _))),
-    format('SWI-Prolog server starting on port ~q...~n', [Port]),
+    print_message(informational,'SWI-Prolog server starting on port ~q...~n' - [Port]),
      % Use the absolute path inside the container
     %AbsoluteBuildDir = '/usr/src/clientExample/llm-app/build',
     %asserta(user:file_search_path(static_dir, AbsoluteBuildDir)), 
-    asserta(user:file_search_path(static_dir,'./build')), 
+    working_directory(D, D),
+    print_message(informational,"Current directory: ~w"-[D]),
+    absolute_file_name('./build', Absolute),
+    print_message(informational,"Absolute: ~w"-[Absolute]),
+    asserta(user:file_search_path(static_dir,Absolute)), 
     % Ensure binding to 0.0.0.0 for Docker access
-    http_server(http_dispatch, [port(Port), ip('0.0.0.0')]),
+    http_server(http_dispatch, [port(Port)]),
     %listing(le_en:_), % for debugging
     % This blocks the main thread, keeping the container alive
     %thread_join('http@9999', _Status). 

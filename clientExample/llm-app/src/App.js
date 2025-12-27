@@ -305,7 +305,8 @@ const DATA = [
 }
 ];
 
-const SERVER_URL_BASE = "http://localhost:8084";
+//const SERVER_URL_BASE = "http://localhost:8084";
+const SERVER_URL_BASE = "https://leapi.logicalcontracts.com";
 const SERVER_URL = SERVER_URL_BASE + "/leapi";
 const MY_TOKEN = "myToken123";
 const MANUAL_FILE_INPUT = 'MANUAL_FILE_INPUT';
