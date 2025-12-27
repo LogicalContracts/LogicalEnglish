@@ -551,7 +551,7 @@ function App() {
         </label>
       </div>
 
-      <h2>Second, let us define a scenario and query or simply describe your situation and interests</h2>
+      <h2>Secondly, let us define a scenario and query or simply describe your situation and interests</h2>
       
       {/* Show the selected file context */}
       <p className="context-display">
@@ -598,7 +598,7 @@ function App() {
                 ))}
               </select>
               <label> - Pre-defined Query ID</label>
-              <p className="or-divider">OR</p>
+              <p className="or-divider"></p>
             </div>
 
             {/* 3. Manual Query Input */}
