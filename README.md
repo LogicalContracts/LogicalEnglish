@@ -117,8 +117,6 @@ The University of Bologna has actively supported the development of LE, in pursu
 		- To test llm-app now:
 			- from https://github.com/LogicalContracts/LogicalEnglish/tree/main/clientExample/llm-app
 			- npm run build
-			- make sure that ./public/simple_server.html header has the correct links to the .js and .css files just produced. 
-			- npm run build (to update those links)
 			- declare the model to be used. e.g: 
 				export USED_LLM="gemini-2.5-flash-lite"
 			- with the correct key:
