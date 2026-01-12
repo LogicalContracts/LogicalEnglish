@@ -175,7 +175,7 @@ entry_point(R, _{results:AnswerExplanation, translation: LLMAnswer}) :- get_dict
         % Successfully processed the LLM request.
         %print_message(informational, "API: LLM request processed successfully: ~w"-[Result]),
         (   Result = _{llm_answer: LLMAnswer, status: 'success'} -> (
-            print_message(informational, "API: LLM Answer: ~w"-[LLMAnswer]),
+            %print_message(informational, "API: LLM Answer: ~w"-[LLMAnswer]),
             string_concat("\n   \n", LLMAnswer, LLMAnswer2), 
             string_concat(R.document, LLMAnswer2, NewDocument),
             le_answer:parse_and_query_all_answers(R.file, en(NewDocument), new, with(new), AnswerExplanation)) 
