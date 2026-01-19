@@ -114,7 +114,7 @@ The University of Bologna has actively supported the development of LE, in pursu
 
 - [2025-12-19] Previous version [10c18e3b887fe731fece548d64bd44f8751b8090](https://github.com/LogicalContracts/LogicalEnglish/commit/10c18e3b887fe731fece548d64bd44f8751b8090)
 	- Major changes to the LE-LLM (Gemini) api and JS app to use as a docker container:
-		- To test llm-app now:
+		- To test llm-app locally:
 			- from https://github.com/LogicalContracts/LogicalEnglish/tree/main/clientExample/llm-app
 			- npm run build
 			- declare the model to be used. e.g: 
@@ -122,17 +122,18 @@ The University of Bologna has actively supported the development of LE, in pursu
 			- with the correct key:
 				export LE_LLM_K="..."
 			- declare the port, e.g:
-				export LE_LLM_PORT=3052
+				export LE_LLM_PORT=local_port
 			- swipl simple_server.pl
-		- To produce the container:
-			- from ~/git/LogicalEnglish/ (Repo's root folder)
-			- build the container's image:
-				- docker build -t leapi -f clientExample/llm-app/dockerfile .
-			- run the new image in docker, passing the env vars:
-				-  docker run -e LE_LLM_K='..' -e USED_LLM='gemini-2.5-flash' -e LE_LLM_PORT=3052 -p 3052:3052  --name lellm-server swipl-web-app
-				- you may need to ctrl-C to escape terminal. It will stay running. 
+		- To deploy (from a copy of the repo in the server)
+			- cd ~/git/LogicalEnglish/clientExample/llm-app/
+			- npm run build
+			- cd ~/git/LogicalEnglish/
+			- docker build -t leapi -f clientExample/llm-app/dockerfile .
+			- cd ~/git/LogicalEnglish/clientExample/llm-app/
+			- docker run -e LE_LLM_K='..' -e USED_LLM='gemini-2.5-flash' -e LE_LLM_PORT=internal_port -p external_port:internal_port  --name lellm-server leapi 
+			- you may need to ctrl-C to escape terminal. It will stay running. 
 		- To open the app, in your the browser go to:
-			- http://your host ip here:3052/static/simple_client.html
+			- http:// your host ip here /static/simple_client.html
 - [2025-12-02] Previous version [f6445c5edb14f5de19e6ad376c9de9f481fdd71d](https://github.com/LogicalContracts/LogicalEnglish/commit/f6445c5edb14f5de19e6ad376c9de9f481fdd71d)
 	- LE - LLM (Gemini) interaction to produce queries and scenarios from texts in English
 		- from https://github.com/LogicalContracts/LogicalEnglish/tree/main/clientExample/llm-app
