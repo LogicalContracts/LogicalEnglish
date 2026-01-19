@@ -305,9 +305,14 @@ const DATA = [
 }
 ];
 
-//const SERVER_URL_BASE = "http://localhost:8084";
-const SERVER_URL_BASE = "https://leapi.logicalcontracts.com";
-//const SERVER_URL_BASE = "http://localhost:3052";
+// This works regardless of whether you are on localhost:3000, 
+// localhost:8084, or a real production domain.
+const SERVER_URL_BASE = window.location.origin;
+//const SERVER_URL_BASE = "https://leapi.logicalcontracts.com";
+// This will look for the environment variable first, 
+// and fallback to a default value if it's not found.
+//const SERVER_URL_BASE = process.env.REACT_APP_SERVER_URL_BASE || 'http://localhost:3052';
+console.error("Using SERVER_URL_BASE =", SERVER_URL_BASE);
 const SERVER_URL = SERVER_URL_BASE + "/leapi";
 const MY_TOKEN = "myToken123";
 const MANUAL_FILE_INPUT = 'MANUAL_FILE_INPUT';
