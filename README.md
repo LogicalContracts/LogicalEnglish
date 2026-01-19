@@ -129,7 +129,6 @@ The University of Bologna has actively supported the development of LE, in pursu
 			- npm run build
 			- cd ~/git/LogicalEnglish/
 			- docker build -t leapi -f clientExample/llm-app/dockerfile .
-			- cd ~/git/LogicalEnglish/clientExample/llm-app/
 			- docker run -e LE_LLM_K='..' -e USED_LLM='gemini-2.5-flash' -e LE_LLM_PORT=internal_port -p external_port:internal_port  --name lellm-server leapi 
 			- you may need to ctrl-C to escape terminal. It will stay running. 
 		- To open the app, in your the browser go to:
