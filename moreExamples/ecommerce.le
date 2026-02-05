@@ -1,0 +1,63 @@
+:- module(ecommerce,[]).
+
+en("the target language is: prolog.
+
+the templates are:
+*a number* is the result.
+*a number* is the base price. 
+*an amount* is paid for *a concept*. 
+
+the ontology is:
+    tax is a tax. 
+    reduction is a reduction. 
+    Electronics is a category.
+    VAT is a tax.
+    Student Discount is a reduction. 
+    Holiday Special is a reduction.
+
+the knowledge base sum includes:
+    
+a number T is the result if
+    a B is the base price
+    and a SumTaxes is the sum of each TaxAmount such that
+         TaxAmount is paid for a concept
+    	 and the concept is a tax
+    and a SumReductions is the sum of each ReductionAmount such that
+            ReductionAmount is paid for a reason
+    		and the reason is a reduction
+    and T = B + SumTaxes - SumReductions.
+    
+scenario one is:
+    100 is the base price.
+    15 is paid for tax.
+    5 is paid for tax. 
+    10 is paid for reduction. 
+    2 is paid for reduction.
+
+scenario two is:
+    100 is the base price.
+    15 is paid for VAT.
+    5 is paid for VAT. 
+    10 is paid for Student Discount. 
+    2 is paid for Holiday Special.
+      
+query one is:
+    which number is the result. 
+    
+query two is:
+    which thing is a category.
+    
+query three is:
+    which thing is a reduction.
+
+").
+
+/** <examples>
+?- show prolog.  
+?- answer("query one with scenario one").
+?- answer("query three with scenario one").
+?- answer("query two with scenario one").  
+?- answer("query one with scenario two").
+?- answer("query three with scenario two").
+?- answer("query two with scenario two").
+*/
