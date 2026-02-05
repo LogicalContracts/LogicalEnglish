@@ -302,6 +302,20 @@ const DATA = [
         "Query_id": "one",  
         "Query_text": "which number is the result."}
     ]   
+},
+{   "File_Example": "ecommerce", 
+    "Summary": "This example covers e-commerce tax and discounts.",
+    "Scenario_ids": [
+      "one",
+      "two"
+    ],
+    "Queries": [
+      {
+        "Query_id": "one",  
+        "Query_text": "which number is the result."},
+      { "Query_id": "two",  "Query_text": "which thing is a category."},
+      { "Query_id": "three",  "Query_text": "which thing is a reduction."}  
+    ]   
 }
 ];
 
