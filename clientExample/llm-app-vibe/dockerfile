@@ -1,0 +1,21 @@
+# Stage 1: Use the official SWI-Prolog image as the base
+# to run from ~/git/LogicalEnglish/
+# Using 'stable' tag ensures you get a recent, tested version.
+FROM swipl
+
+# Copy all LE files into the container
+COPY .  /usr/src/.
+
+# Set the working directory inside the container
+WORKDIR /usr/src/clientExample/llm-app
+
+# The default web server port for this example is 8000.
+# EXPOSE documents which ports the application uses.
+EXPOSE 8084
+
+# The default command to run when the container starts.
+# We use 'swipl -l server.pl -g halt' to compile and run the file.
+# The ':- initialization(server(8000), program).' in server.pl 
+# will automatically start the server.
+#CMD ["swipl", "-l", "simple_server.pl", "-g", "halt", "-t", "halt"]
+CMD ["swipl", "-l", "simple_server.pl", "-g", "simple_server_main", "-t", "prolog"]
