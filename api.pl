@@ -186,6 +186,112 @@ entry_point(R, _{results:AnswerExplanation, translation: LLMAnswer}) :- get_dict
     %print_message(informational,"API: answer_via_llm request returning: ~w with LLM answer: ~w"-[AnswerExplanation, LLMAnswer]).
     % AnswerExplanation = _{error:'LLM request passed', details:'LLM integration disabled in this build'}.
 
+
+entry_point(R, _{sessionModule:M, kb:KB, 
+    predicates:Predicates, examples:ExamplesInJSON, 
+    queries:QueriesInJSON, language:Lang, target:Target}) :- get_dict(operation,R,load), !, 
+    set_le_program_module(M),
+    print_message(informational,"Created module ~w\n"-[M]),
+
+    (get_dict(le,R,LE) -> (
+            Lang=le,
+            le2prologTerms(LE,KB,Clauses,Preds,ExamplesInJSON, Examples, Queries,Target),
+            findall(Pred,(member(Pred_,Preds), toJSON(Pred_,Pred)),Predicates),
+            findall(QueryJSON,(member(Q_,Queries), toJSON(Q_,QueryJSON)),QueriesInJSON),
+            forall(member(Example,Examples),M:assert(Example)), 
+            forall(member(Query,Queries),M:assert(Query)), 
+            forall(member(Clause,Clauses),M:assert(Clause))
+            %print_message(informational,"Asserted  ~w and ~w "-[Queries, Clauses])
+        ) ; (
+            assertion(safe_file(R.file)),
+            (sub_atom(R.file,_,_,0,'le') -> (
+                    Lang=le,
+                    read_file_to_string(R.file,LE,[]),
+                    le2prologTerms(LE,KB,Clauses,Preds,ExamplesInJSON, Examples, Queries, Target),
+                    findall(Pred,(member(Pred_,Preds), toJSON(Pred_,Pred)),Predicates),
+                    findall(QueryJSON,(member(Q_,Queries), toJSON(Q_,QueryJSON)),QueriesInJSON),
+                    forall(member(Example,Examples),M:assert(Example)), 
+                    forall(member(Query,Queries),M:assert(Query)), 
+                    forall(member(Clause,Clauses),M:assert(Clause))
+                    %print_message(informational,"Asserted from file ~w and ~w "-[Queries, Clauses])
+                ) ; (
+                    Lang=prolog, Target=prolog,
+                    load_files(R.file,[module(M)])
+                ) 
+            )    
+        )
+    ),
+    M:assert(target_executor(Target)),
+    (Target==taxlog -> M:assert(myDeclaredModule_(M)) ; true),
+    % For LE, make predicates dynamic so we can query them all:
+    (nonvar(Preds) -> forall(member(Pred,Preds), (functor(Pred,F,N), M:dynamic(F/N))) ; true),
+    %with_output_to(string(Report), (listing(M:_), listing(le_input:_))), 
+    print_message(informational,"load finished\n\n"-[]).
+
+% Example:
+%  curl --header "Content-Type: application/json" --request POST --data '{"operation":"draft", "pageURL":"http://mysite/page1#section2",  "content":[{"url":"http://mysite/page1#section2!chunk1", "text":"john flies by instruments"}, {"url":"http://mysite/page1#section2!chunk2", "text":"miguel drives with gusto"}]}' http://localhost:3050/taxkbapi
+% {operation:draft, pageURL:U, content:Items} --> {pageURL:U, draft:PrologText}
+%   each item is a {url:..,text:...} 
+entry_point(R, _{pageURL:ThePage, draft:Draft}) :- get_dict(operation,R,draft), !, 
+    load_content(R.content),
+    ThePage = R.pageURL,
+    draft_string(R.pageURL,Draft).
+
+% Example: see Javascript example in clientExample/
+% Translates a LE program to a Prolog program
+entry_point(R, _{prolog:Program, kb:KB, 
+    predicates:Predicates, examples:Examples, queries:Qs, target:Target}) :- get_dict(operation,R,le2prolog), !, 
+    le2prologTerms(R.le,KB,Terms,Preds,Examples, _ExamplesProlog ,Queries,Target),
+    with_output_to(string(Program),forall(member(Term,Terms), portray_clause(Term) ) ),
+    with_output_to(string(Qs),forall(member(Qx,Queries), portray_clause(Qx) ) ),
+    findall(Pred,(member(Pred_,Preds), term_string(Pred_,Pred)),Predicates).
+    %print_message(informational,"le2prolog done\n"-[]).
+
+
+% adding an direct entry point
+entry_point(R, _{answer:AnswerJSON, result:ok}) :- get_dict(operation,R,answeringQuery), !, %trace
+    print_message(informational,"answering Query: ~w with ~w\n"-[R.query, R.scenario]), 
+    assertion(safe_module(R.sessionModule)),
+    term_string(Scenario, R.scenario), 
+    call_answer(R.query, with(Scenario), R.sessionModule, Answer), !, 
+    term_string(Answer, AnswerJSON).  
+    % term_string(Requests, R.goal).
+    % print_message(informational,"Attending ~w"-[Request]), 
+    % % assertion(safe_module(R.sessionModule)) -> assert(parsed),
+    % assert(le_input:parsed), 
+    % le_input:answer(happy, with(one), Response), retractall(le_input:parsed). 
+
+entry_point(R, _{facts:R.facts, goal: QVS, answers:Solutions, result:Result}) :- get_dict(operation,R,loadFactsAndQuery), !, 
+    print_message(informational,"loadFactsAndQuery: ~w\n"-[R]), 
+    assertion(safe_module(R.sessionModule)),
+    forall(member(Fact_,R.facts),(
+        term_string(Fact,Fact_),
+        assertion( \+ functor(Fact,':-',_) ),
+        R.sessionModule:assert(Fact)
+        )),
+    (get_dict(goal,R,Goal_) -> (
+        assertion(is_list(R.vars)),
+        format(string(QVS),"(~a)-(~w)",[Goal_,R.vars]), term_string(Goal-Vars_,QVS),
+        (R.sessionModule:target_executor(prolog) -> (
+            findall(_{bindings:Vars}, (R.sessionModule:Goal, toJSON(Vars_,Vars)), Solutions),
+            (Solutions=[] -> Result=false ; Result=true)
+            ) ;(
+            % taxlog:
+            hack_module_for_taxlog(R.sessionModule),
+            findall(Vars+Result+E, (
+                query_with_facts(at(Goal,R.sessionModule),[/*??*/],unknowns(_),taxlog(taxlogExplanation(E_)),Result), 
+                makeExplanationTree(E_,E),
+                toJSON(Vars_,Vars)
+                ),Pairs
+            ),
+            (member(_+unknown+_,Pairs) -> Result=unknown; Pairs=[] -> Result=false; Result=true),
+            findall(_{bindings:Vars,explanation:E},member(Vars+_+E,Pairs),Solutions)
+            )
+        )
+    ) ; true).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  Supporting predicates for the API entry points %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 % NEW: Helper predicate to process the request, call Gemini, and process the response
 process_llm_request(Request, Result)  :- %trace, 
     %Result = _{error:'LLM request passed', details:'LLM integration disabled in this build'}.
@@ -198,23 +304,38 @@ process_llm_request(Request, Result)  :- %trace,
     (getenv('LE_LLM_K', Value) -> APIKey = Value ; throw(error(missing_gemini_api_key, _))),
     %print_message(informational,"API: Using Gemini API Key: ~w"-[APIKey]),
     % 2. Create a suitable prompt for Gemini
-    format(string(Prompt), 'You are an expert on legal and logical reasoning. I will provide a description of a specific situation, possibly containing assumptions and questions: Description: ~w
+    format(string(Prompt), '  You are an expert on legal and logical reasoning.  You are an expert converting regulatory texts into Logic English programs, LE. 
  
+ You MUST follow some of the instructions in file https://github.com/LogicalContracts/LogicalEnglish/blob/main/CLAUDE.md
+ 
+ Using the best knowledge you have, extend and complete the document below, with the rules and facts needed to address a particular enquiry. 
+ I will provide a description of a specific situation, possibly containing assumptions and questions: 
+ 
+ Description: ~w
+     
 Turn this into a query and scenario pair using these templates shown below.
 
-Name both the new query and the new scenario (say query new, scenario new) and 
-return them with this form (no bullet points, please):
+Name both the new query and the new scenario (say query new, scenario new) and include them with this form (no bullet points, please):
 
-scenario new is:
+    scenario new is:
 
-query new is:
+    query new is:
 
-(if there is nothing to put on each section, do not write the header)
+    (if there is nothing to put on each section, do not write the header)
+    (if there are more than one question in the query section, arrange them as follows:
+    question 1
+    and question 2
+    ...
+    and question n. 
+    )
+    (variables, introduced by the word which, in the query new, must have different types altogether)
 
-as illustrated in the examples in the Document bellow:
+    as illustrated in the examples in the Document bellow:
 
-Document:
-~w
+ Document:
+    ~w
+ 
+ Return the full new LE document as a .le file to be tested separately. 
 
 ', [UserInput, DocText]), %Result = _{passed:'Here', details:Prompt}.
     %print_message(informational,"API: Prompt ready ~w"-[Prompt]),    
@@ -324,25 +445,6 @@ handle_api_call(FullURL, PayloadDict, Result) :-
     ).
 
 
-% Example:
-%  curl --header "Content-Type: application/json" --request POST --data '{"operation":"draft", "pageURL":"http://mysite/page1#section2",  "content":[{"url":"http://mysite/page1#section2!chunk1", "text":"john flies by instruments"}, {"url":"http://mysite/page1#section2!chunk2", "text":"miguel drives with gusto"}]}' http://localhost:3050/taxkbapi
-% {operation:draft, pageURL:U, content:Items} --> {pageURL:U, draft:PrologText}
-%   each item is a {url:..,text:...} 
-entry_point(R, _{pageURL:ThePage, draft:Draft}) :- get_dict(operation,R,draft), !, 
-    load_content(R.content),
-    ThePage = R.pageURL,
-    draft_string(R.pageURL,Draft).
-
-% Example: see Javascript example in clientExample/
-% Translates a LE program to a Prolog program
-entry_point(R, _{prolog:Program, kb:KB, 
-    predicates:Predicates, examples:Examples, queries:Qs, target:Target}) :- get_dict(operation,R,le2prolog), !, 
-    le2prologTerms(R.le,KB,Terms,Preds,Examples, _ExamplesProlog ,Queries,Target),
-    with_output_to(string(Program),forall(member(Term,Terms), portray_clause(Term) ) ),
-    with_output_to(string(Qs),forall(member(Qx,Queries), portray_clause(Qx) ) ),
-    findall(Pred,(member(Pred_,Preds), term_string(Pred_,Pred)),Predicates).
-    %print_message(informational,"le2prolog done\n"-[]).
-
 %TODO: verify if JD initializes parsed etc correctly; they may be prone to threading bugs under the web server thread pool
 le2prologTerms(LE,KB,Clauses,Preds,ExamplesInJson, Examples, Queries,Target) :-
     %print_message(informational,"le2prologTerms ~w \n"-[LE]),
@@ -380,92 +482,11 @@ le2prologTerms(LE,KB,Clauses,Preds,ExamplesInJson, Examples, Queries,Target) :-
         ),ExamplesInJson).
     %print_message(informational,"Scenarios ~w \n End of le2prologTerms\n"-[Examples]).
 
-entry_point(R, _{sessionModule:M, kb:KB, 
-    predicates:Predicates, examples:ExamplesInJSON, 
-    queries:QueriesInJSON, language:Lang, target:Target}) :- get_dict(operation,R,load), !, 
-    set_le_program_module(M),
-    print_message(informational,"Created module ~w\n"-[M]),
-
-    (get_dict(le,R,LE) -> (
-            Lang=le,
-            le2prologTerms(LE,KB,Clauses,Preds,ExamplesInJSON, Examples, Queries,Target),
-            findall(Pred,(member(Pred_,Preds), toJSON(Pred_,Pred)),Predicates),
-            findall(QueryJSON,(member(Q_,Queries), toJSON(Q_,QueryJSON)),QueriesInJSON),
-            forall(member(Example,Examples),M:assert(Example)), 
-            forall(member(Query,Queries),M:assert(Query)), 
-            forall(member(Clause,Clauses),M:assert(Clause))
-            %print_message(informational,"Asserted  ~w and ~w "-[Queries, Clauses])
-        ) ; (
-            assertion(safe_file(R.file)),
-            (sub_atom(R.file,_,_,0,'le') -> (
-                    Lang=le,
-                    read_file_to_string(R.file,LE,[]),
-                    le2prologTerms(LE,KB,Clauses,Preds,ExamplesInJSON, Examples, Queries, Target),
-                    findall(Pred,(member(Pred_,Preds), toJSON(Pred_,Pred)),Predicates),
-                    findall(QueryJSON,(member(Q_,Queries), toJSON(Q_,QueryJSON)),QueriesInJSON),
-                    forall(member(Example,Examples),M:assert(Example)), 
-                    forall(member(Query,Queries),M:assert(Query)), 
-                    forall(member(Clause,Clauses),M:assert(Clause))
-                    %print_message(informational,"Asserted from file ~w and ~w "-[Queries, Clauses])
-                ) ; (
-                    Lang=prolog, Target=prolog,
-                    load_files(R.file,[module(M)])
-                ) 
-            )    
-        )
-    ),
-    M:assert(target_executor(Target)),
-    (Target==taxlog -> M:assert(myDeclaredModule_(M)) ; true),
-    % For LE, make predicates dynamic so we can query them all:
-    (nonvar(Preds) -> forall(member(Pred,Preds), (functor(Pred,F,N), M:dynamic(F/N))) ; true),
-    %with_output_to(string(Report), (listing(M:_), listing(le_input:_))), 
-    print_message(informational,"load finished\n\n"-[]).
-
 hack_module_for_taxlog(M) :-  
     retractall(kp_loader:module_api_hack(_)),
     assert(kp_loader:module_api_hack(M)).
 
-% adding an direct entry point
-entry_point(R, _{answer:AnswerJSON, result:ok}) :- get_dict(operation,R,answeringQuery), !, %trace
-    print_message(informational,"answering Query: ~w with ~w\n"-[R.query, R.scenario]), 
-    assertion(safe_module(R.sessionModule)),
-    term_string(Scenario, R.scenario), 
-    call_answer(R.query, with(Scenario), R.sessionModule, Answer), !, 
-    term_string(Answer, AnswerJSON).  
-    % term_string(Requests, R.goal).
-    % print_message(informational,"Attending ~w"-[Request]), 
-    % % assertion(safe_module(R.sessionModule)) -> assert(parsed),
-    % assert(le_input:parsed), 
-    % le_input:answer(happy, with(one), Response), retractall(le_input:parsed). 
 
-entry_point(R, _{facts:R.facts, goal: QVS, answers:Solutions, result:Result}) :- get_dict(operation,R,loadFactsAndQuery), !, 
-    print_message(informational,"loadFactsAndQuery: ~w\n"-[R]), 
-    assertion(safe_module(R.sessionModule)),
-    forall(member(Fact_,R.facts),(
-        term_string(Fact,Fact_),
-        assertion( \+ functor(Fact,':-',_) ),
-        R.sessionModule:assert(Fact)
-        )),
-    (get_dict(goal,R,Goal_) -> (
-        assertion(is_list(R.vars)),
-        format(string(QVS),"(~a)-(~w)",[Goal_,R.vars]), term_string(Goal-Vars_,QVS),
-        (R.sessionModule:target_executor(prolog) -> (
-            findall(_{bindings:Vars}, (R.sessionModule:Goal, toJSON(Vars_,Vars)), Solutions),
-            (Solutions=[] -> Result=false ; Result=true)
-            ) ;(
-            % taxlog:
-            hack_module_for_taxlog(R.sessionModule),
-            findall(Vars+Result+E, (
-                query_with_facts(at(Goal,R.sessionModule),[/*??*/],unknowns(_),taxlog(taxlogExplanation(E_)),Result), 
-                makeExplanationTree(E_,E),
-                toJSON(Vars_,Vars)
-                ),Pairs
-            ),
-            (member(_+unknown+_,Pairs) -> Result=unknown; Pairs=[] -> Result=false; Result=true),
-            findall(_{bindings:Vars,explanation:E},member(Vars+_+E,Pairs),Solutions)
-            )
-        )
-    ) ; true).
 
 call_answer(English, Arg, SwishModule, Command) :- %trace, 
     prepare_query(English, Arg, SwishModule,_Goal, Facts, Command), !, 
