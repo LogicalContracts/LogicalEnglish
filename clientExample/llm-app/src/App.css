@@ -1,6 +1,187 @@
+/* --- QuickFest 2026 Branding Colors --- */
+:root {
+  --qf-deep-emerald: #003333; /* Background from image */
+  --qf-mint: #2cf38a;         /* Bright green from logo */
+  --qf-teal: #00a884;         /* Mid-tone teal from logo */
+  --qf-white-mint: #f4f9f8;   /* Soft background for contrast */
+}
+
+/* --- Preserving your Core Body & Layout --- */
+body {
+    background-color: var(--qf-white-mint); /* Updated from #fdf6e3 to match schema */
+}
+
+.app-container {
+  max-width: 1000px;
+  margin-top: 0;
+  margin-bottom: 0;
+  margin-left: 100px; /* Preserved your specific offset */
+  margin-right: auto; 
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  color: #333;
+}
+
+/* --- Preserving your Symbols and Tree Logic --- */
+.box::before {
+  content: "▢"; /* Preserved */
+  color: black;
+  display: inline-block;
+  margin-right: 6px;
+}
+
+.leaf::before {
+  content: "●"; /* Preserved */
+  color: var(--qf-mint); /* Improved with brand color */
+  display: inline-block;
+  margin-right: 6px;
+}
+
+.check-box::before {
+  content: "☑"; /* Preserved */
+  color: var(--qf-teal); /* Improved from dodgerblue to QuickFest Teal */
+}
+
+/* --- Preserving your Table/Inconsolata settings --- */
+.vars_table {
+    background-color: #fbfbfb;
+    border: 1px solid black;
+    border-collapse: collapse;
+    font-family: "Inconsolata";
+    font-size: 10pt;
+    line-height: 1.1;
+    overflow: auto;
+}
+
+.vars_cell {
+    border: 1px solid black;
+    padding: 5px;
+}
+
+.printed_output {
+    font-family: "Inconsolata";
+    font-weight: bold;
+    font-size: 9pt;
+}
+
+/* --- UI Component Coloring (Improved with Schema) --- */
+.config-inputs {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-bottom: 30px;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-top: 4px solid var(--qf-teal); /* Branded accent */
+    border-radius: 8px;
+    background-color: #fff;
+}
+
+.submit-button {
+  padding: 12px 25px;
+  background-color: var(--qf-teal); /* Brand Teal */
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-size: 1.1em;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  width: 100%;
+  margin-bottom: 30px;
+}
+
+.submit-button:hover:not(:disabled) {
+  background-color: var(--qf-deep-emerald); /* Deep Emerald hover */
+}
+
+.result-box {
+  border: 1px solid #e0e0e0;
+  border-left: 5px solid var(--qf-mint); /* Brand Mint accent */
+  padding: 15px;
+  margin-bottom: 15px;
+  border-radius: 6px;
+  background-color: #ffffff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.context-display {
+    padding: 10px;
+    border: 1px dashed var(--qf-teal);
+    background-color: #eafcf5;
+    border-radius: 4px;
+    font-size: 1.1em;
+    margin-bottom: 30px;
+}
+
+/* --- All Grid and Manual Input Logic Preserved Exactly --- */
+.nested { display: none; }
+.active { display: block; }
+.selection-grid-stage1 { display: flex; gap: 20px; }
+.selection-grid-stage1 .selector-column { flex: 1; }
+.selection-grid-stage2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 30px;
+}
+.scrollable-editor {
+  width: 100%;
+  min-height: 200px;
+  max-height: 500px;
+  margin-top: 10px;
+  padding: 12px;
+  overflow-y: auto; 
+  resize: vertical;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  white-space: pre-wrap;
+}
+/* ... all other original classes remain identical ... */
+
+/* --- Overriding Browser Selection Highlights --- */
+.selector-column select {
+    color: #003333; /* QuickFest Deep Emerald */
+    background-color: #ffffff;
+    border: 1px solid #00a884; /* QuickFest Teal */
+    padding: 10px;
+    border-radius: 4px;
+    font-size: 1em;
+    cursor: pointer;
+    
+    /* 1. Changes the highlight color in modern browsers (Chrome/Edge/Firefox) */
+    accent-color: #00a884; 
+    
+    /* 2. Removes the default OS focus ring (often purple/blue) */
+    outline: none; 
+}
+
+/* 3. Replaces the purple focus ring with a QuickFest Mint glow */
+.selector-column select:focus {
+    border-color: #2cf38a; /* QuickFest Mint */
+    box-shadow: 0 0 0 3px rgba(44, 243, 138, 0.4); 
+}
+
+/* 4. Ensures the dropdown list items stay on-brand */
+.selector-column select option {
+    background-color: #ffffff;
+    color: #003333;
+}
+
+/* 5. Styling the label to match the Senior Reviewer theme */
+.selector-column label {
+    font-weight: bold;
+    color: #003333;
+    margin-top: 5px;
+    font-size: 0.9em;
+    display: block; /* Ensures it sits correctly under the select */
+}
+/* 
 body {
     background-color: #fdf6e3;
 }
+  */
 
 .vars_table {
     background-color: #fbfbfb;
@@ -54,7 +235,7 @@ body {
 
 .check-box::before {
   content: "☑"; /* Checked checkbox - or use "✓" or "✔" */
-  color: dodgerblue;
+  color: #00a884;;
 }
 
 .nested {
@@ -79,12 +260,11 @@ body {
 /* Plus/Minus style */
 /*
 .box::before {
-  content: "⊞"; 
+  content: "⊞";
 }
 
 .check-box::before {
-  content: "⊟"; 
-}
+  content: "⊟";
 */
 
 /* Simple plus/minus */
@@ -127,7 +307,7 @@ body {
 }
 
 .App-link {
-  color: #61dafb;
+  color: #2cf38a;
 }
 
 @keyframes App-logo-spin {
@@ -207,13 +387,13 @@ body {
 
 .selector-column select:disabled {
   background-color: #eee;
-  color: #999;
+  color: #00a884;
 }
 
 /* Submit Button */
 .submit-button {
   padding: 12px 25px;
-  background-color: #007bff;
+  background-color: #057e3d;;
   color: white;
   border: none;
   border-radius: 5px;
@@ -225,8 +405,8 @@ body {
 }
 
 .submit-button:hover:not(:disabled) {
-  background-color: #0056b3;
-}
+  background-color:  #00a884;  
+}  
 
 .submit-button:disabled {
   background-color: #a0c3e8;
@@ -236,8 +416,8 @@ body {
 /* Response Area */
 .response-area {
   padding: 20px;
-  border-top: 2px solid #007bff;
-}
+  border-top: 2px solid  #00a884;
+}    
 
 .result-box {
   border: 1px solid #e0e0e0;
@@ -284,7 +464,7 @@ body {
 
 /* Visual cue for the checked/open box */
 .explanation-list .check-box {
-    color: #007bff; /* Highlight text when expanded */
+    color:  #00a884;     /* Highlight text when expanded */
     font-weight: 500;
 }
 
@@ -332,7 +512,7 @@ body {
 /* Context Display */
 .context-display {
     padding: 10px;
-    border: 1px dashed #007bff;
+    border: 1px dashed#2cf38a;
     background-color: #eaf3ff;
     border-radius: 4px;
     font-size: 1.1em;
@@ -390,7 +570,7 @@ body {
   font-family: 'Courier New', Courier, monospace; /* Good for structured text */
   font-size: 14px;
   line-height: 1.5;
-  border: 1px solid #ccc;
+  border: 1px solid #219b03;
   border-radius: 4px;
   white-space: pre-wrap; /* Preserves line breaks and spaces */
 }
