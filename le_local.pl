@@ -21,7 +21,10 @@ limitations under the License.
 load_file_module(FileName, FileName, _) :-
    load_files([FileName], [module(FileName)]). 
 
-this_capsule(user).
+% HACK:  to support le_cli.pl, which dislikes the user module for LE programs:
+this_capsule(user):- \+ no_user_module.
+:- dynamic no_user_module/0.
+
    %thread_self(M). % current_module(M) messes it up
 
 portray_clause_ind(Clause) :- 

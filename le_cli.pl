@@ -1,5 +1,6 @@
 % Simple wrapper to use LogicalEnglish from the PROLOG command line
 % Launch with /Applications/SWI-Prolog9.3.7-1.app/Contents/MacOS/swipl -l le_cli.pl
+
 :- module(_,[
     load_program/7, load_program/3, load_program/1, load_and_query_program_all/6,
     query_program_all/6, query_program_all/4,
@@ -11,6 +12,8 @@
 prolog:message(S-Args) --> {atomic(S),is_list(Args)},[S-Args].
 
 :- use_module(le_answer).
+
+:- assert(le_local:no_user_module). %HACK: to avoid geeting errors searching queries etc in the user module, as we use our own
 
 load_program(FileOrTerm,ExtraText,Language,DeleteFile,Module,TaxlogTerms,ExpandedTerms) :- 
     load_program(FileOrTerm,ExtraText,Language,DeleteFile,false,Module,TaxlogTerms,ExpandedTerms).
