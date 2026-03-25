@@ -38,13 +38,16 @@ which can be used on the new command interface of LE on SWISH
     parse_and_load/5, parse_and_load/6, literal_to_sentence/3, literal_to_sentence/2, top2levels_predicate/3, top_intensional_predicate/3, retracting/2
     ]).
 
-
 :- if(exists_source(library(pengines_sandbox))).
     :- use_module(library(pengines_sandbox)). 
 :- endif.
 
-% required for sCASP justification (from ~/git/swish/pack/sCASP/examples)
+%HACK: this MUST be done before loading scasp, which seems to mess with parsing of prolog:...
+:- multifile prolog:xref_source_identifier/2. % missing this would cause xref_called etc to fail:
+prolog:xref_source_identifier(File, File). % used by undefined_le_predicate and friends
 
+
+% required for sCASP justification (from ~/git/swish/pack/sCASP/examples)
 :- if(exists_source(library(scasp))).
     :- use_module(library(scasp)).
     :- use_module(library(scasp/html)).
@@ -60,7 +63,6 @@ which can be used on the new command interface of LE on SWISH
 :- endif.
 :- use_module('reasoner.pl'). 
 :- use_module('./tokenize/prolog/tokenize.pl').
-
 
 % html libs
 :- use_module(library(http/html_write)).
@@ -1229,9 +1231,6 @@ undefined_le_predicate(Module,Called,TemplateString) :-
     \+ my_system_predicate(Called),
     predicate_to_template_sentence(Called,Module,TemplateString).
 
-:- multifile prolog:xref_source_identifier/2. % missing this would cause xref_called etc to fail:
-prolog:xref_source_identifier(File, File).
-
 literal_to_sentence(Literal,Module,Sentence) :-
     Literal =..CalledList,
     catch((
@@ -1469,7 +1468,7 @@ sandbox:safe_primitive(le_answer:le_taxlog_translate( _EnText, _File, _Baseline,
 sandbox:safe_primitive(le_answer:translate_goal_into_LE(_,_)). 
 sandbox:safe_primitive(le_answer:dump_scasp(_,_,_)). 
 sandbox:safe_primitive(current_output(_)). 
-sandbox:safe_primitive(le_answer:(show _)). 
+sandbox:safe_primitive(le_answer:(show(_))). 
 sandbox:safe_primitive(le_answer:parse_and_query(_,_,_,_,_)).
 sandbox:safe_primitive(le_answer:parse_and_query_and_explanation(_,_,_,_,_,_)). 
 sandbox:safe_primitive(kp_loader:module_api_hack(_)).
