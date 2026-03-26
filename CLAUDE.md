@@ -6,16 +6,16 @@ Its syntax is described in @le_syntax.md. Some syntax additions:
 * arithmetic expressions are written Result = Expression, for example Diff = A-B
 For each LE program, represented in a file with extension ".le", there should also exist a file with the same name and extension ".le.tests", containing:
 * the expected answers for all queries and scenarios in the program, as PROLOG facts expected(QueryName,ScenarionName,Answers) ; Answers is a list of strings, each a sentence for a (bound) predicate
-* least two expected facts for each top level predicate: one with no answers, the other with at least one answer
+* at least two expected facts for each top level predicate: one with no answers, the other with at least one answer
 ## LE Examples
-Examples of LE programs and their expected answers can be found in @moreExamples/
+If you need inspiration, there are examples of LE programs and their expected answers in @moreExamples/
 # How to run an arbitrary query and scenario on a program
 * Execute the LE query command: /Applications/SWI-Prolog9.3.33-1.app/Contents/MacOS/swipl le_command.pl --command=query --query="<QUERY_SENTENCE>" --scenario="<SCENARIO_SENTENCES>" myProgram.le
-# How to find the top level predicate templates
+# How to find the top level predicate templates of a program
 * Execute command: /Applications/SWI-Prolog9.3.33-1.app/Contents/MacOS/swipl le_command.pl --command=top_predicates  myProgram.le
 # How to test a LE program
 * Execute the LE verify command: /Applications/SWI-Prolog9.3.33-1.app/Contents/MacOS/swipl le_command.pl --command=verify <PROGRAM>
-If the program is working as expected, this command will output "ALL GOOD :-)" at the end; otherwise there will be errors and/or warning messages, meaning that the program is not yet correct and needs further editing
+If the program is working as expected, this command will output "ALL GOOD :-)" at the end; otherwise there will be errors and/or warning messages, meaning that the program (or the expected answers) is not yet correct and needs further editing
 # How to debug a LE program
 React to the errors and warnings produced by the LE verify command. First edit the program as follows, then test it again:
 ## Missing template for 'sentence'
@@ -37,7 +37,7 @@ Be creative and edit the program to fix this.
 ## time_limit_exceeded
 Look for uncontrolled recursions in the program rules and fix them
 # How to convert regulatory text to a LE program
-Perform 3 steps in sequence: 
+Perform these 3 steps in sequence, explained below: 
 * Analyze the given regulatory text
 * Write the LE program
 * Test and Debug it until correct.
@@ -50,6 +50,7 @@ Focusing on the given text only:
 * If the given text contains no examples, summarise the text in a short sentence S, search the web with "examples for S", and collect a few examples from the top page
 Finally, you MUST summarise your findings in a new .txt file, prior to writing the LE program.
 ## Write the LE program
+Do this by looking only at the .txt summary you built, not at the original text.
 Before each LE element, put a PROLOG comment with its provenance within the given text, or web URL if the element originated in a web search.
 * Write the templates based on the predicates found 
 * Write the ontology based on the types
@@ -68,3 +69,5 @@ Before each LE element, put a PROLOG comment with its provenance within the give
 * ALL warnings and errors MUST be fixed. ALL tests MUST succeed.
 * Double-check
   * again, the final LE program MUST have neither warnings nor errors, and its tests MUST all succeed
+## Stepwise refinement
+If tests keep failing, start debugging with a smaller set of expected answers, and expand only after those pass the tests.

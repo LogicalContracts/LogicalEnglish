@@ -30,7 +30,7 @@ opt_spec([
      longflags([scenario]),
      help('extra LE scenario to consider')]
 ]).
-
+%TODO: add show_prolog command
 main(Argv) :-
     opt_spec(OptsSpec),
     opt_parse(OptsSpec, Argv, Opts, PositionalArgs),
