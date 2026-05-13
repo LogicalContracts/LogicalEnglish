@@ -35,7 +35,8 @@ which can be used on the new command interface of LE on SWISH
     dump/4, dump/3, dump/2, dump_scasp/3, split_module_name/3, just_saved_scasp/2, psem/1, set_psem/1,
     prepare_query/6, assert_facts/2, retract_facts/2, parse_and_query/5, parse_and_query_and_explanation/6, parse_and_query_all_answers/5,
     parse_and_query_and_explanation_text/6, le_expanded_terms/2, show/1, source_lang/1, targetBody/6, query_and_explanation_text/4,
-    parse_and_load/5, parse_and_load/6, literal_to_sentence/3, literal_to_sentence/2, top2levels_predicate/3, top_intensional_predicate/3, retracting/2
+    parse_and_load/5, parse_and_load/6, literal_to_sentence/3, literal_to_sentence/2, top2levels_predicate/3, top_intensional_predicate/3, retracting/2,
+    produce_json_explanation/2, parse_and_query_all_answers_json/5
     ]).
 
 :- if(exists_source(library(pengines_sandbox))).
@@ -1445,6 +1446,153 @@ explanationLEText(f(G,_Ref,_,_,_,C),[Gs|RestTree]) :-
     with_output_to(string(Gs), format('"It is not the case that: ~w"', G)).
 explanationLEText([C1|Cn],CH) :- explanationLEText(C1,CH1), explanationLEText(Cn,CHn), append(CH1,CHn,CH).
 explanationLEText([],[]).
+
+% ============================================================================
+% JSON explanation producer (added by LodgeiT/ClawDog 2026-05-13)
+%
+% Walks the same le_Explanation(Trees) structure consumed by
+% produce_html_explanation/2 and produce_text_explanation/2, but emits a
+% JSON-dict-shaped representation that preserves the per-node Ref, Source,
+% and Origin fields. These fields are the load-bearing statutory-anchor
+% surface that the HTML rendering strips out (see explanationLEHTML/2 above
+% — the head pattern destructures `s(G,_Ref,_,_,_,C)` with underscores for
+% Ref/Source/Origin, making them unrecoverable from the rendered HTML).
+%
+% Output is a list of node dicts of the form:
+%   _{type: "proven"|"failed"|"unknown",
+%     literal: <stringified-goal>,
+%     ref:     <stringified-rule-ref or null>,
+%     source:  <stringified-source-annotation or null>,
+%     origin:  <stringified-text-origin or null>,
+%     children: [<dict>, ...]}
+%
+% Sibling to:
+%   produce_html_explanation/2  — HTML rendering (loses Ref/Source/Origin)
+%   produce_text_explanation/2  — plain-text rendering (also loses them)
+%   makeExplanationTree/2 in api.pl — a similar JSON shape exists but is
+%     gated behind the taxlog target language via query/loadFactsAndQuery
+%     ops. This predicate exposes the same structural information to the
+%     prolog target language via parse_and_query_all_answers_json/5 and
+%     the entry_point(explain_json) handler in api.pl.
+% ============================================================================
+
+produce_json_explanation(le_Explanation(Trees), JSON) :-
+    explanationLEJSON(Trees, JSON).
+
+% Successful proof step.
+explanationLEJSON(s(G, Ref, Source, Origin, _, C),
+                  [_{type: "proven",
+                     literal: Gs,
+                     ref: RefS,
+                     source: SrcS,
+                     origin: OrgS,
+                     children: CH}]) :-
+    term_string(G, Gs),
+    optional_string(Ref, RefS),
+    optional_string(Source, SrcS),
+    optional_string(Origin, OrgS),
+    explanationLEJSON(C, CH).
+
+% Unknown / unprovable hypothesis.
+explanationLEJSON(u(G, Ref, Source, Origin, _, []),
+                  [_{type: "unknown",
+                     literal: Gs,
+                     ref: RefS,
+                     source: SrcS,
+                     origin: OrgS,
+                     children: []}]) :-
+    term_string(G, Gs),
+    optional_string(Ref, RefS),
+    optional_string(Source, SrcS),
+    optional_string(Origin, OrgS).
+
+% Failed proof step.
+explanationLEJSON(f(G, Ref, Source, Origin, _, C),
+                  [_{type: "failed",
+                     literal: Gs,
+                     ref: RefS,
+                     source: SrcS,
+                     origin: OrgS,
+                     children: CH}]) :-
+    term_string(G, Gs),
+    optional_string(Ref, RefS),
+    optional_string(Source, SrcS),
+    optional_string(Origin, OrgS),
+    explanationLEJSON(C, CH).
+
+% List-recursion: walk siblings, concatenate dict lists.
+explanationLEJSON([C1|Cn], CH) :-
+    explanationLEJSON(C1, CH1),
+    explanationLEJSON(Cn, CHn),
+    append(CH1, CHn, CH).
+explanationLEJSON([], []).
+
+% Stringify a Ref/Source/Origin term, or emit null when unbound/empty.
+% Mirrors the conservative approach already used elsewhere in the file:
+% Ref, Source, Origin are recorded by the reasoner per-rule and may be
+% atoms, strings, variables, or empty atoms; coerce uniformly to
+% nullable-string for JSON safety.
+optional_string(T, null) :- var(T), !.
+optional_string('', null) :- !.
+optional_string("", null) :- !.
+optional_string([], null) :- !.
+optional_string(T, S) :-
+    (   string(T) -> S = T
+    ;   atom(T)   -> atom_string(T, S)
+    ;   term_string(T, S)
+    ).
+
+% Parallel to parse_and_query_all_answers/5, but bundles the structured JSON
+% explanation into each Answer dict instead of letting answer_all/3 stringify
+% it as HTML internally. Keeps the existing predicate untouched so all
+% downstream callers of parse_and_query_all_answers/5 continue to behave
+% identically.
+parse_and_query_all_answers_json(File, Document, Question, Scenario, JSONAnswers) :-
+    parse_and_load(File, Document, _, ExpandedTerms, _),
+    answer_all_json(Question, Scenario, JSONAnswers), !,
+    retracting(File, ExpandedTerms).
+
+% Parallel to answer_all/3 but emits structured JSON in the `explanation` field.
+answer_all_json(English, Arg, Results) :-
+    once( pre_answer(English, Arg, FactsPre, Module, InnerGoal) ),
+    append(FactsPre, [(is_a(A, B):-(is_a(A, C),is_a(C, B)))], Facts),
+    MAX_SECONDS = 0.4,
+    setup_call_catcher_cleanup(
+        assert_facts(Module, Facts),
+        catch_with_backtrace(
+            call_with_time_limit(MAX_SECONDS,
+                findall(Answer,
+                    ( reasoner:query(at(InnerGoal, Module), _U, le(LE_Explanation), Result),
+                      produce_json_explanation(LE_Explanation, JSON),
+                      correct_answer_json(InnerGoal, JSON, Result, Answer_),
+                      numbervars(InnerGoal),
+                      term_string(InnerGoal, Bindings, [numbervars(true)]),
+                      put_dict(bindings, Answer_, Bindings, Answer)
+                    ),
+                    Results)),
+            Error,
+            ( print_message(error, Error) )
+        ),
+        _Result,
+        retract_facts(Module, Facts)),
+    Results \== [],
+    !.
+answer_all_json(English, Arg, [ _{answer: "Failure",
+                                  explanation: [_{type: "failed",
+                                                  literal: FailureMsg,
+                                                  ref: null, source: null, origin: null,
+                                                  children: []}],
+                                  bindings: ""} ]) :-
+    with_output_to(string(FailureMsg),
+        format("Failed to answer question: ~w : ~w. Check your query/scenario, please.",
+               [English, Arg])), !.
+
+% Parallel to correct_answer/4 (used by answer_all/3) but produces JSON-shaped
+% answer dicts. correct_answer/4 is defined in reasoner.pl; we mirror only the
+% three result branches we actually receive (true / false / unknown).
+correct_answer_json(_InnerGoal, JSON, true,    _{answer: "Yes",     explanation: JSON}).
+correct_answer_json(_InnerGoal, JSON, false,   _{answer: "No",      explanation: JSON}).
+correct_answer_json(_InnerGoal, JSON, unknown, _{answer: "Unknown", explanation: JSON}).
 
 % Moved here so it loads in the wasm version, that doesn't have access to api.pl
 :- if(current_module(wasm)).
