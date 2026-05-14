@@ -4,7 +4,17 @@ The LE API is a JSON-over-HTTP REST endpoint served at `/leapi` (default port 30
 
 ## Authentication
 
-Every request must include `"token": "myToken123"` in the JSON body.
+Every request must include a `"token"` field in the JSON body. The expected
+token is:
+
+- The value of the `LE_API_TOKEN` environment variable, if set when the server
+  started, OR
+- `"myToken123"` as the historical default fallback when `LE_API_TOKEN` is
+  unset.
+
+This behaviour is backwards-compatible: callers using the historical default
+continue to work unchanged, while deployments needing a real shared secret
+can set the env var without code changes.
 
 ## Request / Response format
 
@@ -115,6 +125,89 @@ Same fields as `answer`.
 
 ```json
 { "results": [ <explanation>, ... ] }
+```
+
+The `<explanation>` is rendered as an HTML string nested-list. For machine
+consumption of the proof-tree shape (preserving per-node `ref`, `source`,
+and `origin` annotations), use [`explain_json`](#explain_json--like-explain-but-with-a-structured-json-proof-tree)
+instead.
+
+---
+
+### `explain_json` — Like `explain` but with a structured JSON proof tree
+
+Identical to `explain` in inputs and applicability. The difference is in the
+response shape: each answer's `explanation` field is a list of structured node
+dicts rather than a stringified HTML rendering. This preserves the per-node
+`ref` (clause reference), `source` (originating program / module), and
+`origin` (the actual Prolog clause that fired) annotations that the HTML
+rendering strips out via the underscored variables in `explanationLEHTML/2`.
+
+Designed for agentic / programmatic consumers (e.g. compliance certifiers,
+structured-output advisory systems) that need to attach proof trees to
+structured output without having to parse rendered HTML.
+
+**Request**
+
+```json
+{
+  "token": "myToken123",
+  "operation": "explain_json",
+  "file": "<program_name>",
+  "document": "<LE source text>",
+  "theQuery": "<query sentence>",
+  "scenario": "<scenario name>"
+}
+```
+
+Same fields as `explain` / `answer`.
+
+**Response**
+
+```json
+{
+  "results": [
+    {
+      "answer": "Yes | No | Unknown | Failure",
+      "bindings": "<stringified ground goal>",
+      "explanation": [
+        {
+          "type": "proven | failed | unknown",
+          "literal": "<stringified goal>",
+          "ref": "<clause reference or null>",
+          "source": "<source program / module or null>",
+          "origin": "<the actual Prolog clause that fired or null>",
+          "children": [ <node>, ... ]
+        },
+        ...
+      ]
+    },
+    ...
+  ]
+}
+```
+
+Node `type` values:
+- `"proven"`   — the goal was successfully proved (SLD-resolution succeeded).
+- `"failed"`   — the goal could not be proved.
+- `"unknown"`  — the goal is a hypothesis lacking sufficient facts.
+
+For a leaf step that exercised a Prolog built-in (e.g. an arithmetic
+comparison `160000 is greater or equal to 150000`), `ref` and `origin` are
+`null` and `source` carries the LE program name. For a step that exercised
+a user-defined rule, all four annotation fields are populated.
+
+**curl example**
+
+```bash
+curl -s -X POST http://localhost:3050/leapi \
+  -H 'Content-Type: application/json' \
+  -d '{"token":"myToken123",
+       "operation":"explain_json",
+       "file":"gst",
+       "document":"<full LE source>",
+       "theQuery":"A",
+       "scenario":"A"}'
 ```
 
 ---

@@ -98,7 +98,16 @@ handle_api(Request) :-
     http_read_json_dict(Request, Payload, [value_string_as(atom)]),
     %asserta(my_request(Request)), % for debugging
     %print_message(informational,"Request Payload: ~w"-[Payload]),
-    assertion(Payload.token=='myToken123'),
+    % LodgeiT/ClawDog 2026-05-13: honour LE_API_TOKEN env var when set,
+    % otherwise fall back to the historical default 'myToken123' for
+    % backwards compatibility. The assertion semantics are preserved
+    % (throws on mismatch) so no caller behaviour changes when the env
+    % var is unset.
+    (   getenv('LE_API_TOKEN', ExpectedToken_)
+    ->  atom_string(ExpectedToken, ExpectedToken_)
+    ;   ExpectedToken = 'myToken123'
+    ),
+    assertion(Payload.token == ExpectedToken),
     (entry_point(Payload,Result)->true;Result=_{error:"No answer"}),
     %print_message(informational,"returning Result: ~w"-[Result]),
     reply_json_dict(Result).
@@ -162,6 +171,31 @@ entry_point(R, _{results:AnswerExplanation}) :- get_dict(operation,R,explain), !
     % print_message(informational,"api.pl: Query ~w  Scenario ~w\n"-[R.theQuery, R.scenario]),
     le_answer:parse_and_query_all_answers(R.file, en(R.document), R.theQuery, with(R.scenario), AnswerExplanation). 
     %print_message(informational,"entry point explain returning: ~w"-[AnswerExplanation]).
+
+% Added by LodgeiT/ClawDog 2026-05-13: structured-JSON variant of `explain`.
+%
+% Mirrors the existing `explain` handler exactly, but routes the
+% LE_Explanation term through produce_json_explanation/2 instead of
+% produce_html_explanation/2. The returned `explanation` field is a list
+% of node dicts preserving the per-node Ref / Source / Origin annotations
+% that the HTML rendering strips.
+%
+% Motivation: downstream consumers of /leapi (e.g. agentic certifiers
+% integrating LE proof trees into structured advisory output) need a
+% machine-readable proof-tree for prolog-target programs without forcing
+% them to switch to taxlog or parse the rendered HTML. makeExplanationTree/2
+% already exposes the same shape for taxlog-target programs via the
+% `query` / `loadFactsAndQuery` ops; this brings parity for prolog-target.
+%
+% curl --header "Content-Type: application/json" --request POST \
+%   --data '{"token":"myToken123",
+%            "operation":"explain_json",
+%            "file":"gst",
+%            "document":"<full LE source>",
+%            "theQuery":"A",
+%            "scenario":"A"}' http://localhost:3050/leapi
+entry_point(R, _{results:AnswerExplanation}) :- get_dict(operation,R,explain_json), !,
+    le_answer:parse_and_query_all_answers_json(R.file, en(R.document), R.theQuery, with(R.scenario), AnswerExplanation).
 
 % NEW: Entry point for Gemini
 % curl --header "Content-Type: application/json" --request POST --data '{"token":"myToken123", "gemini_api_key": "..", "operation":"answer_via_llm", "file": "testllm", "document":" ... ", "userinput":"some input text"}' http://localhost:3050/leapi
